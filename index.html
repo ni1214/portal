@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>生産管理課 ポータル</title>
+  <meta name="description" content="生産管理課の社内ポータルサイト。業務に必要な情報やツールへ素早くアクセスできます。">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ==================== Header ==================== -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <div class="header-logo">
+          <i class="fa-solid fa-industry"></i>
+        </div>
+        <div>
+          <div class="header-title">生産管理課 ポータル</div>
+          <div class="header-subtitle">Production Management Portal</div>
+        </div>
+      </div>
+
+      <div class="search-container">
+        <input
+          type="text"
+          id="search-input"
+          class="search-input"
+          placeholder="メニューを検索..."
+          autocomplete="off"
+        >
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+      </div>
+
+      <div class="header-clock">
+        <i class="fa-regular fa-clock"></i>
+        <span id="header-clock"></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== Main ==================== -->
+  <main class="main">
+
+    <!-- Category 1: 管理・報告 -->
+    <section class="category-section category-1" id="section-management">
+      <div class="category-header">
+        <div class="category-icon"><i class="fa-solid fa-clipboard-check"></i></div>
+        <h2 class="category-title">管理・報告</h2>
+        <span class="category-count"></span>
+      </div>
+      <div class="card-grid">
+        <a href="#" class="link-card" id="card-process-management">
+          <div class="card-icon"><i class="fa-solid fa-bars-progress"></i></div>
+          <span class="card-label">工程管理</span>
+        </a>
+        <a href="#" class="link-card" id="card-drawing-storage">
+          <div class="card-icon"><i class="fa-solid fa-folder-open"></i></div>
+          <span class="card-label">図面保管庫</span>
+        </a>
+        <a href="#" class="link-card" id="card-address-book">
+          <div class="card-icon"><i class="fa-solid fa-address-book"></i></div>
+          <span class="card-label">アドレス帳</span>
+        </a>
+        <a href="#" class="link-card" id="card-trouble-report">
+          <div class="card-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+          <span class="card-label">トラブル報告</span>
+        </a>
+        <a href="#" class="link-card" id="card-trouble-response">
+          <div class="card-icon"><i class="fa-solid fa-comment-dots"></i></div>
+          <span class="card-label">トラブル回答</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Category 2: 手配・製作 -->
+    <section class="category-section category-2" id="section-arrangement">
+      <div class="category-header">
+        <div class="category-icon"><i class="fa-solid fa-gears"></i></div>
+        <h2 class="category-title">手配・製作</h2>
+        <span class="category-count"></span>
+      </div>
+      <div class="card-grid">
+        <a href="#" class="link-card" id="card-arrangement-create">
+          <div class="card-icon"><i class="fa-solid fa-file-circle-plus"></i></div>
+          <span class="card-label">手配書作成</span>
+        </a>
+        <a href="#" class="link-card" id="card-arrangement-list">
+          <div class="card-icon"><i class="fa-solid fa-list-check"></i></div>
+          <span class="card-label">手配書リスト</span>
+        </a>
+        <a href="#" class="link-card" id="card-factory-schedule">
+          <div class="card-icon"><i class="fa-solid fa-calendar-days"></i></div>
+          <span class="card-label">工場予定表</span>
+        </a>
+        <a href="#" class="link-card" id="card-outsource">
+          <div class="card-icon"><i class="fa-solid fa-handshake"></i></div>
+          <span class="card-label">外注製作</span>
+        </a>
+        <a href="#" class="link-card" id="card-fittings-management">
+          <div class="card-icon"><i class="fa-solid fa-door-open"></i></div>
+          <span class="card-label">建具管理</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Category 3: 金物・在庫 -->
+    <section class="category-section category-3" id="section-hardware">
+      <div class="category-header">
+        <div class="category-icon"><i class="fa-solid fa-cubes"></i></div>
+        <h2 class="category-title">金物・在庫</h2>
+        <span class="category-count"></span>
+      </div>
+      <div class="card-grid">
+        <a href="#" class="link-card" id="card-standard-hardware">
+          <div class="card-icon"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+          <span class="card-label">標準金物</span>
+        </a>
+        <a href="#" class="link-card" id="card-hardware-docs">
+          <div class="card-icon"><i class="fa-solid fa-file-lines"></i></div>
+          <span class="card-label">金物資料</span>
+        </a>
+        <a href="#" class="link-card" id="card-factory-stock">
+          <div class="card-icon"><i class="fa-solid fa-warehouse"></i></div>
+          <span class="card-label">工場在庫</span>
+        </a>
+        <a href="#" class="link-card" id="card-electricity">
+          <div class="card-icon"><i class="fa-solid fa-bolt"></i></div>
+          <span class="card-label">電気代</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Category 4: 資材・設計 -->
+    <section class="category-section category-4" id="section-materials">
+      <div class="category-header">
+        <div class="category-icon"><i class="fa-solid fa-drafting-compass"></i></div>
+        <h2 class="category-title">資材・設計</h2>
+        <span class="category-count"></span>
+      </div>
+      <div class="card-grid">
+        <a href="#" class="link-card" id="card-filler">
+          <div class="card-icon"><i class="fa-solid fa-fill-drip"></i></div>
+          <span class="card-label">充填材</span>
+        </a>
+        <a href="#" class="link-card" id="card-steel">
+          <div class="card-icon"><i class="fa-solid fa-bars"></i></div>
+          <span class="card-label">鋼材</span>
+        </a>
+        <a href="#" class="link-card" id="card-steel-order">
+          <div class="card-icon"><i class="fa-solid fa-cart-shopping"></i></div>
+          <span class="card-label">鋼材注文</span>
+        </a>
+        <a href="#" class="link-card" id="card-drawing-storage-2">
+          <div class="card-icon"><i class="fa-solid fa-box-archive"></i></div>
+          <span class="card-label">図面保管庫</span>
+        </a>
+        <a href="#" class="link-card" id="card-mold-simulator">
+          <div class="card-icon"><i class="fa-solid fa-calculator"></i></div>
+          <span class="card-label">金型シミュレーター</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Category 5: その他 -->
+    <section class="category-section category-5" id="section-others">
+      <div class="category-header">
+        <div class="category-icon"><i class="fa-solid fa-ellipsis"></i></div>
+        <h2 class="category-title">その他</h2>
+        <span class="category-count"></span>
+      </div>
+      <div class="card-grid">
+        <a href="#" class="link-card" id="card-manual">
+          <div class="card-icon"><i class="fa-solid fa-book"></i></div>
+          <span class="card-label">マニュアル</span>
+        </a>
+        <a href="#" class="link-card" id="card-download">
+          <div class="card-icon"><i class="fa-solid fa-download"></i></div>
+          <span class="card-label">資料ダウンロード</span>
+        </a>
+        <a href="#" class="link-card" id="card-reference-drawing">
+          <div class="card-icon"><i class="fa-solid fa-ruler-combined"></i></div>
+          <span class="card-label">基準図</span>
+        </a>
+        <a href="#" class="link-card" id="card-survey">
+          <div class="card-icon"><i class="fa-solid fa-square-poll-vertical"></i></div>
+          <span class="card-label">アンケート(回答)</span>
+        </a>
+        <a href="#" class="link-card" id="card-daily-report">
+          <div class="card-icon"><i class="fa-solid fa-truck"></i></div>
+          <span class="card-label">運行作業日報</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- No Results -->
+    <div class="no-results" id="no-results">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <p>該当するメニューが見つかりません</p>
+    </div>
+
+  </main>
+
+  <!-- ==================== Footer ==================== -->
+  <footer class="footer">
+    <p>© 2026 生産管理課 ポータルサイト</p>
+  </footer>
+
+  <!-- Script -->
+  <script src="script.js"></script>
+</body>
+</html>
