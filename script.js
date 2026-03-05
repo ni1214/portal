@@ -565,7 +565,7 @@ function updateClock() {
   if (clockEl) {
     clockEl.textContent =
       now.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }) +
-      ' ' + now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+      ' ' + now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 }
 
@@ -635,7 +635,7 @@ async function handlePinSubmit() {
 // ========== 初期化 ==========
 document.addEventListener('DOMContentLoaded', async () => {
   updateClock();
-  setInterval(updateClock, 30000);
+  setInterval(updateClock, 1000);
 
   // まず初期データで即時描画（Firestore 待ちなし）
   allCards = INITIAL_CARDS.map((c, i) => ({ id: `init-${i}`, ...c }));

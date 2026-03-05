@@ -777,6 +777,8 @@ body::after {
    =========================== */
 .edit-mode-banner {
   background: linear-gradient(135deg, rgba(74, 158, 255, 0.15), rgba(124, 92, 255, 0.15));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--accent-blue);
   padding: var(--space-sm) var(--space-xl);
   text-align: center;
@@ -785,12 +787,16 @@ body::after {
   font-weight: 500;
   letter-spacing: 0.02em;
   position: sticky;
-  top: 65px;
+  top: 73px;
   z-index: 90;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-sm);
+}
+
+.edit-mode-banner[hidden] {
+  display: none !important;
 }
 
 /* ===========================
