@@ -1583,124 +1583,108 @@ body::after {
   color: var(--accent-cyan);
 }
 
-/* 雨雲レーダー */
-.btn-toggle-radar {
-  margin-top: var(--space-md);
-  width: 100%;
-  padding: var(--space-sm);
-  background: transparent;
-  border: 1px dashed var(--border-glass);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  font-family: var(--font-family);
-  font-size: var(--font-size-xs);
-  cursor: pointer;
-  transition: all var(--transition-base);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-}
-
-.btn-toggle-radar:hover {
-  border-color: var(--accent-cyan);
-  color: var(--accent-cyan);
-}
-
-.radar-wrap {
-  margin-top: var(--space-md);
-}
-
-.radar-iframe {
-  width: 100%;
-  height: 380px;
-  border: none;
-  border-radius: var(--radius-md);
-  display: block;
-}
-
 /* ===========================
-   太陽光発電 全画面オーバーレイ
+   天気パネル（雨雲レーダー / 太陽光発電 タブ）
    =========================== */
-.solar-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 500;
-  background: var(--bg-primary);
-  display: flex;
-  flex-direction: column;
+.weather-panel {
+  margin-top: var(--space-md);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.solar-overlay[hidden] {
+.weather-panel[hidden] {
   display: none !important;
 }
 
-.solar-toolbar {
+.wpanel-tabs {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: var(--space-sm) var(--space-lg);
-  background: rgba(10, 14, 39, 0.95);
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: rgba(255, 255, 255, 0.05);
   border-bottom: 1px solid var(--border-glass);
-  flex-shrink: 0;
-  gap: var(--space-md);
+  flex-wrap: wrap;
 }
 
-.solar-toolbar-title {
+.wpanel-tab {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-glass);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  font-weight: 600;
+  gap: 6px;
+  transition: all var(--transition-fast);
+}
+
+.wpanel-tab:hover {
   color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  background: rgba(0, 212, 170, 0.07);
 }
 
-.solar-toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+.wpanel-tab.active {
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  background: rgba(0, 212, 170, 0.12);
 }
 
-.btn-solar-external {
-  padding: var(--space-xs) var(--space-md);
-  background: rgba(74, 158, 255, 0.1);
-  border: 1px solid rgba(74, 158, 255, 0.3);
+.wpanel-external {
+  margin-left: auto;
+  padding: 5px 12px;
+  background: rgba(74, 158, 255, 0.08);
+  border: 1px solid rgba(74, 158, 255, 0.25);
   border-radius: var(--radius-sm);
   color: var(--accent-blue);
   text-decoration: none;
   font-size: var(--font-size-xs);
   font-weight: 500;
-  transition: all var(--transition-fast);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
 }
 
-.btn-solar-external:hover {
-  background: rgba(74, 158, 255, 0.2);
+.wpanel-external:hover {
+  background: rgba(74, 158, 255, 0.18);
 }
 
-.btn-solar-close {
-  width: 36px;
-  height: 36px;
+.wpanel-close {
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-sm);
-  background: rgba(255, 94, 160, 0.1);
   border: 1px solid rgba(255, 94, 160, 0.3);
+  background: rgba(255, 94, 160, 0.08);
   color: var(--accent-pink);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-base);
+  font-size: 0.85rem;
   transition: all var(--transition-fast);
+  flex-shrink: 0;
 }
 
-.btn-solar-close:hover {
-  background: rgba(255, 94, 160, 0.25);
+.wpanel-close:hover {
+  background: rgba(255, 94, 160, 0.22);
 }
 
-.solar-iframe {
-  flex: 1;
+.wpanel-content {
   width: 100%;
+  min-height: 380px;
+}
+
+.wpanel-iframe {
+  width: 100%;
+  height: 420px;
   border: none;
   display: block;
 }
@@ -1850,10 +1834,13 @@ body::after {
     opacity: 0.85;
   }
 
-  /* 太陽光ツールバー */
-  .solar-toolbar {
-    flex-wrap: wrap;
-    padding: var(--space-xs) var(--space-md);
+  /* 天気パネルタブ */
+  .wpanel-tabs {
+    gap: 4px;
+  }
+
+  .wpanel-iframe {
+    height: 300px;
   }
 
   /* お知らせ */

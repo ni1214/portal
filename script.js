@@ -501,7 +501,7 @@ function buildExternalCard(card) {
 
   if (card.url === 'solar:open') {
     a.href = '#';
-    a.addEventListener('click', e => { e.preventDefault(); openSolarOverlay(); });
+    a.addEventListener('click', e => { e.preventDefault(); openWeatherPanel('solar'); });
   } else {
     a.href = isEditMode ? '#' : (card.url || '#');
     if (!isEditMode) a.target = '_blank';
@@ -878,16 +878,30 @@ function closePinModal() {
   document.getElementById('pin-modal').classList.remove('visible');
 }
 
-// ========== 太陽光オーバーレイ ==========
-function openSolarOverlay() {
-  const overlay = document.getElementById('solar-overlay');
-  overlay.hidden = false;
-  document.body.style.overflow = 'hidden';
+// ========== 天気パネル（雨雲レーダー / 太陽光発電 タブ） ==========
+const WINDY_URL = `https://embed.windy.com/embed2.html?lat=${WEATHER_LAT}&lon=${WEATHER_LON}&detailLat=${WEATHER_LAT}&detailLon=${WEATHER_LON}&zoom=9&level=surface&overlay=rain&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1`;
+const SOLAR_SRC = 'https://mierukaweb.energymntr.com/48429893PZ';
+
+function openWeatherPanel(tab) {
+  const panel = document.getElementById('weather-panel');
+  panel.hidden = false;
+  switchWeatherTab(tab);
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function closeSolarOverlay() {
-  document.getElementById('solar-overlay').hidden = true;
-  document.body.style.overflow = '';
+function closeWeatherPanel() {
+  document.getElementById('weather-panel').hidden = true;
+  document.getElementById('wpanel-content').innerHTML = '';
+}
+
+function switchWeatherTab(tab) {
+  document.querySelectorAll('.wpanel-tab').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === tab)
+  );
+  const src = tab === 'radar' ? WINDY_URL : SOLAR_SRC;
+  document.getElementById('wpanel-external').href = src;
+  document.getElementById('wpanel-content').innerHTML =
+    `<iframe src="${src}" class="wpanel-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" allowfullscreen></iframe>`;
 }
 
 // ========== 天気 ==========
@@ -1111,28 +1125,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   fetchAndRenderWeather();
   setInterval(fetchAndRenderWeather, 30 * 60 * 1000);
 
-  // 雨雲レーダーボタン
-  document.getElementById('toggle-radar')?.addEventListener('click', () => {
-    const wrap = document.getElementById('weather-radar');
-    const btn = document.getElementById('toggle-radar');
-    const frame = document.getElementById('windy-frame');
-    if (wrap.hidden) {
-      if (!frame.src) {
-        frame.src = `https://embed.windy.com/embed2.html?lat=${WEATHER_LAT}&lon=${WEATHER_LON}&detailLat=${WEATHER_LAT}&detailLon=${WEATHER_LON}&zoom=9&level=surface&overlay=rain&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1`;
-      }
-      wrap.hidden = false;
-      btn.innerHTML = '<i class="fa-solid fa-map"></i> 雨雲レーダーを非表示';
-    } else {
-      wrap.hidden = true;
-      btn.innerHTML = '<i class="fa-solid fa-map"></i> 雨雲レーダーを表示';
-    }
-  });
-
-  // 太陽光オーバーレイ閉じる
-  document.getElementById('solar-close')?.addEventListener('click', closeSolarOverlay);
-  document.getElementById('solar-overlay')?.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeSolarOverlay();
-  });
+  // ===== 天気パネル タブ切り替え・閉じる =====
+  document.getElementById('wpanel-close').addEventListener('click', closeWeatherPanel);
+  document.getElementById('tab-radar').addEventListener('click', () => switchWeatherTab('radar'));
+  document.getElementById('tab-solar').addEventListener('click', () => switchWeatherTab('solar'));
 
   // Firestore 読み込み
   try {

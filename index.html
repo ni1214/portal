@@ -85,11 +85,26 @@
         </div>
         <div id="weather-forecast" class="forecast-scroll"></div>
       </div>
-      <button id="toggle-radar" class="btn-toggle-radar">
-        <i class="fa-solid fa-map"></i> 雨雲レーダーを表示
-      </button>
-      <div id="weather-radar" class="radar-wrap" hidden>
-        <iframe id="windy-frame" class="radar-iframe" allowfullscreen></iframe>
+
+      <!-- 展開パネル（雨雲レーダー / 太陽光発電 タブ） -->
+      <div id="weather-panel" class="weather-panel" hidden>
+        <div class="wpanel-tabs">
+          <button class="wpanel-tab" id="tab-radar" data-tab="radar">
+            <i class="fa-solid fa-map"></i> 雨雲レーダー
+          </button>
+          <button class="wpanel-tab" id="tab-solar" data-tab="solar">
+            <i class="fa-solid fa-solar-panel"></i> 太陽光発電
+          </button>
+          <a id="wpanel-external" href="#" target="_blank" rel="noopener" class="wpanel-external">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> 別タブで開く
+          </a>
+          <button id="wpanel-close" class="wpanel-close" title="閉じる">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div id="wpanel-content" class="wpanel-content">
+          <!-- iframe は JS が挿入 -->
+        </div>
       </div>
     </section>
 
@@ -109,29 +124,6 @@
   <button class="admin-fab" id="admin-fab" title="管理者ログイン">
     <i class="fa-solid fa-lock"></i>
   </button>
-
-  <!-- ==================== 太陽光発電 全画面オーバーレイ ==================== -->
-  <div id="solar-overlay" class="solar-overlay" hidden>
-    <div class="solar-toolbar">
-      <div class="solar-toolbar-title">
-        <i class="fa-solid fa-solar-panel"></i>
-        <span>太陽光発電モニタリング</span>
-      </div>
-      <div class="solar-toolbar-actions">
-        <a href="https://mierukaweb.energymntr.com/48429893PZ" target="_blank" rel="noopener" class="btn-solar-external">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> 別タブで開く
-        </a>
-        <button id="solar-close" class="btn-solar-close" title="閉じる">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-    </div>
-    <iframe id="solar-frame"
-      src="https://mierukaweb.energymntr.com/48429893PZ"
-      class="solar-iframe"
-      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-      title="太陽光発電モニタリング"></iframe>
-  </div>
 
   <!-- ==================== PIN認証モーダル ==================== -->
   <div class="modal-overlay" id="pin-modal">
