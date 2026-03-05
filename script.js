@@ -593,6 +593,17 @@ function buildExternalCard(card) {
   wrap.appendChild(a);
 
   if (isEditMode) {
+    const edit = document.createElement('button');
+    edit.className = 'ext-icon-edit';
+    edit.title = '編集';
+    edit.innerHTML = '<i class="fa-solid fa-pen"></i>';
+    edit.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      openCardModal(card.id);
+    });
+    wrap.appendChild(edit);
+
     const del = document.createElement('button');
     del.className = 'ext-icon-delete';
     del.title = '削除';
@@ -884,7 +895,8 @@ function openCardModal(docId, categoryId = null) {
 
   document.getElementById('card-modal-title').textContent = docId ? 'カードを編集' : 'カードを追加';
   document.getElementById('card-delete').style.display = docId ? 'inline-flex' : 'none';
-  document.getElementById('edit-icon-group').style.display = isSVG ? 'none' : '';
+  document.getElementById('edit-icon-group').style.display = '';
+  document.getElementById('icon-picker').style.display = isSVG ? 'none' : '';
 
   const currentIcon = card ? card.icon : 'fa-solid fa-star';
   document.getElementById('edit-label').value = card ? card.label : '';
@@ -906,9 +918,14 @@ function closeCardModal() {
 function updateIconPreview(iconClass) {
   const el = document.getElementById('icon-preview');
   if (!iconClass) { el.innerHTML = ''; return; }
-  el.innerHTML = iconClass.startsWith('svg:')
-    ? '<span style="font-size:0.65rem;opacity:0.5">SVG</span>'
-    : `<i class="${iconClass}"></i>`;
+  if (iconClass.startsWith('svg:')) {
+    const imgHtml = SVG_ICONS[iconClass] || '';
+    el.innerHTML = imgHtml
+      ? `<div style="width:32px;height:32px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.15)">${imgHtml}</div>`
+      : '<span style="font-size:0.65rem;opacity:0.5">SVG</span>';
+  } else {
+    el.innerHTML = `<i class="${iconClass}"></i>`;
+  }
 }
 
 function buildIconPicker(selectedIcon) {
