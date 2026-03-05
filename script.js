@@ -1345,9 +1345,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== カード編集モーダル =====
   document.getElementById('card-cancel').addEventListener('click', closeCardModal);
-  document.getElementById('card-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeCardModal();
-  });
+  // 枠外クリックでは閉じない（意図しない操作防止）
   document.getElementById('edit-icon').addEventListener('input', e => {
     const val = e.target.value.trim();
     updateIconPreview(val);
