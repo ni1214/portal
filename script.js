@@ -344,9 +344,10 @@ async function loadCategories() {
 
 function subscribeCards() {
   if (unsubscribeCards) unsubscribeCards();
-  const q = query(collection(db, 'cards'), orderBy('categoryOrder'), orderBy('order'));
+  const q = query(collection(db, 'cards'), orderBy('categoryOrder'));
   unsubscribeCards = onSnapshot(q, snapshot => {
-    allCards = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    allCards = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.categoryOrder ?? 0) - (b.categoryOrder ?? 0) || (a.order ?? 0) - (b.order ?? 0));
     renderAllSections();
     renderFavorites();
   }, err => console.error('onSnapshot エラー:', err));
