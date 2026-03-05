@@ -1086,11 +1086,11 @@ function calcHeatIndex(tempC, humidity) {
 }
 
 function getHeatLevel(hi) {
-  if (hi >= 40) return { level: 'danger',    label: '危険',    color: '#ff5ea0' };
-  if (hi >= 35) return { level: 'warning',   label: '厳重警戒', color: '#ff8c42' };
-  if (hi >= 31) return { level: 'caution',   label: '警戒',    color: '#e6c800' };
-  if (hi >= 28) return { level: 'attention', label: '注意',    color: '#00d4aa' };
-  return { level: 'safe', label: 'ほぼ安全', color: 'rgba(255,255,255,0.3)' };
+  if (hi >= 40) return { level: 'danger',    label: '危険',    icon: '🔴', color: '#c0392b', glow: 'rgba(255,94,160,0.55)', textColor: '#fff' };
+  if (hi >= 35) return { level: 'warning',   label: '厳重警戒', icon: '🟠', color: '#d35400', glow: 'rgba(255,140,66,0.55)', textColor: '#fff' };
+  if (hi >= 31) return { level: 'caution',   label: '警戒',    icon: '🟡', color: '#d4ac00', glow: 'rgba(230,200,0,0.4)',  textColor: '#1a1a00' };
+  if (hi >= 28) return { level: 'attention', label: '注意',    icon: '🟢', color: '#00a888', glow: 'rgba(0,212,170,0.4)',  textColor: '#fff' };
+  return { level: 'safe', label: 'ほぼ安全', icon: '✅', color: 'rgba(255,255,255,0.12)', glow: 'transparent', textColor: 'var(--text-secondary)' };
 }
 
 const OWM_ICON_MAP = {
@@ -1139,8 +1139,13 @@ async function fetchAndRenderWeather() {
         <div class="weather-detail-item"><i class="fa-solid fa-wind"></i> ${wind}m/s</div>
         <div class="weather-detail-item"><i class="fa-solid fa-temperature-half"></i> 体感 ${feels}°C</div>
       </div>
-      <div class="heat-badge" style="background:${heat.color};color:${heat.level==='caution'?'#333':'#fff'}">
-        <i class="fa-solid fa-sun"></i> 熱中症危険度: ${heat.label}
+      <div class="heat-badge level-${heat.level}"
+           style="background:${heat.color};color:${heat.textColor};--heat-glow:${heat.glow}">
+        <span class="heat-badge-icon">${heat.icon}</span>
+        <div class="heat-badge-body">
+          <span class="heat-badge-title">熱中症危険度</span>
+          <span class="heat-badge-level">${heat.label}</span>
+        </div>
       </div>
     `;
 

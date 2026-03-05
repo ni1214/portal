@@ -1774,13 +1774,53 @@ body::after {
 }
 
 .heat-badge {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  border-radius: 50px;
-  font-size: var(--font-size-xs);
-  font-weight: 600;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  transition: box-shadow var(--transition-base);
+}
+
+.heat-badge-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.heat-badge-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.heat-badge-title {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.heat-badge-level {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+/* 危険・厳重警戒: 脈動アニメーション */
+.heat-badge.level-danger,
+.heat-badge.level-warning {
+  animation: heat-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes heat-pulse {
+  0%, 100% { transform: scale(1);    box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
+  50%       { transform: scale(1.01); box-shadow: 0 6px 28px var(--heat-glow, rgba(255,100,100,0.5)); }
 }
 
 /* 予報スクロール */
