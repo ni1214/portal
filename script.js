@@ -1322,6 +1322,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // ===== 使い方ガイド =====
+  document.getElementById('help-fab').addEventListener('click', () => {
+    document.getElementById('guide-modal').classList.add('visible');
+  });
+  document.getElementById('guide-close').addEventListener('click', () => {
+    document.getElementById('guide-modal').classList.remove('visible');
+  });
+  document.getElementById('guide-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) document.getElementById('guide-modal').classList.remove('visible');
+  });
+
   // ===== サービスピッカー 閉じる =====
   document.getElementById('service-picker-cancel').addEventListener('click', closeServicePicker);
   document.getElementById('service-picker-modal').addEventListener('click', e => {

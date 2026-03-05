@@ -1115,6 +1115,171 @@ body::after {
 }
 
 /* ===========================
+   Help FAB
+   =========================== */
+.help-fab {
+  position: fixed;
+  bottom: var(--space-xl);
+  right: calc(var(--space-xl) + 48px + 12px);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  color: var(--text-muted);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-base);
+}
+
+.help-fab:hover {
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 16px rgba(0, 212, 170, 0.35);
+  transform: scale(1.1);
+}
+
+/* ===========================
+   Guide Modal
+   =========================== */
+.guide-glass {
+  max-width: 640px;
+  width: 92vw;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.guide-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-lg) var(--space-xl);
+  border-bottom: 1px solid var(--border-glass);
+  flex-shrink: 0;
+}
+
+.guide-header .modal-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guide-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border-glass);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.guide-close:hover {
+  color: var(--accent-pink);
+  border-color: var(--accent-pink);
+  background: rgba(255, 94, 160, 0.12);
+}
+
+.guide-body {
+  overflow-y: auto;
+  padding: var(--space-lg) var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+
+.guide-body::-webkit-scrollbar { width: 4px; }
+.guide-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+.guide-section {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+}
+
+.guide-section--admin {
+  border-color: rgba(74, 158, 255, 0.3);
+  background: rgba(74, 158, 255, 0.04);
+}
+
+.guide-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-sm);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guide-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.guide-sub-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-blue);
+  margin: var(--space-sm) 0 4px;
+}
+
+.guide-list {
+  margin: 0;
+  padding-left: 1.3em;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.guide-list li {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.guide-list strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.guide-note {
+  font-size: 0.78rem;
+  color: var(--accent-cyan);
+  margin: 0 0 var(--space-sm);
+  padding: 5px 10px;
+  background: rgba(0, 212, 170, 0.08);
+  border-radius: 6px;
+  border-left: 2px solid var(--accent-cyan);
+}
+
+.guide-version {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: right;
+  margin: 0;
+}
+
+/* ===========================
    Modal
    =========================== */
 .modal-overlay {
