@@ -458,9 +458,10 @@ function buildLinkCard(card, isFav = false, gradient = '') {
   const a = document.createElement('a');
   if (card.url === 'solar:open') {
     a.href = '#';
-    a.addEventListener('click', e => { e.preventDefault(); openWeatherPanel('solar'); });
+    a.dataset.solarOpen = '1';
   } else {
     a.href = isEditMode ? '#' : (card.url || '#');
+    if (!isEditMode) a.target = '_blank';
   }
   a.className = 'link-card';
   a.dataset.docId = card.id;
@@ -514,7 +515,7 @@ function buildExternalCard(card) {
 
   if (card.url === 'solar:open') {
     a.href = '#';
-    a.addEventListener('click', e => { e.preventDefault(); openWeatherPanel('solar'); });
+    a.dataset.solarOpen = '1';
   } else {
     a.href = isEditMode ? '#' : (card.url || '#');
     if (!isEditMode) a.target = '_blank';
@@ -897,21 +898,21 @@ const SOLAR_SRC = 'https://mierukaweb.energymntr.com/48429893PZ';
 
 function openWeatherPanel(tab) {
   const widget = document.getElementById('weather-widget');
-  widget.hidden = false;
-  // アニメーション再生のため一度リセット
-  widget.style.animation = 'none';
-  widget.offsetHeight; // reflow
-  widget.style.animation = '';
-  const panel = document.getElementById('weather-panel');
-  panel.hidden = false;
+  const panel  = document.getElementById('weather-panel');
+  if (!widget || !panel) return;
+  widget.removeAttribute('hidden');
+  panel.removeAttribute('hidden');
   switchWeatherTab(tab);
-  setTimeout(() => widget.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+  setTimeout(() => widget.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
 }
 
 function closeWeatherPanel() {
-  document.getElementById('weather-panel').hidden = true;
-  document.getElementById('wpanel-content').innerHTML = '';
-  document.getElementById('weather-widget').hidden = true;
+  const panel   = document.getElementById('weather-panel');
+  const content = document.getElementById('wpanel-content');
+  const widget  = document.getElementById('weather-widget');
+  if (panel)   panel.setAttribute('hidden', '');
+  if (content) content.innerHTML = '';
+  if (widget)  widget.setAttribute('hidden', '');
 }
 
 function switchWeatherTab(tab) {
@@ -1149,6 +1150,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('wpanel-close').addEventListener('click', closeWeatherPanel);
   document.getElementById('tab-radar').addEventListener('click', () => switchWeatherTab('radar'));
   document.getElementById('tab-solar').addEventListener('click', () => switchWeatherTab('solar'));
+
+  // ===== 太陽光発電カード（イベント委譲） =====
+  // data-solar-open 属性を持つ要素をどこでもクリックで天気パネルを開く
+  document.addEventListener('click', e => {
+    const card = e.target.closest('[data-solar-open]');
+    if (card) {
+      e.preventDefault();
+      openWeatherPanel('solar');
+    }
+  });
 
   // Firestore 読み込み
   try {
