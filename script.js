@@ -896,15 +896,22 @@ const WINDY_URL = `https://embed.windy.com/embed2.html?lat=${WEATHER_LAT}&lon=${
 const SOLAR_SRC = 'https://mierukaweb.energymntr.com/48429893PZ';
 
 function openWeatherPanel(tab) {
+  const widget = document.getElementById('weather-widget');
+  widget.hidden = false;
+  // アニメーション再生のため一度リセット
+  widget.style.animation = 'none';
+  widget.offsetHeight; // reflow
+  widget.style.animation = '';
   const panel = document.getElementById('weather-panel');
   panel.hidden = false;
   switchWeatherTab(tab);
-  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  setTimeout(() => widget.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
 }
 
 function closeWeatherPanel() {
   document.getElementById('weather-panel').hidden = true;
   document.getElementById('wpanel-content').innerHTML = '';
+  document.getElementById('weather-widget').hidden = true;
 }
 
 function switchWeatherTab(tab) {

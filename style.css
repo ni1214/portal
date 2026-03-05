@@ -1416,6 +1416,10 @@ body::after {
   animation: fadeInUp 0.5s ease forwards;
 }
 
+.weather-widget[hidden] {
+  display: none !important;
+}
+
 .weather-section-header {
   display: flex;
   align-items: center;
