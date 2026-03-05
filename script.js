@@ -283,7 +283,15 @@ async function loadCategories() {
   const q = query(collection(db, 'categories'), orderBy('order'));
   const snap = await getDocs(q);
   if (snap.docs.length > 0) {
-    allCategories = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+    allCategories = snap.docs.map(d => {
+      const data = d.data();
+      return {
+        docId: d.id,
+        ...data,
+        // Firestore に isExternal が未保存の場合は id で判定
+        isExternal: data.isExternal ?? (data.id === 'external')
+      };
+    });
   }
 }
 
@@ -448,7 +456,12 @@ function buildSection(cat, cards) {
 
 function buildLinkCard(card, isFav = false, gradient = '') {
   const a = document.createElement('a');
-  a.href = isEditMode ? '#' : (card.url || '#');
+  if (card.url === 'solar:open') {
+    a.href = '#';
+    a.addEventListener('click', e => { e.preventDefault(); openWeatherPanel('solar'); });
+  } else {
+    a.href = isEditMode ? '#' : (card.url || '#');
+  }
   a.className = 'link-card';
   a.dataset.docId = card.id;
 
