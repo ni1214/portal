@@ -338,13 +338,16 @@ body::after {
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
 
-.ext-icon-img svg {
+.ext-icon-img img {
   width: 52px;
   height: 52px;
-  border-radius: 13px;
+  object-fit: contain;
   display: block;
+  border-radius: 13px;
 }
 
 .ext-icon-label {
@@ -464,6 +467,14 @@ body::after {
   height: 46px;
   border-radius: 11px;
   display: block;
+}
+
+.svc-pick-icon img {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  display: block;
+  border-radius: 11px;
 }
 
 .svc-pick-label {
