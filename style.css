@@ -350,6 +350,17 @@ body::after {
   border-radius: 13px;
 }
 
+/* 太陽光発電カード: 黄色グラデーション背景 */
+.ext-icon-solar-img {
+  background: linear-gradient(135deg, #fff8e1, #ffe082) !important;
+  box-shadow: 0 1px 6px rgba(249,168,37,0.35) !important;
+}
+
+/* 太陽光カード: 枠線で固定感を演出 */
+.ext-icon-solar-pinned > .ext-icon-btn {
+  border-color: rgba(249, 168, 37, 0.4);
+}
+
 .ext-icon-label {
   font-size: 0.68rem;
   line-height: 1.2;

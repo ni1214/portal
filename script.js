@@ -467,7 +467,9 @@ function buildSection(cat, cards) {
       <div class="external-grid"></div>
     `;
     const grid = section.querySelector('.external-grid');
-    cards.forEach(c => grid.appendChild(buildExternalCard(c)));
+    // 太陽光カードは常に先頭固定（Firestoreのsolar:openカードは除外して重複を防ぐ）
+    grid.appendChild(buildSolarIconWrap());
+    cards.filter(c => c.url !== 'solar:open').forEach(c => grid.appendChild(buildExternalCard(c)));
     if (isEditMode) {
       const addWrap = document.createElement('div');
       addWrap.className = 'ext-icon-wrap';
@@ -565,6 +567,24 @@ function buildLinkCard(card, isFav = false, gradient = '') {
     setupDraggable(a, card);
   }
   return a;
+}
+
+// 太陽光カード: 常に先頭固定・削除不可
+function buildSolarIconWrap() {
+  const wrap = document.createElement('div');
+  wrap.className = 'ext-icon-wrap ext-icon-solar-pinned';
+
+  const a = document.createElement('a');
+  a.className = 'ext-icon-btn';
+  a.href = '#';
+  a.setAttribute('data-solar-open', '1');
+  a.innerHTML = `
+    <div class="ext-icon-img ext-icon-solar-img">
+      <i class="fa-solid fa-solar-panel" style="font-size:2rem;color:#f9a825"></i>
+    </div>
+    <span class="ext-icon-label">太陽光発電</span>`;
+  wrap.appendChild(a);
+  return wrap;
 }
 
 function buildExternalCard(card) {
@@ -1031,6 +1051,9 @@ function openWeatherPanel(tab) {
   widget.removeAttribute('hidden');
   panel.removeAttribute('hidden');
   switchWeatherTab(tab);
+  // 天気データが未ロードなら取得
+  const current = document.getElementById('weather-current');
+  if (current && !current.innerHTML.trim()) fetchAndRenderWeather();
   setTimeout(() => widget.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
 }
 
