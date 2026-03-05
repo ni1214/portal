@@ -114,12 +114,14 @@
       </div>
 
       <div class="form-group" id="edit-icon-group">
-        <label class="form-label">アイコン（Font Awesome クラス名）</label>
-        <div class="icon-row">
-          <input type="text" id="edit-icon" class="form-input" placeholder="例: fa-solid fa-star">
+        <label class="form-label">アイコン</label>
+        <!-- アイコンピッカー -->
+        <div class="icon-picker" id="icon-picker"></div>
+        <!-- 直接入力（上級者向け） -->
+        <div class="icon-manual-row">
           <div class="icon-preview" id="icon-preview"></div>
+          <input type="text" id="edit-icon" class="form-input" placeholder="fa-solid fa-star（直接入力も可）">
         </div>
-        <span class="form-hint">Font Awesome 6 のクラス名を入力 — 例: fa-solid fa-star &nbsp;|&nbsp; <a href="https://fontawesome.com/icons" target="_blank" style="color:var(--accent-blue)">アイコン一覧</a></span>
       </div>
 
       <div class="form-group">

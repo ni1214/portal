@@ -26,6 +26,147 @@ const SVG_ICONS = {
   'svg:gdrive': `<svg viewBox="0 0 87.3 78" width="40" height="40" xmlns="http://www.w3.org/2000/svg"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-20.4 35.3c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-10.1-17.5c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 23.8h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>`
 };
 
+// ========== アイコンピッカー用アイコン一覧 ==========
+const ICON_PICKER_LIST = [
+  // ドキュメント・ファイル
+  { icon: 'fa-solid fa-folder-open',          label: 'フォルダ(開)' },
+  { icon: 'fa-solid fa-folder',               label: 'フォルダ' },
+  { icon: 'fa-solid fa-file-lines',           label: 'ファイル' },
+  { icon: 'fa-solid fa-file-circle-plus',     label: 'ファイル追加' },
+  { icon: 'fa-solid fa-file-circle-check',    label: 'ファイル確認' },
+  { icon: 'fa-solid fa-file-invoice',         label: '請求書' },
+  { icon: 'fa-solid fa-file-contract',        label: '契約書' },
+  { icon: 'fa-solid fa-box-archive',          label: 'アーカイブ' },
+  { icon: 'fa-solid fa-clipboard',            label: 'クリップボード' },
+  { icon: 'fa-solid fa-clipboard-check',      label: 'チェック' },
+  { icon: 'fa-solid fa-clipboard-list',       label: 'リスト' },
+  { icon: 'fa-solid fa-book',                 label: 'ブック' },
+  { icon: 'fa-solid fa-book-open',            label: '開いた本' },
+  { icon: 'fa-solid fa-bookmark',             label: 'ブックマーク' },
+  { icon: 'fa-solid fa-paperclip',            label: 'クリップ' },
+  { icon: 'fa-solid fa-print',                label: '印刷' },
+  // カレンダー・時間
+  { icon: 'fa-solid fa-calendar-days',        label: 'カレンダー' },
+  { icon: 'fa-solid fa-calendar-check',       label: '確認' },
+  { icon: 'fa-solid fa-calendar-plus',        label: '追加' },
+  { icon: 'fa-solid fa-calendar-xmark',       label: '削除' },
+  { icon: 'fa-solid fa-clock',                label: '時計' },
+  { icon: 'fa-solid fa-stopwatch',            label: 'ストップウォッチ' },
+  { icon: 'fa-solid fa-hourglass-half',       label: '砂時計' },
+  { icon: 'fa-solid fa-business-time',        label: '業務時間' },
+  // グラフ・データ
+  { icon: 'fa-solid fa-bars-progress',        label: '進捗' },
+  { icon: 'fa-solid fa-chart-bar',            label: '棒グラフ' },
+  { icon: 'fa-solid fa-chart-line',           label: '折れ線' },
+  { icon: 'fa-solid fa-chart-pie',            label: '円グラフ' },
+  { icon: 'fa-solid fa-chart-column',         label: '縦棒グラフ' },
+  { icon: 'fa-solid fa-list-check',           label: 'チェックリスト' },
+  { icon: 'fa-solid fa-table',                label: '表' },
+  { icon: 'fa-solid fa-table-list',           label: 'テーブル' },
+  { icon: 'fa-solid fa-database',             label: 'DB' },
+  { icon: 'fa-solid fa-magnifying-glass-chart', label: '分析' },
+  // 製造・工場
+  { icon: 'fa-solid fa-industry',             label: '工場' },
+  { icon: 'fa-solid fa-gears',                label: 'ギア複数' },
+  { icon: 'fa-solid fa-gear',                 label: 'ギア' },
+  { icon: 'fa-solid fa-screwdriver-wrench',   label: '工具' },
+  { icon: 'fa-solid fa-hammer',               label: 'ハンマー' },
+  { icon: 'fa-solid fa-wrench',               label: 'レンチ' },
+  { icon: 'fa-solid fa-screwdriver',          label: 'ドライバー' },
+  { icon: 'fa-solid fa-toolbox',              label: 'ツールボックス' },
+  { icon: 'fa-solid fa-warehouse',            label: '倉庫' },
+  { icon: 'fa-solid fa-cubes',                label: '在庫(複数)' },
+  { icon: 'fa-solid fa-cube',                 label: 'キューブ' },
+  { icon: 'fa-solid fa-drafting-compass',     label: 'コンパス' },
+  { icon: 'fa-solid fa-ruler-combined',       label: '定規' },
+  { icon: 'fa-solid fa-ruler',                label: 'ルーラー' },
+  { icon: 'fa-solid fa-calculator',           label: '計算機' },
+  { icon: 'fa-solid fa-microscope',           label: '顕微鏡' },
+  { icon: 'fa-solid fa-flask',                label: 'フラスコ' },
+  { icon: 'fa-solid fa-hard-hat',             label: 'ヘルメット' },
+  // 物流・注文
+  { icon: 'fa-solid fa-cart-shopping',        label: 'カート' },
+  { icon: 'fa-solid fa-truck',                label: 'トラック' },
+  { icon: 'fa-solid fa-truck-fast',           label: '急配' },
+  { icon: 'fa-solid fa-truck-loading',        label: '積み込み' },
+  { icon: 'fa-solid fa-box',                  label: '箱' },
+  { icon: 'fa-solid fa-boxes-stacked',        label: '積み箱' },
+  { icon: 'fa-solid fa-pallet',               label: 'パレット' },
+  { icon: 'fa-solid fa-dolly',                label: 'ドーリー' },
+  { icon: 'fa-solid fa-handshake',            label: '取引' },
+  { icon: 'fa-solid fa-receipt',              label: 'レシート' },
+  { icon: 'fa-solid fa-tags',                 label: 'タグ複数' },
+  { icon: 'fa-solid fa-tag',                  label: 'タグ' },
+  { icon: 'fa-solid fa-barcode',              label: 'バーコード' },
+  { icon: 'fa-solid fa-qrcode',               label: 'QRコード' },
+  // 建具・建物
+  { icon: 'fa-solid fa-door-open',            label: 'ドア(開)' },
+  { icon: 'fa-solid fa-door-closed',          label: 'ドア(閉)' },
+  { icon: 'fa-solid fa-building',             label: 'ビル' },
+  { icon: 'fa-solid fa-house',                label: '家' },
+  { icon: 'fa-solid fa-stairs',               label: '階段' },
+  { icon: 'fa-solid fa-window-maximize',      label: '窓' },
+  { icon: 'fa-solid fa-torii-gate',           label: '建物' },
+  // 人・コミュニケーション
+  { icon: 'fa-solid fa-users',                label: 'ユーザー複数' },
+  { icon: 'fa-solid fa-user',                 label: 'ユーザー' },
+  { icon: 'fa-solid fa-user-tie',             label: 'スタッフ' },
+  { icon: 'fa-solid fa-user-gear',            label: '管理者' },
+  { icon: 'fa-solid fa-address-book',         label: 'アドレス帳' },
+  { icon: 'fa-solid fa-comment-dots',         label: 'コメント' },
+  { icon: 'fa-solid fa-comments',             label: '会話' },
+  { icon: 'fa-solid fa-envelope',             label: 'メール' },
+  { icon: 'fa-solid fa-phone',                label: '電話' },
+  { icon: 'fa-solid fa-headset',              label: 'ヘッドセット' },
+  { icon: 'fa-solid fa-bell',                 label: '通知' },
+  { icon: 'fa-solid fa-bullhorn',             label: 'アナウンス' },
+  // アラート・状態
+  { icon: 'fa-solid fa-triangle-exclamation', label: '警告' },
+  { icon: 'fa-solid fa-circle-check',         label: 'OK' },
+  { icon: 'fa-solid fa-circle-xmark',         label: 'NG' },
+  { icon: 'fa-solid fa-circle-info',          label: 'インフォ' },
+  { icon: 'fa-solid fa-flag',                 label: 'フラグ' },
+  { icon: 'fa-solid fa-shield-halved',        label: 'シールド' },
+  { icon: 'fa-solid fa-thumbs-up',            label: 'いいね' },
+  { icon: 'fa-solid fa-check',                label: 'チェック' },
+  // エネルギー・素材
+  { icon: 'fa-solid fa-bolt',                 label: '電気' },
+  { icon: 'fa-solid fa-fill-drip',            label: '充填' },
+  { icon: 'fa-solid fa-bars',                 label: '鋼材' },
+  { icon: 'fa-solid fa-fire',                 label: '炎' },
+  { icon: 'fa-solid fa-water',                label: '水' },
+  { icon: 'fa-solid fa-wind',                 label: '風' },
+  { icon: 'fa-solid fa-plug',                 label: 'プラグ' },
+  { icon: 'fa-solid fa-battery-full',         label: 'バッテリー' },
+  { icon: 'fa-solid fa-solar-panel',          label: '太陽光' },
+  // ダウンロード・共有
+  { icon: 'fa-solid fa-download',             label: 'ダウンロード' },
+  { icon: 'fa-solid fa-upload',               label: 'アップロード' },
+  { icon: 'fa-solid fa-share-nodes',          label: '共有' },
+  { icon: 'fa-solid fa-link',                 label: 'リンク' },
+  { icon: 'fa-solid fa-arrow-up-right-from-square', label: '外部リンク' },
+  // IT・デバイス
+  { icon: 'fa-solid fa-desktop',              label: 'PC' },
+  { icon: 'fa-solid fa-laptop',               label: 'ノートPC' },
+  { icon: 'fa-solid fa-mobile',               label: 'スマホ' },
+  { icon: 'fa-solid fa-server',               label: 'サーバー' },
+  { icon: 'fa-solid fa-wifi',                 label: 'Wi-Fi' },
+  { icon: 'fa-solid fa-network-wired',        label: 'ネットワーク' },
+  { icon: 'fa-solid fa-sitemap',              label: '組織図' },
+  { icon: 'fa-solid fa-cloud',                label: 'クラウド' },
+  // その他
+  { icon: 'fa-solid fa-star',                 label: 'スター' },
+  { icon: 'fa-solid fa-heart',                label: 'ハート' },
+  { icon: 'fa-solid fa-key',                  label: 'キー' },
+  { icon: 'fa-solid fa-lock',                 label: '鍵' },
+  { icon: 'fa-solid fa-sliders',              label: '設定' },
+  { icon: 'fa-solid fa-square-poll-vertical', label: 'アンケート' },
+  { icon: 'fa-solid fa-newspaper',            label: 'ニュース' },
+  { icon: 'fa-solid fa-map',                  label: 'マップ' },
+  { icon: 'fa-solid fa-location-dot',         label: '場所' },
+  { icon: 'fa-solid fa-ellipsis',             label: 'その他' },
+];
+
 // ========== カテゴリ定義 ==========
 const CATEGORIES = [
   { id: 'external',    label: '外部ツール', icon: 'fa-solid fa-arrow-up-right-from-square', colorStyle: 'linear-gradient(135deg, #6c5ce7, #a29bfe)', order: 0, isExternal: true },
@@ -311,10 +452,12 @@ function openCardModal(docId, categoryId = null) {
   document.getElementById('card-delete').style.display = docId ? 'inline-flex' : 'none';
   document.getElementById('edit-icon-group').style.display = isSVG ? 'none' : '';
 
+  const currentIcon = card ? card.icon : 'fa-solid fa-star';
   document.getElementById('edit-label').value = card ? card.label : '';
-  document.getElementById('edit-icon').value  = card ? card.icon  : 'fa-solid fa-star';
+  document.getElementById('edit-icon').value  = currentIcon;
   document.getElementById('edit-url').value   = card ? card.url   : '';
-  updateIconPreview(card ? card.icon : 'fa-solid fa-star');
+  updateIconPreview(currentIcon);
+  if (!isSVG) buildIconPicker(currentIcon);
 
   document.getElementById('card-modal').classList.add('visible');
   setTimeout(() => document.getElementById('edit-label').focus(), 100);
@@ -332,6 +475,36 @@ function updateIconPreview(iconClass) {
   el.innerHTML = iconClass.startsWith('svg:')
     ? '<span style="font-size:0.65rem;opacity:0.5">SVG</span>'
     : `<i class="${iconClass}"></i>`;
+}
+
+function buildIconPicker(selectedIcon) {
+  const picker = document.getElementById('icon-picker');
+  picker.innerHTML = '';
+
+  ICON_PICKER_LIST.forEach(({ icon, label }) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'icon-picker-btn' + (icon === selectedIcon ? ' selected' : '');
+    btn.innerHTML = `<i class="${icon}"></i>`;
+    btn.dataset.label = label;
+    btn.title = label;
+
+    btn.addEventListener('click', () => {
+      // 選択状態の切り替え
+      picker.querySelectorAll('.icon-picker-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+
+      // テキスト入力・プレビューを更新
+      document.getElementById('edit-icon').value = icon;
+      updateIconPreview(icon);
+    });
+
+    picker.appendChild(btn);
+  });
+
+  // 選択中アイコンまでスクロール
+  const selected = picker.querySelector('.selected');
+  if (selected) selected.scrollIntoView({ block: 'nearest' });
 }
 
 // ========== PIN モーダル ==========
@@ -518,7 +691,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('card-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeCardModal();
   });
-  document.getElementById('edit-icon').addEventListener('input', e => updateIconPreview(e.target.value.trim()));
+  document.getElementById('edit-icon').addEventListener('input', e => {
+    const val = e.target.value.trim();
+    updateIconPreview(val);
+    // ピッカーの選択状態を同期
+    document.querySelectorAll('#icon-picker .icon-picker-btn').forEach(btn => {
+      btn.classList.toggle('selected', btn.querySelector('i')?.className === val);
+    });
+  });
 
   document.getElementById('card-save').addEventListener('click', async () => {
     const label = document.getElementById('edit-label').value.trim();
