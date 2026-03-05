@@ -120,6 +120,18 @@
     <p>© 2026 生産管理課 ポータルサイト</p>
   </footer>
 
+  <!-- ==================== サービスピッカーモーダル ==================== -->
+  <div class="modal-overlay" id="service-picker-modal">
+    <div class="modal-glass service-picker-glass">
+      <h3 class="modal-title"><i class="fa-solid fa-grid-2"></i> サービスを追加</h3>
+      <p style="font-size:var(--font-size-sm);color:var(--text-muted);margin-bottom:var(--space-md)">追加したいサービスをタップしてください</p>
+      <div id="service-picker-grid" class="service-picker-grid"></div>
+      <div class="modal-footer" style="margin-top:var(--space-lg)">
+        <button id="service-picker-cancel" class="btn-secondary">閉じる</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ==================== 管理者FABボタン ==================== -->
   <button class="admin-fab" id="admin-fab" title="管理者ログイン">
     <i class="fa-solid fa-lock"></i>

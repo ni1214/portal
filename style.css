@@ -288,9 +288,211 @@ body::after {
 }
 
 .external-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-lg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* ===========================
+   外部ツール アイコン表示
+   =========================== */
+.ext-icon-wrap {
+  position: relative;
+}
+
+.ext-icon-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  width: 82px;
+  padding: 14px 8px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-family: var(--font-family);
+  font-size: 0;
+}
+
+.ext-icon-btn:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-glass-hover);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.ext-icon-btn:active {
+  transform: translateY(-1px) scale(0.97);
+}
+
+.ext-icon-img {
+  width: 52px;
+  height: 52px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.ext-icon-img svg {
+  width: 52px;
+  height: 52px;
+  border-radius: 13px;
+  display: block;
+}
+
+.ext-icon-label {
+  font-size: 0.68rem;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--text-secondary);
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ext-icon-delete {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 94, 160, 0.6);
+  background: var(--bg-primary);
+  color: var(--accent-pink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  transition: all var(--transition-fast);
+  z-index: 10;
+}
+
+.ext-icon-delete:hover {
+  background: rgba(255, 94, 160, 0.25);
+  border-color: var(--accent-pink);
+}
+
+.ext-icon-add-btn {
+  background: transparent;
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+.ext-icon-add-img {
+  border: 2px dashed var(--border-glass);
+  color: var(--text-muted);
+  font-size: 1.4rem;
+}
+
+.ext-icon-add-btn:hover {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.ext-icon-add-btn:hover .ext-icon-add-img {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+/* ===========================
+   サービスピッカーモーダル
+   =========================== */
+.service-picker-glass {
+  max-width: 580px;
+  width: 95vw;
+}
+
+.service-picker-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: var(--space-sm) 0;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.svc-pick-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 78px;
+  padding: 10px 6px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.svc-pick-btn:hover:not([disabled]) {
+  border-color: var(--accent-blue);
+  background: rgba(74, 158, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.svc-pick-btn[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.svc-pick-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.svc-pick-icon svg {
+  width: 46px;
+  height: 46px;
+  border-radius: 11px;
+  display: block;
+}
+
+.svc-pick-label {
+  font-size: 0.65rem;
+  text-align: center;
+  color: var(--text-secondary);
+  line-height: 1.2;
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.svc-added-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 0.5rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(0, 212, 170, 0.15);
+  color: var(--accent-cyan);
+  white-space: nowrap;
+}
+
+.svc-pick-custom-icon {
+  border: 2px dashed var(--border-glass);
+  color: var(--text-muted);
+  font-size: 1.2rem;
 }
 
 .external-card {
@@ -1837,6 +2039,11 @@ body::after {
   .card-edit-overlay {
     opacity: 0.85;
   }
+
+  /* 外部ツール アイコン */
+  .ext-icon-btn { width: 72px; }
+  .ext-icon-img { width: 46px; height: 46px; }
+  .ext-icon-img svg { width: 46px; height: 46px; }
 
   /* 天気パネルタブ */
   .wpanel-tabs {
