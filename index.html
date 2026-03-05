@@ -54,6 +54,45 @@
 
   <!-- ==================== Main ==================== -->
   <main class="main">
+
+    <!-- お気に入りセクション（JS が制御） -->
+    <section id="favorites-section" class="favorites-section category-section" hidden>
+      <div class="category-header">
+        <div class="category-icon" style="background: linear-gradient(135deg, #ffcc00, #dd9900)">
+          <i class="fa-solid fa-star"></i>
+        </div>
+        <h2 class="category-title">お気に入り</h2>
+        <span class="category-count" id="favorites-count">0 件</span>
+      </div>
+      <div class="card-grid" id="favorites-grid"></div>
+    </section>
+
+    <!-- お知らせボード（JS が制御） -->
+    <section id="notice-board" class="notice-board"></section>
+
+    <!-- 天気ウィジェット -->
+    <section id="weather-widget" class="weather-widget">
+      <div class="weather-section-header">
+        <div class="weather-title-area">
+          <i class="fa-solid fa-cloud-sun weather-section-icon"></i>
+          <span class="weather-section-title">高崎市の天気</span>
+        </div>
+        <span id="weather-updated" class="weather-updated"></span>
+      </div>
+      <div class="weather-body">
+        <div id="weather-current" class="weather-current">
+          <div class="weather-loading"><i class="fa-solid fa-spinner fa-spin"></i> 天気情報を取得中...</div>
+        </div>
+        <div id="weather-forecast" class="forecast-scroll"></div>
+      </div>
+      <button id="toggle-radar" class="btn-toggle-radar">
+        <i class="fa-solid fa-map"></i> 雨雲レーダーを表示
+      </button>
+      <div id="weather-radar" class="radar-wrap" hidden>
+        <iframe id="windy-frame" class="radar-iframe" allowfullscreen></iframe>
+      </div>
+    </section>
+
     <!-- カードは script.js が動的に挿入します -->
     <div class="no-results" id="no-results">
       <i class="fa-solid fa-magnifying-glass"></i>
@@ -70,6 +109,29 @@
   <button class="admin-fab" id="admin-fab" title="管理者ログイン">
     <i class="fa-solid fa-lock"></i>
   </button>
+
+  <!-- ==================== 太陽光発電 全画面オーバーレイ ==================== -->
+  <div id="solar-overlay" class="solar-overlay" hidden>
+    <div class="solar-toolbar">
+      <div class="solar-toolbar-title">
+        <i class="fa-solid fa-solar-panel"></i>
+        <span>太陽光発電モニタリング</span>
+      </div>
+      <div class="solar-toolbar-actions">
+        <a href="https://mierukaweb.energymntr.com/48429893PZ" target="_blank" rel="noopener" class="btn-solar-external">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> 別タブで開く
+        </a>
+        <button id="solar-close" class="btn-solar-close" title="閉じる">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    </div>
+    <iframe id="solar-frame"
+      src="https://mierukaweb.energymntr.com/48429893PZ"
+      class="solar-iframe"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+      title="太陽光発電モニタリング"></iframe>
+  </div>
 
   <!-- ==================== PIN認証モーダル ==================== -->
   <div class="modal-overlay" id="pin-modal">
@@ -115,9 +177,7 @@
 
       <div class="form-group" id="edit-icon-group">
         <label class="form-label">アイコン</label>
-        <!-- アイコンピッカー -->
         <div class="icon-picker" id="icon-picker"></div>
-        <!-- 直接入力（上級者向け） -->
         <div class="icon-manual-row">
           <div class="icon-preview" id="icon-preview"></div>
           <input type="text" id="edit-icon" class="form-input" placeholder="fa-solid fa-star（直接入力も可）">
@@ -135,6 +195,72 @@
           <i class="fa-solid fa-trash"></i> 削除
         </button>
         <button class="btn-modal-primary" id="card-save">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== お知らせ編集モーダル ==================== -->
+  <div class="modal-overlay" id="notice-modal">
+    <div class="modal-glass">
+      <h3 class="modal-title" id="notice-modal-title">お知らせを追加</h3>
+
+      <div class="form-group">
+        <label class="form-label">優先度</label>
+        <select id="notice-priority" class="form-input">
+          <option value="normal">通常</option>
+          <option value="urgent">重要</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">タイトル</label>
+        <input type="text" id="notice-title" class="form-input" placeholder="例: 明日は工場予定変更">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">本文（省略可）</label>
+        <textarea id="notice-body" class="form-input" rows="3" placeholder="詳細メッセージ..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="notice-cancel">キャンセル</button>
+        <button class="btn-modal-danger" id="notice-delete" style="display:none">
+          <i class="fa-solid fa-trash"></i> 削除
+        </button>
+        <button class="btn-modal-primary" id="notice-save">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== カテゴリ編集モーダル ==================== -->
+  <div class="modal-overlay" id="category-modal">
+    <div class="modal-glass">
+      <h3 class="modal-title" id="category-modal-title">カテゴリを追加</h3>
+
+      <div class="form-group">
+        <label class="form-label">カテゴリ名</label>
+        <input type="text" id="cat-label" class="form-input" placeholder="例: 品質管理">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">アイコン</label>
+        <div class="icon-manual-row">
+          <div class="icon-preview" id="cat-icon-preview"></div>
+          <input type="text" id="cat-icon" class="form-input" placeholder="fa-solid fa-star">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">カラー</label>
+        <div id="color-picker-grid" class="color-picker-grid"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="cat-cancel">キャンセル</button>
+        <button class="btn-modal-danger" id="cat-delete" style="display:none">
+          <i class="fa-solid fa-trash"></i> 削除
+        </button>
+        <button class="btn-modal-primary" id="cat-save">保存</button>
       </div>
     </div>
   </div>

@@ -1240,3 +1240,660 @@ body::after {
 }
 
 .icon-manual-row .form-input { flex: 1; }
+
+/* ===========================
+   お気に入りセクション
+   =========================== */
+.favorites-section {
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+.btn-favorite {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+  z-index: 5;
+  padding: 0;
+}
+
+.link-card:hover .btn-favorite {
+  opacity: 1;
+}
+
+.btn-favorite.active {
+  opacity: 1;
+  color: #ffcc00;
+}
+
+.btn-favorite:hover {
+  background: rgba(255, 204, 0, 0.15);
+  color: #ffcc00;
+}
+
+/* ===========================
+   お知らせボード
+   =========================== */
+.notice-board {
+  margin-bottom: var(--space-xl);
+}
+
+.notice-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.notice-header i {
+  color: var(--accent-orange);
+}
+
+.btn-add-notice {
+  margin-left: auto;
+  padding: 4px 12px;
+  background: rgba(74, 158, 255, 0.1);
+  border: 1px solid rgba(74, 158, 255, 0.3);
+  border-radius: 50px;
+  color: var(--accent-blue);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-add-notice:hover {
+  background: rgba(74, 158, 255, 0.2);
+}
+
+.notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.notice-item {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  border-left: 3px solid var(--border-glass);
+}
+
+.notice-item.urgent {
+  border-left-color: var(--accent-pink);
+  background: rgba(255, 94, 160, 0.06);
+}
+
+.notice-item-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.notice-badge {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 50px;
+  flex-shrink: 0;
+}
+
+.badge-urgent {
+  background: rgba(255, 94, 160, 0.2);
+  color: var(--accent-pink);
+}
+
+.badge-normal {
+  background: rgba(74, 158, 255, 0.15);
+  color: var(--accent-blue);
+}
+
+.notice-title {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  flex: 1;
+}
+
+.notice-date {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.btn-notice-edit {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  transition: all var(--transition-fast);
+}
+
+.btn-notice-edit:hover {
+  color: var(--accent-blue);
+  background: rgba(74, 158, 255, 0.1);
+}
+
+.notice-body {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-top: var(--space-xs);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+/* ===========================
+   天気ウィジェット
+   =========================== */
+.weather-widget {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-2xl);
+  animation: fadeInUp 0.5s ease forwards;
+}
+
+.weather-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.weather-title-area {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.weather-section-icon {
+  color: var(--accent-cyan);
+  font-size: var(--font-size-lg);
+}
+
+.weather-section-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+
+.weather-updated {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.weather-body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.weather-current {
+  min-width: 180px;
+}
+
+.weather-loading {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  padding: var(--space-md) 0;
+}
+
+.weather-error {
+  color: var(--accent-pink);
+  font-size: var(--font-size-sm);
+  padding: var(--space-md) 0;
+}
+
+.weather-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.weather-emoji {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.weather-temp {
+  font-size: 2.2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.weather-unit {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.weather-desc {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.weather-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.weather-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.weather-detail-item i {
+  color: var(--accent-cyan);
+  width: 14px;
+  text-align: center;
+}
+
+.heat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 50px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+/* 予報スクロール */
+.forecast-scroll {
+  display: flex;
+  gap: var(--space-sm);
+  overflow-x: auto;
+  padding-bottom: var(--space-sm);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+
+.forecast-scroll::-webkit-scrollbar { height: 4px; }
+.forecast-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+.forecast-item {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  min-width: 68px;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.forecast-time {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.forecast-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.forecast-temp {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.forecast-hum {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--accent-cyan);
+}
+
+/* 雨雲レーダー */
+.btn-toggle-radar {
+  margin-top: var(--space-md);
+  width: 100%;
+  padding: var(--space-sm);
+  background: transparent;
+  border: 1px dashed var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+}
+
+.btn-toggle-radar:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.radar-wrap {
+  margin-top: var(--space-md);
+}
+
+.radar-iframe {
+  width: 100%;
+  height: 380px;
+  border: none;
+  border-radius: var(--radius-md);
+  display: block;
+}
+
+/* ===========================
+   太陽光発電 全画面オーバーレイ
+   =========================== */
+.solar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+.solar-overlay[hidden] {
+  display: none !important;
+}
+
+.solar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-lg);
+  background: rgba(10, 14, 39, 0.95);
+  border-bottom: 1px solid var(--border-glass);
+  flex-shrink: 0;
+  gap: var(--space-md);
+}
+
+.solar-toolbar-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-weight: 600;
+  color: var(--accent-cyan);
+}
+
+.solar-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.btn-solar-external {
+  padding: var(--space-xs) var(--space-md);
+  background: rgba(74, 158, 255, 0.1);
+  border: 1px solid rgba(74, 158, 255, 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--accent-blue);
+  text-decoration: none;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-solar-external:hover {
+  background: rgba(74, 158, 255, 0.2);
+}
+
+.btn-solar-close {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 94, 160, 0.1);
+  border: 1px solid rgba(255, 94, 160, 0.3);
+  color: var(--accent-pink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-base);
+  transition: all var(--transition-fast);
+}
+
+.btn-solar-close:hover {
+  background: rgba(255, 94, 160, 0.25);
+}
+
+.solar-iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  display: block;
+}
+
+/* ===========================
+   カテゴリ追加ボタン
+   =========================== */
+.btn-add-category-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-2xl);
+}
+
+.btn-add-category {
+  padding: var(--space-sm) var(--space-xl);
+  background: transparent;
+  border: 2px dashed var(--border-glass);
+  border-radius: 50px;
+  color: var(--text-muted);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.btn-add-category:hover {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  background: rgba(74, 158, 255, 0.05);
+}
+
+.btn-edit-category {
+  margin-left: var(--space-sm);
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid var(--border-glass);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.btn-edit-category:hover {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+  background: rgba(74, 158, 255, 0.08);
+}
+
+/* カラーピッカー */
+.color-picker-grid {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.color-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.color-swatch.selected {
+  border-color: white;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+}
+
+/* ===========================
+   ドラッグ&ドロップ
+   =========================== */
+.link-card[draggable="true"] {
+  cursor: grab;
+}
+
+.link-card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.link-card.dragging {
+  opacity: 0.4;
+  transform: scale(0.97);
+}
+
+.link-card.drag-over {
+  border-color: var(--accent-blue);
+  background: rgba(74, 158, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+/* ===========================
+   スマホ対応改善
+   =========================== */
+@media (max-width: 768px) {
+  /* 天気ウィジェット縦積み */
+  .weather-body {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+
+  .weather-current {
+    min-width: unset;
+  }
+
+  .radar-iframe {
+    height: 280px;
+  }
+
+  /* モーダル スクロール対応 */
+  .modal-glass {
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+
+  /* PIN ボタン大きく */
+  .pin-digit,
+  .pin-digit-confirm {
+    width: 46px;
+    height: 58px;
+    font-size: 1.4rem;
+  }
+
+  /* 編集ボタン タッチしやすく */
+  .btn-edit-card,
+  .btn-delete-card {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* カード編集オーバーレイ: 常時表示（ホバー不可の端末対策） */
+  .card-edit-overlay {
+    opacity: 0.85;
+  }
+
+  /* 太陽光ツールバー */
+  .solar-toolbar {
+    flex-wrap: wrap;
+    padding: var(--space-xs) var(--space-md);
+  }
+
+  /* お知らせ */
+  .notice-item-header {
+    gap: var(--space-xs);
+  }
+
+  /* フッターとFABの被り防止 */
+  .footer {
+    padding-bottom: 5rem;
+  }
+
+  /* 天気予報スクロール */
+  .forecast-item {
+    min-width: 60px;
+    padding: 6px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* 外部ツールグリッド 縦1列 */
+  .external-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* カテゴリ追加ボタン */
+  .btn-add-category {
+    font-size: var(--font-size-xs);
+    padding: var(--space-xs) var(--space-lg);
+  }
+
+  /* 天気情報コンパクト */
+  .weather-emoji { font-size: 2rem; }
+  .weather-temp  { font-size: 1.8rem; }
+}
+
+/* フォームの textarea */
+.form-input[rows] {
+  resize: vertical;
+  min-height: 80px;
+  font-family: var(--font-family);
+  line-height: 1.5;
+}
