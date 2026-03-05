@@ -777,6 +777,35 @@ body::after {
   min-height: 110px;
 }
 
+/* URL未設定カード */
+.link-card--no-url {
+  border: 1.5px dashed rgba(255, 160, 50, 0.55) !important;
+  opacity: 0.72;
+}
+
+.link-card--no-url:hover {
+  border-color: rgba(255, 160, 50, 0.9) !important;
+  opacity: 1;
+}
+
+.no-url-badge {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  background: rgba(255, 140, 0, 0.88);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+  letter-spacing: 0.02em;
+  z-index: 1;
+}
+
 .link-card::before {
   content: '';
   position: absolute;

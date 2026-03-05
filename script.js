@@ -522,7 +522,8 @@ function buildLinkCard(card, isFav = false, gradient = '') {
     a.href = isEditMode ? '#' : (card.url || '#');
     if (!isEditMode) a.target = '_blank';
   }
-  a.className = 'link-card';
+  const hasNoUrl = card.url !== 'solar:open' && (!card.url || card.url.trim() === '' || card.url === '#');
+  a.className = 'link-card' + (hasNoUrl ? ' link-card--no-url' : '');
   a.dataset.docId = card.id;
 
   const iconHtml = card.icon && card.icon.startsWith('svg:')
@@ -532,8 +533,12 @@ function buildLinkCard(card, isFav = false, gradient = '') {
   const favs = getFavorites();
   const isFavorited = favs.includes(card.id);
   const starBtn = `<button class="btn-favorite${isFavorited ? ' active' : ''}" data-id="${card.id}" title="お気に入り"><i class="fa-${isFavorited ? 'solid' : 'regular'} fa-star"></i></button>`;
+  const noUrlBadge = hasNoUrl
+    ? `<span class="no-url-badge"><i class="fa-solid fa-triangle-exclamation"></i> URL未設定</span>`
+    : '';
 
   a.innerHTML = `
+    ${noUrlBadge}
     <div class="card-icon" style="color: inherit">${iconHtml}</div>
     <span class="card-label">${esc(card.label)}</span>
     ${starBtn}
