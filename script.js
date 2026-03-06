@@ -274,7 +274,7 @@ let editingPrivateSectionId = null; // for private section modal
 let privateSectionColorIndex = 1;
 
 // カード階層
-let expandedCards = new Set();
+let activeChildPopup = null;
 let editingParentId = null;
 
 // ========== PIN 認証 ==========
@@ -664,6 +664,7 @@ function getCategoryGradient(cat) {
 }
 
 function renderAllSections() {
+  closeChildPopup();
   const main = document.querySelector('.main');
   const noResults = document.getElementById('no-results');
   main.querySelectorAll('.category-section:not(#favorites-section), .external-tools, .btn-add-category-wrap').forEach(el => el.remove());
@@ -969,68 +970,139 @@ function buildAddButton(categoryId, isPrivate = false, privateSectionDocId = nul
   return btn;
 }
 
-// ========== カード階層: ノード構築（再帰） ==========
+// ========== カード階層: ノード構築（バッジ＋ポップアップ方式） ==========
 function buildCardNode(card, allCatCards, gradient, isPrivate) {
   const children = allCatCards.filter(c => c.parentId === card.id);
-
-  if (children.length === 0 && !expandedCards.has(card.id)) {
-    // 子がなく、かつフォルダとして展開されたことがない → 通常リーフカード
-    // ただし、まだ一度も子を持ったことがない場合は通常カードとして返す
-    const leafA = buildLinkCard(card, false, gradient);
-    return leafA;
-  }
-
-  // フォルダカード（子あり、または過去に子を追加された）
-  const isExpanded = expandedCards.has(card.id);
-  const wrapper = document.createElement('div');
-  wrapper.className = 'card-node--folder' + (isExpanded ? ' expanded' : '');
-  wrapper.dataset.cardId = card.id;
-
-  // メインカード部分（リンクカードを流用）
   const a = buildLinkCard(card, false, gradient);
-  a.classList.add('card-node__main');
 
-  // 展開トグルボタン
-  const toggleBtn = document.createElement('button');
-  toggleBtn.className = 'btn-expand-children';
-  toggleBtn.title = isExpanded ? '折りたたむ' : `${children.length}件の子カードを表示`;
-  toggleBtn.innerHTML = `<span class="expand-count">${children.length}</span><i class="fa-solid fa-chevron-down expand-chevron"></i>`;
-  toggleBtn.addEventListener('click', e => {
+  if (children.length === 0) return a;
+
+  // 子カードがある → スタックバッジを追加（カード本体はそのまま）
+  a.classList.add('card-has-children');
+
+  const badge = document.createElement('button');
+  badge.className = 'card-children-badge';
+  badge.innerHTML = `<i class="fa-solid fa-layer-group"></i><span>${children.length}</span>`;
+  badge.title = `${children.length}件の子カードを表示`;
+  badge.addEventListener('click', e => {
     e.preventDefault();
     e.stopPropagation();
-    if (expandedCards.has(card.id)) {
-      expandedCards.delete(card.id);
-    } else {
-      expandedCards.add(card.id);
+    // 同じポップアップを再クリックで閉じる
+    if (activeChildPopup && activeChildPopup.dataset.parentId === card.id) {
+      closeChildPopup();
+      return;
     }
-    // セクション全体を再描画
-    renderAllSections();
+    openChildPopup(card, children, allCatCards, gradient, isPrivate, a);
   });
-  a.appendChild(toggleBtn);
+  a.appendChild(badge);
 
-  wrapper.appendChild(a);
+  return a;
+}
 
-  // 子カードコンテナ（アコーディオン）
-  const childrenDiv = document.createElement('div');
-  childrenDiv.className = 'card-children' + (isExpanded ? ' open' : '');
+function openChildPopup(parentCard, children, allCatCards, gradient, isPrivate, anchorEl) {
+  closeChildPopup();
 
-  const childGrid = document.createElement('div');
-  childGrid.className = 'card-grid card-grid--sub';
+  const popup = document.createElement('div');
+  popup.className = 'card-child-popup';
+  popup.dataset.parentId = parentCard.id;
 
-  children.forEach(child => {
-    childGrid.appendChild(buildCardNode(child, allCatCards, gradient, isPrivate));
+  // ヘッダー
+  const iconHtml = parentCard.icon && parentCard.icon.startsWith('svg:')
+    ? (SVG_ICONS[parentCard.icon] || '')
+    : `<i class="${parentCard.icon || 'fa-solid fa-star'}"></i>`;
+
+  const header = document.createElement('div');
+  header.className = 'card-child-popup__header';
+  header.innerHTML = `
+    <div class="card-child-popup__title">
+      <span class="card-child-popup__icon">${iconHtml}</span>
+      <span>${esc(parentCard.label)}</span>
+    </div>
+    <button class="card-child-popup__close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+  `;
+  popup.appendChild(header);
+
+  // 子カードグリッド
+  const grid = document.createElement('div');
+  grid.className = 'card-child-popup__grid';
+  children.forEach((child, i) => {
+    const node = buildCardNode(child, allCatCards, gradient, isPrivate);
+    node.style.animationDelay = `${i * 0.04}s`;
+    grid.appendChild(node);
   });
 
-  // 子カード追加ボタン（編集モード不要 — 常に表示）
-  if (isExpanded) {
-    const catId = card.category || card.sectionId;
-    childGrid.appendChild(buildAddButton(catId, isPrivate, isPrivate ? card.sectionId : null, card.id));
+  // 子カード追加ボタン
+  const catId = parentCard.category || parentCard.sectionId;
+  const addBtn = buildAddButton(catId, isPrivate, isPrivate ? parentCard.sectionId : null, parentCard.id);
+  addBtn.style.animationDelay = `${children.length * 0.04}s`;
+  grid.appendChild(addBtn);
+
+  popup.appendChild(grid);
+  document.body.appendChild(popup);
+
+  // ポップアップの位置を調整
+  positionChildPopup(popup, anchorEl);
+
+  header.querySelector('.card-child-popup__close').addEventListener('click', e => {
+    e.stopPropagation();
+    closeChildPopup();
+  });
+
+  activeChildPopup = popup;
+
+  // 外側クリックで閉じる（少し遅延してバインド）
+  setTimeout(() => {
+    document.addEventListener('click', closeChildPopupOnOutside);
+  }, 30);
+}
+
+function positionChildPopup(popup, anchorEl) {
+  const rect = anchorEl.getBoundingClientRect();
+  const scrollY = window.scrollY;
+  const scrollX = window.scrollX;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  const maxW = Math.min(540, vw - 32);
+  popup.style.maxWidth = maxW + 'px';
+
+  // まず仮位置に配置してサイズ取得
+  popup.style.visibility = 'hidden';
+  popup.style.left = '0px';
+  popup.style.top = '0px';
+  const popupH = popup.offsetHeight || 300;
+
+  // カードの下に出す。下に収まらない場合は上に
+  let top = rect.bottom + scrollY + 8;
+  if (rect.bottom + popupH + 8 > vh) {
+    top = rect.top + scrollY - popupH - 8;
   }
 
-  childrenDiv.appendChild(childGrid);
-  wrapper.appendChild(childrenDiv);
+  let left = rect.left + scrollX;
+  if (left + maxW > vw + scrollX - 16) {
+    left = vw + scrollX - maxW - 16;
+  }
+  if (left < scrollX + 8) left = scrollX + 8;
 
-  return wrapper;
+  popup.style.left = left + 'px';
+  popup.style.top = top + 'px';
+  popup.style.visibility = '';
+}
+
+function closeChildPopupOnOutside(e) {
+  if (activeChildPopup && !activeChildPopup.contains(e.target)) {
+    closeChildPopup();
+  }
+}
+
+function closeChildPopup() {
+  if (activeChildPopup) {
+    activeChildPopup.classList.add('closing');
+    const el = activeChildPopup;
+    activeChildPopup = null;
+    setTimeout(() => el.remove(), 180);
+  }
+  document.removeEventListener('click', closeChildPopupOnOutside);
 }
 
 function esc(str) {
@@ -1598,8 +1670,6 @@ function showContextMenu(e, card) {
   menu.querySelector('.ctx-add-child').addEventListener('click', e => {
     e.stopPropagation();
     closeContextMenu();
-    // 親カードを展開状態にしてから子カード追加モーダルを開く
-    expandedCards.add(card.id);
     if (card.isPrivate) {
       openCardModal(null, null, true, card.sectionId, card.id);
     } else {
