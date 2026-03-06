@@ -2675,25 +2675,68 @@ html.font-xl { font-size: 21px; }
    テーマ変数
    =========================== */
 
-/* クリスタル（ガラス強調） */
+/* クリスタル（虹色プリズム） */
 [data-theme="glass"] {
-  --bg-primary:       #080c20;
-  --bg-secondary:     #0d1230;
-  --bg-card:          rgba(255, 255, 255, 0.04);
-  --bg-card-hover:    rgba(255, 255, 255, 0.09);
-  --bg-glass:         rgba(255, 255, 255, 0.04);
-  --border-glass:     rgba(255, 255, 255, 0.18);
-  --border-glass-hover: rgba(255, 255, 255, 0.38);
+  --bg-primary:         #05060f;
+  --bg-secondary:       #080b1c;
+  --bg-card:            rgba(255, 255, 255, 0.025);
+  --bg-card-hover:      rgba(255, 255, 255, 0.06);
+  --bg-glass:           rgba(255, 255, 255, 0.025);
+  --border-glass:       rgba(160, 140, 255, 0.3);
+  --border-glass-hover: rgba(0, 212, 170, 0.6);
 }
-[data-theme="glass"] .link-card,
-[data-theme="glass"] .category-section,
-[data-theme="glass"] .external-tools {
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  background: rgba(255, 255, 255, 0.04);
+[data-theme="glass"] body {
+  background:
+    radial-gradient(ellipse at 15% 55%, rgba(124,92,255,0.28) 0%, transparent 45%),
+    radial-gradient(ellipse at 85% 15%, rgba(0,212,170,0.22) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 95%, rgba(255,94,160,0.18) 0%, transparent 50%),
+    linear-gradient(160deg, #05060f 0%, #080b1c 100%);
 }
 [data-theme="glass"] body::before {
-  opacity: 0.55;
+  background: radial-gradient(circle at 30% 40%, rgba(74,158,255,0.22) 0%, transparent 50%);
+  opacity: 1;
+}
+[data-theme="glass"] body::after {
+  background: radial-gradient(circle at 75% 75%, rgba(255,94,160,0.18) 0%, transparent 50%);
+  opacity: 1;
+}
+[data-theme="glass"] .header {
+  background: rgba(5, 6, 15, 0.55);
+  backdrop-filter: blur(40px) saturate(160%);
+  -webkit-backdrop-filter: blur(40px) saturate(160%);
+  border-bottom-color: rgba(124,92,255,0.25);
+}
+[data-theme="glass"] .link-card {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  border-color: rgba(160, 140, 255, 0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    inset 0 -1px 0 rgba(74,158,255,0.08),
+    0 4px 24px rgba(0,0,0,0.5);
+}
+[data-theme="glass"] .link-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(0, 212, 170, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    inset 0 -1px 0 rgba(0,212,170,0.12),
+    0 8px 32px rgba(0,212,170,0.18),
+    0 0 0 1px rgba(0,212,170,0.12);
+}
+[data-theme="glass"] .category-section,
+[data-theme="glass"] .external-tools {
+  background: rgba(255, 255, 255, 0.015);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border-color: rgba(160, 140, 255, 0.15);
+}
+[data-theme="glass"] .modal-glass {
+  background: rgba(8, 10, 28, 0.88);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-color: rgba(124, 92, 255, 0.3);
 }
 
 /* ライト */
@@ -2797,6 +2840,77 @@ html.font-xl { font-size: 21px; }
 }
 [data-theme="night"] .header {
   background: rgba(0, 0, 0, 0.85);
+}
+
+/* 木目調 */
+[data-theme="wood"] {
+  --bg-primary:         #2e1a08;
+  --bg-secondary:       #3d2410;
+  --bg-card:            rgba(255, 200, 130, 0.07);
+  --bg-card-hover:      rgba(255, 200, 130, 0.14);
+  --bg-glass:           rgba(255, 200, 130, 0.07);
+  --border-glass:       rgba(200, 140, 60, 0.3);
+  --border-glass-hover: rgba(220, 165, 80, 0.6);
+  --text-primary:       #f5dfc0;
+  --text-secondary:     rgba(245, 223, 192, 0.68);
+  --text-muted:         rgba(245, 223, 192, 0.38);
+  --accent-blue:        #d4a050;
+  --accent-cyan:        #c8902e;
+  --accent-purple:      #b07840;
+  --accent-orange:      #e07020;
+  --accent-pink:        #c06040;
+  --gradient-hero:      linear-gradient(160deg, #1e1006 0%, #2e1a08 50%, #1a0e06 100%);
+  --shadow-glow-blue:   0 0 20px rgba(212, 160, 80, 0.2);
+  --shadow-glow-cyan:   0 0 20px rgba(200, 144, 46, 0.2);
+}
+[data-theme="wood"] body {
+  background:
+    repeating-linear-gradient(
+      92deg,
+      transparent 0px, transparent 38px,
+      rgba(0,0,0,0.025) 38px, rgba(0,0,0,0.025) 40px
+    ),
+    repeating-linear-gradient(
+      177deg,
+      transparent 0px, transparent 22px,
+      rgba(255,180,80,0.04) 22px, rgba(255,180,80,0.04) 24px
+    ),
+    repeating-linear-gradient(
+      174deg,
+      transparent 0px, transparent 60px,
+      rgba(100,50,10,0.06) 60px, rgba(100,50,10,0.06) 62px
+    ),
+    linear-gradient(160deg, #1e1006 0%, #2e1a08 40%, #3d2410 70%, #1a0e06 100%);
+}
+[data-theme="wood"] body::before {
+  background: radial-gradient(circle at 25% 40%, rgba(180, 100, 20, 0.2) 0%, transparent 55%);
+  opacity: 1;
+}
+[data-theme="wood"] body::after {
+  background: radial-gradient(circle at 75% 70%, rgba(120, 60, 10, 0.18) 0%, transparent 55%);
+  opacity: 1;
+}
+[data-theme="wood"] .header {
+  background: rgba(30, 16, 6, 0.82);
+  border-bottom-color: rgba(200, 140, 60, 0.2);
+}
+[data-theme="wood"] .link-card {
+  border-color: rgba(180, 120, 50, 0.28);
+}
+[data-theme="wood"] .link-card:hover {
+  border-color: rgba(220, 165, 80, 0.55);
+  box-shadow: 0 8px 28px rgba(150, 80, 20, 0.25);
+}
+[data-theme="wood"] .category-section,
+[data-theme="wood"] .external-tools {
+  border-color: rgba(180, 120, 50, 0.2);
+}
+[data-theme="wood"] .modal-glass {
+  background: rgba(40, 22, 8, 0.95);
+  border-color: rgba(200, 140, 60, 0.25);
+}
+[data-theme="wood"] .notice-board {
+  border-color: rgba(180, 120, 50, 0.2);
 }
 
 /* ===========================
@@ -2909,7 +3023,7 @@ html.font-xl { font-size: 21px; }
 /* テーマグリッド */
 .theme-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
 }
 
@@ -2978,13 +3092,16 @@ html.font-xl { font-size: 21px; }
 
 /* クリスタル */
 .theme-preview--glass {
-  background: #06091a;
-  border-color: rgba(255,255,255,0.25);
+  background: linear-gradient(135deg, #05060f 40%, #0a081e);
+  box-shadow: 0 0 0 1px rgba(124,92,255,0.7), 0 0 8px rgba(0,212,170,0.3);
+  border-color: transparent;
 }
-.theme-preview--glass .tp-bar { background: rgba(124,92,255,0.7); }
+.theme-preview--glass .tp-bar {
+  background: linear-gradient(90deg, #4a9eff, #7c5cff, #00d4aa);
+}
 .theme-preview--glass .tp-cards > div {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.02);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 1px rgba(160,140,255,0.3);
 }
 
 /* ライト */
@@ -3010,6 +3127,23 @@ html.font-xl { font-size: 21px; }
 }
 .theme-preview--night .tp-bar { background: rgba(58,127,255,0.5); }
 .theme-preview--night .tp-cards > div { background: rgba(255,255,255,0.05); }
+
+/* 木目調 */
+.theme-preview--wood {
+  background:
+    repeating-linear-gradient(
+      92deg, transparent 0px, transparent 7px,
+      rgba(0,0,0,0.06) 7px, rgba(0,0,0,0.06) 8px
+    ),
+    repeating-linear-gradient(
+      177deg, transparent 0px, transparent 5px,
+      rgba(255,180,80,0.08) 5px, rgba(255,180,80,0.08) 6px
+    ),
+    linear-gradient(160deg, #3d2410, #5c3520);
+  border-color: rgba(200,140,60,0.4);
+}
+.theme-preview--wood .tp-bar { background: rgba(212,160,80,0.8); }
+.theme-preview--wood .tp-cards > div { background: rgba(255,200,130,0.1); border: 1px solid rgba(180,120,50,0.3); }
 
 /* フォントサイズグリッド */
 .fontsize-grid {

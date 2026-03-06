@@ -1702,7 +1702,7 @@ async function handlePinSubmit() {
 }
 
 // ========== 表示設定（テーマ・文字サイズ） ==========
-const THEMES     = ['dark', 'glass', 'light', 'warm', 'night'];
+const THEMES     = ['dark', 'glass', 'light', 'warm', 'night', 'wood'];
 const FONTSIZES  = ['font-sm', 'font-md', 'font-lg', 'font-xl'];
 
 function applyTheme(theme) {
