@@ -246,7 +246,7 @@ const INITIAL_CARDS = [
 let allCards = [];
 let allCategories = [...DEFAULT_CATEGORIES];
 let allNotices = [];
-let isEditMode = false;
+let isEditMode = true;
 let editingDocId = null;
 let editingCategory = null;
 let editingNoticeId = null;
@@ -1297,6 +1297,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateClock();
   setInterval(updateClock, 1000);
 
+  // 常に編集モード
+  document.body.classList.add('edit-mode');
+  document.getElementById('edit-banner').hidden = false;
+  const adminFab = document.getElementById('admin-fab');
+  adminFab.hidden = true;
+
   // まず初期データで即時描画
   allCards = INITIAL_CARDS.map((c, i) => ({ id: `init-${i}`, ...c }));
   renderAllSections();
@@ -1352,12 +1358,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Firestore エラー:', err);
   }
 
-  // ===== FAB ボタン =====
-  document.getElementById('admin-fab').addEventListener('click', async () => {
-    if (isEditMode) { exitEditMode(); return; }
-    const pinSet = await isPINConfigured();
-    openPinModal(!pinSet);
-  });
+  // FAB ボタン: 常時編集モードのため無効化済み
 
   // ===== PIN 入力フィールド =====
   const pinDigits    = [...document.querySelectorAll('.pin-digit')];
