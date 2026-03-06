@@ -519,8 +519,11 @@ function buildLinkCard(card, isFav = false, gradient = '') {
     a.href = '#';
     a.dataset.solarOpen = '1';
   } else {
-    a.href = isEditMode ? '#' : (card.url || '#');
-    if (!isEditMode) a.target = '_blank';
+    a.href = card.url || '#';
+    if (card.url && card.url !== '#') {
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+    }
   }
   const hasNoUrl = card.url !== 'solar:open' && (!card.url || card.url.trim() === '' || card.url === '#');
   a.className = 'link-card' + (hasNoUrl ? ' link-card--no-url' : '');
@@ -565,9 +568,11 @@ function buildLinkCard(card, isFav = false, gradient = '') {
     toggleFavorite(card.id);
   });
 
-  if (isEditMode && !isFav) {
-    a.appendChild(buildEditOverlay(card));
-    a.addEventListener('click', e => e.preventDefault());
+  if (!isFav) {
+    a.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      showContextMenu(e, card);
+    });
     // ドラッグ&ドロップ
     setupDraggable(a, card);
   }
@@ -602,8 +607,6 @@ function buildExternalCard(card) {
   if (card.url === 'solar:open') {
     a.href = '#';
     a.dataset.solarOpen = '1';
-  } else if (isEditMode) {
-    a.href = '#';
   } else {
     a.href = card.url || '#';
     a.target = '_blank';
@@ -617,29 +620,10 @@ function buildExternalCard(card) {
   a.innerHTML = `<div class="ext-icon-img">${iconHtml}</div><span class="ext-icon-label">${esc(card.label)}</span>`;
   wrap.appendChild(a);
 
-  if (isEditMode) {
-    const edit = document.createElement('button');
-    edit.className = 'ext-icon-edit';
-    edit.title = '編集';
-    edit.innerHTML = '<i class="fa-solid fa-pen"></i>';
-    edit.addEventListener('click', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      openCardModal(card.id);
-    });
-    wrap.appendChild(edit);
-
-    const del = document.createElement('button');
-    del.className = 'ext-icon-delete';
-    del.title = '削除';
-    del.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-    del.addEventListener('click', async e => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (confirm(`「${card.label}」を削除しますか？`)) await deleteCard(card.id);
-    });
-    wrap.appendChild(del);
-  }
+  wrap.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    showContextMenu(e, card);
+  });
   return wrap;
 }
 
@@ -1187,6 +1171,40 @@ async function fetchAndRenderWeather() {
   }
 }
 
+// ========== コンテキストメニュー ==========
+let activeContextMenu = null;
+
+function showContextMenu(e, card) {
+  closeContextMenu();
+  const menu = document.createElement('div');
+  menu.className = 'card-context-menu';
+  // 画面端はみ出し防止
+  const x = Math.min(e.clientX, window.innerWidth - 170);
+  const y = Math.min(e.clientY, window.innerHeight - 90);
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  menu.innerHTML = `
+    <button class="ctx-item ctx-edit"><i class="fa-solid fa-pen"></i> 編集</button>
+    <button class="ctx-item ctx-delete"><i class="fa-solid fa-trash"></i> 削除</button>
+  `;
+  menu.querySelector('.ctx-edit').addEventListener('click', e => {
+    e.stopPropagation();
+    closeContextMenu();
+    openCardModal(card.id);
+  });
+  menu.querySelector('.ctx-delete').addEventListener('click', async e => {
+    e.stopPropagation();
+    closeContextMenu();
+    if (confirm(`「${card.label}」を削除しますか？`)) await deleteCard(card.id);
+  });
+  document.body.appendChild(menu);
+  activeContextMenu = menu;
+}
+
+function closeContextMenu() {
+  if (activeContextMenu) { activeContextMenu.remove(); activeContextMenu = null; }
+}
+
 // ========== 検索（イベント委任） ==========
 function initSearch() {
   const searchInput = document.getElementById('search-input');
@@ -1299,9 +1317,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 常に編集モード
   document.body.classList.add('edit-mode');
-  document.getElementById('edit-banner').hidden = false;
-  const adminFab = document.getElementById('admin-fab');
-  adminFab.hidden = true;
 
   // まず初期データで即時描画
   allCards = INITIAL_CARDS.map((c, i) => ({ id: `init-${i}`, ...c }));
@@ -1358,7 +1373,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Firestore エラー:', err);
   }
 
-  // FAB ボタン: 常時編集モードのため無効化済み
+  // コンテキストメニューを閉じるグローバルリスナー
+  document.addEventListener('click', closeContextMenu);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContextMenu(); });
 
   // ===== PIN 入力フィールド =====
   const pinDigits    = [...document.querySelectorAll('.pin-digit')];
