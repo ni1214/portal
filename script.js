@@ -258,9 +258,20 @@ let unsubscribeCards = null;
 
 // ドラッグ&ドロップ状態
 let dragSrcId = null;
+let dragSrcSectionId = null;
 
 // お気に入りのみ表示モード
 let favoritesOnlyMode = localStorage.getItem('portal-fav-only') === '1';
+
+// ニックネーム・個人データ
+let currentUsername = localStorage.getItem('portal-username') || null;
+let personalSectionOrder = [];
+let privateCategories = [];
+let privateCards = [];
+let editingIsPrivate = false;
+let editingPrivateSectionDocId = null;
+let editingPrivateSectionId = null; // for private section modal
+let privateSectionColorIndex = 1;
 
 // ========== PIN 認証 ==========
 const PIN_SALT = 'seisan-portal-v1';
@@ -284,6 +295,218 @@ async function setPIN(pin) {
 async function isPINConfigured() {
   const snap = await getDoc(doc(db, 'portal', 'config'));
   return snap.exists() && !!snap.data().pinHash;
+}
+
+// ========== ユーザー（ニックネーム）管理 ==========
+function showUsernameModal(isEdit = false) {
+  const input = document.getElementById('username-input');
+  input.value = (isEdit && currentUsername) ? currentUsername : '';
+  document.getElementById('username-modal').classList.add('visible');
+  setTimeout(() => input.focus(), 100);
+}
+
+function closeUsernameModal() {
+  document.getElementById('username-modal').classList.remove('visible');
+}
+
+function saveUsername(name) {
+  currentUsername = name;
+  localStorage.setItem('portal-username', name);
+  updateUsernameDisplay();
+  loadPersonalData(name);
+  renderAllSections(); // ドラッグハンドル表示のため再描画
+}
+
+function updateUsernameDisplay() {
+  const el = document.getElementById('username-display');
+  if (el) el.textContent = currentUsername || '未設定';
+}
+
+// ========== 個人データ（Firestore） ==========
+async function loadPersonalData(username) {
+  if (!username) return;
+  try {
+    const orderSnap = await getDoc(doc(db, 'users', username, 'data', 'section_order'));
+    personalSectionOrder = orderSnap.exists() ? (orderSnap.data().order || []) : [];
+
+    const privSecSnap = await getDocs(collection(db, 'users', username, 'private_sections'));
+    privateCategories = privSecSnap.docs.map(d => ({ docId: d.id, isPrivate: true, ...d.data() }));
+
+    const privCardSnap = await getDocs(collection(db, 'users', username, 'private_cards'));
+    privateCards = privCardSnap.docs.map(d => ({ id: d.id, isPrivate: true, ...d.data() }));
+
+    renderAllSections();
+    renderFavorites();
+  } catch (err) {
+    console.error('個人データ読み込みエラー:', err);
+  }
+}
+
+async function savePersonalSectionOrder(username, order) {
+  if (!username) return;
+  await setDoc(doc(db, 'users', username, 'data', 'section_order'), { order, updatedAt: serverTimestamp() });
+}
+
+async function addPrivateSection(data) {
+  if (!currentUsername) return;
+  const ref = await addDoc(collection(db, 'users', currentUsername, 'private_sections'), { ...data, createdAt: serverTimestamp() });
+  privateCategories.push({ docId: ref.id, isPrivate: true, ...data });
+}
+
+async function updatePrivateSection(docId, data) {
+  if (!currentUsername) return;
+  await updateDoc(doc(db, 'users', currentUsername, 'private_sections', docId), { ...data, updatedAt: serverTimestamp() });
+  const idx = privateCategories.findIndex(c => c.docId === docId);
+  if (idx !== -1) privateCategories[idx] = { ...privateCategories[idx], ...data };
+}
+
+async function deletePrivateSection(docId) {
+  if (!currentUsername) return;
+  await deleteDoc(doc(db, 'users', currentUsername, 'private_sections', docId));
+  privateCategories = privateCategories.filter(c => c.docId !== docId);
+}
+
+async function addPrivateCard(data) {
+  if (!currentUsername) return;
+  const secCards = privateCards.filter(c => c.sectionId === data.sectionId);
+  const maxOrder = secCards.length > 0 ? Math.max(...secCards.map(c => c.order || 0)) + 1 : 0;
+  const ref = await addDoc(collection(db, 'users', currentUsername, 'private_cards'), { ...data, order: maxOrder, updatedAt: serverTimestamp() });
+  privateCards.push({ id: ref.id, isPrivate: true, ...data, order: maxOrder });
+  renderAllSections();
+}
+
+async function savePrivateCard(cardId, data) {
+  if (!currentUsername) return;
+  await updateDoc(doc(db, 'users', currentUsername, 'private_cards', cardId), { ...data, updatedAt: serverTimestamp() });
+  const idx = privateCards.findIndex(c => c.id === cardId);
+  if (idx !== -1) privateCards[idx] = { ...privateCards[idx], ...data };
+  renderAllSections();
+}
+
+async function deletePrivateCard(cardId) {
+  if (!currentUsername) return;
+  await deleteDoc(doc(db, 'users', currentUsername, 'private_cards', cardId));
+  privateCards = privateCards.filter(c => c.id !== cardId);
+  renderAllSections();
+}
+
+// ========== 個人セクション順序 ==========
+function applyPersonalOrder(cats) {
+  const result = [];
+  personalSectionOrder.forEach(sid => {
+    const cat = cats.find(c =>
+      sid.startsWith('priv:')
+        ? c.isPrivate && c.docId === sid.slice(5)
+        : !c.isPrivate && c.id === sid
+    );
+    if (cat) result.push(cat);
+  });
+  cats.forEach(cat => {
+    const sid = cat.isPrivate ? `priv:${cat.docId}` : cat.id;
+    if (!personalSectionOrder.includes(sid)) result.push(cat);
+  });
+  return result;
+}
+
+async function reorderSections(srcId, targetId) {
+  const publicCats = [...allCategories].sort((a, b) => a.order - b.order);
+  const privCats = [...privateCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const allCats = [...publicCats, ...privCats];
+
+  let currentIds;
+  if (personalSectionOrder.length) {
+    currentIds = [...personalSectionOrder];
+    allCats.forEach(cat => {
+      const sid = cat.isPrivate ? `priv:${cat.docId}` : cat.id;
+      if (!currentIds.includes(sid)) currentIds.push(sid);
+    });
+  } else {
+    currentIds = allCats.map(cat => cat.isPrivate ? `priv:${cat.docId}` : cat.id);
+  }
+
+  const srcIdx = currentIds.indexOf(srcId);
+  const tgtIdx = currentIds.indexOf(targetId);
+  if (srcIdx === -1 || tgtIdx === -1) return;
+
+  currentIds.splice(srcIdx, 1);
+  currentIds.splice(tgtIdx, 0, srcId);
+  personalSectionOrder = currentIds;
+
+  if (currentUsername) await savePersonalSectionOrder(currentUsername, currentIds);
+  renderAllSections();
+}
+
+// ========== セクション ドラッグ&ドロップ ==========
+function setupSectionDraggable(section, sectionId) {
+  const handle = section.querySelector('.section-drag-handle');
+  if (!handle) return;
+
+  handle.addEventListener('dragstart', e => {
+    dragSrcSectionId = sectionId;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => section.classList.add('section-dragging'), 0);
+  });
+
+  handle.addEventListener('dragend', () => {
+    section.classList.remove('section-dragging');
+    document.querySelectorAll('.section-drag-over').forEach(el => el.classList.remove('section-drag-over'));
+    dragSrcSectionId = null;
+  });
+
+  section.addEventListener('dragover', e => {
+    if (!dragSrcSectionId || dragSrcSectionId === sectionId) return;
+    e.preventDefault();
+    section.classList.add('section-drag-over');
+  });
+
+  section.addEventListener('dragleave', e => {
+    if (!section.contains(e.relatedTarget)) section.classList.remove('section-drag-over');
+  });
+
+  section.addEventListener('drop', async e => {
+    e.preventDefault();
+    section.classList.remove('section-drag-over');
+    if (!dragSrcSectionId || dragSrcSectionId === sectionId) return;
+    const src = dragSrcSectionId;
+    dragSrcSectionId = null;
+    await reorderSections(src, sectionId);
+  });
+}
+
+// ========== プライベートセクション管理モーダル ==========
+function openPrivateSectionModal(cat) {
+  editingPrivateSectionId = cat?.docId || null;
+  privateSectionColorIndex = cat?.colorIndex || 1;
+  document.getElementById('private-section-modal-title').innerHTML = cat
+    ? '<i class="fa-solid fa-lock"></i> マイセクションを編集'
+    : '<i class="fa-solid fa-lock"></i> マイセクションを追加';
+  document.getElementById('private-section-label').value = cat?.label || '';
+  document.getElementById('private-section-icon').value = cat?.icon || 'fa-solid fa-star';
+  document.getElementById('private-section-delete').style.display = cat ? 'inline-flex' : 'none';
+  const prev = document.getElementById('private-section-icon-preview');
+  if (prev) prev.innerHTML = `<i class="${cat?.icon || 'fa-solid fa-star'}"></i>`;
+  const grid = document.getElementById('private-section-color-grid');
+  grid.innerHTML = '';
+  CATEGORY_COLORS.forEach(({ index, label, gradient }) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `color-swatch${index === privateSectionColorIndex ? ' selected' : ''}`;
+    btn.style.background = gradient;
+    btn.title = label;
+    btn.addEventListener('click', () => {
+      privateSectionColorIndex = index;
+      grid.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+    grid.appendChild(btn);
+  });
+  document.getElementById('private-section-modal').classList.add('visible');
+  setTimeout(() => document.getElementById('private-section-label').focus(), 100);
+}
+
+function closePrivateSectionModal() {
+  document.getElementById('private-section-modal').classList.remove('visible');
+  editingPrivateSectionId = null;
 }
 
 // ========== Firestore CRUD (カード) ==========
@@ -434,26 +657,35 @@ function renderAllSections() {
   const noResults = document.getElementById('no-results');
   main.querySelectorAll('.category-section:not(#favorites-section), .external-tools, .btn-add-category-wrap').forEach(el => el.remove());
 
-  const sorted = [...allCategories].sort((a, b) => a.order - b.order);
+  const publicSorted = [...allCategories].sort((a, b) => a.order - b.order);
+  const privateSorted = [...privateCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const allCats = [...publicSorted, ...privateSorted];
+  const sorted = personalSectionOrder.length ? applyPersonalOrder(allCats) : allCats;
+
   sorted.forEach(cat => {
-    const catCards = allCards
-      .filter(c => c.category === cat.id)
-      .sort((a, b) => a.order - b.order);
+    let catCards;
+    if (cat.isPrivate) {
+      catCards = privateCards.filter(c => c.sectionId === cat.docId).sort((a, b) => (a.order || 0) - (b.order || 0));
+    } else {
+      catCards = allCards.filter(c => c.category === cat.id).sort((a, b) => a.order - b.order);
+    }
     main.insertBefore(buildSection(cat, catCards), noResults);
   });
 
-  if (isEditMode) {
-    const addCatBtn = document.createElement('div');
-    addCatBtn.className = 'btn-add-category-wrap';
-    addCatBtn.innerHTML = '<button class="btn-add-category"><i class="fa-solid fa-plus"></i> カテゴリを追加</button>';
-    addCatBtn.querySelector('button').addEventListener('click', () => openCategoryModal(null));
-    main.insertBefore(addCatBtn, noResults);
-  }
+  const addWrap = document.createElement('div');
+  addWrap.className = 'btn-add-category-wrap';
+  let btnsHtml = '<button class="btn-add-category"><i class="fa-solid fa-plus"></i> カテゴリを追加</button>';
+  if (currentUsername) btnsHtml += '<button class="btn-add-private-section"><i class="fa-solid fa-lock"></i> マイセクションを追加</button>';
+  addWrap.innerHTML = btnsHtml;
+  addWrap.querySelector('.btn-add-category').addEventListener('click', () => openCategoryModal(null));
+  if (currentUsername) addWrap.querySelector('.btn-add-private-section').addEventListener('click', () => openPrivateSectionModal(null));
+  main.insertBefore(addWrap, noResults);
 }
 
 function buildSection(cat, cards) {
   const section = document.createElement('section');
   const gradient = getCategoryGradient(cat);
+  const sectionId = cat.isPrivate ? `priv:${cat.docId}` : cat.id;
 
   if (cat.isExternal) {
     section.className = 'external-tools';
@@ -470,7 +702,6 @@ function buildSection(cat, cards) {
       <div class="external-grid"></div>
     `;
     const grid = section.querySelector('.external-grid');
-    // 太陽光カードは常に先頭固定（Firestoreのsolar:openカードは除外して重複を防ぐ）
     grid.appendChild(buildSolarIconWrap());
     cards.filter(c => c.url !== 'solar:open').forEach(c => grid.appendChild(buildExternalCard(c)));
     if (isEditMode) {
@@ -483,8 +714,47 @@ function buildSection(cat, cards) {
       addWrap.appendChild(addBtn);
       grid.appendChild(addWrap);
     }
+    if (isEditMode) {
+      const editBtn = section.querySelector('.btn-edit-category');
+      if (editBtn) editBtn.addEventListener('click', () => {
+        const catObj = allCategories.find(c => c.docId === editBtn.dataset.docid || c.id === cat.id);
+        openCategoryModal(catObj);
+      });
+    }
+
+  } else if (cat.isPrivate) {
+    // プライベートセクション
+    section.className = 'category-section private-section';
+    section.id = `section-priv-${cat.docId}`;
+    const color = CATEGORY_COLORS.find(c => c.index === cat.colorIndex);
+    const privGradient = color ? color.gradient : CATEGORY_COLORS[0].gradient;
+    section.innerHTML = `
+      <div class="category-header">
+        <div class="category-icon" style="background:${privGradient}"><i class="${cat.icon || 'fa-solid fa-star'}"></i></div>
+        <h2 class="category-title">${esc(cat.label)}<span class="private-badge"><i class="fa-solid fa-lock"></i></span></h2>
+        <span class="category-count">${cards.length} 件</span>
+        <button class="btn-edit-category" data-docid="${cat.docId}" title="マイセクションを編集"><i class="fa-solid fa-pen"></i></button>
+      </div>
+      <div class="card-grid"></div>
+    `;
+    const grid = section.querySelector('.card-grid');
+    cards.forEach(c => grid.appendChild(buildLinkCard(c, false, privGradient)));
+    grid.appendChild(buildAddButton(null, true, cat.docId));
+    section.querySelector('.btn-edit-category').addEventListener('click', () => openPrivateSectionModal(cat));
+
+    // セクションまとめてお気に入り
+    const favs = getFavorites();
+    const allFaved = cards.length > 0 && cards.every(c => favs.includes(c.id));
+    const sBtn = document.createElement('button');
+    sBtn.className = 'btn-section-favorite' + (allFaved ? ' active' : '');
+    sBtn.title = allFaved ? 'まとめて解除' : 'セクションをまとめてお気に入り';
+    sBtn.innerHTML = `<i class="fa-${allFaved ? 'solid' : 'regular'} fa-star"></i>`;
+    sBtn.addEventListener('click', () => toggleSectionFavorite(cat.docId, true));
+    section.querySelector('.category-header').appendChild(sBtn);
+
   } else {
-    section.className = `category-section`;
+    // 通常パブリックセクション
+    section.className = 'category-section';
     section.id = `section-${cat.id}`;
     const editBtns = isEditMode
       ? `<button class="btn-edit-category" data-docid="${cat.docId || ''}" title="カテゴリ編集"><i class="fa-solid fa-pen"></i></button>`
@@ -501,29 +771,36 @@ function buildSection(cat, cards) {
     const grid = section.querySelector('.card-grid');
     cards.forEach(c => grid.appendChild(buildLinkCard(c, false, gradient)));
     if (isEditMode) grid.appendChild(buildAddButton(cat.id));
-  }
 
-  if (isEditMode) {
-    const editBtn = section.querySelector('.btn-edit-category');
-    if (editBtn) {
-      editBtn.addEventListener('click', () => {
+    if (isEditMode) {
+      const editBtn = section.querySelector('.btn-edit-category');
+      if (editBtn) editBtn.addEventListener('click', () => {
         const catObj = allCategories.find(c => c.docId === editBtn.dataset.docid || c.id === cat.id);
         openCategoryModal(catObj);
       });
     }
-  }
 
-  // セクションまとめてお気に入りボタン（外部ツール以外）
-  if (!cat.isExternal) {
+    // セクションまとめてお気に入り
     const favs = getFavorites();
-    const catCards = allCards.filter(c => c.category === cat.id);
-    const allFaved = catCards.length > 0 && catCards.every(c => favs.includes(c.id));
+    const catCardsForFav = allCards.filter(c => c.category === cat.id);
+    const allFaved = catCardsForFav.length > 0 && catCardsForFav.every(c => favs.includes(c.id));
     const sBtn = document.createElement('button');
     sBtn.className = 'btn-section-favorite' + (allFaved ? ' active' : '');
     sBtn.title = allFaved ? 'まとめて解除' : 'セクションをまとめてお気に入り';
     sBtn.innerHTML = `<i class="fa-${allFaved ? 'solid' : 'regular'} fa-star"></i>`;
-    sBtn.addEventListener('click', () => toggleSectionFavorite(cat.id));
+    sBtn.addEventListener('click', () => toggleSectionFavorite(cat.id, false));
     section.querySelector('.category-header').appendChild(sBtn);
+  }
+
+  // セクションドラッグハンドル（ニックネーム設定済みの場合）
+  if (currentUsername) {
+    const handle = document.createElement('div');
+    handle.className = 'section-drag-handle';
+    handle.title = 'ドラッグしてセクションを並び替え';
+    handle.setAttribute('draggable', 'true');
+    handle.innerHTML = '<i class="fa-solid fa-grip-lines"></i>';
+    section.querySelector('.category-header').prepend(handle);
+    setupSectionDraggable(section, sectionId);
   }
 
   return section;
@@ -663,11 +940,11 @@ function buildEditOverlay(card) {
   return overlay;
 }
 
-function buildAddButton(categoryId) {
+function buildAddButton(categoryId, isPrivate = false, privateSectionDocId = null) {
   const btn = document.createElement('button');
   btn.className = 'btn-add-card';
   btn.innerHTML = '<i class="fa-solid fa-plus"></i><span>カードを追加</span>';
-  btn.addEventListener('click', () => openCardModal(null, categoryId));
+  btn.addEventListener('click', () => openCardModal(null, categoryId, isPrivate, privateSectionDocId));
   return btn;
 }
 
@@ -923,11 +1200,15 @@ function exitEditMode() {
 }
 
 // ========== カード編集モーダル ==========
-function openCardModal(docId, categoryId = null) {
+function openCardModal(docId, categoryId = null, isPrivate = false, privateSectionDocId = null) {
   editingDocId = docId;
   editingCategory = categoryId;
+  editingIsPrivate = isPrivate;
+  editingPrivateSectionDocId = privateSectionDocId;
 
-  const card = docId ? allCards.find(c => c.id === docId) : null;
+  const card = docId
+    ? (isPrivate ? privateCards.find(c => c.id === docId) : allCards.find(c => c.id === docId))
+    : null;
   const isSVG = card?.icon?.startsWith('svg:');
 
   document.getElementById('card-modal-title').textContent = docId ? 'カードを編集' : 'カードを追加';
@@ -950,6 +1231,8 @@ function closeCardModal() {
   document.getElementById('card-modal').classList.remove('visible');
   editingDocId = null;
   editingCategory = null;
+  editingIsPrivate = false;
+  editingPrivateSectionDocId = null;
 }
 
 function updateIconPreview(iconClass) {
@@ -1218,12 +1501,22 @@ function showContextMenu(e, card) {
   menu.querySelector('.ctx-edit').addEventListener('click', e => {
     e.stopPropagation();
     closeContextMenu();
-    openCardModal(card.id);
+    if (card.isPrivate) {
+      openCardModal(card.id, null, true, card.sectionId);
+    } else {
+      openCardModal(card.id);
+    }
   });
   menu.querySelector('.ctx-delete').addEventListener('click', async e => {
     e.stopPropagation();
     closeContextMenu();
-    if (confirm(`「${card.label}」を削除しますか？`)) await deleteCard(card.id);
+    if (confirm(`「${card.label}」を削除しますか？`)) {
+      if (card.isPrivate) {
+        await deletePrivateCard(card.id);
+      } else {
+        await deleteCard(card.id);
+      }
+    }
   });
   document.body.appendChild(menu);
   activeContextMenu = menu;
@@ -1257,8 +1550,10 @@ function toggleFavoritesOnly() {
 }
 
 // ========== セクションまとめてお気に入り ==========
-function toggleSectionFavorite(catId) {
-  const catCards = allCards.filter(c => c.category === catId);
+function toggleSectionFavorite(catId, isPrivate = false) {
+  const catCards = isPrivate
+    ? privateCards.filter(c => c.sectionId === catId)
+    : allCards.filter(c => c.category === catId);
   if (!catCards.length) return;
   const favs = getFavorites();
   const allFaved = catCards.every(c => favs.includes(c.id));
@@ -1279,7 +1574,9 @@ function toggleSectionFavorite(catId) {
     });
   });
   // まとめ星ボタンの状態更新
-  const sectionEl = document.getElementById(`section-${catId}`);
+  const sectionEl = isPrivate
+    ? document.getElementById(`section-priv-${catId}`)
+    : document.getElementById(`section-${catId}`);
   if (sectionEl) {
     const sBtn = sectionEl.querySelector('.btn-section-favorite');
     if (sBtn) {
@@ -1463,6 +1760,79 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-favorites-only').addEventListener('click', toggleFavoritesOnly);
   applyFavoritesOnlyMode();
 
+  // ===== ニックネーム（ユーザー）モーダル =====
+  document.getElementById('btn-user').addEventListener('click', () => showUsernameModal(true));
+  updateUsernameDisplay();
+
+  document.getElementById('username-submit').addEventListener('click', () => {
+    const name = document.getElementById('username-input').value.trim();
+    if (!name) { document.getElementById('username-input').focus(); return; }
+    saveUsername(name);
+    closeUsernameModal();
+  });
+  document.getElementById('username-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('username-submit').click();
+  });
+  document.getElementById('username-skip').addEventListener('click', closeUsernameModal);
+  document.getElementById('username-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeUsernameModal();
+  });
+
+  // 初回訪問時にニックネームモーダルを表示
+  if (!currentUsername) {
+    setTimeout(() => showUsernameModal(false), 600);
+  } else {
+    loadPersonalData(currentUsername);
+  }
+
+  // ===== プライベートセクションモーダル =====
+  document.getElementById('private-section-cancel').addEventListener('click', closePrivateSectionModal);
+  document.getElementById('private-section-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closePrivateSectionModal();
+  });
+
+  document.getElementById('private-section-icon').addEventListener('input', e => {
+    const prev = document.getElementById('private-section-icon-preview');
+    if (prev) prev.innerHTML = `<i class="${e.target.value.trim()}"></i>`;
+  });
+
+  document.getElementById('private-section-save').addEventListener('click', async () => {
+    const label = document.getElementById('private-section-label').value.trim();
+    const icon = document.getElementById('private-section-icon').value.trim() || 'fa-solid fa-star';
+    if (!label) { document.getElementById('private-section-label').focus(); return; }
+
+    const btn = document.getElementById('private-section-save');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+    try {
+      if (editingPrivateSectionId) {
+        await updatePrivateSection(editingPrivateSectionId, { label, icon, colorIndex: privateSectionColorIndex });
+      } else {
+        await addPrivateSection({ label, icon, colorIndex: privateSectionColorIndex, order: privateCategories.length });
+      }
+      closePrivateSectionModal();
+      renderAllSections();
+    } catch (err) {
+      console.error('マイセクション保存エラー:', err);
+      alert('保存に失敗しました。');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '保存';
+    }
+  });
+
+  document.getElementById('private-section-delete').addEventListener('click', async () => {
+    if (!editingPrivateSectionId) return;
+    const cat = privateCategories.find(c => c.docId === editingPrivateSectionId);
+    if (confirm(`「${cat?.label}」を削除しますか？（中のカードも全て削除されます）`)) {
+      const sectionCards = privateCards.filter(c => c.sectionId === editingPrivateSectionId);
+      await Promise.all(sectionCards.map(c => deletePrivateCard(c.id)));
+      await deletePrivateSection(editingPrivateSectionId);
+      closePrivateSectionModal();
+      renderAllSections();
+    }
+  });
+
   // コンテキストメニューを閉じるグローバルリスナー
   document.addEventListener('click', closeContextMenu);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContextMenu(); });
@@ -1517,19 +1887,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.innerHTML = '<span class="spinner"></span>';
 
     try {
-      const isStatic = !editingDocId || editingDocId.startsWith('init-');
-      if (!isStatic) {
-        const card = allCards.find(c => c.id === editingDocId);
-        const updateData = { label, url };
-        if (!card?.isExternalTool) updateData.icon = icon;
-        await saveCard(editingDocId, updateData);
+      if (editingIsPrivate) {
+        if (editingDocId) {
+          await savePrivateCard(editingDocId, { label, icon: icon || 'fa-solid fa-star', url: url || '#' });
+        } else {
+          await addPrivateCard({
+            label,
+            icon: icon || 'fa-solid fa-star',
+            url: url || '#',
+            sectionId: editingPrivateSectionDocId,
+          });
+        }
       } else {
-        await addCard({
-          label,
-          icon:     icon || 'fa-solid fa-star',
-          url:      url  || '#',
-          category: editingCategory,
-        });
+        const isStatic = !editingDocId || editingDocId.startsWith('init-');
+        if (!isStatic) {
+          const card = allCards.find(c => c.id === editingDocId);
+          const updateData = { label, url };
+          if (!card?.isExternalTool) updateData.icon = icon;
+          await saveCard(editingDocId, updateData);
+        } else {
+          await addCard({
+            label,
+            icon:     icon || 'fa-solid fa-star',
+            url:      url  || '#',
+            category: editingCategory,
+          });
+        }
       }
       closeCardModal();
     } catch (err) {
@@ -1542,11 +1925,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('card-delete').addEventListener('click', async () => {
-    const card = allCards.find(c => c.id === editingDocId);
-    if (!card) return;
-    if (confirm(`「${card.label}」を削除しますか？`)) {
-      await deleteCard(editingDocId);
-      closeCardModal();
+    if (editingIsPrivate) {
+      const card = privateCards.find(c => c.id === editingDocId);
+      if (!card) return;
+      if (confirm(`「${card.label}」を削除しますか？`)) {
+        await deletePrivateCard(editingDocId);
+        closeCardModal();
+      }
+    } else {
+      const card = allCards.find(c => c.id === editingDocId);
+      if (!card) return;
+      if (confirm(`「${card.label}」を削除しますか？`)) {
+        await deleteCard(editingDocId);
+        closeCardModal();
+      }
     }
   });
 

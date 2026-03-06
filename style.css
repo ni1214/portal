@@ -2181,6 +2181,8 @@ body::after {
 .btn-add-category-wrap {
   display: flex;
   justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
   margin-bottom: var(--space-2xl);
 }
 
@@ -2512,4 +2514,129 @@ body::after {
   background: rgba(255, 204, 0, 0.2);
   border-color: #ffcc00;
   color: #ffcc00;
+}
+
+/* ===========================
+   ユーザーボタン
+   =========================== */
+.btn-user {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-user:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--text-primary);
+}
+
+#username-display {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===========================
+   セクション ドラッグハンドル
+   =========================== */
+.section-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: grab;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.section-drag-handle:hover {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.section-drag-handle:active {
+  cursor: grabbing;
+}
+
+.section-dragging {
+  opacity: 0.45;
+  outline: 2px dashed rgba(255, 255, 255, 0.3);
+  outline-offset: 4px;
+}
+
+.section-drag-over {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 4px;
+}
+
+/* ===========================
+   プライベートセクション
+   =========================== */
+.private-section {
+  position: relative;
+}
+
+.private-section .category-header {
+  border-bottom-color: rgba(124, 92, 255, 0.3);
+}
+
+.private-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: rgba(124, 92, 255, 0.3);
+  border-radius: 50%;
+  font-size: 0.6rem;
+  margin-left: 6px;
+  vertical-align: middle;
+  color: #a29bfe;
+  flex-shrink: 0;
+}
+
+/* ===========================
+   マイセクション追加ボタン
+   =========================== */
+.btn-add-private-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: rgba(124, 92, 255, 0.1);
+  border: 2px dashed rgba(124, 92, 255, 0.4);
+  border-radius: 12px;
+  color: #a29bfe;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-add-private-section:hover {
+  background: rgba(124, 92, 255, 0.2);
+  border-color: rgba(124, 92, 255, 0.7);
+  color: #c4b5fe;
+}
+
+/* プライベートセクションモーダルの色グリッド */
+#private-section-color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
 }

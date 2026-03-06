@@ -47,6 +47,11 @@
         <span class="btn-fav-label">お気に入りのみ</span>
       </button>
 
+      <button class="btn-user" id="btn-user" title="ユーザー設定">
+        <i class="fa-solid fa-user"></i>
+        <span id="username-display">未設定</span>
+      </button>
+
       <div class="header-clock">
         <i class="fa-regular fa-clock"></i>
         <span id="header-clock"></span>
@@ -138,6 +143,52 @@
   <button class="help-fab" id="help-fab" title="使い方ガイド">
     <i class="fa-solid fa-question"></i>
   </button>
+
+  <!-- ==================== ユーザー名設定モーダル ==================== -->
+  <div class="modal-overlay" id="username-modal">
+    <div class="modal-glass">
+      <h3 class="modal-title"><i class="fa-solid fa-user-circle"></i> ニックネームを設定</h3>
+      <p class="modal-desc">あなたの名前を入力してください。<br>セクションの並び順・マイセクション（個人専用）がこの名前で保存されます。</p>
+      <div class="form-group">
+        <label class="form-label">ニックネーム</label>
+        <input type="text" id="username-input" class="form-input" placeholder="例：田中" maxlength="20" autocomplete="off">
+      </div>
+      <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:var(--space-md)">※ 同じ名前を別のPCで入力すれば設定を引き継げます</p>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="username-skip">スキップ</button>
+        <button class="btn-modal-primary" id="username-submit">設定して始める</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== マイセクション編集モーダル ==================== -->
+  <div class="modal-overlay" id="private-section-modal">
+    <div class="modal-glass">
+      <h3 class="modal-title" id="private-section-modal-title"><i class="fa-solid fa-lock"></i> マイセクションを追加</h3>
+      <div class="form-group">
+        <label class="form-label">セクション名</label>
+        <input type="text" id="private-section-label" class="form-input" placeholder="例：マイリンク">
+      </div>
+      <div class="form-group">
+        <label class="form-label">アイコン</label>
+        <div class="icon-manual-row">
+          <div class="icon-preview" id="private-section-icon-preview"></div>
+          <input type="text" id="private-section-icon" class="form-input" placeholder="fa-solid fa-star">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">カラー</label>
+        <div id="private-section-color-grid" class="color-picker-grid"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="private-section-cancel">キャンセル</button>
+        <button class="btn-modal-danger" id="private-section-delete" style="display:none">
+          <i class="fa-solid fa-trash"></i> 削除
+        </button>
+        <button class="btn-modal-primary" id="private-section-save">保存</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ==================== PIN認証モーダル ==================== -->
   <div class="modal-overlay" id="pin-modal">
@@ -280,79 +331,100 @@
       </div>
       <div class="guide-body">
 
-        <!-- 基本操作 -->
         <div class="guide-section">
           <h4 class="guide-section-title"><span class="guide-icon">🖱️</span> 基本操作</h4>
           <ul class="guide-list">
             <li>カードをクリックすると、登録されたページが<strong>新しいタブ</strong>で開きます。</li>
+            <li>カードを<strong>右クリック</strong>すると「編集」「削除」メニューが表示されます。</li>
             <li>画面上部の<strong>検索バー</strong>にキーワードを入力すると、カード名でリアルタイム検索できます。</li>
             <li>URL が未設定のカードは<strong>オレンジの破線枠＋「URL未設定」バッジ</strong>で表示されます。</li>
           </ul>
         </div>
 
-        <!-- お気に入り -->
         <div class="guide-section">
           <h4 class="guide-section-title"><span class="guide-icon">⭐</span> お気に入り</h4>
           <ul class="guide-list">
-            <li>カードにカーソルを合わせると右上に<strong>★ボタン</strong>が現れます。クリックでお気に入り登録。</li>
-            <li>登録したカードはページ最上部の<strong>「お気に入り」セクション</strong>にまとめて表示されます。</li>
+            <li>カードにカーソルを合わせると右上に<strong>☆ボタン</strong>が現れます。クリックでお気に入り登録/解除。</li>
+            <li>カテゴリ名の右端にある<strong>☆ボタン</strong>でそのセクション全体をまとめてお気に入り登録/解除できます。</li>
+            <li>ヘッダーの<strong>「お気に入りのみ」ボタン</strong>をクリックすると、お気に入り登録済みのカードだけを表示します。もう一度クリックで全表示に戻ります。</li>
             <li>お気に入りの情報はこのブラウザにのみ保存されます（他の端末には同期されません）。</li>
           </ul>
         </div>
 
-        <!-- お知らせ -->
+        <div class="guide-section">
+          <h4 class="guide-section-title"><span class="guide-icon">✏️</span> カードの編集</h4>
+          <ul class="guide-list">
+            <li>カードを<strong>右クリック → 「編集」</strong>でカード名・アイコン・URLを変更できます。</li>
+            <li>カードを<strong>右クリック → 「削除」</strong>でカードを削除できます。</li>
+            <li>カードをドラッグ＆ドロップすると<strong>同一カテゴリ内の並び順</strong>を変更できます。</li>
+            <li>カテゴリ末尾の<strong>「＋ カードを追加」</strong>ボタンで新しいカードを追加できます。</li>
+          </ul>
+        </div>
+
+        <div class="guide-section">
+          <h4 class="guide-section-title"><span class="guide-icon">📁</span> 外部ツールの編集</h4>
+          <ul class="guide-list">
+            <li>外部ツールのアイコンを<strong>右クリック</strong>すると「編集」「削除」メニューが表示されます。</li>
+            <li>外部ツールエリアの<strong>「＋ 追加」ボタン</strong>からプリセット一覧またはカスタム登録でアイコンを追加できます。</li>
+            <li>「太陽光発電」アイコンは固定表示で削除できません。</li>
+          </ul>
+        </div>
+
+        <div class="guide-section">
+          <h4 class="guide-section-title"><span class="guide-icon">🗂️</span> カテゴリ・セクションの操作</h4>
+          <ul class="guide-list">
+            <li>カテゴリ名横の<strong>鉛筆ボタン</strong>でカテゴリ名・アイコン・カラーを変更できます。</li>
+            <li>ページ下部の<strong>「＋ カテゴリを追加」</strong>で全員共有の新しいカテゴリを作成できます。</li>
+            <li>カードが存在するカテゴリは削除できません（先にカードを削除してください）。</li>
+          </ul>
+        </div>
+
+        <div class="guide-section">
+          <h4 class="guide-section-title"><span class="guide-icon">↕️</span> セクションの並び替え（個人設定）</h4>
+          <ul class="guide-list">
+            <li>ニックネームを設定すると、各セクションヘッダー左端に<strong>「≡」ハンドル</strong>が表示されます。</li>
+            <li>このハンドルをドラッグすると<strong>セクションの表示順を自分だけ変更</strong>できます。</li>
+            <li>並び順はFirestoreに保存されるため、リロードしても維持されます。</li>
+          </ul>
+        </div>
+
+        <div class="guide-section guide-section--admin">
+          <h4 class="guide-section-title"><span class="guide-icon">🔒</span> マイセクション（個人専用）</h4>
+          <ul class="guide-list">
+            <li>ニックネームを設定すると、ページ下部に<strong>「＋ マイセクションを追加」</strong>ボタンが表示されます。</li>
+            <li>マイセクションは<strong>自分だけに表示</strong>され、他のユーザーには一切見えません。</li>
+            <li>マイセクション内のカードは<strong>右クリックで編集・削除</strong>できます。</li>
+            <li>セクション名横の<strong>鉛筆ボタン</strong>でセクション自体を編集・削除できます。</li>
+            <li>データはFirestoreに保存されるため、<strong>リロードしても消えません</strong>。</li>
+          </ul>
+        </div>
+
+        <div class="guide-section">
+          <h4 class="guide-section-title"><span class="guide-icon">👤</span> ニックネーム設定</h4>
+          <ul class="guide-list">
+            <li>初回アクセス時にニックネーム設定ダイアログが表示されます。</li>
+            <li>ヘッダー右の<strong>「👤 名前」ボタン</strong>をクリックするといつでも変更できます。</li>
+            <li>同じニックネームを別のPCで入力すれば、セクション順序やマイセクションを引き継げます。</li>
+          </ul>
+        </div>
+
         <div class="guide-section">
           <h4 class="guide-section-title"><span class="guide-icon">📢</span> お知らせ掲示板</h4>
           <ul class="guide-list">
             <li>部署内のお知らせがカード上部に表示されます。</li>
-            <li><strong>赤いバッジ「重要」</strong>のお知らせは優先度が高い内容です。必ず確認してください。</li>
-            <li>お知らせの追加・編集・削除は管理者のみ行えます。</li>
+            <li><strong>「重要」バッジ（赤）</strong>のお知らせは優先度が高い内容です。</li>
+            <li>お知らせ欄の<strong>「＋ お知らせを追加」</strong>で全員に表示されるお知らせを投稿できます。</li>
+            <li>既存のお知らせの<strong>鉛筆アイコン</strong>で編集・削除できます。</li>
           </ul>
         </div>
 
-        <!-- 天気・太陽光パネル -->
         <div class="guide-section">
           <h4 class="guide-section-title"><span class="guide-icon">☀️</span> 天気・太陽光発電パネル</h4>
           <ul class="guide-list">
             <li>外部ツールの<strong>「太陽光発電」アイコン</strong>をクリックするとパネルが展開されます。</li>
-            <li>展開後、<strong>現在の気温・湿度・風速・体感温度</strong>と24時間予報が表示されます。</li>
+            <li><strong>現在の気温・湿度・風速・体感温度</strong>と24時間予報が表示されます。</li>
             <li><strong>熱中症危険度バナー</strong>で作業前の安全確認ができます（危険・厳重警戒時は点滅）。</li>
             <li>タブで<strong>「雨雲レーダー」</strong>と<strong>「太陽光発電モニタリング」</strong>を切り替えられます。</li>
-            <li>右上の<strong>「✕ 閉じる」</strong>ボタンでパネルを格納できます。</li>
-          </ul>
-        </div>
-
-        <!-- 管理者モード -->
-        <div class="guide-section guide-section--admin">
-          <h4 class="guide-section-title"><span class="guide-icon">🔐</span> 管理者モード（編集機能）</h4>
-          <p class="guide-note">以下の操作は管理者PINでログインした場合のみ利用できます。</p>
-          <ul class="guide-list">
-            <li>画面右下の<strong>🔒 ボタン</strong>をクリックし、4桁のPINを入力してログインします。</li>
-            <li>ログイン後はページ上部に<strong>「編集モード中」バナー</strong>が表示されます。</li>
-          </ul>
-          <h5 class="guide-sub-title">カードの操作</h5>
-          <ul class="guide-list">
-            <li>カードにカーソルを合わせると<strong>鉛筆（編集）</strong>と<strong>ゴミ箱（削除）</strong>ボタンが現れます。</li>
-            <li>カードをドラッグ＆ドロップすると同じカテゴリ内で<strong>並び順を変更</strong>できます。</li>
-            <li>カテゴリ右下の<strong>「＋ 追加」ボタン</strong>から新しいカードを追加できます。</li>
-          </ul>
-          <h5 class="guide-sub-title">外部ツールの操作</h5>
-          <ul class="guide-list">
-            <li>各アイコン左上の<strong>鉛筆ボタン</strong>でラベル・URL を編集できます。</li>
-            <li>各アイコン右上の<strong>×ボタン</strong>でサービスを削除できます。</li>
-            <li><strong>「追加」ボタン</strong>からプリセットのサービス一覧またはカスタム登録でアイコンを追加できます。</li>
-            <li>「太陽光発電」アイコンは固定表示で削除できません。</li>
-          </ul>
-          <h5 class="guide-sub-title">カテゴリの操作</h5>
-          <ul class="guide-list">
-            <li>カテゴリ名横の<strong>鉛筆ボタン</strong>でカテゴリ名・アイコン・カラーを変更できます。</li>
-            <li>ページ下部の<strong>「＋ カテゴリを追加」</strong>ボタンで新しいカテゴリを作成できます。</li>
-            <li>カードが存在するカテゴリは削除できません（先にカードを削除してください）。</li>
-          </ul>
-          <h5 class="guide-sub-title">お知らせの操作</h5>
-          <ul class="guide-list">
-            <li>お知らせ欄に<strong>「＋ お知らせを追加」</strong>ボタンが表示されます。</li>
-            <li>既存のお知らせをクリックすると<strong>編集・削除</strong>が行えます。</li>
           </ul>
         </div>
 
