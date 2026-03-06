@@ -1701,8 +1701,48 @@ async function handlePinSubmit() {
   }
 }
 
+// ========== 表示設定（テーマ・文字サイズ） ==========
+const THEMES     = ['dark', 'glass', 'light', 'warm', 'night'];
+const FONTSIZES  = ['font-sm', 'font-md', 'font-lg', 'font-xl'];
+
+function applyTheme(theme) {
+  document.body.setAttribute('data-theme', theme || 'dark');
+  document.querySelectorAll('#theme-grid .theme-card').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.theme === theme);
+  });
+}
+
+function applyFontSize(sizeClass) {
+  FONTSIZES.forEach(c => document.documentElement.classList.remove(c));
+  document.documentElement.classList.add(sizeClass || 'font-md');
+  document.querySelectorAll('#fontsize-grid .fontsize-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.size === sizeClass);
+  });
+}
+
+function loadSettings() {
+  const theme    = localStorage.getItem('portal-theme')     || 'dark';
+  const fontSize = localStorage.getItem('portal-font-size') || 'font-md';
+  applyTheme(theme);
+  applyFontSize(fontSize);
+}
+
+function openSettingsPanel() {
+  const panel = document.getElementById('settings-panel');
+  panel.removeAttribute('hidden');
+  document.getElementById('settings-fab').classList.add('active');
+}
+
+function closeSettingsPanel() {
+  document.getElementById('settings-panel').setAttribute('hidden', '');
+  document.getElementById('settings-fab').classList.remove('active');
+}
+
 // ========== 初期化 ==========
 document.addEventListener('DOMContentLoaded', async () => {
+  // 最初に設定を適用（フラッシュ防止）
+  loadSettings();
+
   updateClock();
   setInterval(updateClock, 1000);
 
@@ -2043,6 +2083,45 @@ document.addEventListener('DOMContentLoaded', async () => {
       await deleteCategoryFromFirestore(editingCategoryId);
       closeCategoryModal();
       renderAllSections();
+    }
+  });
+
+  // ===== 設定パネル =====
+  document.getElementById('settings-fab').addEventListener('click', () => {
+    const panel = document.getElementById('settings-panel');
+    if (panel.hasAttribute('hidden')) {
+      openSettingsPanel();
+    } else {
+      closeSettingsPanel();
+    }
+  });
+
+  document.getElementById('settings-panel-close').addEventListener('click', closeSettingsPanel);
+
+  // テーマ選択
+  document.querySelectorAll('#theme-grid .theme-card').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const theme = btn.dataset.theme;
+      applyTheme(theme);
+      localStorage.setItem('portal-theme', theme);
+    });
+  });
+
+  // 文字サイズ選択
+  document.querySelectorAll('#fontsize-grid .fontsize-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const size = btn.dataset.size;
+      applyFontSize(size);
+      localStorage.setItem('portal-font-size', size);
+    });
+  });
+
+  // パネル外クリックで閉じる
+  document.addEventListener('click', e => {
+    const panel = document.getElementById('settings-panel');
+    const fab   = document.getElementById('settings-fab');
+    if (!panel.hasAttribute('hidden') && !panel.contains(e.target) && e.target !== fab && !fab.contains(e.target)) {
+      closeSettingsPanel();
     }
   });
 });

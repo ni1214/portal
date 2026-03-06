@@ -21,6 +21,18 @@
 
   <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css">
+
+  <!-- テーマ・文字サイズをCSSロード直後に適用（フラッシュ防止） -->
+  <script>
+    (function() {
+      var t = localStorage.getItem('portal-theme')     || 'dark';
+      var f = localStorage.getItem('portal-font-size') || 'font-md';
+      document.documentElement.classList.add(f);
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.setAttribute('data-theme', t);
+      });
+    })();
+  </script>
 </head>
 
 <body>
@@ -143,6 +155,70 @@
   <button class="help-fab" id="help-fab" title="使い方ガイド">
     <i class="fa-solid fa-question"></i>
   </button>
+
+  <!-- ==================== 設定FABボタン ==================== -->
+  <button class="settings-fab" id="settings-fab" title="表示設定">
+    <i class="fa-solid fa-gear"></i>
+  </button>
+
+  <!-- ==================== 設定パネル ==================== -->
+  <div id="settings-panel" class="settings-panel" hidden>
+    <div class="settings-panel-header">
+      <span><i class="fa-solid fa-gear"></i> 表示設定</span>
+      <button class="settings-panel-close" id="settings-panel-close" title="閉じる">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="settings-panel-body">
+
+      <div class="settings-section">
+        <div class="settings-section-title">テーマ</div>
+        <div class="theme-grid" id="theme-grid">
+          <button class="theme-card" data-theme="dark">
+            <div class="theme-preview theme-preview--dark">
+              <div class="tp-bar"></div><div class="tp-cards"><div></div><div></div><div></div></div>
+            </div>
+            <span>ダーク</span>
+          </button>
+          <button class="theme-card" data-theme="glass">
+            <div class="theme-preview theme-preview--glass">
+              <div class="tp-bar"></div><div class="tp-cards"><div></div><div></div><div></div></div>
+            </div>
+            <span>クリスタル</span>
+          </button>
+          <button class="theme-card" data-theme="light">
+            <div class="theme-preview theme-preview--light">
+              <div class="tp-bar"></div><div class="tp-cards"><div></div><div></div><div></div></div>
+            </div>
+            <span>ライト</span>
+          </button>
+          <button class="theme-card" data-theme="warm">
+            <div class="theme-preview theme-preview--warm">
+              <div class="tp-bar"></div><div class="tp-cards"><div></div><div></div><div></div></div>
+            </div>
+            <span>ウォーム</span>
+          </button>
+          <button class="theme-card" data-theme="night">
+            <div class="theme-preview theme-preview--night">
+              <div class="tp-bar"></div><div class="tp-cards"><div></div><div></div><div></div></div>
+            </div>
+            <span>ナイト</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">文字サイズ</div>
+        <div class="fontsize-grid" id="fontsize-grid">
+          <button class="fontsize-btn" data-size="font-sm">小<span>あ</span></button>
+          <button class="fontsize-btn" data-size="font-md">標準<span>あ</span></button>
+          <button class="fontsize-btn" data-size="font-lg">大<span>あ</span></button>
+          <button class="fontsize-btn" data-size="font-xl">特大<span>あ</span></button>
+        </div>
+      </div>
+
+    </div>
+  </div>
 
   <!-- ==================== ユーザー名設定モーダル ==================== -->
   <div class="modal-overlay" id="username-modal">
