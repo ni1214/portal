@@ -674,8 +674,16 @@ function renderAllSections() {
 
   const addWrap = document.createElement('div');
   addWrap.className = 'btn-add-category-wrap';
-  let btnsHtml = '<button class="btn-add-category"><i class="fa-solid fa-plus"></i> カテゴリを追加</button>';
-  if (currentUsername) btnsHtml += '<button class="btn-add-private-section"><i class="fa-solid fa-lock"></i> マイセクションを追加</button>';
+  let btnsHtml = `
+    <div class="add-btn-group">
+      <button class="btn-add-category"><i class="fa-solid fa-plus"></i> カテゴリを追加</button>
+      <p class="add-btn-desc"><i class="fa-solid fa-users"></i> 全社員に共有されます</p>
+    </div>`;
+  if (currentUsername) btnsHtml += `
+    <div class="add-btn-group">
+      <button class="btn-add-private-section"><i class="fa-solid fa-lock"></i> マイセクションを追加</button>
+      <p class="add-btn-desc add-btn-desc--private"><i class="fa-solid fa-user-secret"></i> 自分だけに表示されます</p>
+    </div>`;
   addWrap.innerHTML = btnsHtml;
   addWrap.querySelector('.btn-add-category').addEventListener('click', () => openCategoryModal(null));
   if (currentUsername) addWrap.querySelector('.btn-add-private-section').addEventListener('click', () => openPrivateSectionModal(null));
