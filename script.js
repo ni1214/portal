@@ -273,6 +273,10 @@ let editingPrivateSectionDocId = null;
 let editingPrivateSectionId = null; // for private section modal
 let privateSectionColorIndex = 1;
 
+// カード階層
+let expandedCards = new Set();
+let editingParentId = null;
+
 // ========== PIN 認証 ==========
 const PIN_SALT = 'seisan-portal-v1';
 
@@ -368,10 +372,13 @@ async function deletePrivateSection(docId) {
 
 async function addPrivateCard(data) {
   if (!currentUsername) return;
-  const secCards = privateCards.filter(c => c.sectionId === data.sectionId);
-  const maxOrder = secCards.length > 0 ? Math.max(...secCards.map(c => c.order || 0)) + 1 : 0;
-  const ref = await addDoc(collection(db, 'users', currentUsername, 'private_cards'), { ...data, order: maxOrder, updatedAt: serverTimestamp() });
-  privateCards.push({ id: ref.id, isPrivate: true, ...data, order: maxOrder });
+  const siblings = data.parentId
+    ? privateCards.filter(c => c.parentId === data.parentId)
+    : privateCards.filter(c => c.sectionId === data.sectionId && !c.parentId);
+  const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(c => c.order || 0)) + 1 : 0;
+  const newData = { ...data, parentId: data.parentId || null, order: maxOrder, updatedAt: serverTimestamp() };
+  const ref = await addDoc(collection(db, 'users', currentUsername, 'private_cards'), newData);
+  privateCards.push({ id: ref.id, isPrivate: true, ...newData });
   renderAllSections();
 }
 
@@ -586,11 +593,15 @@ async function saveCard(docId, data) {
 }
 
 async function addCard(data) {
-  const catCards = allCards.filter(c => c.category === data.category);
-  const maxOrder = catCards.length > 0 ? Math.max(...catCards.map(c => c.order)) + 1 : 0;
+  // parentId がある場合はその子カード群の中での最大 order を取得
+  const siblings = data.parentId
+    ? allCards.filter(c => c.parentId === data.parentId)
+    : allCards.filter(c => c.category === data.category && !c.parentId);
+  const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(c => c.order)) + 1 : 0;
   const catDef = allCategories.find(c => c.id === data.category);
   const newData = {
     ...data,
+    parentId: data.parentId || null,
     order: maxOrder,
     categoryOrder: catDef ? catDef.order : 99,
     isExternalTool: data.category === 'external',
@@ -746,7 +757,8 @@ function buildSection(cat, cards) {
       <div class="card-grid"></div>
     `;
     const grid = section.querySelector('.card-grid');
-    cards.forEach(c => grid.appendChild(buildLinkCard(c, false, privGradient)));
+    const privRootCards = cards.filter(c => !c.parentId);
+    privRootCards.forEach(c => grid.appendChild(buildCardNode(c, cards, privGradient, true)));
     grid.appendChild(buildAddButton(null, true, cat.docId));
     section.querySelector('.btn-edit-category').addEventListener('click', () => openPrivateSectionModal(cat));
 
@@ -777,7 +789,8 @@ function buildSection(cat, cards) {
       <div class="card-grid"></div>
     `;
     const grid = section.querySelector('.card-grid');
-    cards.forEach(c => grid.appendChild(buildLinkCard(c, false, gradient)));
+    const rootCards = cards.filter(c => !c.parentId);
+    rootCards.forEach(c => grid.appendChild(buildCardNode(c, cards, gradient, false)));
     if (isEditMode) grid.appendChild(buildAddButton(cat.id));
 
     if (isEditMode) {
@@ -948,12 +961,76 @@ function buildEditOverlay(card) {
   return overlay;
 }
 
-function buildAddButton(categoryId, isPrivate = false, privateSectionDocId = null) {
+function buildAddButton(categoryId, isPrivate = false, privateSectionDocId = null, parentId = null) {
   const btn = document.createElement('button');
   btn.className = 'btn-add-card';
   btn.innerHTML = '<i class="fa-solid fa-plus"></i><span>カードを追加</span>';
-  btn.addEventListener('click', () => openCardModal(null, categoryId, isPrivate, privateSectionDocId));
+  btn.addEventListener('click', () => openCardModal(null, categoryId, isPrivate, privateSectionDocId, parentId));
   return btn;
+}
+
+// ========== カード階層: ノード構築（再帰） ==========
+function buildCardNode(card, allCatCards, gradient, isPrivate) {
+  const children = allCatCards.filter(c => c.parentId === card.id);
+
+  if (children.length === 0 && !expandedCards.has(card.id)) {
+    // 子がなく、かつフォルダとして展開されたことがない → 通常リーフカード
+    // ただし、まだ一度も子を持ったことがない場合は通常カードとして返す
+    const leafA = buildLinkCard(card, false, gradient);
+    return leafA;
+  }
+
+  // フォルダカード（子あり、または過去に子を追加された）
+  const isExpanded = expandedCards.has(card.id);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'card-node--folder' + (isExpanded ? ' expanded' : '');
+  wrapper.dataset.cardId = card.id;
+
+  // メインカード部分（リンクカードを流用）
+  const a = buildLinkCard(card, false, gradient);
+  a.classList.add('card-node__main');
+
+  // 展開トグルボタン
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'btn-expand-children';
+  toggleBtn.title = isExpanded ? '折りたたむ' : `${children.length}件の子カードを表示`;
+  toggleBtn.innerHTML = `<span class="expand-count">${children.length}</span><i class="fa-solid fa-chevron-down expand-chevron"></i>`;
+  toggleBtn.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (expandedCards.has(card.id)) {
+      expandedCards.delete(card.id);
+    } else {
+      expandedCards.add(card.id);
+    }
+    // セクション全体を再描画
+    renderAllSections();
+  });
+  a.appendChild(toggleBtn);
+
+  wrapper.appendChild(a);
+
+  // 子カードコンテナ（アコーディオン）
+  const childrenDiv = document.createElement('div');
+  childrenDiv.className = 'card-children' + (isExpanded ? ' open' : '');
+
+  const childGrid = document.createElement('div');
+  childGrid.className = 'card-grid card-grid--sub';
+
+  children.forEach(child => {
+    childGrid.appendChild(buildCardNode(child, allCatCards, gradient, isPrivate));
+  });
+
+  // 子カード追加ボタン（編集モード不要 — 常に表示）
+  if (isExpanded) {
+    const catId = card.category || card.sectionId;
+    childGrid.appendChild(buildAddButton(catId, isPrivate, isPrivate ? card.sectionId : null, card.id));
+  }
+
+  childrenDiv.appendChild(childGrid);
+  wrapper.appendChild(childrenDiv);
+
+  return wrapper;
 }
 
 function esc(str) {
@@ -1208,11 +1285,12 @@ function exitEditMode() {
 }
 
 // ========== カード編集モーダル ==========
-function openCardModal(docId, categoryId = null, isPrivate = false, privateSectionDocId = null) {
+function openCardModal(docId, categoryId = null, isPrivate = false, privateSectionDocId = null, parentId = null) {
   editingDocId = docId;
   editingCategory = categoryId;
   editingIsPrivate = isPrivate;
   editingPrivateSectionDocId = privateSectionDocId;
+  editingParentId = parentId;
 
   const card = docId
     ? (isPrivate ? privateCards.find(c => c.id === docId) : allCards.find(c => c.id === docId))
@@ -1241,6 +1319,7 @@ function closeCardModal() {
   editingCategory = null;
   editingIsPrivate = false;
   editingPrivateSectionDocId = null;
+  editingParentId = null;
 }
 
 function updateIconPreview(iconClass) {
@@ -1504,6 +1583,7 @@ function showContextMenu(e, card) {
   menu.style.top = y + 'px';
   menu.innerHTML = `
     <button class="ctx-item ctx-edit"><i class="fa-solid fa-pen"></i> 編集</button>
+    <button class="ctx-item ctx-add-child"><i class="fa-solid fa-sitemap"></i> 子カードを追加</button>
     <button class="ctx-item ctx-delete"><i class="fa-solid fa-trash"></i> 削除</button>
   `;
   menu.querySelector('.ctx-edit').addEventListener('click', e => {
@@ -1513,6 +1593,17 @@ function showContextMenu(e, card) {
       openCardModal(card.id, null, true, card.sectionId);
     } else {
       openCardModal(card.id);
+    }
+  });
+  menu.querySelector('.ctx-add-child').addEventListener('click', e => {
+    e.stopPropagation();
+    closeContextMenu();
+    // 親カードを展開状態にしてから子カード追加モーダルを開く
+    expandedCards.add(card.id);
+    if (card.isPrivate) {
+      openCardModal(null, null, true, card.sectionId, card.id);
+    } else {
+      openCardModal(null, card.category, false, null, card.id);
     }
   });
   menu.querySelector('.ctx-delete').addEventListener('click', async e => {
@@ -1944,6 +2035,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             icon: icon || 'fa-solid fa-star',
             url: url || '#',
             sectionId: editingPrivateSectionDocId,
+            parentId: editingParentId || null,
           });
         }
       } else {
@@ -1959,6 +2051,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             icon:     icon || 'fa-solid fa-star',
             url:      url  || '#',
             category: editingCategory,
+            parentId: editingParentId || null,
           });
         }
       }
