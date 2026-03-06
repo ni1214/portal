@@ -259,6 +259,9 @@ let unsubscribeCards = null;
 // ドラッグ&ドロップ状態
 let dragSrcId = null;
 
+// お気に入りのみ表示モード
+let favoritesOnlyMode = localStorage.getItem('portal-fav-only') === '1';
+
 // ========== PIN 認証 ==========
 const PIN_SALT = 'seisan-portal-v1';
 
@@ -510,6 +513,19 @@ function buildSection(cat, cards) {
     }
   }
 
+  // セクションまとめてお気に入りボタン（外部ツール以外）
+  if (!cat.isExternal) {
+    const favs = getFavorites();
+    const catCards = allCards.filter(c => c.category === cat.id);
+    const allFaved = catCards.length > 0 && catCards.every(c => favs.includes(c.id));
+    const sBtn = document.createElement('button');
+    sBtn.className = 'btn-section-favorite' + (allFaved ? ' active' : '');
+    sBtn.title = allFaved ? 'まとめて解除' : 'セクションをまとめてお気に入り';
+    sBtn.innerHTML = `<i class="fa-${allFaved ? 'solid' : 'regular'} fa-star"></i>`;
+    sBtn.addEventListener('click', () => toggleSectionFavorite(cat.id));
+    section.querySelector('.category-header').appendChild(sBtn);
+  }
+
   return section;
 }
 
@@ -692,9 +708,21 @@ function renderFavorites() {
   const section = document.getElementById('favorites-section');
   const grid = document.getElementById('favorites-grid');
   const count = document.getElementById('favorites-count');
-  if (!favIds.length) { section.hidden = true; return; }
+
   const cards = favIds.map(id => allCards.find(c => c.id === id)).filter(Boolean);
-  if (!cards.length) { section.hidden = true; return; }
+
+  if (!cards.length) {
+    if (favoritesOnlyMode) {
+      // お気に入りのみモードでは空でもセクションを表示
+      section.hidden = false;
+      grid.innerHTML = '<p class="fav-empty"><i class="fa-regular fa-star"></i> お気に入りが未登録です。カードを右クリック → 編集 または各カードの ☆ をクリックして登録してください。</p>';
+      if (count) count.textContent = '0 件';
+    } else {
+      section.hidden = true;
+    }
+    return;
+  }
+
   section.hidden = false;
   grid.innerHTML = '';
   if (count) count.textContent = `${cards.length} 件`;
@@ -1205,6 +1233,64 @@ function closeContextMenu() {
   if (activeContextMenu) { activeContextMenu.remove(); activeContextMenu = null; }
 }
 
+// ========== お気に入りのみ表示 ==========
+function applyFavoritesOnlyMode() {
+  document.querySelector('.main').classList.toggle('favorites-only', favoritesOnlyMode);
+  const btn = document.getElementById('btn-favorites-only');
+  if (!btn) return;
+  if (favoritesOnlyMode) {
+    btn.classList.add('active');
+    btn.title = 'すべて表示';
+    btn.innerHTML = '<i class="fa-solid fa-star"></i><span class="btn-fav-label">すべて表示</span>';
+  } else {
+    btn.classList.remove('active');
+    btn.title = 'お気に入りのみ表示';
+    btn.innerHTML = '<i class="fa-regular fa-star"></i><span class="btn-fav-label">お気に入りのみ</span>';
+  }
+  renderFavorites();
+}
+
+function toggleFavoritesOnly() {
+  favoritesOnlyMode = !favoritesOnlyMode;
+  localStorage.setItem('portal-fav-only', favoritesOnlyMode ? '1' : '0');
+  applyFavoritesOnlyMode();
+}
+
+// ========== セクションまとめてお気に入り ==========
+function toggleSectionFavorite(catId) {
+  const catCards = allCards.filter(c => c.category === catId);
+  if (!catCards.length) return;
+  const favs = getFavorites();
+  const allFaved = catCards.every(c => favs.includes(c.id));
+  let newFavs;
+  if (allFaved) {
+    newFavs = favs.filter(id => !catCards.some(c => c.id === id));
+  } else {
+    newFavs = [...new Set([...favs, ...catCards.map(c => c.id)])];
+  }
+  setFavorites(newFavs);
+  renderFavorites();
+  // セクション内の星ボタンと、セクション自体のまとめ星ボタンを更新
+  catCards.forEach(card => {
+    document.querySelectorAll(`.btn-favorite[data-id="${card.id}"]`).forEach(b => {
+      const active = newFavs.includes(card.id);
+      b.classList.toggle('active', active);
+      b.innerHTML = `<i class="fa-${active ? 'solid' : 'regular'} fa-star"></i>`;
+    });
+  });
+  // まとめ星ボタンの状態更新
+  const sectionEl = document.getElementById(`section-${catId}`);
+  if (sectionEl) {
+    const sBtn = sectionEl.querySelector('.btn-section-favorite');
+    if (sBtn) {
+      const nowAllFaved = catCards.every(c => newFavs.includes(c.id));
+      sBtn.classList.toggle('active', nowAllFaved);
+      sBtn.title = nowAllFaved ? 'まとめて解除' : 'セクションをまとめてお気に入り';
+      sBtn.innerHTML = `<i class="fa-${nowAllFaved ? 'solid' : 'regular'} fa-star"></i>`;
+    }
+  }
+}
+
 // ========== 検索（イベント委任） ==========
 function initSearch() {
   const searchInput = document.getElementById('search-input');
@@ -1372,6 +1458,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     console.error('Firestore エラー:', err);
   }
+
+  // お気に入りのみ表示ボタン
+  document.getElementById('btn-favorites-only').addEventListener('click', toggleFavoritesOnly);
+  applyFavoritesOnlyMode();
 
   // コンテキストメニューを閉じるグローバルリスナー
   document.addEventListener('click', closeContextMenu);

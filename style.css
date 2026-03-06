@@ -2419,3 +2419,97 @@ body::after {
 
 .ctx-edit:hover  { background: rgba(74, 158, 255, 0.15); color: var(--accent-blue); }
 .ctx-delete:hover { background: rgba(255, 94, 160, 0.15); color: var(--accent-pink); }
+
+/* ===========================
+   お気に入りのみ表示ボタン（ヘッダー）
+   =========================== */
+.btn-favorites-only {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-family: var(--font-family);
+}
+
+.btn-favorites-only:hover {
+  background: rgba(255, 204, 0, 0.12);
+  border-color: #ffcc00;
+  color: #ffcc00;
+}
+
+.btn-favorites-only.active {
+  background: rgba(255, 204, 0, 0.18);
+  border-color: #ffcc00;
+  color: #ffcc00;
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.3);
+}
+
+@media (max-width: 600px) {
+  .btn-fav-label { display: none; }
+  .btn-favorites-only { padding: 6px 10px; }
+}
+
+/* ===========================
+   お気に入りのみ表示モード
+   =========================== */
+.main.favorites-only .category-section:not(#favorites-section),
+.main.favorites-only .external-tools,
+.main.favorites-only .btn-add-category-wrap,
+.main.favorites-only #notice-board,
+.main.favorites-only #weather-widget {
+  display: none !important;
+}
+
+.main.favorites-only #favorites-section {
+  display: block !important;
+}
+
+/* お気に入り空欄メッセージ */
+.fav-empty {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding: 24px 16px;
+  text-align: center;
+  opacity: 0.7;
+  line-height: 1.8;
+}
+
+/* ===========================
+   セクションまとめてお気に入りボタン
+   =========================== */
+.btn-section-favorite {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.btn-section-favorite:hover {
+  background: rgba(255, 204, 0, 0.15);
+  border-color: #ffcc00;
+  color: #ffcc00;
+}
+
+.btn-section-favorite.active {
+  background: rgba(255, 204, 0, 0.2);
+  border-color: #ffcc00;
+  color: #ffcc00;
+}
