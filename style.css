@@ -3195,6 +3195,61 @@ html.font-xl { font-size: 21px; }
   }
 }
 
+/* ========== 削除確認モーダル ========== */
+.delete-confirm-dialog {
+  max-width: 360px;
+  text-align: center;
+  padding: var(--space-xl) var(--space-xl) var(--space-lg);
+}
+
+.delete-confirm-icon {
+  font-size: 2.2rem;
+  color: #f59e0b;
+  margin-bottom: var(--space-md);
+  animation: warnPulse 0.6s ease;
+}
+@keyframes warnPulse {
+  0%   { transform: scale(0.7); opacity: 0; }
+  60%  { transform: scale(1.15); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+.delete-confirm-message {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  line-height: 1.6;
+  margin-bottom: var(--space-lg);
+  word-break: break-all;
+}
+
+.btn-danger {
+  padding: 9px 22px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+  background: rgba(120, 120, 140, 0.4);
+  color: var(--text-muted);
+}
+.btn-danger:disabled {
+  cursor: not-allowed;
+}
+.btn-danger.ready {
+  background: rgba(220, 38, 38, 0.85);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(220, 38, 38, 0.4);
+}
+.btn-danger.ready:hover {
+  background: rgb(220, 38, 38);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.5);
+}
+.btn-danger.ready:active {
+  transform: translateY(0);
+}
+
 /* ========== カード階層（バッジ＋ポップアップ方式） ========== */
 
 /* 子カードを持つ親カード: 見た目はそのまま、スタック影だけ追加 */

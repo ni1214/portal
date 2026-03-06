@@ -955,7 +955,7 @@ function buildEditOverlay(card) {
   });
   overlay.querySelector('.btn-delete-card').addEventListener('click', async e => {
     e.preventDefault();
-    if (confirm(`「${card.label}」を削除しますか？`)) {
+    if (await confirmDelete(`「${card.label}」を削除しますか？`)) {
       await deleteCard(card.id);
     }
   });
@@ -1103,6 +1103,50 @@ function closeChildPopup() {
     setTimeout(() => el.remove(), 180);
   }
   document.removeEventListener('click', closeChildPopupOnOutside);
+}
+
+// ========== 削除確認モーダル（誤削除防止） ==========
+function confirmDelete(message) {
+  return new Promise(resolve => {
+    const modal   = document.getElementById('delete-confirm-modal');
+    const msgEl   = document.getElementById('delete-confirm-message');
+    const okBtn   = document.getElementById('delete-confirm-ok');
+    const cancelBtn = document.getElementById('delete-confirm-cancel');
+
+    msgEl.textContent = message;
+    okBtn.disabled = true;
+    okBtn.innerHTML = '削除 (<span id="delete-confirm-count">2</span>)';
+    modal.classList.add('visible');
+
+    let count = 2;
+    const iv = setInterval(() => {
+      count--;
+      const el = document.getElementById('delete-confirm-count');
+      if (el) el.textContent = count;
+      if (count <= 0) {
+        clearInterval(iv);
+        okBtn.disabled = false;
+        okBtn.textContent = '削除する';
+        okBtn.classList.add('ready');
+      }
+    }, 1000);
+
+    function cleanup() {
+      clearInterval(iv);
+      modal.classList.remove('visible');
+      okBtn.classList.remove('ready');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      modal.removeEventListener('click', onOverlay);
+    }
+    function onOk()      { cleanup(); resolve(true);  }
+    function onCancel()  { cleanup(); resolve(false); }
+    function onOverlay(e){ if (e.target === modal) { cleanup(); resolve(false); } }
+
+    okBtn.addEventListener('click', onOk, { once: true });
+    cancelBtn.addEventListener('click', onCancel, { once: true });
+    modal.addEventListener('click', onOverlay);
+  });
 }
 
 function esc(str) {
@@ -1679,7 +1723,7 @@ function showContextMenu(e, card) {
   menu.querySelector('.ctx-delete').addEventListener('click', async e => {
     e.stopPropagation();
     closeContextMenu();
-    if (confirm(`「${card.label}」を削除しますか？`)) {
+    if (await confirmDelete(`「${card.label}」を削除しますか？`)) {
       if (card.isPrivate) {
         await deletePrivateCard(card.id);
       } else {
@@ -2033,7 +2077,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('private-section-delete').addEventListener('click', async () => {
     if (!editingPrivateSectionId) return;
     const cat = privateCategories.find(c => c.docId === editingPrivateSectionId);
-    if (confirm(`「${cat?.label}」を削除しますか？（中のカードも全て削除されます）`)) {
+    if (await confirmDelete(`「${cat?.label}」を削除しますか？（中のカードも全て削除されます）`)) {
       const sectionCards = privateCards.filter(c => c.sectionId === editingPrivateSectionId);
       await Promise.all(sectionCards.map(c => deletePrivateCard(c.id)));
       await deletePrivateSection(editingPrivateSectionId);
@@ -2139,14 +2183,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (editingIsPrivate) {
       const card = privateCards.find(c => c.id === editingDocId);
       if (!card) return;
-      if (confirm(`「${card.label}」を削除しますか？`)) {
+      if (await confirmDelete(`「${card.label}」を削除しますか？`)) {
         await deletePrivateCard(editingDocId);
         closeCardModal();
       }
     } else {
       const card = allCards.find(c => c.id === editingDocId);
       if (!card) return;
-      if (confirm(`「${card.label}」を削除しますか？`)) {
+      if (await confirmDelete(`「${card.label}」を削除しますか？`)) {
         await deleteCard(editingDocId);
         closeCardModal();
       }
@@ -2189,7 +2233,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('notice-delete').addEventListener('click', async () => {
     if (!editingNoticeId) return;
     const n = allNotices.find(x => x.id === editingNoticeId);
-    if (confirm(`「${n?.title}」を削除しますか？`)) {
+    if (await confirmDelete(`「${n?.title}」を削除しますか？`)) {
       await deleteNotice(editingNoticeId);
       closeNoticeModal();
       renderNotices(allNotices);
@@ -2242,7 +2286,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       alert('このカテゴリにはカードがあります。先にカードを削除または移動してください。');
       return;
     }
-    if (confirm(`「${cat?.label}」を削除しますか？`)) {
+    if (await confirmDelete(`「${cat?.label}」を削除しますか？`)) {
       await deleteCategoryFromFirestore(editingCategoryId);
       closeCategoryModal();
       renderAllSections();

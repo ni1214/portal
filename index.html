@@ -515,6 +515,22 @@
     </div>
   </div>
 
+  <!-- 削除確認モーダル -->
+  <div class="modal-overlay" id="delete-confirm-modal">
+    <div class="modal-glass delete-confirm-dialog">
+      <div class="delete-confirm-icon">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <p class="delete-confirm-message" id="delete-confirm-message">削除しますか？</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="delete-confirm-cancel">キャンセル</button>
+        <button class="btn-danger" id="delete-confirm-ok" disabled>
+          削除 (<span id="delete-confirm-count">2</span>)
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Script (type="module" for Firebase ESM) -->
   <script type="module" src="script.js"></script>
 </body>
