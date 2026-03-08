@@ -384,42 +384,82 @@ async function saveUsername(name) {
 // ========== PINロック ==========
 let lockPinHash = null;      // Firestoreから読み込んだハッシュ
 let lockPinEnabled = false;  // PIN設定済みか
+let lockEnabled = false;     // ロック機能ON/OFF
+let autoLockMinutes = 5;     // 自動ロックまでの時間（分）
 let lockCurrentInput = '';   // 現在入力中のPIN文字列
 let lockClockTimer = null;
+let lastActivityAt = Date.now();
+let _autoLockTimer = null;
 
-async function loadLockPin(username) {
+async function loadLockSettings(username) {
   if (!username) return;
   try {
     const snap = await getDoc(doc(db, 'users', username, 'data', 'lock_pin'));
     if (snap.exists()) {
-      lockPinHash = snap.data().hash || null;
-      lockPinEnabled = !!lockPinHash;
+      const data = snap.data();
+      lockPinHash      = data.hash || null;
+      lockPinEnabled   = !!lockPinHash;
+      lockEnabled      = data.enabled ?? false;
+      autoLockMinutes  = data.autoLockMinutes ?? 5;
     }
   } catch (_) {}
-  document.getElementById('btn-lock-header').hidden = !(lockPinEnabled && currentUsername);
+  document.getElementById('btn-lock-header').hidden = !(lockEnabled && lockPinEnabled && currentUsername);
+  if (lockEnabled && lockPinEnabled) startActivityTracking();
+}
+
+async function saveLockSettings() {
+  if (!currentUsername) return;
+  try {
+    await setDoc(doc(db, 'users', currentUsername, 'data', 'lock_pin'), {
+      enabled: lockEnabled,
+      autoLockMinutes
+    }, { merge: true });
+  } catch (err) { console.error('設定保存エラー:', err); }
+}
+
+function startActivityTracking() {
+  ['mousemove', 'click', 'keydown', 'touchstart', 'scroll'].forEach(ev => {
+    document.addEventListener(ev, resetActivityTimer, { passive: true });
+  });
+  if (_autoLockTimer) clearInterval(_autoLockTimer);
+  _autoLockTimer = setInterval(checkAutoLock, 30_000);
+}
+
+function stopActivityTracking() {
+  if (_autoLockTimer) { clearInterval(_autoLockTimer); _autoLockTimer = null; }
+}
+
+function resetActivityTimer() { lastActivityAt = Date.now(); }
+
+function checkAutoLock() {
+  if (!lockEnabled || !lockPinEnabled || !currentUsername) return;
+  if (!document.getElementById('lock-screen').hidden) return;
+  if (Date.now() - lastActivityAt >= autoLockMinutes * 60_000) lockPortal();
 }
 
 async function setLockPin(newPin) {
   const hash = await hashPIN(newPin);
   try {
     await setDoc(doc(db, 'users', currentUsername, 'data', 'lock_pin'), { hash }, { merge: true });
-    lockPinHash = hash;
+    lockPinHash    = hash;
     lockPinEnabled = true;
-    document.getElementById('btn-lock-header').hidden = false;
+    document.getElementById('btn-lock-header').hidden = !(lockEnabled && currentUsername);
+    if (lockEnabled) startActivityTracking();
   } catch (err) { console.error('PIN設定エラー:', err); throw err; }
 }
 
 async function removeLockPin() {
   try {
     await setDoc(doc(db, 'users', currentUsername, 'data', 'lock_pin'), { hash: null }, { merge: true });
-    lockPinHash = null;
+    lockPinHash    = null;
     lockPinEnabled = false;
     document.getElementById('btn-lock-header').hidden = true;
+    stopActivityTracking();
   } catch (err) { console.error('PIN解除エラー:', err); throw err; }
 }
 
 function lockPortal() {
-  if (!lockPinEnabled || !currentUsername) return;
+  if (!lockEnabled || !lockPinEnabled || !currentUsername) return;
   lockCurrentInput = '';
   updateLockDots();
   // ロック画面の情報を更新
@@ -490,33 +530,90 @@ async function verifyLockPin(pin) {
 
 // セキュリティ設定モーダル
 function openSecurityModal() {
-  const setupArea   = document.getElementById('security-setup-area');
-  const manageArea  = document.getElementById('security-manage-area');
-  const descEl      = document.getElementById('security-modal-desc');
-  document.getElementById('new-pin-input').value     = '';
+  // トグル状態を反映
+  document.getElementById('lock-enabled-toggle').checked = lockEnabled;
+
+  // 自動ロックセクション表示切り替え
+  document.getElementById('security-autolock-section').hidden = !lockEnabled;
+
+  // 選択中の自動ロック時間をハイライト
+  document.querySelectorAll('.autolock-time-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.minutes) === autoLockMinutes);
+  });
+
+  // PIN設定エリアのリセット
+  const setupArea  = document.getElementById('security-setup-area');
+  const manageArea = document.getElementById('security-manage-area');
+  document.getElementById('new-pin-input').value      = '';
   document.getElementById('confirm-pin-input').value  = '';
   document.getElementById('security-pin-error').hidden = true;
-  if (document.getElementById('current-pin-input'))
-    document.getElementById('current-pin-input').value = '';
-  if (document.getElementById('security-current-error'))
-    document.getElementById('security-current-error').hidden = true;
+  const curInput = document.getElementById('current-pin-input');
+  if (curInput) curInput.value = '';
+  const curErr = document.getElementById('security-current-error');
+  if (curErr) curErr.hidden = true;
 
   if (lockPinEnabled) {
     setupArea.hidden  = true;
     manageArea.hidden = false;
-    descEl.textContent = 'PINロックが設定されています。変更・解除するには現在のPINを入力してください。';
   } else {
     setupArea.hidden  = false;
     manageArea.hidden = true;
-    descEl.textContent = 'PINロックを設定すると、離席時にポータルをロックして他の人の操作を防げます。';
   }
+
   document.getElementById('security-modal').classList.add('visible');
-  setTimeout(() => {
-    const firstInput = lockPinEnabled
-      ? document.getElementById('current-pin-input')
-      : document.getElementById('new-pin-input');
-    firstInput?.focus();
-  }, 100);
+}
+
+async function openAdminModal() {
+  document.getElementById('admin-auth-area').hidden  = false;
+  document.getElementById('admin-panel-area').hidden = true;
+  document.getElementById('admin-pin-input').value   = '';
+  document.getElementById('admin-auth-error').hidden = true;
+  document.getElementById('admin-modal').classList.add('visible');
+  setTimeout(() => document.getElementById('admin-pin-input').focus(), 100);
+}
+
+function closeAdminModal() {
+  document.getElementById('admin-modal').classList.remove('visible');
+}
+
+async function loadUsersForAdmin() {
+  const listEl = document.getElementById('admin-user-list');
+  listEl.innerHTML = '<div class="admin-loading">読み込み中...</div>';
+  try {
+    const snap = await getDocs(collection(db, 'users_list'));
+    if (snap.empty) { listEl.innerHTML = '<div class="admin-loading">ユーザーなし</div>'; return; }
+    listEl.innerHTML = '';
+    for (const d of snap.docs) {
+      const name = d.id;
+      const item = document.createElement('div');
+      item.className = 'admin-user-item';
+      item.innerHTML = `
+        <div class="admin-user-info">
+          <span class="admin-user-avatar">${name.charAt(0).toUpperCase()}</span>
+          <span class="admin-user-name">${name}</span>
+        </div>
+        <button class="btn-admin-reset-pin" data-username="${name}">PINリセット</button>
+      `;
+      item.querySelector('.btn-admin-reset-pin').addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        if (!confirm(`${name} さんのPINをリセットしますか？`)) return;
+        btn.disabled = true;
+        btn.textContent = '処理中...';
+        try {
+          await setDoc(doc(db, 'users', name, 'data', 'lock_pin'), { hash: null, enabled: false }, { merge: true });
+          btn.textContent = 'リセット済み ✓';
+          if (name === currentUsername) {
+            lockPinHash = null; lockPinEnabled = false; lockEnabled = false;
+            document.getElementById('btn-lock-header').hidden = true;
+            stopActivityTracking();
+          }
+        } catch (_) { btn.disabled = false; btn.textContent = 'エラー'; }
+      });
+      listEl.appendChild(item);
+    }
+  } catch (_) {
+    listEl.innerHTML = '<div class="admin-loading">読み込みエラー</div>';
+  }
 }
 
 function closeSecurityModal() {
@@ -1607,7 +1704,7 @@ async function loadPersonalData(username) {
     await loadReadNotices(username);
     setupNoticeObserver();
     loadChatLastRead(username);
-    loadLockPin(username);
+    loadLockSettings(username);
   } catch (err) {
     console.error('個人データ読み込みエラー:', err);
   }
@@ -3354,9 +3451,59 @@ document.addEventListener('DOMContentLoaded', async () => {
     openSecurityModal();
   });
   document.getElementById('security-cancel').addEventListener('click', closeSecurityModal);
-  document.getElementById('security-cancel2').addEventListener('click', closeSecurityModal);
   document.getElementById('security-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeSecurityModal();
+  });
+
+  // ロック機能 ON/OFF トグル
+  document.getElementById('lock-enabled-toggle').addEventListener('change', async e => {
+    lockEnabled = e.target.checked;
+    document.getElementById('security-autolock-section').hidden = !lockEnabled;
+    document.getElementById('btn-lock-header').hidden = !(lockEnabled && lockPinEnabled && currentUsername);
+    if (lockEnabled && lockPinEnabled) {
+      startActivityTracking();
+    } else {
+      stopActivityTracking();
+    }
+    await saveLockSettings();
+  });
+
+  // 自動ロック時間ボタン
+  document.getElementById('autolock-time-grid').addEventListener('click', async e => {
+    const btn = e.target.closest('.autolock-time-btn');
+    if (!btn) return;
+    autoLockMinutes = parseInt(btn.dataset.minutes);
+    document.querySelectorAll('.autolock-time-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    lastActivityAt = Date.now();
+    await saveLockSettings();
+  });
+
+  // 管理者パネル
+  document.getElementById('btn-open-admin').addEventListener('click', () => {
+    closeSettingsPanel();
+    openAdminModal();
+  });
+  document.getElementById('admin-cancel').addEventListener('click', closeAdminModal);
+  document.getElementById('admin-close').addEventListener('click', closeAdminModal);
+  document.getElementById('admin-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAdminModal();
+  });
+  document.getElementById('admin-auth-btn').addEventListener('click', async () => {
+    const pin   = document.getElementById('admin-pin-input').value;
+    const errEl = document.getElementById('admin-auth-error');
+    errEl.hidden = true;
+    const ok = await verifyPIN(pin);
+    if (ok) {
+      document.getElementById('admin-auth-area').hidden  = true;
+      document.getElementById('admin-panel-area').hidden = false;
+      loadUsersForAdmin();
+    } else {
+      errEl.hidden = false;
+    }
+  });
+  document.getElementById('admin-pin-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('admin-auth-btn').click();
   });
 
   // PIN設定

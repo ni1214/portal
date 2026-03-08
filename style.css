@@ -5209,3 +5209,165 @@ html.font-xl { font-size: 21px; }
   font-weight: 600;
   margin-bottom: 4px;
 }
+
+/* ===========================
+   セキュリティ モーダル 新UI
+   =========================== */
+.security-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  margin-bottom: 4px;
+}
+.security-row-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+.security-row-left > i { font-size: 1.1rem; color: var(--accent-blue); min-width: 20px; text-align: center; }
+.security-row-title { font-weight: 600; color: var(--text-primary); font-size: 0.9rem; }
+.security-row-desc  { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
+
+/* Toggle switch */
+.toggle-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0.15);
+  border-radius: 26px;
+  cursor: pointer;
+  transition: background 0.25s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 20px; height: 20px;
+  left: 3px; top: 3px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.25s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--accent-blue); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+/* Auto-lock section */
+.security-autolock-section {
+  background: rgba(255,255,255,0.04);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-top: 8px;
+  border: 1px solid rgba(255,255,255,0.07);
+}
+.security-subsection-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.security-subsection-title i { color: var(--accent-blue); }
+.security-hint-text { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px; }
+
+/* Auto-lock time buttons */
+.autolock-time-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.autolock-time-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.autolock-time-btn:hover  { background: rgba(255,255,255,0.12); color: var(--text-primary); }
+.autolock-time-btn.active { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; font-weight: 600; }
+
+/* ===========================
+   管理者パネル モーダル
+   =========================== */
+.admin-modal-inner { max-width: 420px; width: 100%; }
+.admin-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.admin-panel-subtitle { font-size: 0.9rem; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+.admin-panel-subtitle i { color: var(--accent-blue); }
+.admin-user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.admin-loading { color: var(--text-secondary); font-size: 0.85rem; text-align: center; padding: 20px; }
+.admin-user-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.05);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.07);
+}
+.admin-user-info { display: flex; align-items: center; gap: 10px; }
+.admin-user-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg,#6366f1,#8b5cf6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; font-weight: 700; color: #fff;
+  flex-shrink: 0;
+}
+.admin-user-name { font-size: 0.9rem; color: var(--text-primary); font-weight: 500; }
+.btn-admin-reset-pin {
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #f87171;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+.btn-admin-reset-pin:hover    { background: rgba(239,68,68,0.25); }
+.btn-admin-reset-pin:disabled { opacity: 0.5; cursor: default; }
+
+/* ===========================
+   設定パネル 管理者セクション
+   =========================== */
+.settings-section-admin { margin-top: 4px; }
+.btn-open-admin {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.25);
+  color: #f87171;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+.btn-open-admin:hover { background: rgba(239,68,68,0.2); }

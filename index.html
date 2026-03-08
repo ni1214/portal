@@ -303,6 +303,13 @@
         </div>
       </div>
 
+      <div class="settings-section settings-section-admin">
+        <div class="settings-section-title">管理者</div>
+        <button class="btn-open-admin" id="btn-open-admin">
+          <i class="fa-solid fa-user-shield"></i> 管理者パネルを開く
+        </button>
+      </div>
+
     </div>
   </div>
 
@@ -640,40 +647,101 @@
   <div class="modal-overlay" id="security-modal">
     <div class="modal-glass security-modal-inner">
       <h3 class="modal-title"><i class="fa-solid fa-shield-halved"></i> セキュリティ設定</h3>
-      <p class="modal-desc" id="security-modal-desc">PINロックを設定すると、離席時にポータルをロックして他の人の操作を防げます。</p>
 
-      <!-- PIN未設定時 -->
-      <div id="security-setup-area">
-        <div class="form-group">
-          <label class="form-label">新しいPIN（4桁の数字）</label>
-          <input type="password" id="new-pin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・">
+      <!-- ① ロック機能 ON/OFF トグル -->
+      <div class="security-row">
+        <div class="security-row-left">
+          <i class="fa-solid fa-lock"></i>
+          <div>
+            <div class="security-row-title">PINロック機能</div>
+            <div class="security-row-desc">オンにするとロック・自動ロックが有効になります</div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">PINを確認</label>
-          <input type="password" id="confirm-pin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・">
+        <label class="toggle-switch">
+          <input type="checkbox" id="lock-enabled-toggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <!-- ② 自動ロック時間（機能ONのときのみ表示） -->
+      <div class="security-autolock-section" id="security-autolock-section" hidden>
+        <div class="security-subsection-title"><i class="fa-solid fa-clock"></i> 自動ロックまでの時間</div>
+        <div class="autolock-time-grid" id="autolock-time-grid">
+          <button class="autolock-time-btn" data-minutes="1">1分</button>
+          <button class="autolock-time-btn" data-minutes="3">3分</button>
+          <button class="autolock-time-btn active" data-minutes="5">5分</button>
+          <button class="autolock-time-btn" data-minutes="10">10分</button>
+          <button class="autolock-time-btn" data-minutes="30">30分</button>
         </div>
-        <div class="security-error" id="security-pin-error" hidden></div>
-        <div class="modal-actions">
-          <button class="btn-modal-secondary" id="security-cancel">閉じる</button>
-          <button class="btn-modal-primary" id="btn-set-pin">PINを設定する</button>
+
+        <!-- ③ PIN設定 -->
+        <div class="security-subsection-title" style="margin-top:14px"><i class="fa-solid fa-key"></i> PIN番号</div>
+
+        <!-- PIN未設定 -->
+        <div id="security-setup-area">
+          <p class="security-hint-text">4桁のPINを設定してください。ロック解除時に使用します。</p>
+          <div class="form-group">
+            <label class="form-label">新しいPIN（4桁）</label>
+            <input type="password" id="new-pin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・">
+          </div>
+          <div class="form-group">
+            <label class="form-label">確認</label>
+            <input type="password" id="confirm-pin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・">
+          </div>
+          <div class="security-error" id="security-pin-error" hidden></div>
+          <button class="btn-modal-primary" id="btn-set-pin" style="width:100%">PINを設定する</button>
+        </div>
+
+        <!-- PIN設定済み -->
+        <div id="security-manage-area" hidden>
+          <div class="security-pin-set-badge">
+            <i class="fa-solid fa-circle-check"></i> PINが設定されています
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label class="form-label">現在のPIN（変更・解除するには入力）</label>
+            <input type="password" id="current-pin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・">
+          </div>
+          <div class="security-error" id="security-current-error" hidden></div>
+          <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
+            <button class="btn-modal-danger" id="btn-remove-pin">PINを解除する</button>
+            <button class="btn-modal-primary" id="btn-change-pin">PINを変更する</button>
+          </div>
         </div>
       </div>
 
-      <!-- PIN設定済み時 -->
-      <div id="security-manage-area" hidden>
-        <div class="security-pin-set-badge">
-          <i class="fa-solid fa-circle-check"></i> PINが設定されています
-        </div>
-        <p class="modal-desc" style="margin-top:8px">変更・解除するには現在のPINを入力してください。</p>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn-modal-secondary" id="security-cancel">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 管理者パネル モーダル ==================== -->
+  <div class="modal-overlay" id="admin-modal">
+    <div class="modal-glass admin-modal-inner">
+      <h3 class="modal-title"><i class="fa-solid fa-user-shield"></i> 管理者パネル</h3>
+
+      <!-- 管理者認証 -->
+      <div id="admin-auth-area">
+        <p class="modal-desc">管理者PINを入力してください。</p>
         <div class="form-group">
-          <label class="form-label">現在のPIN</label>
-          <input type="password" id="current-pin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・">
+          <label class="form-label">管理者PIN</label>
+          <input type="password" id="admin-pin-input" class="form-input pin-input" maxlength="6" inputmode="numeric" placeholder="・・・・">
         </div>
-        <div class="security-error" id="security-current-error" hidden></div>
-        <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
-          <button class="btn-modal-secondary" id="security-cancel2">閉じる</button>
-          <button class="btn-modal-danger" id="btn-remove-pin">PINを解除する</button>
-          <button class="btn-modal-primary" id="btn-change-pin">PINを変更する</button>
+        <div class="security-error" id="admin-auth-error" hidden>PINが違います</div>
+        <div class="modal-actions">
+          <button class="btn-modal-secondary" id="admin-cancel">閉じる</button>
+          <button class="btn-modal-primary" id="admin-auth-btn">認証する</button>
+        </div>
+      </div>
+
+      <!-- ユーザー管理（認証後） -->
+      <div id="admin-panel-area" hidden>
+        <div class="admin-panel-header">
+          <span class="admin-panel-subtitle"><i class="fa-solid fa-users"></i> ユーザーのPINロック管理</span>
+          <button class="btn-modal-secondary" id="admin-close">閉じる</button>
+        </div>
+        <div class="admin-user-list" id="admin-user-list">
+          <div class="admin-loading">読み込み中...</div>
         </div>
       </div>
     </div>
