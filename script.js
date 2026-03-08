@@ -566,10 +566,23 @@ function openSecurityModal() {
 async function openAdminModal() {
   document.getElementById('admin-auth-area').hidden  = false;
   document.getElementById('admin-panel-area').hidden = true;
+  document.getElementById('admin-setup-area').hidden = true;
   document.getElementById('admin-pin-input').value   = '';
   document.getElementById('admin-auth-error').hidden = true;
   document.getElementById('admin-modal').classList.add('visible');
-  setTimeout(() => document.getElementById('admin-pin-input').focus(), 100);
+
+  // PIN未設定なら設定モードで開く
+  const configured = await isPINConfigured();
+  if (!configured) {
+    document.getElementById('admin-auth-area').hidden  = true;
+    document.getElementById('admin-setup-area').hidden = false;
+    document.getElementById('admin-new-pin').value         = '';
+    document.getElementById('admin-new-pin-confirm').value = '';
+    document.getElementById('admin-setup-error').hidden    = true;
+    setTimeout(() => document.getElementById('admin-new-pin').focus(), 100);
+  } else {
+    setTimeout(() => document.getElementById('admin-pin-input').focus(), 100);
+  }
 }
 
 function closeAdminModal() {
@@ -3505,6 +3518,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('admin-pin-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('admin-auth-btn').click();
   });
+
+  // 管理者PIN初回設定
+  document.getElementById('admin-setup-btn').addEventListener('click', async () => {
+    const pin     = document.getElementById('admin-new-pin').value;
+    const confirm = document.getElementById('admin-new-pin-confirm').value;
+    const errEl   = document.getElementById('admin-setup-error');
+    errEl.hidden  = true;
+    if (!/^\d{4,6}$/.test(pin))  { errEl.textContent = '4〜6桁の数字を入力してください'; errEl.hidden = false; return; }
+    if (pin !== confirm)          { errEl.textContent = 'PINが一致しません';               errEl.hidden = false; return; }
+    await setPIN(pin);
+    document.getElementById('admin-setup-area').hidden = true;
+    document.getElementById('admin-panel-area').hidden = false;
+    loadUsersForAdmin();
+  });
+  document.getElementById('admin-setup-cancel').addEventListener('click', closeAdminModal);
 
   // PIN設定
   document.getElementById('btn-set-pin').addEventListener('click', async () => {

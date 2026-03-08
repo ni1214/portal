@@ -734,6 +734,24 @@
         </div>
       </div>
 
+      <!-- 管理者PIN初回設定（未設定時のみ表示） -->
+      <div id="admin-setup-area" hidden>
+        <p class="modal-desc">管理者PINが未設定です。新しい管理者PINを設定してください。</p>
+        <div class="form-group">
+          <label class="form-label">新しい管理者PIN（4〜6桁）</label>
+          <input type="password" id="admin-new-pin" class="form-input pin-input" maxlength="6" inputmode="numeric" placeholder="・・・・">
+        </div>
+        <div class="form-group">
+          <label class="form-label">確認</label>
+          <input type="password" id="admin-new-pin-confirm" class="form-input pin-input" maxlength="6" inputmode="numeric" placeholder="・・・・">
+        </div>
+        <div class="security-error" id="admin-setup-error" hidden></div>
+        <div class="modal-actions">
+          <button class="btn-modal-secondary" id="admin-setup-cancel">閉じる</button>
+          <button class="btn-modal-primary" id="admin-setup-btn">PINを設定する</button>
+        </div>
+      </div>
+
       <!-- ユーザー管理（認証後） -->
       <div id="admin-panel-area" hidden>
         <div class="admin-panel-header">
