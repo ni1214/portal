@@ -5002,3 +5002,210 @@ html.font-xl { font-size: 21px; }
   .apply-type-list { flex-direction: row; flex-wrap: wrap; }
   .apply-type-item { padding: 5px 9px; font-size: 0.73rem; }
 }
+
+/* ===========================
+   ニックネーム重複エラー
+   =========================== */
+.username-error-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  color: #f87171;
+  margin-bottom: var(--space-md);
+  line-height: 1.5;
+  animation: fadeIn 0.2s ease;
+}
+.username-error-box i { flex-shrink: 0; margin-top: 2px; }
+.username-security-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+.btn-open-security {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-open-security:hover { border-color: rgba(124,92,255,0.4); color: var(--accent-purple); }
+
+/* ===========================
+   ロックヘッダーボタン
+   =========================== */
+.btn-lock-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.btn-lock-header:hover {
+  background: rgba(255,255,255,0.13);
+  border-color: rgba(251,191,36,0.5);
+  color: #fbbf24;
+  box-shadow: 0 0 10px rgba(251,191,36,0.2);
+}
+.lock-set-flash { animation: lockFlash 0.6s ease; }
+@keyframes lockFlash {
+  0%, 100% { box-shadow: none; }
+  50% { box-shadow: 0 0 20px rgba(34,197,94,0.6); border-color: #4ade80; color: #4ade80; }
+}
+
+/* ===========================
+   ロック画面
+   =========================== */
+.lock-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(5, 7, 20, 0.92);
+  backdrop-filter: blur(24px) saturate(0.6);
+  -webkit-backdrop-filter: blur(24px) saturate(0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+.lock-clock {
+  font-size: clamp(3rem, 12vw, 5.5rem);
+  font-weight: 200;
+  color: rgba(255,255,255,0.92);
+  letter-spacing: 0.05em;
+  margin-bottom: 24px;
+  font-variant-numeric: tabular-nums;
+}
+.lock-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  margin-bottom: 10px;
+}
+.lock-username {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 28px;
+}
+.lock-pin-dots {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+.lock-pin-dots span {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.4);
+  transition: all 0.15s;
+}
+.lock-pin-dots span.filled {
+  background: #fff;
+  border-color: #fff;
+  transform: scale(1.1);
+}
+.lock-pin-dots.shake { animation: pinShake 0.5s ease; }
+@keyframes pinShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-10px); }
+  40% { transform: translateX(10px); }
+  60% { transform: translateX(-8px); }
+  80% { transform: translateX(8px); }
+}
+.lock-pin-error {
+  font-size: 0.78rem;
+  color: #f87171;
+  margin-bottom: 4px;
+  min-height: 18px;
+  animation: fadeIn 0.2s ease;
+}
+.lock-numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 72px);
+  gap: 12px;
+  margin-top: 10px;
+}
+.lock-key {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 300;
+  cursor: pointer;
+  transition: all 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.lock-key:active { background: rgba(255,255,255,0.25); transform: scale(0.93); }
+.lock-key-del { font-size: 1.1rem; background: transparent; border-color: transparent; }
+.lock-key-del:active { background: rgba(255,255,255,0.1); }
+.lock-key-empty { visibility: hidden; }
+.lock-hint { margin-top: 28px; font-size: 0.68rem; color: rgba(255,255,255,0.25); text-align: center; }
+
+/* ===========================
+   セキュリティ設定モーダル
+   =========================== */
+.security-modal-inner { max-width: 360px; width: 100%; }
+.pin-input {
+  font-size: 1.4rem !important;
+  letter-spacing: 0.4em;
+  text-align: center;
+  font-family: monospace !important;
+}
+.security-error {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  color: #f87171;
+  margin-bottom: 8px;
+}
+.security-pin-set-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.3);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  color: #4ade80;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}

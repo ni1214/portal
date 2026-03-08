@@ -328,6 +328,9 @@ function showUsernameModal(isEdit = false) {
   const input = document.getElementById('username-input');
   input.value = (isEdit && currentUsername) ? currentUsername : '';
   document.getElementById('username-modal').classList.add('visible');
+  // セキュリティ設定ボタンはログイン済みのときのみ表示
+  document.getElementById('username-security-row').hidden = !currentUsername;
+  hideUsernameError();
   setTimeout(() => input.focus(), 100);
 }
 
@@ -335,13 +338,189 @@ function closeUsernameModal() {
   document.getElementById('username-modal').classList.remove('visible');
 }
 
-function saveUsername(name) {
+function showUsernameError(msg) {
+  const box = document.getElementById('username-error-box');
+  document.getElementById('username-error-msg').textContent = msg;
+  box.hidden = false;
+}
+
+function hideUsernameError() {
+  document.getElementById('username-error-box').hidden = true;
+}
+
+async function saveUsername(name) {
+  // 変更なしはそのまま閉じる
+  if (name === currentUsername) { closeUsernameModal(); return; }
+
+  // 重複チェック
+  const submitBtn = document.getElementById('username-submit');
+  const spinner = document.getElementById('username-submit-spinner');
+  submitBtn.disabled = true;
+  spinner.hidden = false;
+  hideUsernameError();
+
+  try {
+    const snap = await getDoc(doc(db, 'users_list', name));
+    if (snap.exists()) {
+      showUsernameError('このニックネームはすでに使用されています。別の名前を選んでください。');
+      submitBtn.disabled = false;
+      spinner.hidden = true;
+      return;
+    }
+  } catch (_) { /* オフライン等は無視 */ }
+
+  submitBtn.disabled = false;
+  spinner.hidden = true;
+
   currentUsername = name;
   localStorage.setItem('portal-username', name);
   updateUsernameDisplay();
-  registerUserLogin(name);   // users_list に記録
+  registerUserLogin(name);
   loadPersonalData(name);
   renderAllSections();
+  closeUsernameModal();
+}
+
+// ========== PINロック ==========
+let lockPinHash = null;      // Firestoreから読み込んだハッシュ
+let lockPinEnabled = false;  // PIN設定済みか
+let lockCurrentInput = '';   // 現在入力中のPIN文字列
+let lockClockTimer = null;
+
+async function loadLockPin(username) {
+  if (!username) return;
+  try {
+    const snap = await getDoc(doc(db, 'users', username, 'data', 'lock_pin'));
+    if (snap.exists()) {
+      lockPinHash = snap.data().hash || null;
+      lockPinEnabled = !!lockPinHash;
+    }
+  } catch (_) {}
+  document.getElementById('btn-lock-header').hidden = !(lockPinEnabled && currentUsername);
+}
+
+async function setLockPin(newPin) {
+  const hash = await hashPIN(newPin);
+  try {
+    await setDoc(doc(db, 'users', currentUsername, 'data', 'lock_pin'), { hash }, { merge: true });
+    lockPinHash = hash;
+    lockPinEnabled = true;
+    document.getElementById('btn-lock-header').hidden = false;
+  } catch (err) { console.error('PIN設定エラー:', err); throw err; }
+}
+
+async function removeLockPin() {
+  try {
+    await setDoc(doc(db, 'users', currentUsername, 'data', 'lock_pin'), { hash: null }, { merge: true });
+    lockPinHash = null;
+    lockPinEnabled = false;
+    document.getElementById('btn-lock-header').hidden = true;
+  } catch (err) { console.error('PIN解除エラー:', err); throw err; }
+}
+
+function lockPortal() {
+  if (!lockPinEnabled || !currentUsername) return;
+  lockCurrentInput = '';
+  updateLockDots();
+  // ロック画面の情報を更新
+  document.getElementById('lock-username').textContent = currentUsername;
+  const avatarEl = document.getElementById('lock-avatar');
+  avatarEl.textContent = currentUsername.charAt(0).toUpperCase();
+  avatarEl.style.background = getUserAvatarColor(currentUsername);
+  document.getElementById('lock-pin-error').hidden = true;
+  document.getElementById('lock-screen').hidden = false;
+  document.body.style.overflow = 'hidden';
+  // 時計更新
+  updateLockClock();
+  lockClockTimer = setInterval(updateLockClock, 1000);
+}
+
+function updateLockClock() {
+  const now = new Date();
+  const h = now.getHours().toString().padStart(2, '0');
+  const m = now.getMinutes().toString().padStart(2, '0');
+  document.getElementById('lock-clock').textContent = `${h}:${m}`;
+}
+
+async function handleLockKeyPress(digit) {
+  if (lockCurrentInput.length >= 4) return;
+  lockCurrentInput += digit;
+  updateLockDots();
+  if (lockCurrentInput.length === 4) {
+    await verifyLockPin(lockCurrentInput);
+  }
+}
+
+function handleLockDelete() {
+  if (lockCurrentInput.length > 0) {
+    lockCurrentInput = lockCurrentInput.slice(0, -1);
+    updateLockDots();
+  }
+}
+
+function updateLockDots() {
+  const dots = document.querySelectorAll('#lock-pin-dots span');
+  dots.forEach((dot, i) => {
+    dot.classList.toggle('filled', i < lockCurrentInput.length);
+  });
+}
+
+async function verifyLockPin(pin) {
+  const hash = await hashPIN(pin);
+  if (hash === lockPinHash) {
+    // 解錠
+    document.getElementById('lock-screen').hidden = true;
+    document.body.style.overflow = '';
+    clearInterval(lockClockTimer);
+    lockCurrentInput = '';
+    updateLockDots();
+  } else {
+    // 失敗
+    lockCurrentInput = '';
+    updateLockDots();
+    const errEl = document.getElementById('lock-pin-error');
+    errEl.hidden = false;
+    document.getElementById('lock-pin-dots').classList.add('shake');
+    setTimeout(() => {
+      document.getElementById('lock-pin-dots').classList.remove('shake');
+      errEl.hidden = true;
+    }, 800);
+  }
+}
+
+// セキュリティ設定モーダル
+function openSecurityModal() {
+  const setupArea   = document.getElementById('security-setup-area');
+  const manageArea  = document.getElementById('security-manage-area');
+  const descEl      = document.getElementById('security-modal-desc');
+  document.getElementById('new-pin-input').value     = '';
+  document.getElementById('confirm-pin-input').value  = '';
+  document.getElementById('security-pin-error').hidden = true;
+  if (document.getElementById('current-pin-input'))
+    document.getElementById('current-pin-input').value = '';
+  if (document.getElementById('security-current-error'))
+    document.getElementById('security-current-error').hidden = true;
+
+  if (lockPinEnabled) {
+    setupArea.hidden  = true;
+    manageArea.hidden = false;
+    descEl.textContent = 'PINロックが設定されています。変更・解除するには現在のPINを入力してください。';
+  } else {
+    setupArea.hidden  = false;
+    manageArea.hidden = true;
+    descEl.textContent = 'PINロックを設定すると、離席時にポータルをロックして他の人の操作を防げます。';
+  }
+  document.getElementById('security-modal').classList.add('visible');
+  setTimeout(() => {
+    const firstInput = lockPinEnabled
+      ? document.getElementById('current-pin-input')
+      : document.getElementById('new-pin-input');
+    firstInput?.focus();
+  }, 100);
+}
+
+function closeSecurityModal() {
+  document.getElementById('security-modal').classList.remove('visible');
 }
 
 // ユーザー名の頭文字から一貫したアバターカラーを生成
@@ -1428,6 +1607,7 @@ async function loadPersonalData(username) {
     await loadReadNotices(username);
     setupNoticeObserver();
     loadChatLastRead(username);
+    loadLockPin(username);
   } catch (err) {
     console.error('個人データ読み込みエラー:', err);
   }
@@ -3142,14 +3322,87 @@ document.addEventListener('DOMContentLoaded', async () => {
     const name = document.getElementById('username-input').value.trim();
     if (!name) { document.getElementById('username-input').focus(); return; }
     saveUsername(name);
-    closeUsernameModal();
   });
   document.getElementById('username-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('username-submit').click();
   });
+  document.getElementById('username-input').addEventListener('input', hideUsernameError);
   document.getElementById('username-skip').addEventListener('click', closeUsernameModal);
   document.getElementById('username-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeUsernameModal();
+  });
+
+  // ===== ロックボタン =====
+  document.getElementById('btn-lock-header').addEventListener('click', lockPortal);
+
+  // ロック画面テンキー
+  document.querySelectorAll('.lock-key[data-digit]').forEach(btn => {
+    btn.addEventListener('click', () => handleLockKeyPress(btn.dataset.digit));
+  });
+  document.getElementById('lock-key-del').addEventListener('click', handleLockDelete);
+
+  // キーボードでもPIN入力可
+  document.addEventListener('keydown', e => {
+    if (document.getElementById('lock-screen').hidden) return;
+    if (/^[0-9]$/.test(e.key)) handleLockKeyPress(e.key);
+    if (e.key === 'Backspace') handleLockDelete();
+  });
+
+  // セキュリティ設定モーダル
+  document.getElementById('btn-open-security').addEventListener('click', () => {
+    closeUsernameModal();
+    openSecurityModal();
+  });
+  document.getElementById('security-cancel').addEventListener('click', closeSecurityModal);
+  document.getElementById('security-cancel2').addEventListener('click', closeSecurityModal);
+  document.getElementById('security-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeSecurityModal();
+  });
+
+  // PIN設定
+  document.getElementById('btn-set-pin').addEventListener('click', async () => {
+    const newPin  = document.getElementById('new-pin-input').value;
+    const confirm = document.getElementById('confirm-pin-input').value;
+    const errEl   = document.getElementById('security-pin-error');
+    errEl.hidden  = true;
+    if (!/^\d{4}$/.test(newPin))   { errEl.textContent = '4桁の数字を入力してください'; errEl.hidden = false; return; }
+    if (newPin !== confirm)         { errEl.textContent = 'PINが一致しません';           errEl.hidden = false; return; }
+    if (!currentUsername)           { errEl.textContent = 'ニックネームを設定してください'; errEl.hidden = false; return; }
+    try {
+      await setLockPin(newPin);
+      closeSecurityModal();
+      // フィードバック
+      const btn = document.getElementById('btn-lock-header');
+      btn.classList.add('lock-set-flash');
+      setTimeout(() => btn.classList.remove('lock-set-flash'), 1000);
+    } catch (_) { errEl.textContent = '設定に失敗しました'; errEl.hidden = false; }
+  });
+
+  // PIN変更（現在PIN確認後、設定エリアを再表示）
+  document.getElementById('btn-change-pin').addEventListener('click', async () => {
+    const cur    = document.getElementById('current-pin-input').value;
+    const errEl  = document.getElementById('security-current-error');
+    errEl.hidden = true;
+    const hash   = await hashPIN(cur);
+    if (hash !== lockPinHash) { errEl.textContent = 'PINが正しくありません'; errEl.hidden = false; return; }
+    // 設定エリアに切り替え
+    document.getElementById('security-manage-area').hidden = true;
+    document.getElementById('security-setup-area').hidden  = false;
+    document.getElementById('new-pin-input').value    = '';
+    document.getElementById('confirm-pin-input').value = '';
+    document.getElementById('security-pin-error').hidden = true;
+    document.getElementById('new-pin-input').focus();
+  });
+
+  // PIN解除
+  document.getElementById('btn-remove-pin').addEventListener('click', async () => {
+    const cur    = document.getElementById('current-pin-input').value;
+    const errEl  = document.getElementById('security-current-error');
+    errEl.hidden = true;
+    const hash   = await hashPIN(cur);
+    if (hash !== lockPinHash) { errEl.textContent = 'PINが正しくありません'; errEl.hidden = false; return; }
+    await removeLockPin();
+    closeSecurityModal();
   });
 
   // 初回訪問時にニックネームモーダルを表示

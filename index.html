@@ -72,6 +72,10 @@
         <span class="btn-fav-label">お気に入りのみ</span>
       </button>
 
+      <button class="btn-lock-header" id="btn-lock-header" title="ポータルをロック" hidden>
+        <i class="fa-solid fa-lock"></i>
+      </button>
+
       <button class="btn-user" id="btn-user" title="ユーザー設定">
         <div class="user-avatar" id="user-avatar"><i class="fa-solid fa-user"></i></div>
         <div class="user-info">
@@ -315,9 +319,21 @@
         <i class="fa-solid fa-triangle-exclamation"></i>
         <span>この名前はあなたのIDです。<strong>忘れると設定が復元できません。</strong>他の人と重複しない名前を使ってください。</span>
       </div>
+      <div class="username-error-box" id="username-error-box" hidden>
+        <i class="fa-solid fa-circle-xmark"></i>
+        <span id="username-error-msg">このニックネームはすでに使用されています</span>
+      </div>
       <div class="modal-actions">
         <button class="btn-modal-secondary" id="username-skip">スキップ</button>
-        <button class="btn-modal-primary" id="username-submit">設定して始める</button>
+        <button class="btn-modal-primary" id="username-submit">
+          <i class="fa-solid fa-spinner fa-spin" id="username-submit-spinner" hidden></i>
+          設定して始める
+        </button>
+      </div>
+      <div class="username-security-row" id="username-security-row" hidden>
+        <button class="btn-open-security" id="btn-open-security">
+          <i class="fa-solid fa-lock"></i> PINロックを設定する
+        </button>
       </div>
     </div>
   </div>
@@ -590,6 +606,75 @@
         </div>
 
         <p class="guide-version">最終更新: 2026年3月</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ロック画面 ==================== -->
+  <div id="lock-screen" class="lock-screen" hidden>
+    <div class="lock-clock" id="lock-clock"></div>
+    <div class="lock-avatar" id="lock-avatar"></div>
+    <div class="lock-username" id="lock-username"></div>
+    <div class="lock-pin-dots" id="lock-pin-dots">
+      <span></span><span></span><span></span><span></span>
+    </div>
+    <div class="lock-pin-error" id="lock-pin-error" hidden>PINが違います</div>
+    <div class="lock-numpad">
+      <button class="lock-key" data-digit="1">1</button>
+      <button class="lock-key" data-digit="2">2</button>
+      <button class="lock-key" data-digit="3">3</button>
+      <button class="lock-key" data-digit="4">4</button>
+      <button class="lock-key" data-digit="5">5</button>
+      <button class="lock-key" data-digit="6">6</button>
+      <button class="lock-key" data-digit="7">7</button>
+      <button class="lock-key" data-digit="8">8</button>
+      <button class="lock-key" data-digit="9">9</button>
+      <div class="lock-key-empty"></div>
+      <button class="lock-key" data-digit="0">0</button>
+      <button class="lock-key lock-key-del" id="lock-key-del"><i class="fa-solid fa-delete-left"></i></button>
+    </div>
+    <div class="lock-hint">PINを忘れた場合はページを再読み込みしてください</div>
+  </div>
+
+  <!-- ==================== セキュリティ設定モーダル ==================== -->
+  <div class="modal-overlay" id="security-modal">
+    <div class="modal-glass security-modal-inner">
+      <h3 class="modal-title"><i class="fa-solid fa-shield-halved"></i> セキュリティ設定</h3>
+      <p class="modal-desc" id="security-modal-desc">PINロックを設定すると、離席時にポータルをロックして他の人の操作を防げます。</p>
+
+      <!-- PIN未設定時 -->
+      <div id="security-setup-area">
+        <div class="form-group">
+          <label class="form-label">新しいPIN（4桁の数字）</label>
+          <input type="password" id="new-pin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・">
+        </div>
+        <div class="form-group">
+          <label class="form-label">PINを確認</label>
+          <input type="password" id="confirm-pin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・">
+        </div>
+        <div class="security-error" id="security-pin-error" hidden></div>
+        <div class="modal-actions">
+          <button class="btn-modal-secondary" id="security-cancel">閉じる</button>
+          <button class="btn-modal-primary" id="btn-set-pin">PINを設定する</button>
+        </div>
+      </div>
+
+      <!-- PIN設定済み時 -->
+      <div id="security-manage-area" hidden>
+        <div class="security-pin-set-badge">
+          <i class="fa-solid fa-circle-check"></i> PINが設定されています
+        </div>
+        <p class="modal-desc" style="margin-top:8px">変更・解除するには現在のPINを入力してください。</p>
+        <div class="form-group">
+          <label class="form-label">現在のPIN</label>
+          <input type="password" id="current-pin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・">
+        </div>
+        <div class="security-error" id="security-current-error" hidden></div>
+        <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
+          <button class="btn-modal-secondary" id="security-cancel2">閉じる</button>
+          <button class="btn-modal-danger" id="btn-remove-pin">PINを解除する</button>
+          <button class="btn-modal-primary" id="btn-change-pin">PINを変更する</button>
+        </div>
       </div>
     </div>
   </div>
