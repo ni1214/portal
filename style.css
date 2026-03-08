@@ -5090,6 +5090,7 @@ html.font-xl { font-size: 21px; }
   justify-content: center;
   user-select: none;
 }
+.lock-screen[hidden] { display: none !important; }
 .lock-clock {
   font-size: clamp(3rem, 12vw, 5.5rem);
   font-weight: 200;
