@@ -674,6 +674,247 @@ function scrollChatToBottom() {
   if (c) c.scrollTop = c.scrollHeight;
 }
 
+// ========== メール返信アシスタント ==========
+const DEFAULT_EMAIL_PROFILES = [
+  {
+    id: 'internal',
+    name: '社内向け',
+    prompt: '社内の同僚へのメールです。敬語は使いますが堅すぎず、簡潔で分かりやすい文体で返信を作成してください。要点は箇条書きにしても構いません。件名・宛名・署名は含めないでください。'
+  },
+  {
+    id: 'drawing',
+    name: '作図業者',
+    prompt: '外部の作図業者へのメールです。発注者として丁寧かつ明確に、作業内容・納期・注意点を具体的に伝える文体で返信を作成してください。件名・宛名・署名は含めないでください。'
+  },
+  {
+    id: 'subcontractor',
+    name: '下請け業者',
+    prompt: '下請け業者（協力会社）へのメールです。発注者として丁寧に、工程・品質・安全に関する指示や依頼を明確に伝える文体で返信を作成してください。件名・宛名・署名は含めないでください。'
+  },
+  {
+    id: 'client',
+    name: 'ゼネコン（お客様）',
+    prompt: '元請けゼネコン・お客様へのメールです。最上級の敬語を使い、丁寧かつ誠実な文体で返信を作成してください。懸念事項には真摯に対応する姿勢を示してください。件名・宛名・署名は含めないでください。'
+  }
+];
+
+let emailProfiles = [];
+let selectedEmailProfileId = 'internal';
+let geminiApiKey = null;
+let emailModalLoaded = false;
+
+async function loadEmailData() {
+  // APIキーをFirestoreから取得
+  try {
+    const snap = await getDoc(doc(db, 'portal', 'config'));
+    geminiApiKey = snap.data()?.geminiApiKey || null;
+  } catch (_) {}
+
+  // ユーザーのカスタムプロファイルを取得
+  let userProfiles = [];
+  if (currentUsername) {
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'users', currentUsername, 'email_profiles'), orderBy('createdAt', 'asc'))
+      );
+      userProfiles = snap.docs.map(d => ({ id: d.id, isCustom: true, ...d.data() }));
+    } catch (_) {}
+  }
+
+  // デフォルトにユーザーのカスタマイズをマージ
+  const mergedDefaults = DEFAULT_EMAIL_PROFILES.map(p => {
+    const override = userProfiles.find(u => u.id === p.id);
+    return override ? { ...p, ...override, isDefault: true } : { ...p, isDefault: true };
+  });
+  const onlyCustom = userProfiles.filter(u => !DEFAULT_EMAIL_PROFILES.find(d => d.id === u.id));
+  emailProfiles = [...mergedDefaults, ...onlyCustom];
+
+  updateApiKeyUI();
+  renderEmailProfileList();
+  selectEmailProfile(selectedEmailProfileId);
+  emailModalLoaded = true;
+}
+
+function updateApiKeyUI() {
+  const area = document.getElementById('email-api-key-area');
+  if (!area) return;
+  area.hidden = !!geminiApiKey;
+}
+
+function renderEmailProfileList() {
+  const list = document.getElementById('email-profile-list');
+  if (!list) return;
+  list.innerHTML = '';
+  emailProfiles.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = `email-profile-item${p.id === selectedEmailProfileId ? ' active' : ''}`;
+    btn.dataset.id = p.id;
+    btn.innerHTML = `<span>${esc(p.name)}</span>${p.isDefault ? '' : '<span class="email-custom-tag">カスタム</span>'}`;
+    btn.addEventListener('click', () => selectEmailProfile(p.id));
+    list.appendChild(btn);
+  });
+}
+
+function selectEmailProfile(id) {
+  const profile = emailProfiles.find(p => p.id === id);
+  if (!profile) return;
+  selectedEmailProfileId = id;
+  document.querySelectorAll('.email-profile-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === id);
+  });
+  document.getElementById('email-selected-profile-name').textContent = profile.name;
+  document.getElementById('email-profile-name').value = profile.name;
+  document.getElementById('email-profile-prompt').value = profile.prompt;
+  const delBtn = document.getElementById('email-profile-delete');
+  delBtn.style.display = profile.isDefault ? 'none' : 'inline-flex';
+}
+
+async function saveEmailProfile() {
+  if (!currentUsername) { alert('ニックネームを設定してください'); return; }
+  const name   = document.getElementById('email-profile-name').value.trim();
+  const prompt = document.getElementById('email-profile-prompt').value.trim();
+  if (!name || !prompt) return;
+  try {
+    await setDoc(
+      doc(db, 'users', currentUsername, 'email_profiles', selectedEmailProfileId),
+      { name, prompt, updatedAt: serverTimestamp() }, { merge: true }
+    );
+    const idx = emailProfiles.findIndex(p => p.id === selectedEmailProfileId);
+    if (idx !== -1) { emailProfiles[idx].name = name; emailProfiles[idx].prompt = prompt; }
+    document.getElementById('email-selected-profile-name').textContent = name;
+    renderEmailProfileList();
+    // フィードバック
+    const btn = document.getElementById('email-profile-save');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存しました';
+    setTimeout(() => { btn.innerHTML = orig; }, 1500);
+  } catch (err) { console.error('プロファイル保存エラー:', err); }
+}
+
+async function addEmailProfile() {
+  if (!currentUsername) { alert('ニックネームを設定してください'); return; }
+  const id = `custom_${Date.now()}`;
+  const newProfile = { id, name: '新しいパターン', prompt: '丁寧な文体でメールの返信を作成してください。件名・宛名・署名は含めないでください。', isCustom: true };
+  try {
+    await setDoc(
+      doc(db, 'users', currentUsername, 'email_profiles', id),
+      { name: newProfile.name, prompt: newProfile.prompt, createdAt: serverTimestamp() }
+    );
+    emailProfiles.push(newProfile);
+    renderEmailProfileList();
+    selectEmailProfile(id);
+    // 詳細を開いてパターン名にフォーカス
+    document.getElementById('email-prompt-details').open = true;
+    setTimeout(() => {
+      const nameInput = document.getElementById('email-profile-name');
+      nameInput.select();
+      nameInput.focus();
+    }, 50);
+  } catch (err) { console.error('プロファイル追加エラー:', err); }
+}
+
+async function deleteEmailProfile() {
+  const profile = emailProfiles.find(p => p.id === selectedEmailProfileId);
+  if (!profile || profile.isDefault) return;
+  const ok = await confirmDelete(`「${profile.name}」を削除しますか？`);
+  if (!ok) return;
+  try {
+    await deleteDoc(doc(db, 'users', currentUsername, 'email_profiles', selectedEmailProfileId));
+    emailProfiles = emailProfiles.filter(p => p.id !== selectedEmailProfileId);
+    selectedEmailProfileId = emailProfiles[0]?.id || 'internal';
+    renderEmailProfileList();
+    selectEmailProfile(selectedEmailProfileId);
+  } catch (err) { console.error('プロファイル削除エラー:', err); }
+}
+
+async function saveGeminiApiKey() {
+  const key = document.getElementById('email-api-key-input').value.trim();
+  if (!key) return;
+  try {
+    await setDoc(doc(db, 'portal', 'config'), { geminiApiKey: key }, { merge: true });
+    geminiApiKey = key;
+    document.getElementById('email-api-key-input').value = '';
+    updateApiKeyUI();
+  } catch (err) { console.error('APIキー保存エラー:', err); }
+}
+
+async function generateEmailReply() {
+  if (!geminiApiKey) {
+    document.getElementById('email-api-key-area').hidden = false;
+    document.getElementById('email-api-key-input').focus();
+    return;
+  }
+  const received = document.getElementById('email-received').value.trim();
+  if (!received) { document.getElementById('email-received').focus(); return; }
+  const profile = emailProfiles.find(p => p.id === selectedEmailProfileId);
+  if (!profile) return;
+
+  const btn = document.getElementById('email-generate');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中...';
+  const outputArea = document.getElementById('email-output-area');
+  outputArea.hidden = true;
+
+  const fullPrompt = `あなたは日本の建設会社「日建フレメックス」の社員です。以下の受信メールに対する返信文を作成してください。
+
+【返信パターン：${profile.name}】
+${profile.prompt}
+
+【受信したメール】
+${received}
+
+返信文（件名・宛名・署名なし、本文のみ）：`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: fullPrompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+        })
+      }
+    );
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error?.message || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '（生成結果が空でした）';
+    document.getElementById('email-output').textContent = text;
+    outputArea.hidden = false;
+    outputArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (err) {
+    document.getElementById('email-output').textContent = `エラー: ${err.message}`;
+    outputArea.hidden = false;
+    console.error('Gemini APIエラー:', err);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 返信を生成する';
+  }
+}
+
+function copyEmailOutput() {
+  const text = document.getElementById('email-output').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-copy-output');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> コピーしました！';
+    setTimeout(() => { btn.innerHTML = orig; }, 2000);
+  });
+}
+
+function openEmailModal() {
+  document.getElementById('email-modal').classList.add('visible');
+  if (!emailModalLoaded) loadEmailData();
+}
+
+function closeEmailModal() {
+  document.getElementById('email-modal').classList.remove('visible');
+}
+
 // ========== 個人TODO ==========
 function loadTodos(username) {
   // 既存リスナーを解除
@@ -2599,6 +2840,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('todo-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('todo-add-btn').click();
   });
+
+  // ===== メール返信アシスタント =====
+  document.getElementById('btn-email-assist').addEventListener('click', openEmailModal);
+  document.getElementById('email-modal-close').addEventListener('click', closeEmailModal);
+  document.getElementById('email-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeEmailModal();
+  });
+  document.getElementById('email-profile-save').addEventListener('click', saveEmailProfile);
+  document.getElementById('email-profile-delete').addEventListener('click', deleteEmailProfile);
+  document.getElementById('email-profile-add').addEventListener('click', addEmailProfile);
+  document.getElementById('email-generate').addEventListener('click', generateEmailReply);
+  document.getElementById('btn-copy-output').addEventListener('click', copyEmailOutput);
+  document.getElementById('email-api-key-save').addEventListener('click', saveGeminiApiKey);
 
   // ===== チャットFAB =====
   document.getElementById('chat-fab').addEventListener('click', () => {

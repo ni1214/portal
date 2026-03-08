@@ -54,6 +54,10 @@
         <i class="fa-solid fa-magnifying-glass search-icon"></i>
       </div>
 
+      <button class="btn-email-assist" id="btn-email-assist" title="メール返信アシスタント（AI）">
+        <i class="fa-solid fa-envelope-open-text"></i>
+      </button>
+
       <button class="btn-notice-bell" id="btn-notice-bell" title="お知らせ">
         <i class="fa-solid fa-bell"></i>
         <span class="notice-unread-badge" id="notice-unread-badge" hidden>0</span>
@@ -582,6 +586,90 @@
         </div>
 
         <p class="guide-version">最終更新: 2026年3月</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== メール返信アシスタント モーダル ==================== -->
+  <div class="modal-overlay" id="email-modal">
+    <div class="email-modal-inner">
+
+      <div class="email-modal-header">
+        <span><i class="fa-solid fa-envelope-open-text"></i> メール返信アシスタント</span>
+        <button class="email-modal-close" id="email-modal-close" title="閉じる">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="email-modal-body">
+
+        <!-- 左サイドバー：パターン一覧 -->
+        <div class="email-profile-sidebar">
+          <div class="email-sidebar-label">返信パターン</div>
+          <div class="email-profile-list" id="email-profile-list"></div>
+          <button class="email-profile-add-btn" id="email-profile-add">
+            <i class="fa-solid fa-plus"></i> パターンを追加
+          </button>
+        </div>
+
+        <!-- 右エリア：メイン -->
+        <div class="email-main-area">
+
+          <!-- プロンプト編集 -->
+          <details class="email-prompt-details" id="email-prompt-details">
+            <summary class="email-prompt-summary">
+              <span id="email-selected-profile-name">パターン名</span>
+              <span class="email-prompt-edit-hint"><i class="fa-solid fa-pen"></i> カスタマイズ</span>
+            </summary>
+            <div class="email-prompt-editor">
+              <label class="email-label">パターン名</label>
+              <input type="text" id="email-profile-name" class="email-profile-name-input" placeholder="例：ゼネコン（お客様）" maxlength="30">
+              <label class="email-label">AIへの指示（プロンプト）</label>
+              <textarea id="email-profile-prompt" class="email-profile-prompt-area" rows="4" placeholder="AIにどんな文体・注意点で書いてほしいか入力してください..."></textarea>
+              <div class="email-prompt-actions">
+                <button class="btn-save-profile" id="email-profile-save">
+                  <i class="fa-solid fa-floppy-disk"></i> 保存
+                </button>
+                <button class="btn-danger-sm" id="email-profile-delete" style="display:none">
+                  <i class="fa-solid fa-trash-can"></i> このパターンを削除
+                </button>
+              </div>
+            </div>
+          </details>
+
+          <!-- 受信メール -->
+          <label class="email-label">受信したメールを貼り付け</label>
+          <textarea id="email-received" class="email-received-area" rows="7" placeholder="返信したいメールをここにそのまま貼り付けてください..."></textarea>
+
+          <!-- 生成ボタン -->
+          <button class="btn-generate" id="email-generate">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> 返信を生成する
+          </button>
+
+          <!-- 出力エリア -->
+          <div class="email-output-area" id="email-output-area" hidden>
+            <div class="email-output-header">
+              <span><i class="fa-solid fa-file-lines"></i> 生成された返信</span>
+              <button class="btn-copy-output" id="btn-copy-output">
+                <i class="fa-solid fa-copy"></i> コピー
+              </button>
+            </div>
+            <div class="email-output" id="email-output"></div>
+          </div>
+
+          <!-- APIキー設定（未設定時のみ表示） -->
+          <div class="email-api-key-area" id="email-api-key-area" hidden>
+            <div class="email-api-key-label">
+              <i class="fa-solid fa-key"></i> Gemini APIキーを設定してください
+              <span class="email-api-key-hint">（設定は全員に共有されます）</span>
+            </div>
+            <div class="email-api-key-row">
+              <input type="password" id="email-api-key-input" class="email-api-key-input" placeholder="AIzaSy..." autocomplete="off">
+              <button class="btn-save-apikey" id="email-api-key-save">設定する</button>
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
   </div>
