@@ -3805,3 +3805,52 @@ html.font-xl { font-size: 21px; }
   background: rgba(96, 165, 250, 0.2);
   border-color: rgba(96, 165, 250, 0.5);
 }
+
+/* ===========================
+   お知らせリアクション
+   =========================== */
+.notice-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.reaction-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: inherit;
+  line-height: 1;
+  user-select: none;
+}
+.reaction-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: scale(1.08);
+}
+.reaction-btn.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.3);
+}
+.reaction-btn.active:hover {
+  background: rgba(99, 102, 241, 0.3);
+}
+.reaction-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  min-width: 10px;
+}
+.reaction-btn.active .reaction-count {
+  color: #a5b4fc;
+}

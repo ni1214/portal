@@ -3,7 +3,8 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/fireba
 import {
   getFirestore, collection, doc,
   getDocs, getDoc, setDoc, addDoc, deleteDoc, updateDoc,
-  query, orderBy, writeBatch, serverTimestamp, onSnapshot
+  query, orderBy, writeBatch, serverTimestamp, onSnapshot,
+  arrayUnion, arrayRemove
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ========== Firebase 設定 ==========
@@ -289,6 +290,9 @@ let _todoUnsubscribe = null; // onSnapshot の解除用
 let readNoticeIds = new Set();
 let _noticeObserver = null; // IntersectionObserver
 
+// お知らせリアクション { [noticeId]: { '👍': ['user1', 'user2'], ... } }
+let noticeReactions = {};
+
 // ========== PIN 認証 ==========
 const PIN_SALT = 'seisan-portal-v1';
 
@@ -451,6 +455,58 @@ function setupNoticeObserver() {
     if (entries[0].isIntersecting) markAllNoticesRead();
   }, { threshold: 0.3 });
   _noticeObserver.observe(board);
+}
+
+// ========== お知らせリアクション ==========
+const REACTION_EMOJIS = ['👍', '✅', '👀', '😊', '🙏'];
+
+async function loadAllNoticeReactions() {
+  try {
+    const snap = await getDocs(collection(db, 'notice_reactions'));
+    noticeReactions = {};
+    snap.docs.forEach(d => { noticeReactions[d.id] = d.data(); });
+    renderNotices(allNotices);
+  } catch (err) {
+    console.error('リアクション読み込みエラー:', err);
+  }
+}
+
+async function toggleReaction(noticeId, emoji) {
+  if (!currentUsername) return;
+  const ref = doc(db, 'notice_reactions', noticeId);
+  const current = (noticeReactions[noticeId] || {})[emoji] || [];
+  const alreadyReacted = current.includes(currentUsername);
+  // 楽観的UI更新
+  if (!noticeReactions[noticeId]) noticeReactions[noticeId] = {};
+  if (alreadyReacted) {
+    noticeReactions[noticeId][emoji] = current.filter(u => u !== currentUsername);
+  } else {
+    noticeReactions[noticeId][emoji] = [...current, currentUsername];
+  }
+  renderNotices(allNotices);
+  try {
+    if (alreadyReacted) {
+      await updateDoc(ref, { [emoji]: arrayRemove(currentUsername) });
+    } else {
+      await setDoc(ref, { [emoji]: arrayUnion(currentUsername) }, { merge: true });
+    }
+  } catch (err) {
+    console.error('リアクション更新エラー:', err);
+    // ロールバック
+    await loadAllNoticeReactions();
+  }
+}
+
+function buildReactionBar(noticeId) {
+  const reactions = noticeReactions[noticeId] || {};
+  const btns = REACTION_EMOJIS.map(emoji => {
+    const users = reactions[emoji] || [];
+    const count = users.length;
+    const active = currentUsername && users.includes(currentUsername) ? ' active' : '';
+    const countHtml = count > 0 ? `<span class="reaction-count">${count}</span>` : '';
+    return `<button class="reaction-btn${active}" data-notice-id="${noticeId}" data-emoji="${emoji}" title="${users.join(', ') || ''}">${emoji}${countHtml}</button>`;
+  }).join('');
+  return `<div class="notice-reactions">${btns}</div>`;
 }
 
 // ========== 個人TODO ==========
@@ -1550,11 +1606,20 @@ function renderNotices(notices) {
         ${editBtns}
       </div>
       ${n.body ? `<div class="notice-body">${esc(n.body)}</div>` : ''}
+      ${buildReactionBar(n.id)}
     `;
     if (isEditMode) {
       item.querySelector('.btn-notice-edit').addEventListener('click', () => openNoticeModal(n));
     }
     list.appendChild(item);
+  });
+
+  // リアクションボタン（イベントデリゲーション）
+  list.addEventListener('click', e => {
+    const btn = e.target.closest('.reaction-btn');
+    if (!btn) return;
+    if (!currentUsername) { alert('リアクションするにはニックネームを設定してください'); return; }
+    toggleReaction(btn.dataset.noticeId, btn.dataset.emoji);
   });
 }
 
@@ -2265,6 +2330,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderAllSections();
   initSearch();
   renderFavorites();
+
+  // お知らせリアクションを先行読み込み（ログイン不要）
+  loadAllNoticeReactions();
 
   // 天気は即時取得（30分ごと更新）
   fetchAndRenderWeather();
