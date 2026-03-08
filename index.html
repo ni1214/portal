@@ -54,6 +54,10 @@
         <i class="fa-solid fa-magnifying-glass search-icon"></i>
       </div>
 
+      <button class="btn-apply" id="btn-apply" title="申請フォーム">
+        <i class="fa-solid fa-file-signature"></i>
+      </button>
+
       <button class="btn-email-assist" id="btn-email-assist" title="メール返信アシスタント（AI）">
         <i class="fa-solid fa-envelope-open-text"></i>
       </button>
@@ -724,6 +728,59 @@
               </button>
             </div>
 
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 簡易申請フォーム モーダル ==================== -->
+  <div class="modal-overlay" id="apply-modal">
+    <div class="apply-modal-inner">
+
+      <div class="apply-modal-header">
+        <span><i class="fa-solid fa-file-signature"></i> 申請フォーム</span>
+        <button class="apply-modal-close" id="apply-modal-close" title="閉じる">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="apply-modal-body">
+
+        <!-- 左サイドバー：申請種別 -->
+        <div class="apply-type-sidebar">
+          <div class="apply-sidebar-label">申請の種類</div>
+          <div class="apply-type-list" id="apply-type-list"></div>
+        </div>
+
+        <!-- 右エリア：タブ切り替え -->
+        <div class="apply-main-area">
+
+          <!-- タブバー -->
+          <div class="apply-tabs">
+            <button class="apply-tab active" data-tab="form">
+              <i class="fa-solid fa-pen-to-square"></i> 申請する
+            </button>
+            <button class="apply-tab" data-tab="history">
+              <i class="fa-solid fa-clock-rotate-left"></i> 申請履歴
+            </button>
+          </div>
+
+          <!-- タブ1：申請フォーム -->
+          <div class="apply-tab-content" id="apply-tab-form">
+            <div class="apply-form-title" id="apply-form-title"></div>
+            <div class="apply-fields" id="apply-fields"></div>
+            <button class="btn-submit-apply" id="btn-submit-apply">
+              <i class="fa-solid fa-paper-plane"></i> 申請を送信する
+            </button>
+          </div>
+
+          <!-- タブ2：申請履歴 -->
+          <div class="apply-tab-content" id="apply-tab-history" hidden>
+            <div class="apply-history-list" id="apply-history-list">
+              <div class="apply-history-empty">読み込み中...</div>
+            </div>
           </div>
 
         </div>

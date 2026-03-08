@@ -1008,6 +1008,253 @@ function closeEmailModal() {
   document.getElementById('email-modal').classList.remove('visible');
 }
 
+// ========== 簡易申請フォーム ==========
+const APPLY_FORM_TYPES = [
+  {
+    id: 'leave',
+    name: '休暇申請',
+    icon: 'fa-solid fa-umbrella-beach',
+    fields: [
+      { key: 'leaveDate',  label: '申請日',   type: 'date',     required: true  },
+      { key: 'leaveType',  label: '休暇種類', type: 'select',   required: true,
+        options: ['年次有給休暇', '特別休暇（慶弔等）', '欠勤', 'その他'] },
+      { key: 'days',       label: '日数',     type: 'number',   required: true,  placeholder: '1' },
+      { key: 'reason',     label: '理由・備考', type: 'textarea', required: false, placeholder: '任意' }
+    ]
+  },
+  {
+    id: 'overtime',
+    name: '残業申請',
+    icon: 'fa-solid fa-clock',
+    fields: [
+      { key: 'workDate',   label: '残業日',     type: 'date', required: true },
+      { key: 'startTime',  label: '残業開始',   type: 'time', required: true },
+      { key: 'endTime',    label: '終了予定',   type: 'time', required: true },
+      { key: 'reason',     label: '作業内容・理由', type: 'textarea', required: true, placeholder: '具体的に記入してください' }
+    ]
+  },
+  {
+    id: 'purchase',
+    name: '購買申請',
+    icon: 'fa-solid fa-cart-shopping',
+    fields: [
+      { key: 'item',     label: '品目',       type: 'text',     required: true, placeholder: '例：軍手 Mサイズ' },
+      { key: 'quantity', label: '数量',       type: 'text',     required: true, placeholder: '例：10双' },
+      { key: 'amount',   label: '金額（概算）', type: 'text',   required: true, placeholder: '例：¥3,000' },
+      { key: 'purpose',  label: '使用目的',   type: 'textarea', required: true, placeholder: '用途を記入してください' }
+    ]
+  },
+  {
+    id: 'business_trip',
+    name: '出張申請',
+    icon: 'fa-solid fa-train',
+    fields: [
+      { key: 'tripDate',  label: '出張日',     type: 'date',     required: true },
+      { key: 'dest',      label: '行き先',     type: 'text',     required: true, placeholder: '例：東京都〇〇区' },
+      { key: 'purpose',   label: '目的',       type: 'text',     required: true, placeholder: '例：現場打合せ' },
+      { key: 'transport', label: '交通手段',   type: 'select',   required: true,
+        options: ['電車・バス', '社用車', '自家用車', 'タクシー', 'その他'] },
+      { key: 'cost',      label: '旅費概算',   type: 'text',     required: false, placeholder: '例：¥5,000' },
+      { key: 'notes',     label: '備考',       type: 'textarea', required: false, placeholder: '任意' }
+    ]
+  },
+  {
+    id: 'other',
+    name: 'その他申請',
+    icon: 'fa-solid fa-file-pen',
+    fields: [
+      { key: 'title',   label: '件名',   type: 'text',     required: true, placeholder: '申請の件名を入力してください' },
+      { key: 'content', label: '内容',   type: 'textarea', required: true, placeholder: '申請内容を詳しく記入してください' }
+    ]
+  }
+];
+
+let selectedApplyTypeId = 'leave';
+let applyHistory = [];
+let applyModalLoaded = false;
+
+function openApplyModal() {
+  document.getElementById('apply-modal').classList.add('visible');
+  if (!applyModalLoaded) {
+    renderApplyTypeList();
+    selectApplyType(selectedApplyTypeId);
+    applyModalLoaded = true;
+  }
+}
+
+function closeApplyModal() {
+  document.getElementById('apply-modal').classList.remove('visible');
+}
+
+function switchApplyTab(tabId) {
+  document.querySelectorAll('.apply-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+  document.querySelectorAll('.apply-tab-content').forEach(el => { el.hidden = el.id !== `apply-tab-${tabId}`; });
+  if (tabId === 'history') loadApplyHistory();
+}
+
+function renderApplyTypeList() {
+  const list = document.getElementById('apply-type-list');
+  if (!list) return;
+  list.innerHTML = '';
+  APPLY_FORM_TYPES.forEach(ft => {
+    const btn = document.createElement('button');
+    btn.className = `apply-type-item${ft.id === selectedApplyTypeId ? ' active' : ''}`;
+    btn.dataset.id = ft.id;
+    btn.innerHTML = `<i class="${ft.icon}"></i><span>${ft.name}</span>`;
+    btn.addEventListener('click', () => selectApplyType(ft.id));
+    list.appendChild(btn);
+  });
+}
+
+function selectApplyType(id) {
+  selectedApplyTypeId = id;
+  const ft = APPLY_FORM_TYPES.find(f => f.id === id);
+  if (!ft) return;
+  document.querySelectorAll('.apply-type-item').forEach(el => el.classList.toggle('active', el.dataset.id === id));
+  document.getElementById('apply-form-title').textContent = ft.name;
+  renderApplyFields(ft);
+}
+
+function renderApplyFields(ft) {
+  const container = document.getElementById('apply-fields');
+  container.innerHTML = '';
+  ft.fields.forEach(field => {
+    const row = document.createElement('div');
+    row.className = 'apply-field-row';
+    const label = document.createElement('label');
+    label.className = 'apply-field-label';
+    label.textContent = field.label + (field.required ? ' *' : '');
+    row.appendChild(label);
+    let input;
+    if (field.type === 'textarea') {
+      input = document.createElement('textarea');
+      input.className = 'apply-field-textarea';
+      input.rows = 3;
+      input.placeholder = field.placeholder || '';
+    } else if (field.type === 'select') {
+      input = document.createElement('select');
+      input.className = 'apply-field-select';
+      field.options.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt;
+        o.textContent = opt;
+        input.appendChild(o);
+      });
+    } else {
+      input = document.createElement('input');
+      input.type = field.type;
+      input.className = 'apply-field-input';
+      input.placeholder = field.placeholder || '';
+    }
+    input.dataset.key = field.key;
+    input.dataset.required = field.required ? '1' : '0';
+    row.appendChild(input);
+    container.appendChild(row);
+  });
+}
+
+async function submitApply() {
+  if (!currentUsername) {
+    alert('申請するにはニックネームを設定してください');
+    return;
+  }
+  const ft = APPLY_FORM_TYPES.find(f => f.id === selectedApplyTypeId);
+  if (!ft) return;
+
+  // バリデーション
+  const fieldData = {};
+  let valid = true;
+  document.querySelectorAll('#apply-fields [data-key]').forEach(el => {
+    const val = el.value.trim();
+    if (el.dataset.required === '1' && !val) {
+      el.classList.add('apply-field-error');
+      valid = false;
+    } else {
+      el.classList.remove('apply-field-error');
+      fieldData[el.dataset.key] = val;
+    }
+  });
+  if (!valid) { return; }
+
+  const btn = document.getElementById('btn-submit-apply');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 送信中...';
+  try {
+    await addDoc(collection(db, 'applications'), {
+      formType: ft.id,
+      formName: ft.name,
+      username: currentUsername,
+      realName: userEmailProfile.realName || currentUsername,
+      department: userEmailProfile.department || '',
+      fields: fieldData,
+      status: 'submitted',
+      createdAt: serverTimestamp()
+    });
+    // 成功フィードバック
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> 申請を送信しました！';
+    btn.style.background = 'rgba(34, 197, 94, 0.3)';
+    // フォームリセット
+    setTimeout(() => {
+      renderApplyFields(ft);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 申請を送信する';
+      btn.style.background = '';
+    }, 2000);
+  } catch (err) {
+    console.error('申請送信エラー:', err);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 申請を送信する';
+  }
+}
+
+async function loadApplyHistory() {
+  const container = document.getElementById('apply-history-list');
+  if (!currentUsername) {
+    container.innerHTML = '<div class="apply-history-empty">ニックネームを設定してください</div>';
+    return;
+  }
+  container.innerHTML = '<div class="apply-history-empty">読み込み中...</div>';
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'applications'),
+        orderBy('createdAt', 'desc'), limit(30))
+    );
+    // 自分の申請のみ表示
+    const myApps = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(a => a.username === currentUsername);
+    if (!myApps.length) {
+      container.innerHTML = '<div class="apply-history-empty">申請履歴がありません</div>';
+      return;
+    }
+    container.innerHTML = '';
+    myApps.forEach(app => {
+      const ts = app.createdAt?.toDate ? app.createdAt.toDate() : new Date();
+      const dateStr = ts.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
+      const timeStr = ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+      const statusLabel = { submitted: '送信済み', approved: '承認済み', rejected: '差戻し' }[app.status] || app.status;
+      const statusClass = { submitted: 'status-submitted', approved: 'status-approved', rejected: 'status-rejected' }[app.status] || '';
+      // フィールドのサマリー（最初の2件）
+      const fieldSummary = Object.entries(app.fields || {}).slice(0, 2)
+        .map(([k, v]) => `${v}`).join(' / ');
+      const el = document.createElement('div');
+      el.className = 'apply-history-item';
+      el.innerHTML = `
+        <div class="apply-history-item-header">
+          <span class="apply-history-type">${esc(app.formName || app.formType)}</span>
+          <span class="apply-history-status ${statusClass}">${statusLabel}</span>
+        </div>
+        <div class="apply-history-summary">${esc(fieldSummary)}</div>
+        <div class="apply-history-date">${dateStr} ${timeStr}</div>
+      `;
+      container.appendChild(el);
+    });
+  } catch (err) {
+    console.error('履歴読み込みエラー:', err);
+    container.innerHTML = '<div class="apply-history-empty">読み込みに失敗しました</div>';
+  }
+}
+
 // ========== 個人TODO ==========
 function loadTodos(username) {
   // 既存リスナーを解除
@@ -2935,6 +3182,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ===== メール返信アシスタント =====
+  // ===== 申請フォーム =====
+  document.getElementById('btn-apply').addEventListener('click', openApplyModal);
+  document.getElementById('apply-modal-close').addEventListener('click', closeApplyModal);
+  document.getElementById('apply-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeApplyModal();
+  });
+  document.getElementById('btn-submit-apply').addEventListener('click', submitApply);
+  document.querySelectorAll('.apply-tab').forEach(btn => {
+    btn.addEventListener('click', () => switchApplyTab(btn.dataset.tab));
+  });
+
   document.getElementById('btn-email-assist').addEventListener('click', openEmailModal);
   document.getElementById('email-modal-close').addEventListener('click', closeEmailModal);
   document.getElementById('email-modal').addEventListener('click', e => {
