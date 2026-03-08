@@ -6,7 +6,10 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(/c/portal/style.css:*)",
-      "Bash(git --version)"
+      "Bash(git --version)",
+      "WebSearch",
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(node -e \":*)"
     ]
   }
 }
