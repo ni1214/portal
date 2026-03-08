@@ -346,6 +346,17 @@ function showUsernameError(msg) {
 
 function hideUsernameError() {
   document.getElementById('username-error-box').hidden = true;
+  document.getElementById('username-reclaim').hidden = true;
+}
+
+async function applyUsername(name) {
+  currentUsername = name;
+  localStorage.setItem('portal-username', name);
+  updateUsernameDisplay();
+  registerUserLogin(name);
+  loadPersonalData(name);
+  renderAllSections();
+  closeUsernameModal();
 }
 
 async function saveUsername(name) {
@@ -362,7 +373,9 @@ async function saveUsername(name) {
   try {
     const snap = await getDoc(doc(db, 'users_list', name));
     if (snap.exists()) {
-      showUsernameError('このニックネームはすでに使用されています。別の名前を選んでください。');
+      showUsernameError('このニックネームはすでに使用されています。');
+      // 自分のアカウント再ログイン用ボタンを表示
+      document.getElementById('username-reclaim').hidden = false;
       submitBtn.disabled = false;
       spinner.hidden = true;
       return;
@@ -371,14 +384,7 @@ async function saveUsername(name) {
 
   submitBtn.disabled = false;
   spinner.hidden = true;
-
-  currentUsername = name;
-  localStorage.setItem('portal-username', name);
-  updateUsernameDisplay();
-  registerUserLogin(name);
-  loadPersonalData(name);
-  renderAllSections();
-  closeUsernameModal();
+  await applyUsername(name);
 }
 
 // ========== PINロック ==========
@@ -3437,6 +3443,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Enter') document.getElementById('username-submit').click();
   });
   document.getElementById('username-input').addEventListener('input', hideUsernameError);
+  document.getElementById('username-reclaim').addEventListener('click', async () => {
+    const name = document.getElementById('username-input').value.trim();
+    if (name) await applyUsername(name);
+  });
   document.getElementById('username-skip').addEventListener('click', closeUsernameModal);
   document.getElementById('username-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeUsernameModal();
