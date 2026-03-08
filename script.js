@@ -260,8 +260,11 @@ let unsubscribeCards = null;
 let dragSrcId = null;
 let dragSrcSectionId = null;
 
-// お気に入りのみ表示モード
-let favoritesOnlyMode = localStorage.getItem('portal-fav-only') === '1';
+// お気に入りのみ表示モード（Firestoreから読み込む。初回はfalse）
+let favoritesOnlyMode = false;
+
+// お気に入りリスト（Firestoreから読み込むメモリキャッシュ）
+let personalFavorites = [];
 
 // ニックネーム・個人データ
 let currentUsername = localStorage.getItem('portal-username') || null;
@@ -327,20 +330,69 @@ function updateUsernameDisplay() {
 }
 
 // ========== 個人データ（Firestore） ==========
+// ========== 個人設定 Firestore 保存（デバウンス付き） ==========
+let _prefSaveTimer = null;
+function savePreferencesToFirestore() {
+  if (!currentUsername) return;
+  clearTimeout(_prefSaveTimer);
+  _prefSaveTimer = setTimeout(async () => {
+    try {
+      const theme    = localStorage.getItem('portal-theme')     || 'dark';
+      const fontSize = localStorage.getItem('portal-font-size') || 'font-md';
+      await setDoc(
+        doc(db, 'users', currentUsername, 'data', 'preferences'),
+        {
+          theme,
+          fontSize,
+          favOnly:   favoritesOnlyMode,
+          favorites: personalFavorites,
+          updatedAt: serverTimestamp()
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.error('設定保存エラー:', err);
+    }
+  }, 600);
+}
+
 async function loadPersonalData(username) {
   if (!username) return;
   try {
-    const orderSnap = await getDoc(doc(db, 'users', username, 'data', 'section_order'));
+    const [orderSnap, prefSnap, privSecSnap, privCardSnap] = await Promise.all([
+      getDoc(doc(db, 'users', username, 'data', 'section_order')),
+      getDoc(doc(db, 'users', username, 'data', 'preferences')),
+      getDocs(collection(db, 'users', username, 'private_sections')),
+      getDocs(collection(db, 'users', username, 'private_cards')),
+    ]);
+
     personalSectionOrder = orderSnap.exists() ? (orderSnap.data().order || []) : [];
 
-    const privSecSnap = await getDocs(collection(db, 'users', username, 'private_sections'));
-    privateCategories = privSecSnap.docs.map(d => ({ docId: d.id, isPrivate: true, ...d.data() }));
+    if (prefSnap.exists()) {
+      // Firestore から設定を復元
+      const p = prefSnap.data();
+      personalFavorites = Array.isArray(p.favorites) ? p.favorites : [];
+      favoritesOnlyMode = !!p.favOnly;
+      if (p.theme)    applyTheme(p.theme, false);       // save=false: 読み込み時は保存しない
+      if (p.fontSize) applyFontSize(p.fontSize, false); // save=false: 読み込み時は保存しない
+    } else {
+      // 初回ログイン：localStorage に残っているデータがあれば Firestore へ移行
+      const localFavs = (() => {
+        try { return JSON.parse(localStorage.getItem('portal-favorites') || '[]'); } catch { return []; }
+      })();
+      const localFavOnly = localStorage.getItem('portal-fav-only') === '1';
+      personalFavorites = localFavs;
+      favoritesOnlyMode = localFavOnly;
+      // Firestore へ保存（移行）
+      savePreferencesToFirestore();
+    }
 
-    const privCardSnap = await getDocs(collection(db, 'users', username, 'private_cards'));
-    privateCards = privCardSnap.docs.map(d => ({ id: d.id, isPrivate: true, ...d.data() }));
+    privateCategories = privSecSnap.docs.map(d => ({ docId: d.id, isPrivate: true, ...d.data() }));
+    privateCards      = privCardSnap.docs.map(d => ({ id: d.id, isPrivate: true, ...d.data() }));
 
     renderAllSections();
     renderFavorites();
+    applyFavoritesOnlyMode();
   } catch (err) {
     console.error('個人データ読み込みエラー:', err);
   }
@@ -1159,12 +1211,12 @@ function esc(str) {
 
 // ========== お気に入り ==========
 function getFavorites() {
-  try { return JSON.parse(localStorage.getItem('portal-favorites') || '[]'); }
-  catch { return []; }
+  return [...personalFavorites];
 }
 
 function setFavorites(ids) {
-  localStorage.setItem('portal-favorites', JSON.stringify(ids));
+  personalFavorites = [...ids];
+  savePreferencesToFirestore();
 }
 
 function toggleFavorite(docId) {
@@ -1758,7 +1810,7 @@ function applyFavoritesOnlyMode() {
 
 function toggleFavoritesOnly() {
   favoritesOnlyMode = !favoritesOnlyMode;
-  localStorage.setItem('portal-fav-only', favoritesOnlyMode ? '1' : '0');
+  savePreferencesToFirestore();
   applyFavoritesOnlyMode();
 }
 
@@ -1910,19 +1962,27 @@ async function handlePinSubmit() {
 const THEMES     = ['dark', 'glass', 'light', 'warm', 'night', 'wood'];
 const FONTSIZES  = ['font-sm', 'font-md', 'font-lg', 'font-xl'];
 
-function applyTheme(theme) {
-  document.body.setAttribute('data-theme', theme || 'dark');
+function applyTheme(theme, save = true) {
+  const t = theme || 'dark';
+  document.body.setAttribute('data-theme', t);
   document.querySelectorAll('#theme-grid .theme-card').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.theme === theme);
+    btn.classList.toggle('active', btn.dataset.theme === t);
   });
+  // localStorage はフラッシュ防止キャッシュとして常に更新
+  localStorage.setItem('portal-theme', t);
+  if (save) savePreferencesToFirestore();
 }
 
-function applyFontSize(sizeClass) {
+function applyFontSize(sizeClass, save = true) {
+  const s = sizeClass || 'font-md';
   FONTSIZES.forEach(c => document.documentElement.classList.remove(c));
-  document.documentElement.classList.add(sizeClass || 'font-md');
+  document.documentElement.classList.add(s);
   document.querySelectorAll('#fontsize-grid .fontsize-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.size === sizeClass);
+    btn.classList.toggle('active', btn.dataset.size === s);
   });
+  // localStorage はフラッシュ防止キャッシュとして常に更新
+  localStorage.setItem('portal-font-size', s);
+  if (save) savePreferencesToFirestore();
 }
 
 function loadSettings() {
@@ -2308,18 +2368,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // テーマ選択
   document.querySelectorAll('#theme-grid .theme-card').forEach(btn => {
     btn.addEventListener('click', () => {
-      const theme = btn.dataset.theme;
-      applyTheme(theme);
-      localStorage.setItem('portal-theme', theme);
+      applyTheme(btn.dataset.theme);
     });
   });
 
   // 文字サイズ選択
   document.querySelectorAll('#fontsize-grid .fontsize-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const size = btn.dataset.size;
-      applyFontSize(size);
-      localStorage.setItem('portal-font-size', size);
+      applyFontSize(btn.dataset.size);
     });
   });
 
