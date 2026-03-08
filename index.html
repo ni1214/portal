@@ -60,8 +60,11 @@
       </button>
 
       <button class="btn-user" id="btn-user" title="ユーザー設定">
-        <i class="fa-solid fa-user"></i>
-        <span id="username-display">未設定</span>
+        <div class="user-avatar" id="user-avatar"><i class="fa-solid fa-user"></i></div>
+        <div class="user-info">
+          <span class="user-label" id="user-greeting">名前を設定してください</span>
+          <span class="user-name" id="username-display"></span>
+        </div>
       </button>
 
       <div class="header-clock">
@@ -230,12 +233,15 @@
   <div class="modal-overlay" id="username-modal">
     <div class="modal-glass">
       <h3 class="modal-title"><i class="fa-solid fa-user-circle"></i> ニックネームを設定</h3>
-      <p class="modal-desc">あなたの名前を入力してください。<br>セクションの並び順・マイセクション（個人専用）がこの名前で保存されます。</p>
+      <p class="modal-desc">あなただけの名前を入力してください。<br>お気に入り・テーマ・マイセクションがこの名前に紐づいて保存されます。</p>
       <div class="form-group">
         <label class="form-label">ニックネーム</label>
         <input type="text" id="username-input" class="form-input" placeholder="例：田中" maxlength="20" autocomplete="off">
       </div>
-      <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:var(--space-md)">※ 同じ名前を別のPCで入力すれば設定を引き継げます</p>
+      <div class="username-warn-box">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>この名前はあなたのIDです。<strong>忘れると設定が復元できません。</strong>他の人と重複しない名前を使ってください。</span>
+      </div>
       <div class="modal-actions">
         <button class="btn-modal-secondary" id="username-skip">スキップ</button>
         <button class="btn-modal-primary" id="username-submit">設定して始める</button>

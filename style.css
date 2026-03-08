@@ -2522,28 +2522,87 @@ body::after {
 .btn-user {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 24px;
   color: var(--text-secondary);
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
 }
-
 .btn-user:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.13);
   border-color: rgba(255, 255, 255, 0.25);
   color: var(--text-primary);
 }
+.btn-user--active {
+  border-color: rgba(255, 255, 255, 0.22);
+}
 
-#username-display {
+/* アバター円 */
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.btn-user:hover .user-avatar {
+  transform: scale(1.08);
+}
+
+/* アバター横のテキスト */
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0px;
+  line-height: 1.2;
+}
+.user-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+.user-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
   max-width: 80px;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ユーザー名モーダル：警告ボックス */
+.username-warn-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-md);
+  line-height: 1.5;
+}
+.username-warn-box i {
+  color: #f59e0b;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.username-warn-box strong {
+  color: #f59e0b;
 }
 
 /* ===========================

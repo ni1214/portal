@@ -320,13 +320,72 @@ function saveUsername(name) {
   currentUsername = name;
   localStorage.setItem('portal-username', name);
   updateUsernameDisplay();
+  registerUserLogin(name);   // users_list に記録
   loadPersonalData(name);
-  renderAllSections(); // ドラッグハンドル表示のため再描画
+  renderAllSections();
+}
+
+// ユーザー名の頭文字から一貫したアバターカラーを生成
+function getUserAvatarColor(name) {
+  const colors = [
+    'linear-gradient(135deg,#6366f1,#8b5cf6)',
+    'linear-gradient(135deg,#0ea5e9,#06b6d4)',
+    'linear-gradient(135deg,#10b981,#059669)',
+    'linear-gradient(135deg,#f59e0b,#d97706)',
+    'linear-gradient(135deg,#ef4444,#dc2626)',
+    'linear-gradient(135deg,#ec4899,#db2777)',
+    'linear-gradient(135deg,#14b8a6,#0d9488)',
+    'linear-gradient(135deg,#f97316,#ea580c)',
+  ];
+  let hash = 0;
+  for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) & 0xffff;
+  return colors[hash % colors.length];
 }
 
 function updateUsernameDisplay() {
-  const el = document.getElementById('username-display');
-  if (el) el.textContent = currentUsername || '未設定';
+  const nameEl    = document.getElementById('username-display');
+  const greetEl   = document.getElementById('user-greeting');
+  const avatarEl  = document.getElementById('user-avatar');
+  const btnEl     = document.getElementById('btn-user');
+
+  if (currentUsername) {
+    const initial = currentUsername.charAt(0).toUpperCase();
+    if (avatarEl) {
+      avatarEl.textContent = initial;
+      avatarEl.style.background = getUserAvatarColor(currentUsername);
+    }
+    if (nameEl)  nameEl.textContent  = currentUsername;
+    if (greetEl) greetEl.textContent = 'こんにちは';
+    if (btnEl)   btnEl.classList.add('btn-user--active');
+  } else {
+    if (avatarEl) {
+      avatarEl.innerHTML = '<i class="fa-solid fa-user"></i>';
+      avatarEl.style.background = '';
+    }
+    if (nameEl)  nameEl.textContent  = '';
+    if (greetEl) greetEl.textContent = '名前を設定してください';
+    if (btnEl)   btnEl.classList.remove('btn-user--active');
+  }
+}
+
+// Firestore の users_list にログイン記録（管理者が全員を把握できる）
+async function registerUserLogin(username) {
+  if (!username) return;
+  try {
+    const ref  = doc(db, 'users_list', username);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        displayName: username,
+        createdAt:   serverTimestamp(),
+        lastLogin:   serverTimestamp(),
+      });
+    } else {
+      await updateDoc(ref, { lastLogin: serverTimestamp() });
+    }
+  } catch (err) {
+    console.error('ユーザー登録エラー:', err);
+  }
 }
 
 // ========== 個人データ（Firestore） ==========
@@ -359,6 +418,9 @@ function savePreferencesToFirestore() {
 async function loadPersonalData(username) {
   if (!username) return;
   try {
+    // ログイン記録を更新（並列で実行、失敗しても続行）
+    registerUserLogin(username);
+
     const [orderSnap, prefSnap, privSecSnap, privCardSnap] = await Promise.all([
       getDoc(doc(db, 'users', username, 'data', 'section_order')),
       getDoc(doc(db, 'users', username, 'data', 'preferences')),
