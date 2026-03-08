@@ -280,6 +280,11 @@ let privateSectionColorIndex = 1;
 let activeChildPopup = null;
 let editingParentId = null;
 
+// 個人TODO
+let personalTodos = [];
+let todoCollapsed = false;
+let _todoUnsubscribe = null; // onSnapshot の解除用
+
 // ========== PIN 認証 ==========
 const PIN_SALT = 'seisan-portal-v1';
 
@@ -389,6 +394,109 @@ async function registerUserLogin(username) {
 }
 
 // ========== 個人データ（Firestore） ==========
+// ========== 個人TODO ==========
+function loadTodos(username) {
+  // 既存リスナーを解除
+  if (_todoUnsubscribe) { _todoUnsubscribe(); _todoUnsubscribe = null; }
+  if (!username) { personalTodos = []; renderTodoSection(); return; }
+
+  const q = query(
+    collection(db, 'users', username, 'todos'),
+    orderBy('createdAt', 'asc')
+  );
+  _todoUnsubscribe = onSnapshot(q, snap => {
+    personalTodos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderTodoSection();
+  }, err => console.error('TODO読み込みエラー:', err));
+}
+
+async function addTodo(text, dueDate) {
+  if (!currentUsername || !text.trim()) return;
+  await addDoc(collection(db, 'users', currentUsername, 'todos'), {
+    text:      text.trim(),
+    done:      false,
+    dueDate:   dueDate || null,
+    createdAt: serverTimestamp(),
+  });
+}
+
+async function toggleTodo(todoId, currentDone) {
+  if (!currentUsername) return;
+  await updateDoc(doc(db, 'users', currentUsername, 'todos', todoId), {
+    done: !currentDone,
+  });
+}
+
+async function deleteTodo(todoId) {
+  if (!currentUsername) return;
+  await deleteDoc(doc(db, 'users', currentUsername, 'todos', todoId));
+}
+
+function renderTodoSection() {
+  const section = document.getElementById('todo-section');
+  const list    = document.getElementById('todo-list');
+  const countEl = document.getElementById('todo-count');
+  const body    = document.getElementById('todo-body');
+  if (!section || !list) return;
+
+  // ニックネーム未設定なら非表示
+  if (!currentUsername) { section.hidden = true; return; }
+  section.hidden = false;
+
+  // 折りたたみ状態
+  body.classList.toggle('todo-body--collapsed', todoCollapsed);
+  const toggleBtn = document.getElementById('todo-toggle-btn');
+  if (toggleBtn) {
+    toggleBtn.querySelector('i').className = todoCollapsed
+      ? 'fa-solid fa-chevron-down'
+      : 'fa-solid fa-chevron-up';
+    toggleBtn.title = todoCollapsed ? '展開する' : '折りたたむ';
+  }
+
+  // カウント表示
+  const total  = personalTodos.length;
+  const doneN  = personalTodos.filter(t => t.done).length;
+  if (countEl) {
+    countEl.textContent = total ? `${doneN}/${total} 完了` : '';
+    countEl.className   = 'todo-count' + (doneN === total && total > 0 ? ' todo-count--all-done' : '');
+  }
+
+  // リスト描画（未完了→完了の順）
+  const sorted = [
+    ...personalTodos.filter(t => !t.done),
+    ...personalTodos.filter(t =>  t.done),
+  ];
+
+  list.innerHTML = '';
+  if (sorted.length === 0) {
+    list.innerHTML = '<li class="todo-empty"><i class="fa-regular fa-circle-check"></i> タスクはありません</li>';
+  } else {
+    sorted.forEach(todo => {
+      const li = document.createElement('li');
+      li.className = 'todo-item' + (todo.done ? ' todo-item--done' : '');
+      li.dataset.id = todo.id;
+
+      const dueBadge = todo.dueDate
+        ? `<span class="todo-due todo-due--${todo.dueDate === '今日' ? 'today' : 'tomorrow'}">${esc(todo.dueDate)}</span>`
+        : '';
+
+      li.innerHTML = `
+        <button class="todo-check" title="${todo.done ? '未完了に戻す' : '完了にする'}">
+          <i class="fa-${todo.done ? 'solid' : 'regular'} fa-circle-check"></i>
+        </button>
+        <span class="todo-text">${esc(todo.text)}</span>
+        ${dueBadge}
+        <button class="todo-delete-btn" title="削除"><i class="fa-solid fa-xmark"></i></button>
+      `;
+
+      li.querySelector('.todo-check').addEventListener('click', () => toggleTodo(todo.id, todo.done));
+      li.querySelector('.todo-delete-btn').addEventListener('click', () => deleteTodo(todo.id));
+
+      list.appendChild(li);
+    });
+  }
+}
+
 // ========== 個人設定 Firestore 保存（デバウンス付き） ==========
 let _prefSaveTimer = null;
 function savePreferencesToFirestore() {
@@ -455,6 +563,7 @@ async function loadPersonalData(username) {
     renderAllSections();
     renderFavorites();
     applyFavoritesOnlyMode();
+    loadTodos(username);
   } catch (err) {
     console.error('個人データ読み込みエラー:', err);
   }
@@ -2156,9 +2265,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 初回訪問時にニックネームモーダルを表示
   if (!currentUsername) {
     setTimeout(() => showUsernameModal(false), 600);
+    renderTodoSection(); // 非ログイン時は非表示にする
   } else {
     loadPersonalData(currentUsername);
   }
+
+  // ===== TODO パネル =====
+  document.getElementById('todo-toggle-btn').addEventListener('click', () => {
+    todoCollapsed = !todoCollapsed;
+    renderTodoSection();
+  });
+
+  document.getElementById('todo-add-btn').addEventListener('click', async () => {
+    const input  = document.getElementById('todo-input');
+    const due    = document.getElementById('todo-due-select');
+    const text   = input.value.trim();
+    if (!text) { input.focus(); return; }
+    await addTodo(text, due.value);
+    input.value = '';
+    due.value   = '';
+    input.focus();
+  });
+
+  document.getElementById('todo-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('todo-add-btn').click();
+  });
 
   // ===== プライベートセクションモーダル =====
   document.getElementById('private-section-cancel').addEventListener('click', closePrivateSectionModal);

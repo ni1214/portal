@@ -77,6 +77,38 @@
   <!-- ==================== Main ==================== -->
   <main class="main">
 
+    <!-- ==================== 個人TODOパネル ==================== -->
+    <section id="todo-section" class="todo-section" hidden>
+      <div class="todo-header">
+        <div class="todo-header-left">
+          <div class="todo-icon"><i class="fa-solid fa-circle-check"></i></div>
+          <h2 class="todo-title">今日のタスク</h2>
+          <span class="todo-count" id="todo-count"></span>
+        </div>
+        <button class="todo-toggle-btn" id="todo-toggle-btn" title="折りたたむ">
+          <i class="fa-solid fa-chevron-up"></i>
+        </button>
+      </div>
+
+      <div class="todo-body" id="todo-body">
+        <!-- タスク一覧（JSで生成） -->
+        <ul class="todo-list" id="todo-list"></ul>
+
+        <!-- クイック追加フォーム -->
+        <div class="todo-add-row">
+          <input type="text" id="todo-input" class="todo-input" placeholder="新しいタスクを入力..." maxlength="100" autocomplete="off">
+          <select id="todo-due-select" class="todo-due-select">
+            <option value="">期限なし</option>
+            <option value="今日">今日</option>
+            <option value="明日">明日</option>
+          </select>
+          <button class="todo-add-btn" id="todo-add-btn">
+            <i class="fa-solid fa-plus"></i> 追加
+          </button>
+        </div>
+      </div>
+    </section>
+
     <!-- お気に入りセクション（JS が制御） -->
     <section id="favorites-section" class="favorites-section category-section" hidden>
       <div class="category-header">
