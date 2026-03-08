@@ -54,6 +54,11 @@
         <i class="fa-solid fa-magnifying-glass search-icon"></i>
       </div>
 
+      <button class="btn-notice-bell" id="btn-notice-bell" title="お知らせ">
+        <i class="fa-solid fa-bell"></i>
+        <span class="notice-unread-badge" id="notice-unread-badge" hidden>0</span>
+      </button>
+
       <button class="btn-favorites-only" id="btn-favorites-only" title="お気に入りのみ表示">
         <i class="fa-regular fa-star"></i>
         <span class="btn-fav-label">お気に入りのみ</span>
@@ -182,6 +187,34 @@
       <div id="service-picker-grid" class="service-picker-grid"></div>
       <div class="modal-footer" style="margin-top:var(--space-lg)">
         <button id="service-picker-cancel" class="btn-secondary">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== チャットFABボタン ==================== -->
+  <button class="chat-fab" id="chat-fab" title="全社チャット">
+    <i class="fa-solid fa-comments"></i>
+    <span class="chat-unread-badge" id="chat-unread-badge" hidden>0</span>
+  </button>
+
+  <!-- ==================== チャットパネル ==================== -->
+  <div id="chat-panel" class="chat-panel" hidden>
+    <div class="chat-panel-header">
+      <span><i class="fa-solid fa-comments"></i> 全社チャット</span>
+      <button class="chat-panel-close" id="chat-panel-close" title="閉じる">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-area">
+      <div class="chat-login-required" id="chat-login-required" hidden>
+        <i class="fa-solid fa-user-lock"></i> チャットするにはニックネームを設定してください
+      </div>
+      <div class="chat-input-row" id="chat-input-row">
+        <input type="text" id="chat-input" class="chat-input" placeholder="メッセージを入力..." maxlength="300" autocomplete="off">
+        <button class="chat-send-btn" id="chat-send-btn" title="送信">
+          <i class="fa-solid fa-paper-plane"></i>
+        </button>
       </div>
     </div>
   </div>

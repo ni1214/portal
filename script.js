@@ -3,7 +3,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/fireba
 import {
   getFirestore, collection, doc,
   getDocs, getDoc, setDoc, addDoc, deleteDoc, updateDoc,
-  query, orderBy, writeBatch, serverTimestamp, onSnapshot,
+  query, orderBy, limit, writeBatch, serverTimestamp, onSnapshot,
   arrayUnion, arrayRemove
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
@@ -293,6 +293,12 @@ let _noticeObserver = null; // IntersectionObserver
 // お知らせリアクション { [noticeId]: { '👍': ['user1', 'user2'], ... } }
 let noticeReactions = {};
 
+// 全社チャット
+let chatMessages = [];
+let _chatUnsubscribe = null;
+let chatLastReadAt = null;
+let chatPanelOpen = false;
+
 // ========== PIN 認証 ==========
 const PIN_SALT = 'seisan-portal-v1';
 
@@ -509,6 +515,165 @@ function buildReactionBar(noticeId) {
   return `<div class="notice-reactions">${btns}</div>`;
 }
 
+// ========== 全社チャット ==========
+const CHAT_MAX = 100;
+
+function openChatPanel() {
+  chatPanelOpen = true;
+  const panel = document.getElementById('chat-panel');
+  panel.removeAttribute('hidden');
+  setTimeout(() => panel.classList.add('open'), 10);
+  if (!_chatUnsubscribe) startChatListener();
+  else { renderChatMessages(); scrollChatToBottom(); }
+  setTimeout(markChatAsRead, 400);
+}
+
+function closeChatPanel() {
+  chatPanelOpen = false;
+  const panel = document.getElementById('chat-panel');
+  panel.classList.remove('open');
+  setTimeout(() => panel.setAttribute('hidden', ''), 280);
+  updateChatBadge();
+}
+
+function startChatListener() {
+  const q = query(collection(db, 'chat_messages'), orderBy('createdAt', 'asc'), limit(CHAT_MAX));
+  _chatUnsubscribe = onSnapshot(q, snap => {
+    chatMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (chatPanelOpen) {
+      renderChatMessages();
+      scrollChatToBottom();
+      markChatAsRead();
+    }
+    updateChatBadge();
+  }, err => console.error('チャット受信エラー:', err));
+}
+
+async function sendChatMessage() {
+  if (!currentUsername) return;
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  try {
+    await addDoc(collection(db, 'chat_messages'), {
+      username: currentUsername,
+      text,
+      createdAt: serverTimestamp()
+    });
+  } catch (err) { console.error('チャット送信エラー:', err); }
+}
+
+async function deleteChatMessage(id) {
+  const ok = await confirmDelete('このメッセージを削除しますか？');
+  if (!ok) return;
+  try { await deleteDoc(doc(db, 'chat_messages', id)); }
+  catch (err) { console.error('チャット削除エラー:', err); }
+}
+
+async function markChatAsRead() {
+  if (!currentUsername) return;
+  chatLastReadAt = new Date();
+  updateChatBadge();
+  try {
+    await setDoc(
+      doc(db, 'users', currentUsername, 'data', 'chat_last_read'),
+      { readAt: serverTimestamp() }, { merge: true }
+    );
+  } catch (_) {}
+}
+
+async function loadChatLastRead(username) {
+  if (!username) return;
+  try {
+    const snap = await getDoc(doc(db, 'users', username, 'data', 'chat_last_read'));
+    chatLastReadAt = snap.exists() ? snap.data().readAt?.toDate?.() || null : null;
+    updateChatBadge();
+  } catch (_) {}
+}
+
+function updateChatBadge() {
+  const badge = document.getElementById('chat-unread-badge');
+  const fab   = document.getElementById('chat-fab');
+  if (!badge || !fab) return;
+  if (!currentUsername || chatPanelOpen) {
+    badge.hidden = true;
+    fab.classList.remove('has-unread');
+    return;
+  }
+  const unread = chatMessages.filter(m =>
+    m.username !== currentUsername &&
+    m.createdAt?.toDate &&
+    (!chatLastReadAt || m.createdAt.toDate() > chatLastReadAt)
+  ).length;
+  if (unread > 0) {
+    badge.textContent = unread > 99 ? '99+' : unread;
+    badge.hidden = false;
+    fab.classList.add('has-unread');
+  } else {
+    badge.hidden = true;
+    fab.classList.remove('has-unread');
+  }
+}
+
+function renderChatMessages() {
+  const container = document.getElementById('chat-messages');
+  if (!container) return;
+  const loginReq = document.getElementById('chat-login-required');
+  const inputRow = document.getElementById('chat-input-row');
+  if (currentUsername) {
+    loginReq.hidden = true;
+    inputRow.hidden = false;
+  } else {
+    loginReq.hidden = false;
+    inputRow.hidden = true;
+  }
+  if (!chatMessages.length) {
+    container.innerHTML = '<div class="chat-empty">まだメッセージはありません。<br>最初のメッセージを送ってみましょう！</div>';
+    return;
+  }
+  container.innerHTML = '';
+  let lastDate = '';
+  chatMessages.forEach(msg => {
+    const isOwn = msg.username === currentUsername;
+    const ts = msg.createdAt?.toDate ? msg.createdAt.toDate() : new Date();
+    const dateStr = ts.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' });
+    const timeStr = ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    if (dateStr !== lastDate) {
+      const sep = document.createElement('div');
+      sep.className = 'chat-date-sep';
+      sep.textContent = dateStr;
+      container.appendChild(sep);
+      lastDate = dateStr;
+    }
+    const color = getUserAvatarColor(msg.username);
+    const initial = msg.username.charAt(0).toUpperCase();
+    const del = isOwn
+      ? `<button class="chat-msg-delete" data-id="${msg.id}" title="削除"><i class="fa-solid fa-trash-can"></i></button>`
+      : '';
+    const el = document.createElement('div');
+    el.className = `chat-msg${isOwn ? ' chat-msg--own' : ''}`;
+    el.innerHTML = `
+      ${!isOwn ? `<div class="chat-avatar" style="background:${color}">${initial}</div>` : ''}
+      <div class="chat-msg-body">
+        ${!isOwn ? `<div class="chat-msg-name">${esc(msg.username)}</div>` : ''}
+        <div class="chat-bubble">${esc(msg.text)}${del}</div>
+        <div class="chat-msg-time">${timeStr}</div>
+      </div>
+      ${isOwn ? `<div class="chat-avatar" style="background:${color}">${initial}</div>` : ''}
+    `;
+    if (isOwn) {
+      el.querySelector('.chat-msg-delete').addEventListener('click', () => deleteChatMessage(msg.id));
+    }
+    container.appendChild(el);
+  });
+}
+
+function scrollChatToBottom() {
+  const c = document.getElementById('chat-messages');
+  if (c) c.scrollTop = c.scrollHeight;
+}
+
 // ========== 個人TODO ==========
 function loadTodos(username) {
   // 既存リスナーを解除
@@ -681,6 +846,7 @@ async function loadPersonalData(username) {
     loadTodos(username);
     await loadReadNotices(username);
     setupNoticeObserver();
+    loadChatLastRead(username);
   } catch (err) {
     console.error('個人データ読み込みエラー:', err);
   }
@@ -2432,6 +2598,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('todo-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('todo-add-btn').click();
+  });
+
+  // ===== チャットFAB =====
+  document.getElementById('chat-fab').addEventListener('click', () => {
+    chatPanelOpen ? closeChatPanel() : openChatPanel();
+  });
+  document.getElementById('chat-panel-close').addEventListener('click', closeChatPanel);
+  document.getElementById('chat-send-btn').addEventListener('click', sendChatMessage);
+  document.getElementById('chat-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
   });
 
   // ===== ベル通知ボタン =====
