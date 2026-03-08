@@ -285,6 +285,10 @@ let personalTodos = [];
 let todoCollapsed = false;
 let _todoUnsubscribe = null; // onSnapshot の解除用
 
+// お知らせ未読管理
+let readNoticeIds = new Set();
+let _noticeObserver = null; // IntersectionObserver
+
 // ========== PIN 認証 ==========
 const PIN_SALT = 'seisan-portal-v1';
 
@@ -394,6 +398,61 @@ async function registerUserLogin(username) {
 }
 
 // ========== 個人データ（Firestore） ==========
+// ========== お知らせ未読管理 ==========
+async function loadReadNotices(username) {
+  if (!username) { readNoticeIds = new Set(); updateNoticeBadge(); return; }
+  try {
+    const snap = await getDocs(collection(db, 'users', username, 'read_notices'));
+    readNoticeIds = new Set(snap.docs.map(d => d.id));
+    updateNoticeBadge();
+    renderNotices(allNotices); // 既読状態を反映して再描画
+  } catch (err) {
+    console.error('既読データ読み込みエラー:', err);
+  }
+}
+
+async function markAllNoticesRead() {
+  if (!currentUsername || !allNotices.length) return;
+  const batch = writeBatch(db);
+  allNotices.forEach(n => {
+    if (!readNoticeIds.has(n.id)) {
+      batch.set(doc(db, 'users', currentUsername, 'read_notices', n.id), {
+        readAt: serverTimestamp()
+      });
+    }
+  });
+  await batch.commit();
+  allNotices.forEach(n => readNoticeIds.add(n.id));
+  updateNoticeBadge();
+  renderNotices(allNotices);
+}
+
+function updateNoticeBadge() {
+  const badge = document.getElementById('notice-unread-badge');
+  const bell  = document.getElementById('btn-notice-bell');
+  if (!badge || !bell) return;
+  const unreadCount = allNotices.filter(n => !readNoticeIds.has(n.id)).length;
+  if (unreadCount > 0) {
+    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+    badge.hidden = false;
+    bell.classList.add('has-unread');
+  } else {
+    badge.hidden = true;
+    bell.classList.remove('has-unread');
+  }
+}
+
+// お知らせボードが画面内に入ったら自動既読
+function setupNoticeObserver() {
+  if (_noticeObserver) { _noticeObserver.disconnect(); _noticeObserver = null; }
+  const board = document.getElementById('notice-board');
+  if (!board || !currentUsername) return;
+  _noticeObserver = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) markAllNoticesRead();
+  }, { threshold: 0.3 });
+  _noticeObserver.observe(board);
+}
+
 // ========== 個人TODO ==========
 function loadTodos(username) {
   // 既存リスナーを解除
@@ -564,6 +623,8 @@ async function loadPersonalData(username) {
     renderFavorites();
     applyFavoritesOnlyMode();
     loadTodos(username);
+    await loadReadNotices(username);
+    setupNoticeObserver();
   } catch (err) {
     console.error('個人データ読み込みエラー:', err);
   }
@@ -1444,14 +1505,25 @@ function renderNotices(notices) {
     ? `<button class="btn-add-notice"><i class="fa-solid fa-plus"></i> お知らせを追加</button>`
     : '';
 
+  const unreadCount = allNotices.filter(n => !readNoticeIds.has(n.id)).length;
+  const readAllBtn = (currentUsername && unreadCount > 0)
+    ? `<button class="btn-read-all" id="btn-read-all"><i class="fa-solid fa-check-double"></i> 全て既読</button>`
+    : '';
+
   board.innerHTML = `
     <div class="notice-header">
       <i class="fa-solid fa-bullhorn"></i>
       <span>お知らせ</span>
+      ${unreadCount > 0 ? `<span class="notice-unread-label">${unreadCount}件 未読</span>` : ''}
+      ${readAllBtn}
       ${addBtn}
     </div>
     <div class="notice-list" id="notice-list"></div>
   `;
+
+  if (currentUsername && unreadCount > 0) {
+    board.querySelector('#btn-read-all')?.addEventListener('click', markAllNoticesRead);
+  }
 
   if (isEditMode) {
     board.querySelector('.btn-add-notice').addEventListener('click', () => openNoticeModal(null));
@@ -1459,16 +1531,19 @@ function renderNotices(notices) {
 
   const list = board.querySelector('#notice-list');
   notices.forEach(n => {
+    const isUnread = currentUsername && !readNoticeIds.has(n.id);
     const item = document.createElement('div');
-    item.className = `notice-item${n.priority === 'urgent' ? ' urgent' : ''}`;
+    item.className = `notice-item${n.priority === 'urgent' ? ' urgent' : ''}${isUnread ? ' notice-unread' : ''}`;
     const dateStr = n.createdAt?.toDate
       ? n.createdAt.toDate().toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' })
       : '';
+    const newBadge = isUnread ? `<span class="notice-new-badge">NEW</span>` : '';
     const editBtns = isEditMode
       ? `<button class="btn-notice-edit" data-id="${n.id}"><i class="fa-solid fa-pen"></i></button>`
       : '';
     item.innerHTML = `
       <div class="notice-item-header">
+        ${newBadge}
         <span class="notice-badge ${n.priority === 'urgent' ? 'badge-urgent' : 'badge-normal'}">${n.priority === 'urgent' ? '重要' : 'お知らせ'}</span>
         <span class="notice-title">${esc(n.title || '')}</span>
         <span class="notice-date">${dateStr}</span>
@@ -2289,6 +2364,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('todo-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('todo-add-btn').click();
+  });
+
+  // ===== ベル通知ボタン =====
+  document.getElementById('btn-notice-bell').addEventListener('click', () => {
+    const board = document.getElementById('notice-board');
+    if (board) board.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (currentUsername) markAllNoticesRead();
   });
 
   // ===== プライベートセクションモーダル =====

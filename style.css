@@ -3709,3 +3709,99 @@ html.font-xl { font-size: 21px; }
   .todo-add-row { flex-wrap: wrap; }
   .todo-input { min-width: 100%; }
 }
+
+/* ===========================
+   ベル通知ボタン
+   =========================== */
+.btn-notice-bell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.btn-notice-bell:hover {
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--text-primary);
+}
+.btn-notice-bell.has-unread {
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.4);
+  animation: bellShake 0.5s ease 0.3s;
+}
+@keyframes bellShake {
+  0%, 100% { transform: rotate(0deg); }
+  20%  { transform: rotate(-18deg); }
+  40%  { transform: rotate(16deg); }
+  60%  { transform: rotate(-10deg); }
+  80%  { transform: rotate(8deg); }
+}
+.notice-unread-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  line-height: 1;
+  border: 1.5px solid var(--bg-primary);
+}
+
+/* ===========================
+   お知らせ 未読スタイル
+   =========================== */
+.notice-item.notice-unread {
+  border-left: 3px solid #60a5fa;
+  padding-left: calc(var(--space-md) - 3px);
+}
+.notice-new-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+  margin-left: 6px;
+  line-height: 1.6;
+}
+.notice-unread-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: var(--space-sm);
+}
+.btn-read-all {
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  color: #60a5fa;
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-read-all:hover {
+  background: rgba(96, 165, 250, 0.2);
+  border-color: rgba(96, 165, 250, 0.5);
+}
