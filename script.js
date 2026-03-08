@@ -702,6 +702,15 @@ let emailProfiles = [];
 let selectedEmailProfileId = 'internal';
 let geminiApiKey = null;
 let emailModalLoaded = false;
+let userEmailProfile = { realName: '', department: '', email: '', phone: '', signatureTemplate: '' };
+
+const DEFAULT_SIGNATURE_TEMPLATE =
+`━━━━━━━━━━━━━━━━━━━━━━
+{realName}　{department}
+日建フレメックス株式会社
+TEL：{phone}
+E-mail：{email}
+━━━━━━━━━━━━━━━━━━━━━━`;
 
 async function loadEmailData() {
   // APIキーをFirestoreから取得
@@ -729,9 +738,20 @@ async function loadEmailData() {
   const onlyCustom = userProfiles.filter(u => !DEFAULT_EMAIL_PROFILES.find(d => d.id === u.id));
   emailProfiles = [...mergedDefaults, ...onlyCustom];
 
+  // ユーザープロフィール（名前・所属・署名）を読み込み
+  if (currentUsername) {
+    try {
+      const profSnap = await getDoc(doc(db, 'users', currentUsername, 'data', 'email_profile'));
+      if (profSnap.exists()) {
+        userEmailProfile = { ...userEmailProfile, ...profSnap.data() };
+      }
+    } catch (_) {}
+  }
+
   updateApiKeyUI();
   renderEmailProfileList();
   selectEmailProfile(selectedEmailProfileId);
+  renderProfileTab();
   emailModalLoaded = true;
 }
 
@@ -855,15 +875,26 @@ async function generateEmailReply() {
   const outputArea = document.getElementById('email-output-area');
   outputArea.hidden = true;
 
-  const fullPrompt = `あなたは日本の建設会社「日建フレメックス」の社員です。以下の受信メールに対する返信文を作成してください。
+  const senderName = userEmailProfile.realName ? `日建フレメックスの${userEmailProfile.realName}` : '日建フレメックスの担当者';
+  const sigTemplate = userEmailProfile.signatureTemplate || DEFAULT_SIGNATURE_TEMPLATE;
+  const filledSig   = fillSignature(sigTemplate);
+
+  const fullPrompt = `あなたは日本の建設会社「日建フレメックス」の社員（${senderName}）です。以下の受信メールに対する返信文を作成してください。
 
 【返信パターン：${profile.name}】
 ${profile.prompt}
 
+【必須ルール】
+- 返信文の書き出しは必ず「${senderName}です。」から始めてください
+- 件名・宛名は含めないでください
+- 返信本文の最後に、以下の署名をそのまま追加してください（改変不可）：
+
+${filledSig}
+
 【受信したメール】
 ${received}
 
-返信文（件名・宛名・署名なし、本文のみ）：`;
+返信文：`;
 
   try {
     const res = await fetch(
@@ -903,6 +934,68 @@ function copyEmailOutput() {
     const orig = btn.innerHTML;
     btn.innerHTML = '<i class="fa-solid fa-check"></i> コピーしました！';
     setTimeout(() => { btn.innerHTML = orig; }, 2000);
+  });
+}
+
+// プロフィールタブを描画
+function renderProfileTab() {
+  document.getElementById('ep-real-name').value   = userEmailProfile.realName   || '';
+  document.getElementById('ep-department').value  = userEmailProfile.department  || '';
+  document.getElementById('ep-email').value        = userEmailProfile.email        || '';
+  document.getElementById('ep-phone').value        = userEmailProfile.phone        || '';
+  const sig = userEmailProfile.signatureTemplate || DEFAULT_SIGNATURE_TEMPLATE;
+  document.getElementById('ep-signature').value = sig;
+  updateSignaturePreview(sig);
+}
+
+function fillSignature(template) {
+  return template
+    .replace(/\{realName\}/g,   userEmailProfile.realName   || '（名前未設定）')
+    .replace(/\{department\}/g, userEmailProfile.department  || '（所属未設定）')
+    .replace(/\{email\}/g,      userEmailProfile.email        || '（メール未設定）')
+    .replace(/\{phone\}/g,      userEmailProfile.phone        || '（電話未設定）');
+}
+
+function updateSignaturePreview(template) {
+  const el = document.getElementById('ep-signature-preview');
+  if (el) el.textContent = fillSignature(template || DEFAULT_SIGNATURE_TEMPLATE);
+}
+
+async function saveUserEmailProfile() {
+  userEmailProfile.realName          = document.getElementById('ep-real-name').value.trim();
+  userEmailProfile.department        = document.getElementById('ep-department').value.trim();
+  userEmailProfile.email             = document.getElementById('ep-email').value.trim();
+  userEmailProfile.phone             = document.getElementById('ep-phone').value.trim();
+  userEmailProfile.signatureTemplate = document.getElementById('ep-signature').value;
+
+  if (currentUsername) {
+    try {
+      await setDoc(
+        doc(db, 'users', currentUsername, 'data', 'email_profile'),
+        { ...userEmailProfile, updatedAt: serverTimestamp() }, { merge: true }
+      );
+    } catch (err) { console.error('プロフィール保存エラー:', err); }
+  }
+  // フィードバック
+  const btn = document.getElementById('ep-save');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存しました';
+  setTimeout(() => { btn.innerHTML = orig; }, 1500);
+  updateSignaturePreview(userEmailProfile.signatureTemplate);
+}
+
+function resetSignatureTemplate() {
+  document.getElementById('ep-signature').value = DEFAULT_SIGNATURE_TEMPLATE;
+  updateSignaturePreview(DEFAULT_SIGNATURE_TEMPLATE);
+}
+
+// タブ切り替え
+function switchEmailTab(tabId) {
+  document.querySelectorAll('.email-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tabId);
+  });
+  document.querySelectorAll('.email-tab-content').forEach(el => {
+    el.hidden = el.id !== `email-tab-${tabId}`;
   });
 }
 
@@ -2853,6 +2946,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('email-generate').addEventListener('click', generateEmailReply);
   document.getElementById('btn-copy-output').addEventListener('click', copyEmailOutput);
   document.getElementById('email-api-key-save').addEventListener('click', saveGeminiApiKey);
+  // タブ切り替え
+  document.querySelectorAll('.email-tab').forEach(btn => {
+    btn.addEventListener('click', () => switchEmailTab(btn.dataset.tab));
+  });
+  // プロフィールタブ
+  document.getElementById('ep-save').addEventListener('click', saveUserEmailProfile);
+  document.getElementById('ep-reset-sig').addEventListener('click', resetSignatureTemplate);
+  document.getElementById('ep-signature').addEventListener('input', e => updateSignaturePreview(e.target.value));
 
   // ===== チャットFAB =====
   document.getElementById('chat-fab').addEventListener('click', () => {

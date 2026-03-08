@@ -4540,3 +4540,146 @@ html.font-xl { font-size: 21px; }
   .email-profile-item { padding: 5px 9px; font-size: 0.75rem; }
   .email-profile-add-btn { margin-top: 0; padding: 5px 9px; font-size: 0.72rem; }
 }
+
+/* ===========================
+   メールモーダル タブ
+   =========================== */
+.email-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+.email-tab {
+  padding: 9px 14px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: -1px;
+}
+.email-tab:hover { color: var(--text-primary); }
+.email-tab.active {
+  color: var(--accent-purple);
+  border-bottom-color: var(--accent-purple);
+  font-weight: 600;
+}
+.email-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ===========================
+   プロフィール・署名タブ
+   =========================== */
+.ep-section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.ep-section-title i { color: var(--accent-purple); }
+.ep-hint {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-left: 4px;
+}
+.ep-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.ep-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ep-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.ep-required { color: #f87171; }
+.ep-input {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 0.83rem;
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+.ep-input:focus { border-color: rgba(124, 92, 255, 0.5); }
+.ep-input::placeholder { color: var(--text-muted); }
+.ep-signature-area {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  outline: none;
+  font-family: monospace;
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+  transition: border-color 0.15s;
+}
+.ep-signature-area:focus { border-color: rgba(124, 92, 255, 0.45); }
+.ep-signature-preview-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ep-signature-preview {
+  background: rgba(255,255,255,0.03);
+  border: 1px dashed rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  font-family: monospace;
+  line-height: 1.65;
+}
+.ep-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.btn-reset-sig {
+  padding: 7px 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
+}
+.btn-reset-sig:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+@media (max-width: 520px) {
+  .ep-form-grid { grid-template-columns: 1fr; }
+}
