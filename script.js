@@ -3477,10 +3477,24 @@ function toggleSectionFavorite(catId, isPrivate = false) {
 // ========== 検索（イベント委任） ==========
 function initSearch() {
   const searchInput = document.getElementById('search-input');
+  const container   = searchInput.closest('.search-container');
   const noResults   = document.getElementById('no-results');
+
+  // コンテナクリックで入力フォーカス
+  container.addEventListener('click', () => searchInput.focus());
+
+  // Escape で検索クリア＆折りたたみ
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      searchInput.value = '';
+      searchInput.blur();
+      searchInput.dispatchEvent(new Event('input'));
+    }
+  });
 
   searchInput.addEventListener('input', () => {
     const q = searchInput.value.trim().toLowerCase();
+    container.classList.toggle('has-value', q.length > 0);
     let total = 0;
 
     document.querySelectorAll('.category-section:not(#favorites-section)').forEach(section => {

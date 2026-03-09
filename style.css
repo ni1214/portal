@@ -205,51 +205,72 @@ body::after {
 }
 
 /* ===========================
-   Search Bar
+   Search Bar（折りたたみ式）
    =========================== */
 .search-container {
-  flex: 1;
-  max-width: 400px;
   position: relative;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 50px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: width 0.3s cubic-bezier(0.4,0,0.2,1),
+              background 0.2s,
+              border-color 0.2s,
+              box-shadow 0.2s;
+}
+
+.search-container:focus-within,
+.search-container.has-value {
+  width: min(360px, 38vw);
+  cursor: default;
+  background: rgba(74,158,255,0.08);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(74,158,255,0.1);
+}
+
+.search-container:hover:not(:focus-within):not(.has-value) {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.22);
 }
 
 .search-input {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  padding: var(--space-sm) var(--space-lg);
-  padding-left: 2.5rem;
-  background: var(--bg-glass);
-  border: 1px solid var(--border-glass);
-  border-radius: 50px;
+  height: 100%;
+  padding: 0 var(--space-lg) 0 2.5rem;
+  background: transparent;
+  border: none;
   color: var(--text-primary);
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
   outline: none;
-  transition: all var(--transition-base);
 }
 
 .search-input::placeholder {
   color: var(--text-muted);
 }
 
-.search-input:focus {
-  border-color: var(--accent-blue);
-  background: rgba(74, 158, 255, 0.08);
-  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
-}
-
 .search-icon {
   position: absolute;
-  left: var(--space-md);
+  left: 50%;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%);
   color: var(--text-muted);
   font-size: var(--font-size-sm);
   pointer-events: none;
-  transition: color var(--transition-base);
+  transition: left 0.3s ease, transform 0.3s ease, color 0.15s;
 }
 
-.search-input:focus+.search-icon,
-.search-input:not(:placeholder-shown)+.search-icon {
+.search-container:focus-within .search-icon,
+.search-container.has-value .search-icon {
+  left: var(--space-md);
+  transform: translateY(-50%);
   color: var(--accent-blue);
 }
 
@@ -261,9 +282,12 @@ body::after {
   align-items: center;
   gap: var(--space-sm);
   color: var(--text-secondary);
-  font-size: 1.3rem;
+  font-size: clamp(0.68rem, 1.15vw, 1.3rem);
   font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .header-clock i {
@@ -982,10 +1006,9 @@ body::after {
     flex-wrap: wrap;
   }
 
-  .search-container {
-    order: 3;
-    max-width: 100%;
-    flex-basis: 100%;
+  .search-container:focus-within,
+  .search-container.has-value {
+    width: min(240px, 50vw);
   }
 
   .header-clock {
@@ -2426,20 +2449,23 @@ body::after {
    お気に入りのみ表示ボタン（ヘッダー）
    =========================== */
 .btn-favorites-only {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 20px;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 50%;
   color: var(--text-secondary);
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.2s;
-  white-space: nowrap;
-  font-family: var(--font-family);
+  flex-shrink: 0;
 }
+
+.btn-fav-label { display: none; }
 
 .btn-favorites-only:hover {
   background: rgba(255, 204, 0, 0.12);
@@ -2452,11 +2478,6 @@ body::after {
   border-color: #ffcc00;
   color: #ffcc00;
   box-shadow: 0 0 12px rgba(255, 204, 0, 0.3);
-}
-
-@media (max-width: 600px) {
-  .btn-fav-label { display: none; }
-  .btn-favorites-only { padding: 6px 10px; }
 }
 
 /* ===========================
