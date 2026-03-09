@@ -62,6 +62,11 @@
         <i class="fa-solid fa-envelope-open-text"></i>
       </button>
 
+      <button class="btn-task" id="btn-task" title="タスク管理">
+        <i class="fa-solid fa-list-check"></i>
+        <span class="task-badge" id="task-badge" hidden>0</span>
+      </button>
+
       <button class="btn-notice-bell" id="btn-notice-bell" title="お知らせ">
         <i class="fa-solid fa-bell"></i>
         <span class="notice-unread-badge" id="notice-unread-badge" hidden>0</span>
@@ -1031,6 +1036,48 @@
           </div>
 
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== タスク管理モーダル ==================== -->
+  <div class="modal-overlay" id="task-modal">
+    <div class="task-modal-inner">
+
+      <div class="task-modal-header">
+        <span><i class="fa-solid fa-list-check"></i> タスク管理</span>
+        <button class="task-modal-close" id="task-modal-close" title="閉じる">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="task-tabs">
+        <button class="task-tab active" data-tab="received">
+          受け取ったタスク
+          <span class="task-tab-badge" id="task-tab-received-badge" hidden></span>
+        </button>
+        <button class="task-tab" data-tab="sent">
+          依頼したタスク
+          <span class="task-tab-badge" id="task-tab-sent-badge" hidden></span>
+        </button>
+        <button class="task-tab" data-tab="new">
+          <i class="fa-solid fa-plus"></i> 新規依頼
+        </button>
+      </div>
+
+      <div id="task-tab-content" class="task-tab-content"></div>
+
+    </div>
+  </div>
+
+  <!-- ==================== タスク担当者ピッカーモーダル ==================== -->
+  <div class="modal-overlay" id="task-user-picker-modal">
+    <div class="modal-glass">
+      <h3 class="modal-title"><i class="fa-solid fa-user-plus"></i> 担当者を選択</h3>
+      <input type="text" id="task-user-search" class="form-input" placeholder="名前で検索..." autocomplete="off" style="margin-bottom:10px">
+      <div id="task-user-list" class="new-dm-user-list"></div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="task-user-picker-cancel">キャンセル</button>
       </div>
     </div>
   </div>

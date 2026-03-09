@@ -307,6 +307,15 @@ let chatReadTimes = {}; // { roomId: Date | null }
 
 const CHAT_MSG_MAX = 200;
 
+// タスク割り振り
+let receivedTasks = [];
+let sentTasks = [];
+let _receivedTasksUnsub = null;
+let _sentTasksUnsub = null;
+let taskModalOpen = false;
+let activeTaskTab = 'received';
+let newTaskAssignee = '';
+
 // ========== PIN 認証 ==========
 const PIN_SALT = 'seisan-portal-v1';
 
@@ -1235,6 +1244,251 @@ async function loadUsersForChatPicker(listElId, searchElId, onSelect, excludeSel
   }
 }
 
+// ========== タスク割り振り ==========
+
+const TASK_STATUS_LABEL = {
+  pending:  { text: '承諾待ち', cls: 'status-pending' },
+  accepted: { text: '進行中',   cls: 'status-accepted' },
+  done:     { text: '完了',     cls: 'status-done' },
+};
+
+function startTaskListeners(username) {
+  if (!username) return;
+  if (_receivedTasksUnsub) { _receivedTasksUnsub(); _receivedTasksUnsub = null; }
+  if (_sentTasksUnsub)     { _sentTasksUnsub();     _sentTasksUnsub = null; }
+
+  const rQ = query(collection(db, 'assigned_tasks'), where('assignedTo', '==', username), orderBy('createdAt', 'desc'));
+  _receivedTasksUnsub = onSnapshot(rQ, snap => {
+    receivedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    updateTaskBadge();
+    if (taskModalOpen && activeTaskTab === 'received') renderTaskTabContent();
+  });
+
+  const sQ = query(collection(db, 'assigned_tasks'), where('assignedBy', '==', username), orderBy('createdAt', 'desc'));
+  _sentTasksUnsub = onSnapshot(sQ, snap => {
+    sentTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    updateTaskBadge();
+    if (taskModalOpen && activeTaskTab === 'sent') renderTaskTabContent();
+  });
+}
+
+function updateTaskBadge() {
+  const badge = document.getElementById('task-badge');
+  const btn   = document.getElementById('btn-task');
+  if (!badge || !btn) return;
+  const incoming   = receivedTasks.filter(t => t.status === 'pending').length;
+  const completions = sentTasks.filter(t => t.status === 'done' && !t.notifiedDone).length;
+  const count = incoming + completions;
+
+  // タブバッジも更新
+  const rBadge = document.getElementById('task-tab-received-badge');
+  const sBadge = document.getElementById('task-tab-sent-badge');
+  if (rBadge) { rBadge.textContent = incoming; rBadge.hidden = incoming === 0; }
+  if (sBadge) { sBadge.textContent = completions; sBadge.hidden = completions === 0; }
+
+  if (count > 0) {
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.hidden = false;
+    btn.classList.add('has-badge');
+  } else {
+    badge.hidden = true;
+    btn.classList.remove('has-badge');
+  }
+}
+
+function openTaskModal() {
+  taskModalOpen = true;
+  document.getElementById('task-modal').classList.add('visible');
+  switchTaskTab(activeTaskTab);
+}
+
+function closeTaskModal() {
+  taskModalOpen = false;
+  document.getElementById('task-modal').classList.remove('visible');
+}
+
+function switchTaskTab(tab) {
+  activeTaskTab = tab;
+  document.querySelectorAll('.task-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  renderTaskTabContent();
+}
+
+function renderTaskTabContent() {
+  const content = document.getElementById('task-tab-content');
+  if (!content) return;
+  if (!currentUsername) {
+    content.innerHTML = '<div class="task-empty"><i class="fa-solid fa-user-slash"></i><p>ニックネームを設定してください</p></div>';
+    return;
+  }
+  if (activeTaskTab === 'received') _renderReceivedTasks(content);
+  else if (activeTaskTab === 'sent') _renderSentTasks(content);
+  else _renderNewTaskForm(content);
+}
+
+function _renderReceivedTasks(container) {
+  if (!receivedTasks.length) {
+    container.innerHTML = '<div class="task-empty"><i class="fa-solid fa-inbox"></i><p>受け取ったタスクはありません</p></div>';
+    return;
+  }
+  container.innerHTML = receivedTasks.map(t => {
+    const s = TASK_STATUS_LABEL[t.status] || TASK_STATUS_LABEL.pending;
+    const due = t.dueDate ? `<span class="task-due"><i class="fa-regular fa-calendar"></i> ${esc(t.dueDate)}</span>` : '';
+    let actions = '';
+    if (t.status === 'pending') {
+      actions = `<button class="task-action-btn task-action-accept" data-id="${t.id}"><i class="fa-solid fa-check"></i> 承諾する</button>`;
+    } else if (t.status === 'accepted') {
+      actions = `<button class="task-action-btn task-action-done" data-id="${t.id}"><i class="fa-solid fa-flag-checkered"></i> 完了報告</button>`;
+    } else {
+      actions = `<span class="task-done-stamp"><i class="fa-solid fa-circle-check"></i> 完了済み</span>`;
+    }
+    return `
+      <div class="task-item task-item--${t.status}">
+        <div class="task-item-meta">
+          <span class="task-status-badge ${s.cls}">${s.text}</span>
+          <span class="task-partner"><i class="fa-solid fa-arrow-right-to-bracket"></i> 依頼: ${esc(t.assignedBy)}</span>
+          ${due}
+        </div>
+        <div class="task-item-title">${esc(t.title)}</div>
+        ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
+        <div class="task-item-actions">${actions}</div>
+      </div>`;
+  }).join('');
+
+  container.querySelectorAll('.task-action-accept').forEach(btn =>
+    btn.addEventListener('click', () => acceptTask(btn.dataset.id)));
+  container.querySelectorAll('.task-action-done').forEach(btn =>
+    btn.addEventListener('click', () => completeTask(btn.dataset.id)));
+}
+
+function _renderSentTasks(container) {
+  if (!sentTasks.length) {
+    container.innerHTML = '<div class="task-empty"><i class="fa-solid fa-paper-plane"></i><p>依頼したタスクはありません</p></div>';
+    return;
+  }
+  container.innerHTML = sentTasks.map(t => {
+    const s = TASK_STATUS_LABEL[t.status] || TASK_STATUS_LABEL.pending;
+    const due = t.dueDate ? `<span class="task-due"><i class="fa-regular fa-calendar"></i> ${esc(t.dueDate)}</span>` : '';
+    const isNewDone = t.status === 'done' && !t.notifiedDone;
+    const actions = isNewDone
+      ? `<button class="task-action-btn task-action-ack" data-id="${t.id}"><i class="fa-solid fa-circle-check"></i> 完了を確認した</button>`
+      : '';
+    return `
+      <div class="task-item task-item--${t.status}${isNewDone ? ' task-item--alert' : ''}">
+        <div class="task-item-meta">
+          <span class="task-status-badge ${s.cls}">${s.text}</span>
+          <span class="task-partner"><i class="fa-solid fa-arrow-right-from-bracket"></i> 担当: ${esc(t.assignedTo)}</span>
+          ${due}
+        </div>
+        <div class="task-item-title">${esc(t.title)}</div>
+        ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
+        ${actions ? `<div class="task-item-actions">${actions}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  container.querySelectorAll('.task-action-ack').forEach(btn =>
+    btn.addEventListener('click', () => acknowledgeTask(btn.dataset.id)));
+}
+
+function _renderNewTaskForm(container) {
+  newTaskAssignee = '';
+  container.innerHTML = `
+    <div class="task-new-form">
+      <div class="form-group">
+        <label class="form-label">担当者 <span class="required-mark">*</span></label>
+        <div class="task-assignee-row">
+          <span class="task-assignee-display" id="new-task-assignee-display">未選択</span>
+          <button class="task-pick-btn" id="task-pick-user"><i class="fa-solid fa-user-plus"></i> 選択</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">タスク名 <span class="required-mark">*</span></label>
+        <input type="text" id="new-task-title" class="form-input" placeholder="例：〇〇の資料作成" maxlength="60" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">詳細（省略可）</label>
+        <textarea id="new-task-desc" class="form-input" rows="3" placeholder="詳しい説明や注意点..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">期限（省略可）</label>
+        <input type="date" id="new-task-due" class="form-input">
+      </div>
+      <button class="btn-modal-primary" id="new-task-submit" style="width:100%;margin-top:4px">
+        <i class="fa-solid fa-paper-plane"></i> タスクを依頼する
+      </button>
+    </div>`;
+
+  document.getElementById('task-pick-user').addEventListener('click', openTaskUserPicker);
+  document.getElementById('new-task-submit').addEventListener('click', submitNewTask);
+}
+
+async function openTaskUserPicker() {
+  document.getElementById('task-user-picker-modal').classList.add('visible');
+  document.getElementById('task-user-search').value = '';
+  await loadUsersForChatPicker('task-user-list', 'task-user-search', (name) => {
+    newTaskAssignee = name;
+    const el = document.getElementById('new-task-assignee-display');
+    if (el) { el.textContent = name; el.classList.add('selected'); }
+    document.getElementById('task-user-picker-modal').classList.remove('visible');
+  }, true);
+}
+
+async function submitNewTask() {
+  if (!newTaskAssignee) { alert('担当者を選択してください。'); return; }
+  const title = document.getElementById('new-task-title')?.value.trim();
+  if (!title) { document.getElementById('new-task-title')?.focus(); return; }
+  const description = document.getElementById('new-task-desc')?.value.trim() || '';
+  const dueDate = document.getElementById('new-task-due')?.value || '';
+
+  const btn = document.getElementById('new-task-submit');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 送信中...';
+  try {
+    await addDoc(collection(db, 'assigned_tasks'), {
+      title, description,
+      assignedBy: currentUsername,
+      assignedTo: newTaskAssignee,
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      acceptedAt: null,
+      doneAt: null,
+      dueDate,
+      notifiedDone: false,
+    });
+    newTaskAssignee = '';
+    switchTaskTab('sent');
+  } catch (err) {
+    console.error('タスク作成エラー:', err);
+    alert('送信に失敗しました。');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> タスクを依頼する';
+  }
+}
+
+async function acceptTask(taskId) {
+  try {
+    await updateDoc(doc(db, 'assigned_tasks', taskId), {
+      status: 'accepted',
+      acceptedAt: serverTimestamp(),
+    });
+  } catch (err) { console.error('タスク承諾エラー:', err); }
+}
+
+async function completeTask(taskId) {
+  if (!confirm('このタスクを完了として報告しますか？')) return;
+  try {
+    await updateDoc(doc(db, 'assigned_tasks', taskId), {
+      status: 'done',
+      doneAt: serverTimestamp(),
+    });
+  } catch (err) { console.error('タスク完了エラー:', err); }
+}
+
+async function acknowledgeTask(taskId) {
+  try {
+    await updateDoc(doc(db, 'assigned_tasks', taskId), { notifiedDone: true });
+  } catch (err) { console.error('タスク確認エラー:', err); }
+}
+
 // ========== メール返信アシスタント ==========
 const DEFAULT_EMAIL_PROFILES = [
   {
@@ -1990,6 +2244,7 @@ async function loadPersonalData(username) {
     setupNoticeObserver();
     loadChatReadTimes(username);
     startChatListeners(username);
+    startTaskListeners(username);
     loadLockSettings(username);
   } catch (err) {
     console.error('個人データ読み込みエラー:', err);
@@ -3959,6 +4214,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === e.currentTarget) document.getElementById('new-group-modal').classList.remove('visible');
   });
   document.getElementById('new-group-create').addEventListener('click', createGroupRoom);
+
+  // ===== タスクボタン =====
+  document.getElementById('btn-task').addEventListener('click', openTaskModal);
+  document.getElementById('task-modal-close').addEventListener('click', closeTaskModal);
+  document.getElementById('task-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeTaskModal();
+  });
+  document.querySelectorAll('.task-tab').forEach(btn => {
+    btn.addEventListener('click', () => switchTaskTab(btn.dataset.tab));
+  });
+  document.getElementById('task-user-picker-cancel').addEventListener('click', () => {
+    document.getElementById('task-user-picker-modal').classList.remove('visible');
+  });
+  document.getElementById('task-user-picker-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) document.getElementById('task-user-picker-modal').classList.remove('visible');
+  });
 
   // ===== ベル通知ボタン =====
   document.getElementById('btn-notice-bell').addEventListener('click', () => {
