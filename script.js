@@ -3,7 +3,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/fireba
 import {
   getFirestore, collection, doc,
   getDocs, getDoc, setDoc, addDoc, deleteDoc, updateDoc,
-  query, orderBy, limit, writeBatch, serverTimestamp, onSnapshot,
+  query, where, orderBy, limit, writeBatch, serverTimestamp, onSnapshot,
   arrayUnion, arrayRemove
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
@@ -293,11 +293,19 @@ let _noticeObserver = null; // IntersectionObserver
 // お知らせリアクション { [noticeId]: { '👍': ['user1', 'user2'], ... } }
 let noticeReactions = {};
 
-// 全社チャット
-let chatMessages = [];
-let _chatUnsubscribe = null;
-let chatLastReadAt = null;
+// チャット（DM + グループ）
 let chatPanelOpen = false;
+let dmRooms = [];
+let groupRooms = [];
+let currentRoomId = null;
+let currentRoomType = null; // 'dm' | 'group'
+let currentRoomMessages = [];
+let _dmRoomsUnsubscribe = null;
+let _groupRoomsUnsubscribe = null;
+let _roomMsgUnsubscribe = null;
+let chatReadTimes = {}; // { roomId: Date | null }
+
+const CHAT_MSG_MAX = 200;
 
 // ========== PIN 認証 ==========
 const PIN_SALT = 'seisan-portal-v1';
@@ -810,17 +818,18 @@ function buildReactionBar(noticeId) {
   return `<div class="notice-reactions">${btns}</div>`;
 }
 
-// ========== 全社チャット ==========
-const CHAT_MAX = 100;
+// ========== チャット（DM + グループ）==========
+
+function getDmRoomId(a, b) {
+  return [a, b].sort().join('_');
+}
 
 function openChatPanel() {
   chatPanelOpen = true;
   const panel = document.getElementById('chat-panel');
   panel.removeAttribute('hidden');
   setTimeout(() => panel.classList.add('open'), 10);
-  if (!_chatUnsubscribe) startChatListener();
-  else { renderChatMessages(); scrollChatToBottom(); }
-  setTimeout(markChatAsRead, 400);
+  renderChatSidebar();
 }
 
 function closeChatPanel() {
@@ -828,81 +837,80 @@ function closeChatPanel() {
   const panel = document.getElementById('chat-panel');
   panel.classList.remove('open');
   setTimeout(() => panel.setAttribute('hidden', ''), 280);
-  updateChatBadge();
 }
 
-function startChatListener() {
-  const q = query(collection(db, 'chat_messages'), orderBy('createdAt', 'asc'), limit(CHAT_MAX));
-  _chatUnsubscribe = onSnapshot(q, snap => {
-    chatMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (chatPanelOpen) {
-      renderChatMessages();
-      scrollChatToBottom();
-      markChatAsRead();
+function startChatListeners(username) {
+  if (!username) return;
+  stopChatListeners();
+
+  const dmQ = query(collection(db, 'dm_rooms'), where('members', 'array-contains', username));
+  _dmRoomsUnsubscribe = onSnapshot(dmQ, snap => {
+    dmRooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (chatPanelOpen) renderChatSidebar();
+    updateChatBadge();
+  });
+
+  const grpQ = query(collection(db, 'chat_rooms'), where('members', 'array-contains', username));
+  _groupRoomsUnsubscribe = onSnapshot(grpQ, snap => {
+    groupRooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (chatPanelOpen) renderChatSidebar();
+    updateChatBadge();
+  });
+}
+
+function stopChatListeners() {
+  if (_dmRoomsUnsubscribe) { _dmRoomsUnsubscribe(); _dmRoomsUnsubscribe = null; }
+  if (_groupRoomsUnsubscribe) { _groupRoomsUnsubscribe(); _groupRoomsUnsubscribe = null; }
+  if (_roomMsgUnsubscribe) { _roomMsgUnsubscribe(); _roomMsgUnsubscribe = null; }
+  dmRooms = [];
+  groupRooms = [];
+  currentRoomId = null;
+  currentRoomType = null;
+}
+
+async function loadChatReadTimes(username) {
+  if (!username) return;
+  try {
+    const snap = await getDoc(doc(db, 'users', username, 'data', 'chat_reads'));
+    if (snap.exists()) {
+      chatReadTimes = {};
+      Object.entries(snap.data()).forEach(([roomId, ts]) => {
+        chatReadTimes[roomId] = ts?.toDate?.() || null;
+      });
     }
     updateChatBadge();
-  }, err => console.error('チャット受信エラー:', err));
+  } catch (_) {}
 }
 
-async function sendChatMessage() {
-  if (!currentUsername) return;
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-  try {
-    await addDoc(collection(db, 'chat_messages'), {
-      username: currentUsername,
-      text,
-      createdAt: serverTimestamp()
-    });
-  } catch (err) { console.error('チャット送信エラー:', err); }
-}
-
-async function deleteChatMessage(id) {
-  const ok = await confirmDelete('このメッセージを削除しますか？');
-  if (!ok) return;
-  try { await deleteDoc(doc(db, 'chat_messages', id)); }
-  catch (err) { console.error('チャット削除エラー:', err); }
-}
-
-async function markChatAsRead() {
-  if (!currentUsername) return;
-  chatLastReadAt = new Date();
+async function markRoomRead(roomId) {
+  chatReadTimes[roomId] = new Date();
   updateChatBadge();
+  if (chatPanelOpen) renderChatSidebar();
+  if (!currentUsername) return;
   try {
     await setDoc(
-      doc(db, 'users', currentUsername, 'data', 'chat_last_read'),
-      { readAt: serverTimestamp() }, { merge: true }
+      doc(db, 'users', currentUsername, 'data', 'chat_reads'),
+      { [roomId]: serverTimestamp() },
+      { merge: true }
     );
   } catch (_) {}
 }
 
-async function loadChatLastRead(username) {
-  if (!username) return;
-  try {
-    const snap = await getDoc(doc(db, 'users', username, 'data', 'chat_last_read'));
-    chatLastReadAt = snap.exists() ? snap.data().readAt?.toDate?.() || null : null;
-    updateChatBadge();
-  } catch (_) {}
+function getRoomUnread(room) {
+  if (!room.lastAt || !room.lastSender || room.lastSender === currentUsername) return 0;
+  const lastAt = room.lastAt?.toDate?.() || null;
+  if (!lastAt) return 0;
+  const readTime = chatReadTimes[room.id] || null;
+  return (!readTime || lastAt > readTime) ? 1 : 0;
 }
 
 function updateChatBadge() {
   const badge = document.getElementById('chat-unread-badge');
   const fab   = document.getElementById('chat-fab');
   if (!badge || !fab) return;
-  if (!currentUsername || chatPanelOpen) {
-    badge.hidden = true;
-    fab.classList.remove('has-unread');
-    return;
-  }
-  const unread = chatMessages.filter(m =>
-    m.username !== currentUsername &&
-    m.createdAt?.toDate &&
-    (!chatLastReadAt || m.createdAt.toDate() > chatLastReadAt)
-  ).length;
-  if (unread > 0) {
-    badge.textContent = unread > 99 ? '99+' : unread;
+  const total = [...dmRooms, ...groupRooms].reduce((sum, r) => sum + getRoomUnread(r), 0);
+  if (total > 0) {
+    badge.textContent = total > 99 ? '99+' : total;
     badge.hidden = false;
     fab.classList.add('has-unread');
   } else {
@@ -911,25 +919,155 @@ function updateChatBadge() {
   }
 }
 
-function renderChatMessages() {
-  const container = document.getElementById('chat-messages');
-  if (!container) return;
+function renderChatSidebar() {
+  _renderRoomList('dm');
+  _renderRoomList('group');
+}
+
+function _renderRoomList(type) {
+  const listEl = document.getElementById(type === 'dm' ? 'dm-room-list' : 'group-room-list');
+  if (!listEl) return;
+  const rooms = type === 'dm' ? dmRooms : groupRooms;
+
+  if (!rooms.length) {
+    listEl.innerHTML = `<div class="chat-room-empty">${type === 'dm' ? 'まだDMがありません' : 'まだグループがありません'}</div>`;
+    return;
+  }
+
+  const sorted = [...rooms].sort((a, b) => {
+    const ta = a.lastAt?.toDate?.() || new Date(0);
+    const tb = b.lastAt?.toDate?.() || new Date(0);
+    return tb - ta;
+  });
+
+  listEl.innerHTML = sorted.map(room => {
+    const unread = getRoomUnread(room);
+    const isActive = room.id === currentRoomId;
+    const name = type === 'dm'
+      ? (room.members || []).find(m => m !== currentUsername) || '?'
+      : (room.name || 'グループ');
+    const lastMsg = room.lastMessage
+      ? esc(room.lastMessage).slice(0, 22) + (room.lastMessage.length > 22 ? '…' : '')
+      : '';
+    const color = getUserAvatarColor(name);
+    const initial = name.charAt(0).toUpperCase();
+    const unreadHtml = unread > 0 ? `<span class="chat-room-unread">${unread}</span>` : '';
+    return `
+      <div class="chat-room-item${isActive ? ' active' : ''}" data-room-id="${room.id}" data-room-type="${type}">
+        <div class="chat-room-item-avatar" style="background:${color}">${initial}</div>
+        <div class="chat-room-item-body">
+          <div class="chat-room-item-name">${esc(name)}</div>
+          ${lastMsg ? `<div class="chat-room-item-preview">${lastMsg}</div>` : ''}
+        </div>
+        ${unreadHtml}
+      </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('.chat-room-item').forEach(el => {
+    el.addEventListener('click', () => openRoom(el.dataset.roomId, el.dataset.roomType));
+  });
+}
+
+async function openRoom(roomId, type) {
+  if (_roomMsgUnsubscribe) { _roomMsgUnsubscribe(); _roomMsgUnsubscribe = null; }
+  currentRoomId = roomId;
+  currentRoomType = type;
+  currentRoomMessages = [];
+
+  document.getElementById('chat-no-room').hidden = true;
+  const roomView = document.getElementById('chat-room-view');
+  roomView.removeAttribute('hidden');
+
+  const room = type === 'dm'
+    ? dmRooms.find(r => r.id === roomId)
+    : groupRooms.find(r => r.id === roomId);
+
+  const titleEl = document.getElementById('chat-room-title');
+  const membersEl = document.getElementById('chat-room-members');
+  if (room) {
+    if (type === 'dm') {
+      titleEl.textContent = (room.members || []).find(m => m !== currentUsername) || '?';
+      membersEl.textContent = '';
+    } else {
+      titleEl.textContent = room.name || 'グループ';
+      membersEl.textContent = (room.members || []).join(' · ');
+    }
+  }
+
   const loginReq = document.getElementById('chat-login-required');
   const inputRow = document.getElementById('chat-input-row');
   if (currentUsername) {
     loginReq.hidden = true;
     inputRow.hidden = false;
+    setTimeout(() => document.getElementById('chat-input')?.focus(), 100);
   } else {
     loginReq.hidden = false;
     inputRow.hidden = true;
   }
-  if (!chatMessages.length) {
+
+  const colRef = type === 'dm'
+    ? collection(db, 'dm_rooms', roomId, 'messages')
+    : collection(db, 'chat_rooms', roomId, 'messages');
+  const msgQ = query(colRef, orderBy('createdAt', 'asc'), limit(CHAT_MSG_MAX));
+
+  _roomMsgUnsubscribe = onSnapshot(msgQ, snap => {
+    currentRoomMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderChatMessages();
+    scrollChatToBottom();
+    markRoomRead(roomId);
+  });
+
+  renderChatSidebar();
+}
+
+async function sendChatMessage() {
+  if (!currentUsername || !currentRoomId) return;
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  const colRef = currentRoomType === 'dm'
+    ? collection(db, 'dm_rooms', currentRoomId, 'messages')
+    : collection(db, 'chat_rooms', currentRoomId, 'messages');
+  const roomRef = currentRoomType === 'dm'
+    ? doc(db, 'dm_rooms', currentRoomId)
+    : doc(db, 'chat_rooms', currentRoomId);
+
+  try {
+    if (currentRoomMessages.length >= CHAT_MSG_MAX) {
+      const oldest = currentRoomMessages[0];
+      const oldRef = currentRoomType === 'dm'
+        ? doc(db, 'dm_rooms', currentRoomId, 'messages', oldest.id)
+        : doc(db, 'chat_rooms', currentRoomId, 'messages', oldest.id);
+      await deleteDoc(oldRef);
+    }
+    await addDoc(colRef, { username: currentUsername, text, createdAt: serverTimestamp() });
+    await setDoc(roomRef, { lastMessage: text, lastAt: serverTimestamp(), lastSender: currentUsername }, { merge: true });
+  } catch (err) { console.error('チャット送信エラー:', err); }
+}
+
+async function deleteChatMessage(msgId) {
+  if (!currentRoomId) return;
+  const ok = await confirmDelete('このメッセージを削除しますか？');
+  if (!ok) return;
+  const msgRef = currentRoomType === 'dm'
+    ? doc(db, 'dm_rooms', currentRoomId, 'messages', msgId)
+    : doc(db, 'chat_rooms', currentRoomId, 'messages', msgId);
+  try { await deleteDoc(msgRef); }
+  catch (err) { console.error('メッセージ削除エラー:', err); }
+}
+
+function renderChatMessages() {
+  const container = document.getElementById('chat-messages');
+  if (!container) return;
+  if (!currentRoomMessages.length) {
     container.innerHTML = '<div class="chat-empty">まだメッセージはありません。<br>最初のメッセージを送ってみましょう！</div>';
     return;
   }
   container.innerHTML = '';
   let lastDate = '';
-  chatMessages.forEach(msg => {
+  currentRoomMessages.forEach(msg => {
     const isOwn = msg.username === currentUsername;
     const ts = msg.createdAt?.toDate ? msg.createdAt.toDate() : new Date();
     const dateStr = ts.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' });
@@ -943,16 +1081,16 @@ function renderChatMessages() {
     }
     const color = getUserAvatarColor(msg.username);
     const initial = msg.username.charAt(0).toUpperCase();
-    const del = isOwn
-      ? `<button class="chat-msg-delete" data-id="${msg.id}" title="削除"><i class="fa-solid fa-trash-can"></i></button>`
-      : '';
     const el = document.createElement('div');
     el.className = `chat-msg${isOwn ? ' chat-msg--own' : ''}`;
     el.innerHTML = `
       ${!isOwn ? `<div class="chat-avatar" style="background:${color}">${initial}</div>` : ''}
       <div class="chat-msg-body">
         ${!isOwn ? `<div class="chat-msg-name">${esc(msg.username)}</div>` : ''}
-        <div class="chat-bubble">${esc(msg.text)}${del}</div>
+        <div class="chat-bubble">
+          ${esc(msg.text)}
+          ${isOwn ? `<button class="chat-msg-delete" data-id="${msg.id}" title="削除"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+        </div>
         <div class="chat-msg-time">${timeStr}</div>
       </div>
       ${isOwn ? `<div class="chat-avatar" style="background:${color}">${initial}</div>` : ''}
@@ -967,6 +1105,134 @@ function renderChatMessages() {
 function scrollChatToBottom() {
   const c = document.getElementById('chat-messages');
   if (c) c.scrollTop = c.scrollHeight;
+}
+
+// ===== DM作成モーダル =====
+async function openNewDmModal() {
+  if (!currentUsername) { alert('チャットするにはニックネームを設定してください。'); return; }
+  const modal = document.getElementById('new-dm-modal');
+  modal.classList.add('visible');
+  document.getElementById('new-dm-search').value = '';
+  await loadUsersForChatPicker('new-dm-user-list', 'new-dm-search', async (name) => {
+    modal.classList.remove('visible');
+    await openOrCreateDm(name);
+  }, true);
+}
+
+async function openOrCreateDm(targetUser) {
+  if (!currentUsername || !targetUser) return;
+  const roomId = getDmRoomId(currentUsername, targetUser);
+  const roomRef = doc(db, 'dm_rooms', roomId);
+  const snap = await getDoc(roomRef);
+  if (!snap.exists()) {
+    await setDoc(roomRef, {
+      members: [currentUsername, targetUser].sort(),
+      createdAt: serverTimestamp(),
+      lastMessage: '',
+      lastAt: null,
+      lastSender: ''
+    });
+  }
+  if (!chatPanelOpen) openChatPanel();
+  setTimeout(() => openRoom(roomId, 'dm'), 150);
+}
+
+// ===== グループ作成モーダル =====
+let _newGroupSelected = [];
+
+async function openNewGroupModal() {
+  if (!currentUsername) { alert('チャットするにはニックネームを設定してください。'); return; }
+  _newGroupSelected = [];
+  document.getElementById('new-group-name').value = '';
+  document.getElementById('new-group-member-search').value = '';
+  renderNewGroupSelected();
+  document.getElementById('new-group-modal').classList.add('visible');
+  await loadUsersForChatPicker('new-group-member-list', 'new-group-member-search', (name) => {
+    if (!_newGroupSelected.includes(name)) {
+      _newGroupSelected.push(name);
+      renderNewGroupSelected();
+    }
+  }, false);
+}
+
+function renderNewGroupSelected() {
+  const el = document.getElementById('new-group-selected');
+  if (!el) return;
+  if (!_newGroupSelected.length) {
+    el.innerHTML = '<span class="group-no-member">まだ選択されていません</span>';
+    return;
+  }
+  el.innerHTML = _newGroupSelected.map(name =>
+    `<span class="group-member-chip">${esc(name)}<button class="group-chip-rm" data-name="${esc(name)}">×</button></span>`
+  ).join('');
+  el.querySelectorAll('.group-chip-rm').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _newGroupSelected = _newGroupSelected.filter(m => m !== btn.dataset.name);
+      renderNewGroupSelected();
+    });
+  });
+}
+
+async function createGroupRoom() {
+  const name = document.getElementById('new-group-name').value.trim();
+  if (!name) { document.getElementById('new-group-name').focus(); return; }
+  if (!_newGroupSelected.length) { alert('メンバーを1人以上選んでください。'); return; }
+  const members = [...new Set([currentUsername, ..._newGroupSelected])];
+  try {
+    const roomRef = await addDoc(collection(db, 'chat_rooms'), {
+      name,
+      members,
+      createdBy: currentUsername,
+      createdAt: serverTimestamp(),
+      lastMessage: '',
+      lastAt: null,
+      lastSender: ''
+    });
+    document.getElementById('new-group-modal').classList.remove('visible');
+    if (!chatPanelOpen) openChatPanel();
+    setTimeout(() => openRoom(roomRef.id, 'group'), 150);
+  } catch (err) { console.error('グループ作成エラー:', err); alert('作成に失敗しました。'); }
+}
+
+// ===== ユーザーピッカー（DM/グループ共通）=====
+async function loadUsersForChatPicker(listElId, searchElId, onSelect, excludeSelf) {
+  const listEl = document.getElementById(listElId);
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="new-dm-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>';
+  let users = [];
+  try {
+    const snap = await getDocs(collection(db, 'users_list'));
+    users = snap.docs.map(d => d.id);
+    if (excludeSelf) users = users.filter(u => u !== currentUsername);
+  } catch (_) {
+    listEl.innerHTML = '<div class="new-dm-empty">読み込み失敗</div>';
+    return;
+  }
+  const searchEl = document.getElementById(searchElId);
+  const render = (filter = '') => {
+    const list = filter ? users.filter(u => u.toLowerCase().includes(filter.toLowerCase())) : users;
+    if (!list.length) {
+      listEl.innerHTML = '<div class="new-dm-empty">ユーザーが見つかりません</div>';
+      return;
+    }
+    listEl.innerHTML = list.map(name => {
+      const color = getUserAvatarColor(name);
+      const initial = name.charAt(0).toUpperCase();
+      return `<div class="new-dm-user-item" data-name="${esc(name)}">
+        <div class="chat-avatar" style="background:${color};width:30px;height:30px;font-size:0.75rem">${initial}</div>
+        <span>${esc(name)}</span>
+      </div>`;
+    }).join('');
+    listEl.querySelectorAll('.new-dm-user-item').forEach(el => {
+      el.addEventListener('click', () => onSelect(el.dataset.name));
+    });
+  };
+  render();
+  if (searchEl) {
+    if (searchEl._chatPickerHandler) searchEl.removeEventListener('input', searchEl._chatPickerHandler);
+    searchEl._chatPickerHandler = e => render(e.target.value);
+    searchEl.addEventListener('input', searchEl._chatPickerHandler);
+  }
 }
 
 // ========== メール返信アシスタント ==========
@@ -1722,7 +1988,8 @@ async function loadPersonalData(username) {
     loadTodos(username);
     await loadReadNotices(username);
     setupNoticeObserver();
-    loadChatLastRead(username);
+    loadChatReadTimes(username);
+    startChatListeners(username);
     loadLockSettings(username);
   } catch (err) {
     console.error('個人データ読み込みエラー:', err);
@@ -3660,6 +3927,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('chat-input').addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
   });
+
+  // ===== 新規DM/グループ =====
+  document.getElementById('btn-new-dm').addEventListener('click', openNewDmModal);
+  document.getElementById('new-dm-cancel').addEventListener('click', () => {
+    document.getElementById('new-dm-modal').classList.remove('visible');
+  });
+  document.getElementById('new-dm-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) document.getElementById('new-dm-modal').classList.remove('visible');
+  });
+
+  document.getElementById('btn-new-group').addEventListener('click', openNewGroupModal);
+  document.getElementById('new-group-cancel').addEventListener('click', () => {
+    document.getElementById('new-group-modal').classList.remove('visible');
+  });
+  document.getElementById('new-group-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) document.getElementById('new-group-modal').classList.remove('visible');
+  });
+  document.getElementById('new-group-create').addEventListener('click', createGroupRoom);
 
   // ===== ベル通知ボタン =====
   document.getElementById('btn-notice-bell').addEventListener('click', () => {

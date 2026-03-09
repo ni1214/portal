@@ -204,29 +204,104 @@
   </div>
 
   <!-- ==================== チャットFABボタン ==================== -->
-  <button class="chat-fab" id="chat-fab" title="全社チャット">
+  <button class="chat-fab" id="chat-fab" title="チャット">
     <i class="fa-solid fa-comments"></i>
     <span class="chat-unread-badge" id="chat-unread-badge" hidden>0</span>
   </button>
 
   <!-- ==================== チャットパネル ==================== -->
   <div id="chat-panel" class="chat-panel" hidden>
-    <div class="chat-panel-header">
-      <span><i class="fa-solid fa-comments"></i> 全社チャット</span>
-      <button class="chat-panel-close" id="chat-panel-close" title="閉じる">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
-    <div class="chat-messages" id="chat-messages"></div>
-    <div class="chat-input-area">
-      <div class="chat-login-required" id="chat-login-required" hidden>
-        <i class="fa-solid fa-user-lock"></i> チャットするにはニックネームを設定してください
-      </div>
-      <div class="chat-input-row" id="chat-input-row">
-        <input type="text" id="chat-input" class="chat-input" placeholder="メッセージを入力..." maxlength="300" autocomplete="off">
-        <button class="chat-send-btn" id="chat-send-btn" title="送信">
-          <i class="fa-solid fa-paper-plane"></i>
+
+    <!-- 左：ルームリスト -->
+    <div class="chat-sidebar">
+      <div class="chat-sidebar-header">
+        <span><i class="fa-solid fa-comments"></i> チャット</span>
+        <button class="chat-panel-close" id="chat-panel-close" title="閉じる">
+          <i class="fa-solid fa-xmark"></i>
         </button>
+      </div>
+
+      <div class="chat-sidebar-section">
+        <div class="chat-sidebar-section-label">
+          <i class="fa-solid fa-user"></i> ダイレクト
+          <button class="chat-sidebar-add-btn" id="btn-new-dm" title="新しいDM">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </div>
+        <div id="dm-room-list" class="chat-room-list"></div>
+      </div>
+
+      <div class="chat-sidebar-section">
+        <div class="chat-sidebar-section-label">
+          <i class="fa-solid fa-users"></i> グループ
+          <button class="chat-sidebar-add-btn" id="btn-new-group" title="新しいグループ">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </div>
+        <div id="group-room-list" class="chat-room-list"></div>
+      </div>
+    </div>
+
+    <!-- 右：メッセージエリア -->
+    <div class="chat-main">
+      <div class="chat-no-room" id="chat-no-room">
+        <i class="fa-solid fa-comment-dots"></i>
+        <p>ルームを選択してください</p>
+      </div>
+
+      <div class="chat-room-view" id="chat-room-view" hidden>
+        <div class="chat-room-header">
+          <div class="chat-room-header-left">
+            <span id="chat-room-title" class="chat-room-title"></span>
+            <span id="chat-room-members" class="chat-room-members"></span>
+          </div>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-area">
+          <div class="chat-login-required" id="chat-login-required" hidden>
+            <i class="fa-solid fa-user-lock"></i> チャットするにはニックネームを設定してください
+          </div>
+          <div class="chat-input-row" id="chat-input-row">
+            <input type="text" id="chat-input" class="chat-input" placeholder="メッセージを入力..." maxlength="300" autocomplete="off">
+            <button class="chat-send-btn" id="chat-send-btn" title="送信">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 新規DMモーダル ==================== -->
+  <div class="modal-overlay" id="new-dm-modal">
+    <div class="modal-glass">
+      <h3 class="modal-title"><i class="fa-solid fa-user-plus"></i> ダイレクトメッセージ</h3>
+      <p class="modal-desc">話しかけたいメンバーを選んでください</p>
+      <input type="text" id="new-dm-search" class="form-input" placeholder="名前で検索..." autocomplete="off" style="margin-bottom:10px">
+      <div id="new-dm-user-list" class="new-dm-user-list"></div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="new-dm-cancel">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 新規グループモーダル ==================== -->
+  <div class="modal-overlay" id="new-group-modal">
+    <div class="modal-glass">
+      <h3 class="modal-title"><i class="fa-solid fa-users"></i> グループを作成</h3>
+      <div class="form-group">
+        <label class="form-label">グループ名</label>
+        <input type="text" id="new-group-name" class="form-input" placeholder="例：朝会メンバー" maxlength="30">
+      </div>
+      <div class="form-group">
+        <label class="form-label">メンバーを追加</label>
+        <input type="text" id="new-group-member-search" class="form-input" placeholder="名前で検索..." autocomplete="off">
+      </div>
+      <div id="new-group-member-list" class="new-dm-user-list" style="margin-bottom:10px"></div>
+      <div id="new-group-selected" class="new-group-selected"></div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="new-group-cancel">キャンセル</button>
+        <button class="btn-modal-primary" id="new-group-create">作成する</button>
       </div>
     </div>
   </div>
