@@ -310,7 +310,11 @@ body::after {
    External Tools
    =========================== */
 .external-tools {
-  margin-bottom: var(--space-2xl);
+  margin-bottom: var(--space-xl);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
   animation: fadeInUp 0.6s ease forwards;
 }
 
@@ -681,7 +685,11 @@ body::after {
    Category Sections
    =========================== */
 .category-section {
-  margin-bottom: var(--space-2xl);
+  margin-bottom: var(--space-xl);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
   animation: fadeInUp 0.6s ease forwards;
   opacity: 0;
 }
@@ -2758,71 +2766,6 @@ html.font-xl { font-size: 21px; }
    テーマ変数
    =========================== */
 
-/* ガラス（iOSフロストガラス） */
-[data-theme="glass"] {
-  --bg-primary:         #0e0b2e;
-  --bg-secondary:       #160e3e;
-  --bg-card:            rgba(255, 255, 255, 0.14);
-  --bg-card-hover:      rgba(255, 255, 255, 0.22);
-  --bg-glass:           rgba(255, 255, 255, 0.10);
-  --border-glass:       rgba(255, 255, 255, 0.22);
-  --border-glass-hover: rgba(255, 255, 255, 0.45);
-  --text-primary:       #ffffff;
-  --text-secondary:     rgba(255, 255, 255, 0.78);
-  --text-muted:         rgba(255, 255, 255, 0.48);
-  --gradient-hero:      linear-gradient(160deg, #0a0820 0%, #1a1050 40%, #0e0b35 100%);
-  --shadow-md:          0 4px 20px rgba(0, 0, 0, 0.45);
-  --header-bg:          rgba(14, 11, 46, 0.55);
-}
-[data-theme="glass"] body {
-  background: var(--gradient-hero);
-}
-[data-theme="glass"] body::before {
-  background: radial-gradient(circle at 30% 50%, rgba(120, 80, 255, 0.38) 0%, transparent 55%);
-  opacity: 1;
-}
-[data-theme="glass"] body::after {
-  background: radial-gradient(circle at 75% 20%, rgba(180, 120, 255, 0.28) 0%, transparent 55%);
-  opacity: 1;
-}
-[data-theme="glass"] .header {
-  backdrop-filter: blur(40px) saturate(150%);
-  -webkit-backdrop-filter: blur(40px) saturate(150%);
-  border-bottom-color: rgba(255, 255, 255, 0.15);
-}
-[data-theme="glass"] .link-card {
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 2px 16px rgba(0, 0, 0, 0.4);
-}
-[data-theme="glass"] .link-card:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 8px 32px rgba(0, 0, 0, 0.5);
-}
-[data-theme="glass"] .category-section,
-[data-theme="glass"] .external-tools {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-}
-[data-theme="glass"] .modal-glass {
-  background: rgba(14, 11, 46, 0.80);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-[data-theme="glass"] .notice-board {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-md);
-}
-
 /* ライト */
 [data-theme="light"] {
   --bg-primary:         #f0f4ff;
@@ -2856,8 +2799,9 @@ html.font-xl { font-size: 21px; }
 }
 [data-theme="light"] .category-section,
 [data-theme="light"] .external-tools {
-  background: rgba(255, 255, 255, 0.6);
-  border-color: rgba(100, 120, 200, 0.15);
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(100, 120, 200, 0.2);
+  box-shadow: 0 2px 14px rgba(74, 100, 200, 0.07);
 }
 [data-theme="light"] .modal-glass {
   background: rgba(240, 244, 255, 0.97);
@@ -2899,97 +2843,10 @@ html.font-xl { font-size: 21px; }
 [data-theme="warm"] body::after {
   background: radial-gradient(circle at 80% 20%, rgba(255, 100, 30, 0.12) 0%, transparent 50%);
 }
-
-/* ナイト */
-[data-theme="night"] {
-  --bg-primary:         #000000;
-  --bg-secondary:       #0a0a0a;
-  --bg-card:            rgba(255, 255, 255, 0.04);
-  --bg-card-hover:      rgba(255, 255, 255, 0.08);
-  --bg-glass:           rgba(255, 255, 255, 0.04);
-  --border-glass:       rgba(255, 255, 255, 0.08);
-  --border-glass-hover: rgba(255, 255, 255, 0.18);
-  --text-primary:       #d0d8e8;
-  --text-secondary:     rgba(208, 216, 232, 0.55);
-  --text-muted:         rgba(208, 216, 232, 0.3);
-  --accent-blue:        #3a7fff;
-  --accent-cyan:        #00b894;
-  --accent-purple:      #6c47e8;
-  --gradient-hero:      linear-gradient(160deg, #000000 0%, #050510 50%, #000000 100%);
-  --shadow-glow-blue:   0 0 20px rgba(58, 127, 255, 0.12);
-  --shadow-glow-cyan:   0 0 20px rgba(0, 184, 148, 0.12);
-  --header-bg:          rgba(0, 0, 0, 0.85);
-}
-[data-theme="night"] body::before,
-[data-theme="night"] body::after {
-  opacity: 0.08;
-}
-
-/* 木目調（SVG feTurbulenceによる木目テクスチャ） */
-[data-theme="wood"] {
-  --bg-primary:         #c8903a;
-  --bg-secondary:       #b87c2e;
-  --bg-card:            rgba(90, 45, 10, 0.45);
-  --bg-card-hover:      rgba(90, 45, 10, 0.60);
-  --bg-glass:           rgba(90, 45, 10, 0.40);
-  --border-glass:       rgba(80, 35, 5, 0.65);
-  --border-glass-hover: rgba(60, 25, 3, 0.85);
-  --text-primary:       #2a1205;
-  --text-secondary:     rgba(42, 18, 5, 0.72);
-  --text-muted:         rgba(42, 18, 5, 0.50);
-  --accent-blue:        #7b3a10;
-  --accent-cyan:        #5c2a08;
-  --accent-purple:      #8b4513;
-  --accent-orange:      #a0522d;
-  --accent-pink:        #6b3020;
-  --shadow-glow-blue:   0 0 20px rgba(80, 35, 5, 0.4);
-  --shadow-glow-cyan:   0 0 20px rgba(60, 25, 3, 0.35);
-  --header-bg:          rgba(80, 38, 8, 0.82);
-}
-[data-theme="wood"] body {
-  background-color: #c8903a;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='400'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.025 0.55' numOctaves='5' seed='12'/%3E%3CfeColorMatrix type='matrix' values='0.28 0.28 0.28 0 0.52 0.14 0.14 0.14 0 0.28 0.04 0.04 0.04 0 0.06 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='600' height='400' filter='url(%23w)'/%3E%3C/svg%3E");
-  background-size: 600px 400px;
-  background-repeat: repeat;
-}
-[data-theme="wood"] body::before {
-  background: radial-gradient(ellipse at 30% 30%, rgba(200,140,60,0.25) 0%, transparent 55%);
-  opacity: 1;
-}
-[data-theme="wood"] body::after {
-  background: radial-gradient(ellipse at 70% 70%, rgba(120,60,15,0.30) 0%, transparent 55%);
-  opacity: 1;
-}
-[data-theme="wood"] .header {
-  border-bottom-color: rgba(80, 35, 5, 0.5);
-}
-[data-theme="wood"] .link-card {
-  background: rgba(200, 155, 80, 0.35);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  box-shadow: inset 0 1px 0 rgba(255,220,150,0.3), 0 2px 8px rgba(60,25,5,0.3);
-}
-[data-theme="wood"] .link-card:hover {
-  background: rgba(220, 175, 100, 0.50);
-  box-shadow: inset 0 1px 0 rgba(255,230,160,0.4), 0 6px 20px rgba(60,25,5,0.4);
-}
-[data-theme="wood"] .category-section,
-[data-theme="wood"] .external-tools {
-  background: rgba(180, 130, 55, 0.25);
-  border-color: rgba(80, 35, 5, 0.4);
-}
-[data-theme="wood"] .modal-glass {
-  background: rgba(160, 110, 45, 0.96);
-  border-color: rgba(80, 35, 5, 0.5);
-}
-[data-theme="wood"] .notice-board {
-  background: rgba(180, 130, 55, 0.3);
-  border-color: rgba(80, 35, 5, 0.35);
-}
-[data-theme="wood"] .settings-panel {
-  background: rgba(160, 110, 40, 0.97);
-  border-color: rgba(80, 35, 5, 0.5);
+[data-theme="warm"] .category-section,
+[data-theme="warm"] .external-tools {
+  background: rgba(255, 195, 110, 0.07);
+  border-color: rgba(255, 195, 110, 0.22);
 }
 
 /* ===========================
@@ -3169,17 +3026,6 @@ html.font-xl { font-size: 21px; }
 .theme-preview--dark .tp-bar { background: rgba(74,158,255,0.6); }
 .theme-preview--dark .tp-cards > div { background: rgba(255,255,255,0.1); }
 
-/* ガラス（iOS風） */
-.theme-preview--glass {
-  background: linear-gradient(160deg, #0a0820 0%, #1a1050 60%, #0e0b35 100%);
-  border-color: rgba(255,255,255,0.15);
-}
-.theme-preview--glass .tp-bar { background: rgba(255,255,255,0.4); }
-.theme-preview--glass .tp-cards > div {
-  background: rgba(255,255,255,0.18);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
-}
-
 /* ライト */
 .theme-preview--light {
   background: #f0f4ff;
@@ -3195,24 +3041,6 @@ html.font-xl { font-size: 21px; }
 }
 .theme-preview--warm .tp-bar { background: rgba(255,173,96,0.7); }
 .theme-preview--warm .tp-cards > div { background: rgba(255,235,200,0.1); }
-
-/* ナイト */
-.theme-preview--night {
-  background: #000000;
-  border-color: rgba(255,255,255,0.08);
-}
-.theme-preview--night .tp-bar { background: rgba(58,127,255,0.5); }
-.theme-preview--night .tp-cards > div { background: rgba(255,255,255,0.05); }
-
-/* 木目調 */
-.theme-preview--wood {
-  background-color: #c8903a;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='50'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.025 0.55' numOctaves='5' seed='12'/%3E%3CfeColorMatrix type='matrix' values='0.28 0.28 0.28 0 0.52 0.14 0.14 0.14 0 0.28 0.04 0.04 0.04 0 0.06 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='80' height='50' filter='url(%23w)'/%3E%3C/svg%3E");
-  background-size: 80px 50px;
-  border-color: rgba(80,35,5,0.5);
-}
-.theme-preview--wood .tp-bar { background: rgba(80,35,5,0.6); }
-.theme-preview--wood .tp-cards > div { background: rgba(200,155,80,0.5); border: 1px solid rgba(80,35,5,0.3); }
 
 /* フォントサイズグリッド */
 .fontsize-grid {
@@ -3487,12 +3315,6 @@ html.font-xl { font-size: 21px; }
 [data-theme="light"] .card-child-popup {
   background: rgba(240, 244, 255, 0.98);
 }
-[data-theme="wood"] .card-children-badge {
-  background: #8B4513;
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.4);
-}
-
 /* ========== 個人TODOパネル ========== */
 .todo-section {
   background: var(--bg-glass);

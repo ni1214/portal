@@ -4031,11 +4031,12 @@ async function handlePinSubmit() {
 }
 
 // ========== 表示設定（テーマ・文字サイズ） ==========
-const THEMES     = ['dark', 'glass', 'light', 'warm', 'night', 'wood'];
+const THEMES     = ['dark', 'light', 'warm'];
 const FONTSIZES  = ['font-sm', 'font-md', 'font-lg', 'font-xl'];
 
 function applyTheme(theme, save = true) {
-  const t = theme || 'dark';
+  // 廃止テーマ（glass/night/wood）はダークにフォールバック
+  const t = THEMES.includes(theme) ? theme : 'dark';
   document.body.setAttribute('data-theme', t);
   document.querySelectorAll('#theme-grid .theme-card').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.theme === t);
