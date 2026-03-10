@@ -4577,6 +4577,18 @@ html.font-xl { font-size: 21px; }
   color: #a5b4fc;
 }
 .task-action-ack:hover { background: rgba(99,102,241,0.28); }
+.task-action-delete {
+  background: rgba(239,68,68,0.1);
+  border-color: rgba(239,68,68,0.35);
+  color: #fca5a5;
+}
+.task-action-delete:hover { background: rgba(239,68,68,0.24); border-color: rgba(239,68,68,0.6); }
+.task-action-cancel {
+  background: rgba(107,114,128,0.12);
+  border-color: rgba(107,114,128,0.35);
+  color: #9ca3af;
+}
+.task-action-cancel:hover { background: rgba(107,114,128,0.24); border-color: rgba(107,114,128,0.55); }
 .task-done-stamp {
   font-size: 0.75rem;
   color: #86efac;

@@ -1524,7 +1524,8 @@ function _renderReceivedTasks(container) {
     } else if (t.status === 'accepted') {
       actions = `<button class="task-action-btn task-action-done" data-id="${t.id}"><i class="fa-solid fa-flag-checkered"></i> 完了報告</button>`;
     } else {
-      actions = `<span class="task-done-stamp"><i class="fa-solid fa-circle-check"></i> 完了済み</span>`;
+      actions = `<span class="task-done-stamp"><i class="fa-solid fa-circle-check"></i> 完了済み</span>
+        <button class="task-action-btn task-action-delete" data-id="${t.id}" title="削除"><i class="fa-solid fa-trash"></i> 削除</button>`;
     }
     return `
       <div class="task-item task-item--${t.status}">
@@ -1543,6 +1544,8 @@ function _renderReceivedTasks(container) {
     btn.addEventListener('click', () => acceptTask(btn.dataset.id)));
   container.querySelectorAll('.task-action-done').forEach(btn =>
     btn.addEventListener('click', () => completeTask(btn.dataset.id)));
+  container.querySelectorAll('.task-action-delete').forEach(btn =>
+    btn.addEventListener('click', () => deleteTask(btn.dataset.id, 'この完了タスクを削除しますか？')));
 }
 
 function _renderSentTasks(container) {
@@ -1554,9 +1557,15 @@ function _renderSentTasks(container) {
     const s = TASK_STATUS_LABEL[t.status] || TASK_STATUS_LABEL.pending;
     const due = t.dueDate ? `<span class="task-due"><i class="fa-regular fa-calendar"></i> ${esc(t.dueDate)}</span>` : '';
     const isNewDone = t.status === 'done' && !t.notifiedDone;
-    const actions = isNewDone
-      ? `<button class="task-action-btn task-action-ack" data-id="${t.id}"><i class="fa-solid fa-circle-check"></i> 完了を確認した</button>`
-      : '';
+    let actions = '';
+    if (isNewDone) {
+      actions = `<button class="task-action-btn task-action-ack" data-id="${t.id}"><i class="fa-solid fa-circle-check"></i> 完了を確認した</button>
+        <button class="task-action-btn task-action-delete" data-id="${t.id}" title="削除"><i class="fa-solid fa-trash"></i> 削除</button>`;
+    } else if (t.status === 'done') {
+      actions = `<button class="task-action-btn task-action-delete" data-id="${t.id}" title="削除"><i class="fa-solid fa-trash"></i> 削除</button>`;
+    } else if (t.status === 'pending') {
+      actions = `<button class="task-action-btn task-action-cancel" data-id="${t.id}" title="依頼を取り消す"><i class="fa-solid fa-xmark"></i> 取り消す</button>`;
+    }
     return `
       <div class="task-item task-item--${t.status}${isNewDone ? ' task-item--alert' : ''}">
         <div class="task-item-meta">
@@ -1572,6 +1581,10 @@ function _renderSentTasks(container) {
 
   container.querySelectorAll('.task-action-ack').forEach(btn =>
     btn.addEventListener('click', () => acknowledgeTask(btn.dataset.id)));
+  container.querySelectorAll('.task-action-delete').forEach(btn =>
+    btn.addEventListener('click', () => deleteTask(btn.dataset.id, 'この完了タスクを削除しますか？')));
+  container.querySelectorAll('.task-action-cancel').forEach(btn =>
+    btn.addEventListener('click', () => deleteTask(btn.dataset.id, 'この依頼を取り消しますか？相手側からも消えます。')));
 }
 
 function _renderNewTaskForm(container) {
@@ -1681,6 +1694,13 @@ async function acknowledgeTask(taskId) {
   try {
     await updateDoc(doc(db, 'assigned_tasks', taskId), { notifiedDone: true });
   } catch (err) { console.error('タスク確認エラー:', err); }
+}
+
+async function deleteTask(taskId, confirmMsg) {
+  if (!confirm(confirmMsg)) return;
+  try {
+    await deleteDoc(doc(db, 'assigned_tasks', taskId));
+  } catch (err) { console.error('タスク削除エラー:', err); }
 }
 
 // ========== メール返信アシスタント ==========
