@@ -306,6 +306,7 @@ let _roomMsgUnsubscribe = null;
 let chatReadTimes = {}; // { roomId: Date | null }
 
 const CHAT_MSG_MAX = 200;
+let _knownUsernames = null; // users_list のキャッシュ Set（DMフィルタリング用）
 
 // P2P ファイル転送
 const RTC_CONFIG    = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
@@ -1094,11 +1095,18 @@ function initChatResize() {
   document.addEventListener('touchend', onEnd);
 }
 
-function openChatPanel() {
+async function openChatPanel() {
   chatPanelOpen = true;
   const panel = document.getElementById('chat-panel');
   panel.removeAttribute('hidden');
   setTimeout(() => panel.classList.add('open'), 10);
+  // users_list をロードしてDMフィルタリング用キャッシュを更新
+  if (!_knownUsernames) {
+    try {
+      const snap = await getDocs(collection(db, 'users_list'));
+      _knownUsernames = new Set(snap.docs.map(d => d.id));
+    } catch (_) { _knownUsernames = new Set(); }
+  }
   renderChatSidebar();
 }
 
@@ -1136,6 +1144,7 @@ function stopChatListeners() {
   groupRooms = [];
   currentRoomId = null;
   currentRoomType = null;
+  _knownUsernames = null; // ユーザー切り替え時にキャッシュをリセット
 }
 
 async function loadChatReadTimes(username) {
@@ -1206,12 +1215,21 @@ function _renderRoomList(type) {
   if (!listEl) return;
   const rooms = type === 'dm' ? dmRooms : groupRooms;
 
-  if (!rooms.length) {
+  let filtered = [...rooms];
+  // DM: users_listに存在しないユーザーとのルームを非表示
+  if (type === 'dm' && _knownUsernames) {
+    filtered = filtered.filter(room => {
+      const other = (room.members || []).find(m => m !== currentUsername);
+      return !other || _knownUsernames.has(other);
+    });
+  }
+
+  if (!filtered.length) {
     listEl.innerHTML = `<div class="chat-room-empty">${type === 'dm' ? 'まだDMがありません' : 'まだグループがありません'}</div>`;
     return;
   }
 
-  const sorted = [...rooms].sort((a, b) => {
+  const sorted = filtered.sort((a, b) => {
     const ta = a.lastAt?.toDate?.() || new Date(0);
     const tb = b.lastAt?.toDate?.() || new Date(0);
     return tb - ta;
@@ -1229,6 +1247,9 @@ function _renderRoomList(type) {
     const color = getUserAvatarColor(name);
     const initial = name.charAt(0).toUpperCase();
     const unreadHtml = unread > 0 ? `<span class="chat-room-unread">${unread}</span>` : '';
+    const deleteBtn = type === 'dm'
+      ? `<button class="chat-room-delete-btn" data-room-id="${room.id}" title="DMを削除">🗑</button>`
+      : '';
     return `
       <div class="chat-room-item${isActive ? ' active' : ''}" data-room-id="${room.id}" data-room-type="${type}">
         <div class="chat-room-item-avatar" style="background:${color}">${initial}</div>
@@ -1237,11 +1258,21 @@ function _renderRoomList(type) {
           ${lastMsg ? `<div class="chat-room-item-preview">${lastMsg}</div>` : ''}
         </div>
         ${unreadHtml}
+        ${deleteBtn}
       </div>`;
   }).join('');
 
   listEl.querySelectorAll('.chat-room-item').forEach(el => {
-    el.addEventListener('click', () => openRoom(el.dataset.roomId, el.dataset.roomType));
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.chat-room-delete-btn')) return;
+      openRoom(el.dataset.roomId, el.dataset.roomType);
+    });
+  });
+  listEl.querySelectorAll('.chat-room-delete-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteDmRoom(btn.dataset.roomId);
+    });
   });
 }
 
@@ -1709,6 +1740,27 @@ async function openNewDmModal() {
   }, true);
 }
 
+async function deleteDmRoom(roomId) {
+  if (!currentUsername || !roomId) return;
+  if (!confirm('このDMを削除しますか？（自分の一覧からのみ消えます）')) return;
+  try {
+    const roomRef = doc(db, 'dm_rooms', roomId);
+    await updateDoc(roomRef, { members: arrayRemove(currentUsername) });
+    // 現在開いているルームだったら閉じる
+    if (currentRoomId === roomId) {
+      currentRoomId = null;
+      currentRoomType = null;
+      if (_roomMsgUnsubscribe) { _roomMsgUnsubscribe(); _roomMsgUnsubscribe = null; }
+      document.getElementById('chat-no-room').hidden = false;
+      const roomView = document.getElementById('chat-room-view');
+      if (roomView) roomView.setAttribute('hidden', '');
+    }
+  } catch (e) {
+    console.error('DM削除失敗:', e);
+    alert('削除に失敗しました');
+  }
+}
+
 async function openOrCreateDm(targetUser) {
   if (!currentUsername || !targetUser) return;
   const roomId = getDmRoomId(currentUsername, targetUser);
@@ -1722,6 +1774,9 @@ async function openOrCreateDm(targetUser) {
       lastAt: null,
       lastSender: ''
     });
+  } else {
+    // どちらかが削除していた場合は再追加
+    await updateDoc(roomRef, { members: arrayUnion(currentUsername, targetUser) });
   }
   if (!chatPanelOpen) openChatPanel();
   setTimeout(() => openRoom(roomId, 'dm'), 150);
