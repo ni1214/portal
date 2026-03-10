@@ -1747,8 +1747,10 @@ function closeFtSendModal() {
 
 async function confirmFtSend() {
   if (!_ftSelectedUser || !_ftSelectedFile) return;
+  const file      = _ftSelectedFile;
+  const recipient = _ftSelectedUser;
   closeFtSendModal();
-  await initiateFileTransfer(_ftSelectedFile, _ftSelectedUser);
+  await initiateFileTransfer(file, recipient);
 }
 
 // ===== P2P 転送コア =====
@@ -1766,6 +1768,7 @@ async function initiateFileTransfer(file, recipientUsername) {
 
   // アウトゴーイングリストに追加
   _ftOutgoing.push({ sessionId, to: recipientUsername, fileName: file.name, fileSize: file.size, fileType: file.type || '', status: 'pending' });
+  if (!_ftPanelOpen) openFileTransferPanel();
   renderFtPanel();
 
   pc.onicecandidate = async e => {
