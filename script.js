@@ -3972,6 +3972,11 @@ function toggleSectionFavorite(catId, isPrivate = false) {
 }
 
 // ========== 検索（イベント委任） ==========
+function normalizeForSearch(s) {
+  // 全角→半角変換 + 小文字化（NFKC正規化で全角英数・記号を半角に統一）
+  return (s || '').normalize('NFKC').toLowerCase();
+}
+
 function initSearch() {
   const searchInput = document.getElementById('search-input');
   const container   = searchInput.closest('.search-container');
@@ -3990,15 +3995,51 @@ function initSearch() {
   });
 
   searchInput.addEventListener('input', () => {
-    const q = searchInput.value.trim().toLowerCase();
-    container.classList.toggle('has-value', q.length > 0);
+    const raw = searchInput.value.trim();
+    const q = normalizeForSearch(raw);
+    container.classList.toggle('has-value', raw.length > 0);
     let total = 0;
+
+    // 子カードを含む全カードデータから「表示すべきルートカードID」を収集
+    const directRootIds  = new Set(); // 自身がヒットしたルートカード
+    const childOnlyRootIds = new Set(); // 子カードがヒットしたルートカード
+
+    if (q) {
+      const allData = [...(allCards || []), ...(privateCards || [])];
+      allData.forEach(card => {
+        if (!normalizeForSearch(card.label).includes(q)) return;
+        if (!card.parentId) {
+          directRootIds.add(card.id);
+        } else {
+          // 親を辿ってルートカードを見つける
+          let cur = card;
+          while (cur && cur.parentId) {
+            cur = allData.find(c => c.id === cur.parentId) || null;
+          }
+          if (cur && !cur.parentId) {
+            if (!directRootIds.has(cur.id)) childOnlyRootIds.add(cur.id);
+          }
+        }
+      });
+    }
 
     document.querySelectorAll('.category-section:not(#favorites-section)').forEach(section => {
       let visible = 0;
-      section.querySelectorAll('.link-card').forEach(card => {
-        const match = !q || card.querySelector('.card-label')?.textContent.toLowerCase().includes(q);
-        card.classList.toggle('hidden', !match);
+      section.querySelectorAll('.link-card').forEach(cardEl => {
+        const cardId = cardEl.dataset.docId;
+        let match, isChildOnly = false;
+        if (!q) {
+          match = true;
+        } else if (directRootIds.has(cardId)) {
+          match = true;
+        } else if (childOnlyRootIds.has(cardId)) {
+          match = true;
+          isChildOnly = true;
+        } else {
+          match = false;
+        }
+        cardEl.classList.toggle('hidden', !match);
+        cardEl.classList.toggle('search-child-match', isChildOnly);
         if (match) visible++;
       });
       const countEl = section.querySelector('.category-count');
@@ -4008,7 +4049,7 @@ function initSearch() {
     });
 
     document.querySelectorAll('.external-card').forEach(card => {
-      const match = !q || card.querySelector('.external-label')?.textContent.toLowerCase().includes(q);
+      const match = !q || normalizeForSearch(card.querySelector('.external-label')?.textContent).includes(q);
       card.classList.toggle('hidden', !match);
     });
 

@@ -1009,6 +1009,19 @@ body::after {
   display: none;
 }
 
+/* 子カードがヒットした親カードのインジケーター */
+.link-card.search-child-match {
+  border-color: rgba(99, 102, 241, 0.5) !important;
+  outline: 1px solid rgba(99, 102, 241, 0.2);
+}
+.link-card.search-child-match .card-children-badge {
+  animation: pulse-badge 1.2s ease-in-out infinite;
+}
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.15); }
+}
+
 /* ===========================
    Responsive
    =========================== */
