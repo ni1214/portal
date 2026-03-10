@@ -40,7 +40,6 @@
 | `notices/` | お知らせ |
 | `notice_reactions/{noticeId}` | リアクション |
 | `chat_messages/` | 全社チャット（廃止予定） |
-| `applications/` | 申請フォーム |
 | `users/{name}/data/preferences` | 個人設定 |
 | `users/{name}/data/lock_pin` | PINロック設定 |
 | `users/{name}/private_sections/` | マイセクション |
@@ -100,6 +99,34 @@ assigned_tasks/{taskId}
 - 「依頼したタスク」タブ：進捗確認・完了通知の確認
 - サーバー不要・Firestore のみで実現可能
 
+## UIパターン・実装規約
+
+### 日付入力フィールド（必須ルール）
+日付入力は常に「カレンダーアイコンのみ」で実装する。テキスト部分は非表示にし、アイコン色は各テーマに合わせる。
+
+**HTML:**
+```html
+<div class="form-group form-group-inline">
+  <label class="form-label">期限（省略可）</label>
+  <input type="date" id="xxx-due" class="date-icon-only">
+</div>
+```
+
+**CSS クラス（style.css に定義済み）:**
+- `.date-icon-only` — アイコンのみ表示の日付入力（34×34px、テキスト透明）
+- `.form-group-inline` — ラベルとアイコンを横並びにするラッパー
+- `--date-icon-filter` — テーマ別アイコン色の CSS 変数（各テーマブロックに定義済み）
+
+**新テーマ追加時:** `:root` / `[data-theme="xxx"]` に `--date-icon-filter` を追加すること。
+
+## テーマ一覧
+| テーマ | セレクタ | 背景 | `--date-icon-filter` |
+|---|---|---|---|
+| dark（デフォルト） | `:root` | 暗い青系 | `invert(0.8)` |
+| light | `[data-theme="light"]` | 明るい青系 | `opacity(0.5)` |
+| warm | `[data-theme="warm"]` | 暗い茶系（アクセント色オレンジ系） | `invert(1) sepia(1) saturate(2) hue-rotate(350deg) opacity(0.85)` |
+
 ## 注意事項
 - ヘルプガイド (`#guide-modal` in `index.html`) は大きな機能追加時に更新すること
 - 返答は**日本語**で行うこと
+- 「記録して」と言われた場合は **CLAUDE.md** に記載する（MEMORY.md はローカル専用のため Git 経由で別 PC に引き継がれない）
