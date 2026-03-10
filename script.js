@@ -463,14 +463,14 @@ function showUsernameModal(isEdit = false) {
   // 編集モード（ログイン済み）かどうかでテキストを切り替え
   if (isEdit && currentUsername) {
     document.getElementById('username-modal-title').innerHTML =
-      '<i class="fa-solid fa-user-circle"></i> ニックネームを変更';
+      '<i class="fa-solid fa-user-circle"></i> ユーザーネームを変更';
     document.getElementById('username-modal-desc').innerHTML =
-      '新しいニックネームを入力してください。<br>チャット・タスク・マイセクションなどのデータはすべて引き継がれます。';
+      '新しいユーザーネームを入力してください。<br>チャット・タスク・マイセクションなどのデータはすべて引き継がれます。';
     document.getElementById('username-submit-text').textContent = '変更する';
     document.getElementById('username-skip').textContent = 'キャンセル';
   } else {
     document.getElementById('username-modal-title').innerHTML =
-      '<i class="fa-solid fa-user-circle"></i> ニックネームを設定';
+      '<i class="fa-solid fa-user-circle"></i> ユーザーネームを設定';
     document.getElementById('username-modal-desc').innerHTML =
       'あなただけの名前を入力してください。<br>お気に入り・テーマ・マイセクションがこの名前に紐づいて保存されます。';
     document.getElementById('username-submit-text').textContent = '設定して始める';
@@ -521,7 +521,7 @@ async function saveUsername(name) {
   try {
     const snap = await getDoc(doc(db, 'users_list', name));
     if (snap.exists()) {
-      showUsernameError('このニックネームはすでに使用されています。');
+      showUsernameError('このユーザーネームはすでに使用されています。');
       // 自分のアカウント再ログイン用ボタンを表示
       document.getElementById('username-reclaim').hidden = false;
       submitBtn.disabled = false;
@@ -1730,7 +1730,7 @@ async function rejectFileTransfer(sessionId, roomId, msgId) {
 
 // ===== DM作成モーダル =====
 async function openNewDmModal() {
-  if (!currentUsername) { alert('チャットするにはニックネームを設定してください。'); return; }
+  if (!currentUsername) { alert('チャットするにはユーザーネームを設定してください。'); return; }
   const modal = document.getElementById('new-dm-modal');
   modal.classList.add('visible');
   document.getElementById('new-dm-search').value = '';
@@ -1786,7 +1786,7 @@ async function openOrCreateDm(targetUser) {
 let _newGroupSelected = [];
 
 async function openNewGroupModal() {
-  if (!currentUsername) { alert('チャットするにはニックネームを設定してください。'); return; }
+  if (!currentUsername) { alert('チャットするにはユーザーネームを設定してください。'); return; }
   _newGroupSelected = [];
   document.getElementById('new-group-name').value = '';
   document.getElementById('new-group-member-search').value = '';
@@ -1956,7 +1956,7 @@ function renderTaskTabContent() {
   const content = document.getElementById('task-tab-content');
   if (!content) return;
   if (!currentUsername) {
-    content.innerHTML = '<div class="task-empty"><i class="fa-solid fa-user-slash"></i><p>ニックネームを設定してください</p></div>';
+    content.innerHTML = '<div class="task-empty"><i class="fa-solid fa-user-slash"></i><p>ユーザーネームを設定してください</p></div>';
     return;
   }
   if (activeTaskTab === 'received') _renderReceivedTasks(content);
@@ -2296,7 +2296,7 @@ function selectEmailProfile(id) {
 }
 
 async function saveEmailProfile() {
-  if (!currentUsername) { alert('ニックネームを設定してください'); return; }
+  if (!currentUsername) { alert('ユーザーネームを設定してください'); return; }
   const name   = document.getElementById('email-profile-name').value.trim();
   const prompt = document.getElementById('email-profile-prompt').value.trim();
   if (!name || !prompt) return;
@@ -2318,7 +2318,7 @@ async function saveEmailProfile() {
 }
 
 async function addEmailProfile() {
-  if (!currentUsername) { alert('ニックネームを設定してください'); return; }
+  if (!currentUsername) { alert('ユーザーネームを設定してください'); return; }
   const id = `custom_${Date.now()}`;
   const newProfile = { id, name: '新しいパターン', prompt: '丁寧な文体でメールの返信を作成してください。件名・宛名・署名は含めないでください。', isCustom: true };
   try {
@@ -2666,7 +2666,7 @@ function renderApplyFields(ft) {
 
 async function submitApply() {
   if (!currentUsername) {
-    alert('申請するにはニックネームを設定してください');
+    alert('申請するにはユーザーネームを設定してください');
     return;
   }
   const ft = APPLY_FORM_TYPES.find(f => f.id === selectedApplyTypeId);
@@ -2721,7 +2721,7 @@ async function submitApply() {
 async function loadApplyHistory() {
   const container = document.getElementById('apply-history-list');
   if (!currentUsername) {
-    container.innerHTML = '<div class="apply-history-empty">ニックネームを設定してください</div>';
+    container.innerHTML = '<div class="apply-history-empty">ユーザーネームを設定してください</div>';
     return;
   }
   container.innerHTML = '<div class="apply-history-empty">読み込み中...</div>';
@@ -3415,7 +3415,7 @@ function buildSection(cat, cards) {
     section.querySelector('.category-header').appendChild(sBtn);
   }
 
-  // セクションドラッグハンドル（ニックネーム設定済みの場合）
+  // セクションドラッグハンドル（ユーザーネーム設定済みの場合）
   if (currentUsername) {
     const handle = document.createElement('div');
     handle.className = 'section-drag-handle';
@@ -3879,7 +3879,7 @@ function renderNotices(notices) {
   list.addEventListener('click', e => {
     const btn = e.target.closest('.reaction-btn');
     if (!btn) return;
-    if (!currentUsername) { alert('リアクションするにはニックネームを設定してください'); return; }
+    if (!currentUsername) { alert('リアクションするにはユーザーネームを設定してください'); return; }
     toggleReaction(btn.dataset.noticeId, btn.dataset.emoji);
   });
 }
@@ -4826,7 +4826,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     errEl.hidden  = true;
     if (!/^\d{4}$/.test(newPin))   { errEl.textContent = '4桁の数字を入力してください'; errEl.hidden = false; return; }
     if (newPin !== confirm)         { errEl.textContent = 'PINが一致しません';           errEl.hidden = false; return; }
-    if (!currentUsername)           { errEl.textContent = 'ニックネームを設定してください'; errEl.hidden = false; return; }
+    if (!currentUsername)           { errEl.textContent = 'ユーザーネームを設定してください'; errEl.hidden = false; return; }
     try {
       await setLockPin(newPin);
       closeSecurityModal();
