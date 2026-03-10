@@ -1795,12 +1795,35 @@ function renderEmailProfileList() {
   if (!list) return;
   list.innerHTML = '';
   emailProfiles.forEach(p => {
+    const wrap = document.createElement('div');
+    wrap.className = 'email-profile-list-item';
+
     const btn = document.createElement('button');
     btn.className = `email-profile-item${p.id === selectedEmailProfileId ? ' active' : ''}`;
     btn.dataset.id = p.id;
     btn.innerHTML = `<span>${esc(p.name)}</span>${p.isDefault ? '' : '<span class="email-custom-tag">カスタム</span>'}`;
     btn.addEventListener('click', () => selectEmailProfile(p.id));
-    list.appendChild(btn);
+    wrap.appendChild(btn);
+
+    if (!p.isDefault) {
+      const renameBtn = document.createElement('button');
+      renameBtn.className = 'email-profile-rename-btn';
+      renameBtn.title = '名前を変更';
+      renameBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>';
+      renameBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        selectEmailProfile(p.id);
+        document.getElementById('email-prompt-details').open = true;
+        setTimeout(() => {
+          const nameInput = document.getElementById('email-profile-name');
+          nameInput.select();
+          nameInput.focus();
+        }, 50);
+      });
+      wrap.appendChild(renameBtn);
+    }
+
+    list.appendChild(wrap);
   });
 }
 
@@ -1964,6 +1987,11 @@ function copyEmailOutput() {
     btn.innerHTML = '<i class="fa-solid fa-check"></i> コピーしました！';
     setTimeout(() => { btn.innerHTML = orig; }, 2000);
   });
+}
+
+function resetEmailOutput() {
+  document.getElementById('email-output-area').hidden = true;
+  document.getElementById('email-output').textContent = '';
 }
 
 // プロフィールタブを描画
@@ -4392,6 +4420,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('email-profile-add').addEventListener('click', addEmailProfile);
   document.getElementById('email-generate').addEventListener('click', generateEmailReply);
   document.getElementById('btn-copy-output').addEventListener('click', copyEmailOutput);
+  document.getElementById('btn-reset-output').addEventListener('click', resetEmailOutput);
   document.getElementById('email-api-key-save').addEventListener('click', saveGeminiApiKey);
   // タブ切り替え
   document.querySelectorAll('.email-tab').forEach(btn => {

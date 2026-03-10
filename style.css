@@ -4754,6 +4754,39 @@ html.font-xl { font-size: 21px; }
   color: var(--accent-purple);
   font-weight: 600;
 }
+.email-profile-list-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.email-profile-list-item .email-profile-item {
+  flex: 1;
+  min-width: 0;
+}
+.email-profile-rename-btn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  transition: all 0.15s;
+  opacity: 0;
+}
+.email-profile-list-item:hover .email-profile-rename-btn {
+  opacity: 1;
+}
+.email-profile-rename-btn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.15);
+  color: var(--text-primary);
+}
 .email-custom-tag {
   font-size: 0.58rem;
   background: rgba(255,255,255,0.1);
@@ -4853,7 +4886,7 @@ html.font-xl { font-size: 21px; }
   outline: none;
   font-family: inherit;
   resize: vertical;
-  min-height: 80px;
+  min-height: 160px;
   line-height: 1.6;
   transition: border-color 0.15s;
 }
@@ -4969,6 +5002,26 @@ html.font-xl { font-size: 21px; }
   transition: all 0.15s;
 }
 .btn-copy-output:hover { background: rgba(99, 102, 241, 0.35); }
+.email-output-header-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-reset-output {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  color: #fca5a5;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-reset-output:hover { background: rgba(239, 68, 68, 0.22); }
 
 /* APIキー設定 */
 .email-api-key-area {

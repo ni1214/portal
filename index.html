@@ -890,7 +890,7 @@
                 <label class="email-label">パターン名</label>
                 <input type="text" id="email-profile-name" class="email-profile-name-input" placeholder="例：ゼネコン（お客様）" maxlength="30">
                 <label class="email-label">AIへの指示（プロンプト）</label>
-                <textarea id="email-profile-prompt" class="email-profile-prompt-area" rows="4" placeholder="AIにどんな文体・注意点で書いてほしいか入力してください..."></textarea>
+                <textarea id="email-profile-prompt" class="email-profile-prompt-area" rows="8" placeholder="AIにどんな文体・注意点で書いてほしいか入力してください..."></textarea>
                 <div class="email-prompt-actions">
                   <button class="btn-save-profile" id="email-profile-save">
                     <i class="fa-solid fa-floppy-disk"></i> 保存
@@ -915,9 +915,14 @@
             <div class="email-output-area" id="email-output-area" hidden>
               <div class="email-output-header">
                 <span><i class="fa-solid fa-file-lines"></i> 生成された返信</span>
-                <button class="btn-copy-output" id="btn-copy-output">
-                  <i class="fa-solid fa-copy"></i> コピー
-                </button>
+                <div class="email-output-header-btns">
+                  <button class="btn-reset-output" id="btn-reset-output">
+                    <i class="fa-solid fa-rotate-left"></i> リセット
+                  </button>
+                  <button class="btn-copy-output" id="btn-copy-output">
+                    <i class="fa-solid fa-copy"></i> コピー
+                  </button>
+                </div>
               </div>
               <div class="email-output" id="email-output"></div>
             </div>
