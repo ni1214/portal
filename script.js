@@ -693,8 +693,10 @@ function updateLockNotifications() {
 
   el.innerHTML = items.map(item => `
     <div class="lock-notif-item">
-      <i class="fa-solid ${item.icon}" style="color:${item.color}"></i>
-      <span style="color:${item.color}">${item.count}</span>
+      <div class="lock-notif-icon" style="border-color:${item.color}60; color:${item.color}">
+        <i class="fa-solid ${item.icon}"></i>
+        <span class="lock-notif-badge">${item.count > 99 ? '99+' : item.count}</span>
+      </div>
       <div class="lock-notif-label">${item.label}</div>
     </div>`).join('');
 }
