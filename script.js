@@ -583,8 +583,12 @@ async function loadLockSettings(username, lockImmediately = false) {
   document.getElementById('btn-lock-header').hidden = !(lockEnabled && lockPinEnabled && currentUsername);
   if (lockEnabled && lockPinEnabled) {
     startActivityTracking();
-    // ユーザー切り替え時はすぐにロック（PIN設定がある場合のみ）
-    if (lockImmediately) lockPortal();
+    // リロード後または切り替え時: セッションストレージにロックフラグがあれば再ロック
+    const shouldLock = lockImmediately || (sessionStorage.getItem('portal-locked') === username);
+    if (shouldLock) lockPortal();
+  } else {
+    // PIN無効ならロックフラグも消す
+    sessionStorage.removeItem('portal-locked');
   }
 }
 
@@ -651,9 +655,23 @@ function lockPortal() {
   document.getElementById('lock-pin-error').hidden = true;
   document.getElementById('lock-screen').hidden = false;
   document.body.style.overflow = 'hidden';
+  // リロード後も再ロックされるようにセッションストレージに記録
+  sessionStorage.setItem('portal-locked', currentUsername);
   // 時計更新
   updateLockClock();
   lockClockTimer = setInterval(updateLockClock, 1000);
+}
+
+function lockSwitchUser() {
+  // ロックフラグをクリアしてロック画面を閉じ、ユーザーネームモーダルを開く
+  sessionStorage.removeItem('portal-locked');
+  document.getElementById('lock-screen').hidden = true;
+  document.body.style.overflow = '';
+  clearInterval(lockClockTimer);
+  lockCurrentInput = '';
+  updateLockDots();
+  // ユーザーネーム設定モーダルを開く（新規入力扱い）
+  showUsernameModal(false);
 }
 
 function updateLockClock() {
@@ -690,6 +708,7 @@ async function verifyLockPin(pin) {
   const hash = await hashPIN(pin);
   if (hash === lockPinHash) {
     // 解錠
+    sessionStorage.removeItem('portal-locked'); // ロックフラグをクリア
     document.getElementById('lock-screen').hidden = true;
     document.body.style.overflow = '';
     clearInterval(lockClockTimer);
@@ -4831,6 +4850,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.addEventListener('click', () => handleLockKeyPress(btn.dataset.digit));
   });
   document.getElementById('lock-key-del').addEventListener('click', handleLockDelete);
+  document.getElementById('btn-lock-switch-user').addEventListener('click', lockSwitchUser);
 
   // キーボードでもPIN入力可
   document.addEventListener('keydown', e => {
