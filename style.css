@@ -3,17 +3,17 @@
    =========================== */
 :root {
   /* Colors */
-  --bg-primary: #0a0e27;
-  --bg-secondary: #111640;
-  --bg-card: rgba(255, 255, 255, 0.06);
-  --bg-card-hover: rgba(255, 255, 255, 0.12);
-  --bg-glass: rgba(255, 255, 255, 0.08);
-  --border-glass: rgba(255, 255, 255, 0.12);
-  --border-glass-hover: rgba(255, 255, 255, 0.25);
+  --bg-primary: #0f1117;
+  --bg-secondary: #181d2a;
+  --bg-card: rgba(255, 255, 255, 0.05);
+  --bg-card-hover: rgba(255, 255, 255, 0.09);
+  --bg-glass: rgba(255, 255, 255, 0.06);
+  --border-glass: rgba(255, 255, 255, 0.10);
+  --border-glass-hover: rgba(255, 255, 255, 0.22);
 
-  --text-primary: #f0f2ff;
-  --text-secondary: rgba(240, 242, 255, 0.65);
-  --text-muted: rgba(240, 242, 255, 0.4);
+  --text-primary: #e8eaf0;
+  --text-secondary: rgba(232, 234, 240, 0.62);
+  --text-muted: rgba(232, 234, 240, 0.38);
 
   --accent-blue: #4a9eff;
   --accent-cyan: #00d4aa;
@@ -21,8 +21,8 @@
   --accent-orange: #ff8c42;
   --accent-pink: #ff5ea0;
 
-  --gradient-hero: linear-gradient(135deg, #0a0e27 0%, #1a1f4e 50%, #0d1235 100%);
-  --gradient-accent: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  --gradient-hero: linear-gradient(160deg, #0d1117 0%, #151c28 50%, #0d1117 100%);
+  --gradient-accent: linear-gradient(135deg, #4a9eff, #00d4aa);
   --gradient-card-1: linear-gradient(135deg, rgba(74, 158, 255, 0.15), rgba(74, 158, 255, 0.05));
   --gradient-card-2: linear-gradient(135deg, rgba(0, 212, 170, 0.15), rgba(0, 212, 170, 0.05));
   --gradient-card-3: linear-gradient(135deg, rgba(124, 92, 255, 0.15), rgba(124, 92, 255, 0.05));
@@ -113,7 +113,7 @@ body::after {
 body::before {
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(74, 158, 255, 0.2), transparent 70%);
+  background: radial-gradient(circle, rgba(74, 158, 255, 0.12), transparent 70%);
   top: -200px;
   right: -100px;
 }
@@ -121,7 +121,7 @@ body::before {
 body::after {
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(124, 92, 255, 0.2), transparent 70%);
+  background: radial-gradient(circle, rgba(0, 180, 200, 0.08), transparent 70%);
   bottom: -150px;
   left: -100px;
   animation-delay: -10s;
@@ -154,7 +154,7 @@ body::after {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--header-bg, rgba(10, 14, 39, 0.85));
+  background: var(--header-bg, rgba(11, 14, 20, 0.88));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-glass);
@@ -2794,6 +2794,16 @@ html.font-xl { font-size: 21px; }
 [data-theme="light"] .header {
   border-bottom-color: rgba(100, 120, 200, 0.2);
 }
+[data-theme="light"] .header-title {
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+[data-theme="light"] .header-logo {
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  box-shadow: 0 0 16px rgba(37, 99, 235, 0.3);
+}
 [data-theme="light"] .link-card {
   box-shadow: 0 2px 10px rgba(74, 100, 200, 0.12);
 }
@@ -2885,6 +2895,16 @@ html.font-xl { font-size: 21px; }
 [data-theme="warm"] .external-tools {
   background: rgba(255, 195, 110, 0.07);
   border-color: rgba(255, 195, 110, 0.22);
+}
+[data-theme="warm"] .header-title {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+[data-theme="warm"] .header-logo {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.35);
 }
 
 /* ===========================
