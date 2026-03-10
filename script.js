@@ -1208,6 +1208,19 @@ function subscribeUsersList() {
   if (_usersListUnsub) return;
   _usersListUnsub = onSnapshot(collection(db, 'users_list'), snap => {
     _knownUsernames = new Set(snap.docs.map(d => d.id));
+    // 現在開いているDMルームの相手が存在しないユーザーならパネルを閉じる
+    if (currentRoomId && currentRoomType === 'dm') {
+      const room = dmRooms.find(r => r.id === currentRoomId);
+      if (room) {
+        const other = (room.members || []).find(m => m !== currentUsername);
+        if (other && !_knownUsernames.has(other)) {
+          currentRoomId = null;
+          currentRoomType = null;
+          const roomView = document.getElementById('chat-room-view');
+          if (roomView) roomView.setAttribute('hidden', '');
+        }
+      }
+    }
     if (chatPanelOpen) renderChatSidebar();
     updateChatBadge(); // バッジとリストの整合性を保つ
   });
@@ -1932,20 +1945,31 @@ async function deleteDmRoom(roomId) {
 
 async function openOrCreateDm(targetUser) {
   if (!currentUsername || !targetUser) return;
-  const roomId = getDmRoomId(currentUsername, targetUser);
-  const roomRef = doc(db, 'dm_rooms', roomId);
-  const snap = await getDoc(roomRef);
-  if (!snap.exists()) {
-    await setDoc(roomRef, {
-      members: [currentUsername, targetUser].sort(),
-      createdAt: serverTimestamp(),
-      lastMessage: '',
-      lastAt: null,
-      lastSender: ''
-    });
+  // 既存のDMルームをmembersで検索（名前変更後の旧ルームIDにも対応）
+  const existingRoom = dmRooms.find(r =>
+    Array.isArray(r.members) &&
+    r.members.includes(currentUsername) &&
+    r.members.includes(targetUser)
+  );
+  let roomId;
+  if (existingRoom) {
+    roomId = existingRoom.id;
   } else {
-    // どちらかが削除していた場合は再追加
-    await updateDoc(roomRef, { members: arrayUnion(currentUsername, targetUser) });
+    roomId = getDmRoomId(currentUsername, targetUser);
+    const roomRef = doc(db, 'dm_rooms', roomId);
+    const snap = await getDoc(roomRef);
+    if (!snap.exists()) {
+      await setDoc(roomRef, {
+        members: [currentUsername, targetUser].sort(),
+        createdAt: serverTimestamp(),
+        lastMessage: '',
+        lastAt: null,
+        lastSender: ''
+      });
+    } else {
+      // どちらかが削除していた場合は再追加
+      await updateDoc(roomRef, { members: arrayUnion(currentUsername, targetUser) });
+    }
   }
   if (!chatPanelOpen) openChatPanel();
   setTimeout(() => openRoom(roomId, 'dm'), 150);
