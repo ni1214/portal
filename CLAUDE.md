@@ -104,11 +104,11 @@ assigned_tasks/{taskId}
 ### 日付入力フィールド（必須ルール）
 日付入力は常に「カレンダーアイコンのみ」で実装する。テキスト部分は非表示にし、アイコン色は各テーマに合わせる。
 
-**HTML:**
+**HTML:** アイコンを左端、ラベルを右に配置する（アイコン → ラベルの順）
 ```html
 <div class="form-group form-group-inline">
-  <label class="form-label">期限（省略可）</label>
   <input type="date" id="xxx-due" class="date-icon-only">
+  <label class="form-label" for="xxx-due">期限入力（省略可）</label>
 </div>
 ```
 

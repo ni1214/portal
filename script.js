@@ -2261,8 +2261,8 @@ function _renderNewTaskForm(container) {
         <textarea id="new-task-desc" class="form-input" rows="3" placeholder="詳しい説明や注意点..."></textarea>
       </div>
       <div class="form-group form-group-inline">
-        <label class="form-label">期限（省略可）</label>
         <input type="date" id="new-task-due" class="date-icon-only">
+        <label class="form-label" for="new-task-due">期限入力（省略可）</label>
       </div>
       <button class="btn-modal-primary" id="new-task-submit" style="width:100%;margin-top:4px">
         <i class="fa-solid fa-paper-plane"></i> タスクを依頼する
