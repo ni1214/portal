@@ -692,9 +692,10 @@ function updateLockNotifications() {
   if (!items.length) { el.innerHTML = ''; return; }
 
   el.innerHTML = items.map(item => `
-    <div class="lock-notif-item" title="${item.label} ${item.count}件">
+    <div class="lock-notif-item">
       <i class="fa-solid ${item.icon}" style="color:${item.color}"></i>
-      <span>${item.count}</span>
+      <span style="color:${item.color}">${item.count}</span>
+      <div class="lock-notif-label">${item.label}</div>
     </div>`).join('');
 }
 

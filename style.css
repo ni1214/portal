@@ -6191,29 +6191,43 @@ html.font-xl { font-size: 21px; }
 .lock-hint { margin-top: 28px; font-size: 0.68rem; color: rgba(255,255,255,0.25); text-align: center; }
 .lock-notifications {
   display: flex;
-  gap: 10px;
+  gap: 14px;
   justify-content: center;
   flex-wrap: wrap;
-  margin: 10px 0 4px;
-  min-height: 28px;
+  margin: 16px 0 8px;
+  min-height: 52px;
 }
 .lock-notif-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 5px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 14px;
-  padding: 4px 12px;
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.75);
-  backdrop-filter: blur(6px);
-  animation: lockNotifIn 0.3s ease;
+  gap: 6px;
+  background: rgba(255,255,255,0.10);
+  border: 1.5px solid rgba(255,255,255,0.22);
+  border-radius: 18px;
+  padding: 12px 18px 10px;
+  color: rgba(255,255,255,0.92);
+  backdrop-filter: blur(10px);
+  animation: lockNotifIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  position: relative;
+  min-width: 56px;
 }
-.lock-notif-item i  { font-size: 0.75rem; }
-.lock-notif-item span { font-weight: 700; font-size: 0.78rem; }
+.lock-notif-item i {
+  font-size: 1.5rem;
+}
+.lock-notif-item span {
+  font-weight: 800;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.lock-notif-item .lock-notif-label {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.55);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
 @keyframes lockNotifIn {
-  from { opacity: 0; transform: translateY(-4px) scale(0.9); }
+  from { opacity: 0; transform: translateY(-8px) scale(0.8); }
   to   { opacity: 1; transform: none; }
 }
 .lock-switch-user { margin-top: 24px; text-align: center; }
