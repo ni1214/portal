@@ -5143,6 +5143,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('ft-panel-close').addEventListener('click', closeFileTransferPanel);
   document.getElementById('ft-new-btn').addEventListener('click', openFtSendModal);
+  document.getElementById('ft-cancel-btn').addEventListener('click', closeFtSendModal);
+  document.getElementById('ft-confirm-btn').addEventListener('click', confirmFtSend);
 
   // ファイル送信モーダル: ファイル選択
   document.getElementById('ft-file-input').addEventListener('change', e => {
