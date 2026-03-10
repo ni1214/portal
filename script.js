@@ -1439,19 +1439,22 @@ function startTaskListeners(username) {
   if (_receivedTasksUnsub) { _receivedTasksUnsub(); _receivedTasksUnsub = null; }
   if (_sentTasksUnsub)     { _sentTasksUnsub();     _sentTasksUnsub = null; }
 
-  const rQ = query(collection(db, 'assigned_tasks'), where('assignedTo', '==', username), orderBy('createdAt', 'desc'));
+  // orderBy を外してクライアント側でソート（複合インデックス不要）
+  const rQ = query(collection(db, 'assigned_tasks'), where('assignedTo', '==', username));
   _receivedTasksUnsub = onSnapshot(rQ, snap => {
-    receivedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    receivedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
     updateTaskBadge();
     if (taskModalOpen && activeTaskTab === 'received') renderTaskTabContent();
-  });
+  }, err => console.error('receivedTasks listener error:', err));
 
-  const sQ = query(collection(db, 'assigned_tasks'), where('assignedBy', '==', username), orderBy('createdAt', 'desc'));
+  const sQ = query(collection(db, 'assigned_tasks'), where('assignedBy', '==', username));
   _sentTasksUnsub = onSnapshot(sQ, snap => {
-    sentTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    sentTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
     updateTaskBadge();
     if (taskModalOpen && activeTaskTab === 'sent') renderTaskTabContent();
-  });
+  }, err => console.error('sentTasks listener error:', err));
 }
 
 function updateTaskBadge() {
@@ -1636,11 +1639,20 @@ async function submitNewTask() {
       dueDate,
       notifiedDone: false,
     });
+    // フォームをリセット
     newTaskAssignee = '';
+    const titleEl = document.getElementById('new-task-title');
+    const descEl  = document.getElementById('new-task-desc');
+    const dueEl   = document.getElementById('new-task-due');
+    if (titleEl) titleEl.value = '';
+    if (descEl)  descEl.value  = '';
+    if (dueEl)   dueEl.value   = '';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> タスクを依頼する';
     switchTaskTab('sent');
   } catch (err) {
     console.error('タスク作成エラー:', err);
-    alert('送信に失敗しました。');
+    alert('送信に失敗しました: ' + err.message);
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> タスクを依頼する';
   }
