@@ -307,7 +307,8 @@ let _roomMsgUnsubscribe = null;
 let chatReadTimes = {}; // { roomId: Date | null }
 
 const CHAT_MSG_MAX = 200;
-let _knownUsernames = null; // users_list のキャッシュ Set（DMフィルタリング用）
+let _knownUsernames = null; // users_list のリアルタイム Set（DMフィルタリング用）
+let _usersListUnsub = null;
 
 // P2P ファイル転送
 const RTC_CONFIG    = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
@@ -1156,18 +1157,11 @@ function initChatResize() {
   document.addEventListener('touchend', onEnd);
 }
 
-async function openChatPanel() {
+function openChatPanel() {
   chatPanelOpen = true;
   const panel = document.getElementById('chat-panel');
   panel.removeAttribute('hidden');
   setTimeout(() => panel.classList.add('open'), 10);
-  // users_list をロードしてDMフィルタリング用キャッシュを更新
-  if (!_knownUsernames) {
-    try {
-      const snap = await getDocs(collection(db, 'users_list'));
-      _knownUsernames = new Set(snap.docs.map(d => d.id));
-    } catch (_) { _knownUsernames = new Set(); }
-  }
   renderChatSidebar();
 }
 
@@ -1181,6 +1175,7 @@ function closeChatPanel() {
 function startChatListeners(username) {
   if (!username) return;
   stopChatListeners();
+  subscribeUsersList();
 
   const dmQ = query(collection(db, 'dm_rooms'), where('members', 'array-contains', username));
   _dmRoomsUnsubscribe = onSnapshot(dmQ, snap => {
@@ -1205,8 +1200,22 @@ function stopChatListeners() {
   groupRooms = [];
   currentRoomId = null;
   currentRoomType = null;
-  _knownUsernames = null; // ユーザー切り替え時にキャッシュをリセット
+  stopUsersListListener();
   stopFtListener();
+}
+
+function subscribeUsersList() {
+  if (_usersListUnsub) return;
+  _usersListUnsub = onSnapshot(collection(db, 'users_list'), snap => {
+    _knownUsernames = new Set(snap.docs.map(d => d.id));
+    if (chatPanelOpen) renderChatSidebar();
+    updateChatBadge(); // バッジとリストの整合性を保つ
+  });
+}
+
+function stopUsersListListener() {
+  if (_usersListUnsub) { _usersListUnsub(); _usersListUnsub = null; }
+  _knownUsernames = null;
 }
 
 async function loadChatReadTimes(username) {
@@ -1249,7 +1258,14 @@ function updateChatBadge() {
   const badge = document.getElementById('chat-unread-badge');
   const fab   = document.getElementById('chat-fab');
   if (!badge || !fab) return;
-  const total = [...dmRooms, ...groupRooms].reduce((sum, r) => sum + getRoomUnread(r), 0);
+  // _knownUsernames でフィルタした DM ルームのみカウント（リスト表示と整合）
+  const visibleDm = _knownUsernames
+    ? dmRooms.filter(room => {
+        const other = (room.members || []).find(m => m !== currentUsername);
+        return !other || _knownUsernames.has(other);
+      })
+    : dmRooms;
+  const total = [...visibleDm, ...groupRooms].reduce((sum, r) => sum + getRoomUnread(r), 0);
   if (total > 0) {
     badge.textContent = total > 99 ? '99+' : total;
     badge.hidden = false;
