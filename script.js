@@ -247,6 +247,7 @@ const INITIAL_CARDS = [
 let allCards = [];
 let allCategories = [...DEFAULT_CATEGORIES];
 let allNotices = [];
+let _noticeUnsub = null;
 let isEditMode = true;
 let editingDocId = null;
 let editingCategory = null;
@@ -3372,26 +3373,29 @@ async function deleteCard(docId) {
 }
 
 // ========== Firestore CRUD (お知らせ) ==========
-async function loadNotices() {
+function subscribeNotices() {
+  if (_noticeUnsub) return; // 既に購読中
   const q = query(collection(db, 'notices'), orderBy('createdAt', 'desc'));
-  const snap = await getDocs(q);
-  allNotices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  _noticeUnsub = onSnapshot(q, snap => {
+    allNotices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderNotices(allNotices);
+    updateNoticeBadge();
+  });
 }
 
 async function saveNotice(id, data) {
   await updateDoc(doc(db, 'notices', id), { ...data, updatedAt: serverTimestamp() });
-  const idx = allNotices.findIndex(n => n.id === id);
-  if (idx !== -1) allNotices[idx] = { ...allNotices[idx], ...data };
+  // onSnapshot が自動で allNotices を更新するためローカル更新は不要
 }
 
 async function addNotice(data) {
-  const ref = await addDoc(collection(db, 'notices'), { ...data, createdAt: serverTimestamp() });
-  allNotices.unshift({ id: ref.id, ...data });
+  await addDoc(collection(db, 'notices'), { ...data, createdAt: serverTimestamp() });
+  // onSnapshot が自動で allNotices を更新するためローカル更新は不要
 }
 
 async function deleteNotice(id) {
   await deleteDoc(doc(db, 'notices', id));
-  allNotices = allNotices.filter(n => n.id !== id);
+  // onSnapshot が自動で allNotices を更新するためローカル更新は不要
 }
 
 // ========== Firestore CRUD (カテゴリ) ==========
@@ -4847,9 +4851,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await migrateCategories();
     await migrateAddBox();
     await loadCategories();
-    await loadNotices();
-    renderNotices(allNotices);
-    subscribeCards(); // onSnapshot 開始（以降は自動更新）
+    subscribeNotices(); // onSnapshot 開始（以降は自動更新）
+    subscribeCards();   // onSnapshot 開始（以降は自動更新）
   } catch (err) {
     console.error('Firestore エラー:', err);
   }
