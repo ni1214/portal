@@ -81,6 +81,9 @@
   box-sizing: border-box;
 }
 
+/* display:flex/grid など他ルールに [hidden] が打ち消されないよう保証 */
+[hidden] { display: none !important; }
+
 html {
   scroll-behavior: smooth;
   font-size: 16px;
@@ -3941,6 +3944,8 @@ html.font-xl { font-size: 21px; }
   right: calc(var(--space-xl) + (48px + 12px) * 2);
   width: 620px;
   height: 520px;
+  min-width: 460px;
+  min-height: 340px;
   background: var(--bg-card);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-lg);
@@ -3955,6 +3960,30 @@ html.font-xl { font-size: 21px; }
   transition: opacity 0.25s ease, transform 0.25s ease;
   pointer-events: none;
   overflow: hidden;
+}
+/* リサイズハンドル（左上コーナー） */
+.chat-resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  cursor: nw-resize;
+  z-index: 10;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+.chat-resize-handle:hover { opacity: 1; }
+.chat-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 10px;
+  height: 10px;
+  border-top: 2px solid var(--text-secondary);
+  border-left: 2px solid var(--text-secondary);
+  border-radius: 3px 0 0 0;
 }
 .chat-panel.open {
   opacity: 1;

@@ -969,6 +969,43 @@ function getDmRoomId(a, b) {
   return [a, b].sort().join('_');
 }
 
+function initChatResize() {
+  const panel = document.getElementById('chat-panel');
+  const handle = document.getElementById('chat-resize-handle');
+  if (!handle || !panel) return;
+
+  let resizing = false, startX, startY, startW, startH;
+
+  const onStart = (cx, cy) => {
+    resizing = true;
+    startX = cx; startY = cy;
+    startW = panel.offsetWidth; startH = panel.offsetHeight;
+    document.body.style.cursor = 'nw-resize';
+    document.body.style.userSelect = 'none';
+  };
+  const onMove = (cx, cy) => {
+    if (!resizing) return;
+    const newW = Math.max(460, Math.min(window.innerWidth  - 40, startW + (startX - cx)));
+    const newH = Math.max(340, Math.min(window.innerHeight - 100, startH + (startY - cy)));
+    panel.style.width  = newW + 'px';
+    panel.style.height = newH + 'px';
+  };
+  const onEnd = () => {
+    if (!resizing) return;
+    resizing = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  };
+
+  handle.addEventListener('mousedown', e => { e.preventDefault(); onStart(e.clientX, e.clientY); });
+  document.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+  document.addEventListener('mouseup', onEnd);
+
+  handle.addEventListener('touchstart', e => { e.preventDefault(); onStart(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+  document.addEventListener('touchmove', e => { if (resizing) { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
+  document.addEventListener('touchend', onEnd);
+}
+
 function openChatPanel() {
   chatPanelOpen = true;
   const panel = document.getElementById('chat-panel');
@@ -4337,6 +4374,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     chatPanelOpen ? closeChatPanel() : openChatPanel();
   });
   document.getElementById('chat-panel-close').addEventListener('click', closeChatPanel);
+  initChatResize();
   document.getElementById('chat-tab-dm').addEventListener('click', () => switchChatSidebarTab('dm'));
   document.getElementById('chat-tab-group').addEventListener('click', () => switchChatSidebarTab('group'));
   document.getElementById('chat-send-btn').addEventListener('click', sendChatMessage);
