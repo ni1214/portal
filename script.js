@@ -315,6 +315,12 @@ let _p2pConnections  = {}; // sessionId → { pc, dc, unsub, role, addedFromIdx,
 let _receivedFiles   = {}; // sessionId → { url, fileName } (受信ファイルのObjectURL)
 let _sendProgress    = {}; // sessionId → 0-100
 let _receiveProgress = {}; // sessionId → 0-100
+let _ftPanelOpen     = false;
+let _ftIncomingSub   = null; // Firestore listener for incoming signals
+let _ftIncoming      = [];   // [{id, from, fileName, fileSize, fileType, createdAt}]
+let _ftOutgoing      = [];   // [{sessionId, to, fileName, fileSize, status}]
+let _ftSelectedUser  = null;
+let _ftSelectedFile  = null;
 
 // タスク割り振り
 let receivedTasks = [];
@@ -1145,6 +1151,7 @@ function stopChatListeners() {
   currentRoomId = null;
   currentRoomType = null;
   _knownUsernames = null; // ユーザー切り替え時にキャッシュをリセット
+  stopFtListener();
 }
 
 async function loadChatReadTimes(username) {
@@ -1306,11 +1313,9 @@ async function openRoom(roomId, type) {
 
   const loginReq = document.getElementById('chat-login-required');
   const inputRow = document.getElementById('chat-input-row');
-  const fileBtn  = document.getElementById('chat-file-btn');
   if (currentUsername) {
     loginReq.hidden = true;
     inputRow.hidden = false;
-    if (fileBtn) fileBtn.hidden = (type !== 'dm'); // DMのみファイル送信可
     setTimeout(() => document.getElementById('chat-input')?.focus(), 100);
   } else {
     loginReq.hidden = false;
@@ -1397,90 +1402,22 @@ function renderChatMessages() {
     const el = document.createElement('div');
     el.className = `chat-msg${isOwn ? ' chat-msg--own' : ''}`;
 
-    if (msg.type === 'file') {
-      // ===== ファイル転送バブル =====
-      const senderPct   = _sendProgress[msg.sessionId];
-      const receivePct  = _receiveProgress[msg.sessionId];
-      const hasConn     = !!_p2pConnections[msg.sessionId];
-      const received    = _receivedFiles[msg.sessionId];
-      const iconClass   = getFileIcon(msg.fileType);
-      let statusHtml    = '';
-
-      if (isOwn) {
-        if (msg.status === 'pending') {
-          const pct   = senderPct ?? 0;
-          const label = (senderPct != null && senderPct > 0) ? Math.round(senderPct) + '%' : '相手の承認待ち...';
-          statusHtml = `
-            <div class="file-transfer-bar"><div class="file-transfer-bar__fill" data-session="${msg.sessionId}" style="width:${pct}%"></div></div>
-            <div class="file-transfer-footer"><span class="file-transfer-pct" data-session="${msg.sessionId}">${label}</span></div>`;
-        } else if (msg.status === 'done') {
-          statusHtml = `<div class="file-transfer-footer file-transfer-done"><i class="fa-solid fa-check"></i> 送信完了</div>`;
-        } else if (msg.status === 'rejected') {
-          statusHtml = `<div class="file-transfer-footer file-transfer-rejected"><i class="fa-solid fa-ban"></i> 辞退されました</div>`;
-        }
-      } else {
-        if (msg.status === 'pending' && !hasConn) {
-          statusHtml = `
-            <div class="file-transfer-actions">
-              <button class="btn-file-accept" data-session="${msg.sessionId}"><i class="fa-solid fa-arrow-down"></i> 受け取る</button>
-              <button class="btn-file-reject" data-session="${msg.sessionId}" data-room="${currentRoomId}" data-msg="${msg.id}">断る</button>
-            </div>`;
-        } else if (msg.status === 'pending' && hasConn) {
-          const pct = receivePct ?? 0;
-          statusHtml = `
-            <div class="file-transfer-bar"><div class="file-transfer-bar__fill" data-session="${msg.sessionId}" style="width:${pct}%"></div></div>
-            <div class="file-transfer-footer"><span class="file-transfer-pct" data-session="${msg.sessionId}">${Math.round(pct)}%</span></div>`;
-        } else if (msg.status === 'done' && received) {
-          statusHtml = `
-            <div class="file-transfer-actions">
-              <a class="btn-file-download" href="${received.url}" download="${esc(msg.fileName || 'file')}"><i class="fa-solid fa-arrow-down"></i> ダウンロード</a>
-            </div>`;
-        } else if (msg.status === 'done') {
-          statusHtml = `<div class="file-transfer-footer file-transfer-done"><i class="fa-solid fa-check"></i> 受信済み</div>`;
-        } else if (msg.status === 'rejected') {
-          statusHtml = `<div class="file-transfer-footer file-transfer-rejected"><i class="fa-solid fa-ban"></i> 辞退しました</div>`;
-        }
-      }
-
-      el.innerHTML = `
-        ${!isOwn ? `<div class="chat-avatar" style="background:${color}">${initial}</div>` : ''}
-        <div class="chat-msg-body">
-          ${!isOwn ? `<div class="chat-msg-name">${esc(msg.username)}</div>` : ''}
-          <div class="chat-bubble chat-bubble--file">
-            <div class="file-transfer-info">
-              <span class="file-transfer-icon"><i class="fa-solid ${iconClass}"></i></span>
-              <div class="file-transfer-meta">
-                <div class="file-transfer-name">${esc(msg.fileName || '(不明)')}</div>
-                <div class="file-transfer-size">${formatFileSize(msg.fileSize)}</div>
-              </div>
-            </div>
-            ${statusHtml}
-          </div>
-          <div class="chat-msg-time">${timeStr}</div>
+    // ===== テキストバブル =====
+    if (msg.type === 'file') return; // 旧形式は無視
+    el.innerHTML = `
+      ${!isOwn ? `<div class="chat-avatar" style="background:${color}">${initial}</div>` : ''}
+      <div class="chat-msg-body">
+        ${!isOwn ? `<div class="chat-msg-name">${esc(msg.username)}</div>` : ''}
+        <div class="chat-bubble">
+          ${esc(msg.text)}
+          ${isOwn ? `<button class="chat-msg-delete" data-id="${msg.id}" title="削除"><i class="fa-solid fa-trash-can"></i></button>` : ''}
         </div>
-        ${isOwn ? `<div class="chat-avatar" style="background:${color}">${initial}</div>` : ''}
-      `;
-      if (!isOwn && msg.status === 'pending' && !hasConn) {
-        el.querySelector('.btn-file-accept')?.addEventListener('click', () => acceptFileTransfer(msg.sessionId));
-        el.querySelector('.btn-file-reject')?.addEventListener('click', () => rejectFileTransfer(msg.sessionId, currentRoomId, msg.id));
-      }
-    } else {
-      // ===== 通常テキストバブル =====
-      el.innerHTML = `
-        ${!isOwn ? `<div class="chat-avatar" style="background:${color}">${initial}</div>` : ''}
-        <div class="chat-msg-body">
-          ${!isOwn ? `<div class="chat-msg-name">${esc(msg.username)}</div>` : ''}
-          <div class="chat-bubble">
-            ${esc(msg.text)}
-            ${isOwn ? `<button class="chat-msg-delete" data-id="${msg.id}" title="削除"><i class="fa-solid fa-trash-can"></i></button>` : ''}
-          </div>
-          <div class="chat-msg-time">${timeStr}</div>
-        </div>
-        ${isOwn ? `<div class="chat-avatar" style="background:${color}">${initial}</div>` : ''}
-      `;
-      if (isOwn) {
-        el.querySelector('.chat-msg-delete').addEventListener('click', () => deleteChatMessage(msg.id));
-      }
+        <div class="chat-msg-time">${timeStr}</div>
+      </div>
+      ${isOwn ? `<div class="chat-avatar" style="background:${color}">${initial}</div>` : ''}
+    `;
+    if (isOwn) {
+      el.querySelector('.chat-msg-delete').addEventListener('click', () => deleteChatMessage(msg.id));
     }
     container.appendChild(el);
   });
@@ -1515,8 +1452,8 @@ function getFileIcon(mimeType) {
 }
 
 function updateFileProgressUI(sessionId, pct) {
-  const fill  = document.querySelector(`.file-transfer-bar__fill[data-session="${sessionId}"]`);
-  const label = document.querySelector(`.file-transfer-pct[data-session="${sessionId}"]`);
+  const fill  = document.querySelector(`.ft-progress-fill[data-session="${sessionId}"]`);
+  const label = document.querySelector(`.ft-pct[data-session="${sessionId}"]`);
   if (fill)  fill.style.width = Math.min(100, pct).toFixed(1) + '%';
   if (label) label.textContent = Math.round(Math.min(100, pct)) + '%';
 }
@@ -1561,12 +1498,177 @@ async function sendFileChunks(dc, file, sessionId) {
   sendNext();
 }
 
-async function initiateFileTransfer(file) {
-  if (!currentUsername || !currentRoomId || currentRoomType !== 'dm') return;
-  const room = dmRooms.find(r => r.id === currentRoomId);
-  if (!room) return;
-  const recipientUsername = (room.members || []).find(m => m !== currentUsername);
-  if (!recipientUsername) return;
+// ===== ファイル転送パネル UI =====
+
+function openFileTransferPanel() {
+  _ftPanelOpen = true;
+  const panel = document.getElementById('ft-panel');
+  panel.removeAttribute('hidden');
+  setTimeout(() => panel.classList.add('open'), 10);
+  renderFtPanel();
+  startFtListener();
+}
+
+function closeFileTransferPanel() {
+  _ftPanelOpen = false;
+  const panel = document.getElementById('ft-panel');
+  panel.classList.remove('open');
+  setTimeout(() => panel.setAttribute('hidden', ''), 200);
+}
+
+function updateFtBadge() {
+  const badge = document.getElementById('ft-badge');
+  const fab   = document.getElementById('ft-fab');
+  if (!badge || !fab) return;
+  const count = _ftIncoming.filter(s => s.status === 'pending').length;
+  if (count > 0) {
+    badge.textContent = count;
+    badge.hidden = false;
+    fab.classList.add('has-pending');
+  } else {
+    badge.hidden = true;
+    fab.classList.remove('has-pending');
+  }
+}
+
+function renderFtPanel() {
+  if (!_ftPanelOpen) return;
+  const loginEl    = document.getElementById('ft-login-required');
+  const contentEl  = document.getElementById('ft-content');
+  if (!currentUsername) {
+    if (loginEl) loginEl.hidden = false;
+    if (contentEl) contentEl.hidden = true;
+    return;
+  }
+  if (loginEl) loginEl.hidden = true;
+  if (contentEl) contentEl.hidden = false;
+
+  const incomingEl    = document.getElementById('ft-incoming-list');
+  const outgoingEl    = document.getElementById('ft-outgoing-list');
+  const incomingTitle = document.getElementById('ft-incoming-title');
+  const outgoingTitle = document.getElementById('ft-outgoing-title');
+  const emptyEl       = document.getElementById('ft-empty');
+
+  // 受信待ち（pending のみ表示）
+  const pending = _ftIncoming.filter(s => s.status === 'pending');
+  if (incomingTitle) incomingTitle.hidden = pending.length === 0;
+  if (incomingEl) {
+    incomingEl.innerHTML = pending.map(s => {
+      const icon = getFileIcon(s.fileType || '');
+      return `<div class="ft-item">
+        <div class="ft-item-top">
+          <i class="fa-solid ${icon} ft-item-icon"></i>
+          <div class="ft-item-meta">
+            <div class="ft-item-name" title="${esc(s.fileName)}">${esc(s.fileName)}</div>
+            <div class="ft-item-size">${formatFileSize(s.fileSize)} · 送信者: ${esc(s.from)}</div>
+          </div>
+        </div>
+        <div class="ft-item-actions">
+          <button class="btn-ft-accept" data-sid="${s.id}">受け取る</button>
+          <button class="btn-ft-reject" data-sid="${s.id}">断る</button>
+        </div>
+      </div>`;
+    }).join('');
+    incomingEl.querySelectorAll('.btn-ft-accept').forEach(btn =>
+      btn.addEventListener('click', () => acceptFtTransfer(btn.dataset.sid)));
+    incomingEl.querySelectorAll('.btn-ft-reject').forEach(btn =>
+      btn.addEventListener('click', () => rejectFtTransfer(btn.dataset.sid)));
+  }
+
+  // 送信中・受信完了
+  const active = _ftOutgoing.filter(s => ['pending','accepted','done'].includes(s.status));
+  if (outgoingTitle) outgoingTitle.hidden = active.length === 0;
+  if (outgoingEl) {
+    outgoingEl.innerHTML = active.map(s => {
+      const icon = getFileIcon(s.fileType || '');
+      const pct  = _sendProgress[s.sessionId] ?? 0;
+      const received = _receivedFiles[s.sessionId];
+      let statusHtml = '';
+      if (s.status === 'done' || received) {
+        statusHtml = `<div class="ft-item-status done">✓ 転送完了</div>`;
+        if (received) {
+          statusHtml += `<div class="ft-item-actions">
+            <a class="btn-ft-download" href="${received.url}" download="${esc(received.fileName)}">ダウンロード</a>
+          </div>`;
+        }
+      } else if (s.status === 'rejected') {
+        statusHtml = `<div class="ft-item-status rejected">辞退されました</div>`;
+      } else if (s.status === 'accepted' || pct > 0) {
+        statusHtml = `<div class="ft-progress-bar">
+          <div class="ft-progress-fill" data-session="${s.sessionId}" style="width:${pct.toFixed(1)}%"></div>
+        </div>
+        <div class="ft-item-status"><span class="ft-pct" data-session="${s.sessionId}">${Math.round(pct)}%</span></div>`;
+      } else {
+        statusHtml = `<div class="ft-item-status">相手の受け取り待ち…</div>`;
+      }
+      return `<div class="ft-item">
+        <div class="ft-item-top">
+          <i class="fa-solid ${icon} ft-item-icon"></i>
+          <div class="ft-item-meta">
+            <div class="ft-item-name" title="${esc(s.fileName)}">${esc(s.fileName)}</div>
+            <div class="ft-item-size">${formatFileSize(s.fileSize)} → ${esc(s.to)}</div>
+          </div>
+        </div>
+        ${statusHtml}
+      </div>`;
+    }).join('');
+  }
+
+  if (emptyEl) emptyEl.hidden = (pending.length + active.length) > 0;
+}
+
+function startFtListener() {
+  if (!currentUsername || _ftIncomingSub) return;
+  const q = query(collection(db, 'p2p_signals'), where('to', '==', currentUsername));
+  _ftIncomingSub = onSnapshot(q, snap => {
+    _ftIncoming = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    updateFtBadge();
+    renderFtPanel();
+  });
+}
+
+function stopFtListener() {
+  if (_ftIncomingSub) { _ftIncomingSub(); _ftIncomingSub = null; }
+  _ftIncoming = [];
+  _ftOutgoing = [];
+  updateFtBadge();
+}
+
+// ===== ファイル送信モーダル =====
+
+async function openFtSendModal() {
+  if (!currentUsername) { alert('ユーザーネームを設定してください'); return; }
+  _ftSelectedUser = null;
+  _ftSelectedFile = null;
+  document.getElementById('ft-user-search').value = '';
+  document.getElementById('ft-file-group').hidden = true;
+  document.getElementById('ft-selected-file').hidden = true;
+  document.getElementById('ft-confirm-btn').hidden = true;
+  document.getElementById('ft-file-input').value = '';
+  document.getElementById('ft-send-modal').classList.add('visible');
+  await loadUsersForChatPicker('ft-user-list', 'ft-user-search', (name) => {
+    _ftSelectedUser = name;
+    document.getElementById('ft-target-label').textContent = `送信先：${name}`;
+    document.getElementById('ft-file-group').hidden = false;
+  }, true);
+}
+
+function closeFtSendModal() {
+  document.getElementById('ft-send-modal').classList.remove('visible');
+  _ftSelectedUser = null;
+  _ftSelectedFile = null;
+}
+
+async function confirmFtSend() {
+  if (!_ftSelectedUser || !_ftSelectedFile) return;
+  closeFtSendModal();
+  await initiateFileTransfer(_ftSelectedFile, _ftSelectedUser);
+}
+
+// ===== P2P 転送コア =====
+
+async function initiateFileTransfer(file, recipientUsername) {
+  if (!currentUsername || !recipientUsername) return;
 
   const sessionId  = `${currentUsername}_${recipientUsername}_${Date.now()}`;
   const signalRef  = doc(db, 'p2p_signals', sessionId);
@@ -1576,49 +1678,39 @@ async function initiateFileTransfer(file) {
   _p2pConnections[sessionId] = conn;
   _sendProgress[sessionId]   = 0;
 
+  // アウトゴーイングリストに追加
+  _ftOutgoing.push({ sessionId, to: recipientUsername, fileName: file.name, fileSize: file.size, fileType: file.type || '', status: 'pending' });
+  renderFtPanel();
+
   pc.onicecandidate = async e => {
     if (e.candidate) {
-      try {
-        await updateDoc(signalRef, { fromCandidates: arrayUnion(JSON.stringify(e.candidate.toJSON())) });
-      } catch (_) {}
+      try { await updateDoc(signalRef, { fromCandidates: arrayUnion(JSON.stringify(e.candidate.toJSON())) }); } catch (_) {}
     }
   };
 
   dc.onopen  = () => sendFileChunks(dc, file, sessionId);
-  dc.onerror = () => cleanupP2p(sessionId);
+  dc.onerror = () => { cleanupP2p(sessionId); _updateOutgoing(sessionId, 'error'); renderFtPanel(); };
 
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
 
-  // Firestoreにシグナルを書き込み
   await setDoc(signalRef, {
     from: currentUsername, to: recipientUsername,
     fileName: file.name, fileSize: file.size,
     fileType: file.type || 'application/octet-stream',
-    roomId: currentRoomId, status: 'pending',
-    offer: JSON.stringify(offer), answer: null,
+    status: 'pending', offer: JSON.stringify(offer), answer: null,
     fromCandidates: [], toCandidates: [],
     createdAt: serverTimestamp()
   });
 
-  // DMルームにファイルメッセージを送信
-  const msgRef = await addDoc(collection(db, 'dm_rooms', currentRoomId, 'messages'), {
-    username: currentUsername, type: 'file', text: '',
-    fileName: file.name, fileSize: file.size,
-    fileType: file.type || 'application/octet-stream',
-    sessionId, status: 'pending', createdAt: serverTimestamp()
-  });
-  await setDoc(doc(db, 'dm_rooms', currentRoomId),
-    { lastMessage: `📎 ${file.name}`, lastAt: serverTimestamp(), lastSender: currentUsername },
-    { merge: true }
-  );
-
   // answer / toCandidates を監視
   conn.unsub = onSnapshot(signalRef, async snap => {
-    if (!snap.exists()) return;
+    if (!snap.exists()) { _updateOutgoing(sessionId, 'done'); renderFtPanel(); return; }
     const data = snap.data();
     const c = _p2pConnections[sessionId];
     if (!c) return;
+    _updateOutgoing(sessionId, data.status);
+    renderFtPanel();
     if (data.answer && !c.pc.currentRemoteDescription) {
       try { await c.pc.setRemoteDescription(JSON.parse(data.answer)); } catch (e) { console.error('setRemoteDescription:', e); }
     }
@@ -1627,18 +1719,24 @@ async function initiateFileTransfer(file) {
       try { await c.pc.addIceCandidate(JSON.parse(toCands[i])); c.addedToIdx = i + 1; } catch (_) {}
     }
     if (data.status === 'rejected') {
-      try { await updateDoc(doc(db, 'dm_rooms', currentRoomId, 'messages', msgRef.id), { status: 'rejected' }); } catch (_) {}
       cleanupP2p(sessionId);
+      _updateOutgoing(sessionId, 'rejected');
+      renderFtPanel();
     }
   });
 }
 
-async function acceptFileTransfer(sessionId) {
-  if (!currentUsername || !currentRoomId) return;
+function _updateOutgoing(sessionId, status) {
+  const item = _ftOutgoing.find(o => o.sessionId === sessionId);
+  if (item) item.status = status;
+}
+
+async function acceptFtTransfer(sessionId) {
+  if (!currentUsername) return;
   const signalRef  = doc(db, 'p2p_signals', sessionId);
   let signalSnap;
   try { signalSnap = await getDoc(signalRef); } catch (_) { alert('転送セッションの取得に失敗しました。'); return; }
-  if (!signalSnap.exists()) { alert('転送セッションが見つかりません。送信側が待機していない可能性があります。'); return; }
+  if (!signalSnap.exists()) { alert('転送セッションが見つかりません。送信側がオフラインの可能性があります。'); return; }
   const signal = signalSnap.data();
   if (signal.status !== 'pending') return;
 
@@ -1647,7 +1745,11 @@ async function acceptFileTransfer(sessionId) {
   const conn = { pc, dc: null, role: 'receiver', unsub: null, addedFromIdx: 0, rcvd };
   _p2pConnections[sessionId] = conn;
   _receiveProgress[sessionId] = 0;
-  renderChatMessages(); // 進捗バー表示のために即時再描画
+  // 受信アイテムをアウトゴーイングリストに追加（進捗表示用）
+  _ftOutgoing.push({ sessionId, to: signal.from, fileName: signal.fileName, fileSize: signal.fileSize, fileType: signal.fileType || '', status: 'accepted' });
+  // 受信待ちリストから除外
+  _ftIncoming = _ftIncoming.filter(s => s.id !== sessionId);
+  renderFtPanel();
 
   pc.onicecandidate = async e => {
     if (e.candidate) {
@@ -1674,23 +1776,17 @@ async function acceptFileTransfer(sessionId) {
           _receiveProgress[sessionId] = pct;
           updateFileProgressUI(sessionId, pct);
           if (conn.rcvd.receivedSize >= conn.rcvd.meta.totalSize) {
-            // ファイル組み立て
             const blob = new Blob(conn.rcvd.buffers, { type: conn.rcvd.meta.fileType });
             _receivedFiles[sessionId] = { url: URL.createObjectURL(blob), fileName: conn.rcvd.meta.fileName };
-            // Firestoreのメッセージステータスを更新
-            const roomMsg = currentRoomMessages.find(m => m.sessionId === sessionId);
-            if (roomMsg) {
-              try { await updateDoc(doc(db, 'dm_rooms', currentRoomId, 'messages', roomMsg.id), { status: 'done' }); } catch (_) {}
-            }
             try { await updateDoc(signalRef, { status: 'done' }); } catch (_) {}
-            // クリーンアップ（シグナルドキュメント削除は sender が行う）
             try { if (conn.unsub) conn.unsub(); } catch (_) {}
             try { dc.close(); } catch (_) {}
             try { pc.close(); } catch (_) {}
             delete _p2pConnections[sessionId];
             delete _receiveProgress[sessionId];
             try { await deleteDoc(signalRef); } catch (_) {}
-            renderChatMessages();
+            _updateOutgoing(sessionId, 'done');
+            renderFtPanel();
           }
         }
       }
@@ -1703,12 +1799,10 @@ async function acceptFileTransfer(sessionId) {
   await pc.setLocalDescription(answer);
   await updateDoc(signalRef, { answer: JSON.stringify(answer), status: 'accepted' });
 
-  // 既存の fromCandidates を追加
   for (const candStr of (signal.fromCandidates || [])) {
     try { await pc.addIceCandidate(JSON.parse(candStr)); conn.addedFromIdx++; } catch (_) {}
   }
 
-  // 新規 fromCandidates を監視
   conn.unsub = onSnapshot(signalRef, async snap => {
     if (!snap.exists()) return;
     const c = _p2pConnections[sessionId];
@@ -1720,12 +1814,14 @@ async function acceptFileTransfer(sessionId) {
   });
 }
 
-async function rejectFileTransfer(sessionId, roomId, msgId) {
+async function rejectFtTransfer(sessionId) {
   try {
-    await updateDoc(doc(db, 'dm_rooms', roomId, 'messages', msgId), { status: 'rejected' });
     await updateDoc(doc(db, 'p2p_signals', sessionId), { status: 'rejected' });
+    _ftIncoming = _ftIncoming.filter(s => s.id !== sessionId);
+    updateFtBadge();
+    renderFtPanel();
     setTimeout(() => cleanupP2p(sessionId), 1500);
-  } catch (err) { console.error('rejectFileTransfer:', err); }
+  } catch (err) { console.error('rejectFtTransfer:', err); }
 }
 
 // ===== DM作成モーダル =====
@@ -2941,6 +3037,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     loadChatReadTimes(username);
     startChatListeners(username);
     startTaskListeners(username);
+    startFtListener();
     await loadLockSettings(username, lockOnSwitch);
   } catch (err) {
     console.error('個人データ読み込みエラー:', err);
@@ -4939,16 +5036,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
   });
 
-  // ===== P2P ファイル転送 =====
-  document.getElementById('chat-file-btn').addEventListener('click', () => {
-    if (!currentUsername) return;
-    document.getElementById('chat-file-input').click();
+  // ===== ファイル転送FAB・パネル =====
+  document.getElementById('ft-fab').addEventListener('click', () => {
+    _ftPanelOpen ? closeFileTransferPanel() : openFileTransferPanel();
   });
-  document.getElementById('chat-file-input').addEventListener('change', e => {
+  document.getElementById('ft-panel-close').addEventListener('click', closeFileTransferPanel);
+  document.getElementById('ft-new-btn').addEventListener('click', openFtSendModal);
+
+  // ファイル送信モーダル: ファイル選択
+  document.getElementById('ft-file-input').addEventListener('change', e => {
     const file = e.target.files[0];
-    if (file) initiateFileTransfer(file);
-    e.target.value = ''; // 同じファイルを再選択できるようにリセット
+    if (!file) return;
+    _ftSelectedFile = file;
+    const selEl = document.getElementById('ft-selected-file');
+    selEl.innerHTML = `<i class="fa-solid ${getFileIcon(file.type)}"></i> ${esc(file.name)} <span style="color:var(--text-muted)">(${formatFileSize(file.size)})</span>`;
+    selEl.hidden = false;
+    document.getElementById('ft-confirm-btn').hidden = false;
   });
+
+  // ドラッグ&ドロップ
+  const dropZone = document.getElementById('ft-file-drop');
+  if (dropZone) {
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (!file) return;
+      _ftSelectedFile = file;
+      const selEl = document.getElementById('ft-selected-file');
+      selEl.innerHTML = `<i class="fa-solid ${getFileIcon(file.type)}"></i> ${esc(file.name)} <span style="color:var(--text-muted)">(${formatFileSize(file.size)})</span>`;
+      selEl.hidden = false;
+      document.getElementById('ft-confirm-btn').hidden = false;
+    });
+  }
 
   // ===== 新規DM/グループ =====
   document.getElementById('btn-new-dm').addEventListener('click', openNewDmModal);

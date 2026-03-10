@@ -208,6 +208,63 @@
     </div>
   </div>
 
+  <!-- ==================== ファイル転送FABボタン ==================== -->
+  <button class="ft-fab" id="ft-fab" title="ファイル転送">
+    <i class="fa-solid fa-file-arrow-up"></i>
+    <span class="ft-badge" id="ft-badge" hidden>0</span>
+  </button>
+
+  <!-- ==================== ファイル転送パネル ==================== -->
+  <div id="ft-panel" class="ft-panel" hidden>
+    <div class="ft-panel-header">
+      <span><i class="fa-solid fa-file-arrow-up"></i> ファイル転送</span>
+      <button class="ft-panel-close" id="ft-panel-close" title="閉じる">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="ft-panel-body">
+      <div class="ft-login-required" id="ft-login-required" hidden>
+        <i class="fa-solid fa-user-lock"></i> ユーザーネームを設定してください
+      </div>
+      <div id="ft-content">
+        <button class="btn-ft-new" id="ft-new-btn">
+          <i class="fa-solid fa-plus"></i> ファイルを送る
+        </button>
+        <div class="ft-section-title" id="ft-incoming-title" hidden>受信待ち</div>
+        <div id="ft-incoming-list"></div>
+        <div class="ft-section-title" id="ft-outgoing-title" hidden>送信中・完了</div>
+        <div id="ft-outgoing-list"></div>
+        <div class="ft-empty" id="ft-empty">転送中のファイルはありません</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ファイル送信モーダル ==================== -->
+  <div class="modal-overlay" id="ft-send-modal">
+    <div class="modal-glass">
+      <h3 class="modal-title"><i class="fa-solid fa-file-arrow-up"></i> ファイルを送る</h3>
+      <p class="modal-desc">送信先を選んでファイルを選択してください。<br>相手がオンラインのときに受け取れます。</p>
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label">送信先</label>
+        <input type="text" id="ft-user-search" class="form-input" placeholder="名前で検索..." autocomplete="off" style="margin-bottom:8px">
+        <div id="ft-user-list" class="new-dm-user-list"></div>
+      </div>
+      <div class="form-group" id="ft-file-group" hidden>
+        <label class="form-label" id="ft-target-label">送信先：</label>
+        <div class="ft-file-drop" id="ft-file-drop">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <span>クリックまたはドロップでファイルを選択</span>
+          <input type="file" id="ft-file-input" style="position:absolute;inset:0;opacity:0;cursor:pointer">
+        </div>
+        <div id="ft-selected-file" class="ft-selected-file" hidden></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeFtSendModal()">キャンセル</button>
+        <button class="btn-primary" id="ft-confirm-btn" onclick="confirmFtSend()" hidden>送信する</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ==================== チャットFABボタン ==================== -->
   <button class="chat-fab" id="chat-fab" title="チャット">
     <i class="fa-solid fa-comments"></i>
@@ -281,15 +338,11 @@
             <i class="fa-solid fa-user-lock"></i> チャットするにはユーザーネームを設定してください
           </div>
           <div class="chat-input-row" id="chat-input-row">
-            <button class="chat-file-btn" id="chat-file-btn" title="ファイルを送る" hidden>
-              <i class="fa-solid fa-paperclip"></i>
-            </button>
             <input type="text" id="chat-input" class="chat-input" placeholder="メッセージを入力..." maxlength="300" autocomplete="off">
             <button class="chat-send-btn" id="chat-send-btn" title="送信">
               <i class="fa-solid fa-paper-plane"></i>
             </button>
           </div>
-          <input type="file" id="chat-file-input" style="display:none">
         </div>
       </div>
     </div>
