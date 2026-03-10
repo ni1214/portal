@@ -2814,6 +2814,44 @@ html.font-xl { font-size: 21px; }
   background: rgba(255, 255, 255, 0.75);
   border-color: rgba(100, 120, 200, 0.18);
 }
+/* ライトテーマ: ヘッダーアイコンボタン白飛び防止 */
+[data-theme="light"] .search-container,
+[data-theme="light"] .btn-favorites-only,
+[data-theme="light"] .btn-task,
+[data-theme="light"] .btn-notice-bell,
+[data-theme="light"] .btn-email-assist {
+  background: rgba(26, 30, 58, 0.07);
+  border-color: rgba(26, 30, 58, 0.16);
+  color: rgba(26, 30, 58, 0.6);
+}
+[data-theme="light"] .search-container:hover:not(:focus-within):not(.has-value),
+[data-theme="light"] .btn-favorites-only:hover,
+[data-theme="light"] .btn-task:hover,
+[data-theme="light"] .btn-notice-bell:hover,
+[data-theme="light"] .btn-email-assist:hover {
+  background: rgba(26, 30, 58, 0.13);
+  border-color: rgba(26, 30, 58, 0.3);
+  color: rgba(26, 30, 58, 0.9);
+}
+[data-theme="light"] .search-container:focus-within,
+[data-theme="light"] .search-container.has-value {
+  background: rgba(74, 100, 200, 0.08);
+  border-color: rgba(74, 100, 200, 0.35);
+  box-shadow: 0 0 0 3px rgba(74, 100, 200, 0.1);
+}
+[data-theme="light"] .btn-notice-bell.has-unread {
+  border-color: rgba(245, 158, 11, 0.5);
+}
+[data-theme="light"] .btn-user {
+  background: rgba(26, 30, 58, 0.06);
+  border-color: rgba(26, 30, 58, 0.15);
+  color: rgba(26, 30, 58, 0.65);
+}
+[data-theme="light"] .btn-user:hover {
+  background: rgba(26, 30, 58, 0.11);
+  border-color: rgba(26, 30, 58, 0.28);
+  color: #1a1e3a;
+}
 
 /* ウォーム */
 [data-theme="warm"] {
