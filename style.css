@@ -4205,6 +4205,140 @@ html.font-xl { font-size: 21px; }
   padding: 0 2px;
 }
 
+/* ===== P2P ファイル転送バブル ===== */
+.chat-bubble--file,
+.chat-msg--own .chat-bubble--file {
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  border-radius: 12px;
+  padding: 12px 14px;
+  min-width: 200px;
+  max-width: 270px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  white-space: normal;
+}
+.file-transfer-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.file-transfer-icon {
+  font-size: 1.5rem;
+  color: #a5b4fc;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.file-transfer-meta { overflow: hidden; }
+.file-transfer-name {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.file-transfer-size {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.file-transfer-bar {
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.file-transfer-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #06b6d4);
+  border-radius: 2px;
+  transition: width 0.2s ease;
+  width: 0%;
+}
+.file-transfer-footer {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.file-transfer-footer.file-transfer-done    { color: #4ade80; }
+.file-transfer-footer.file-transfer-rejected { color: #6b7280; }
+.file-transfer-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.btn-file-accept {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.45);
+  border-radius: 6px;
+  color: #a5b4fc;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-file-accept:hover { background: rgba(99, 102, 241, 0.35); }
+.btn-file-reject {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: rgba(107,114,128,0.1);
+  border: 1px solid rgba(107,114,128,0.25);
+  border-radius: 6px;
+  color: #9ca3af;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-file-reject:hover { background: rgba(107,114,128,0.2); }
+.btn-file-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 6px;
+  color: #4ade80;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-file-download:hover { background: rgba(16, 185, 129, 0.28); }
+
+/* ファイル添付ボタン（入力欄） */
+.chat-file-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  font-size: 0.85rem;
+}
+.chat-file-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.22);
+  color: var(--text-primary);
+}
+
 /* 入力エリア */
 .chat-input-area {
   padding: 10px;
