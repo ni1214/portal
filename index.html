@@ -396,8 +396,8 @@
   <!-- ==================== ユーザー名設定モーダル ==================== -->
   <div class="modal-overlay" id="username-modal">
     <div class="modal-glass">
-      <h3 class="modal-title"><i class="fa-solid fa-user-circle"></i> ニックネームを設定</h3>
-      <p class="modal-desc">あなただけの名前を入力してください。<br>お気に入り・テーマ・マイセクションがこの名前に紐づいて保存されます。</p>
+      <h3 class="modal-title" id="username-modal-title"><i class="fa-solid fa-user-circle"></i> ニックネームを設定</h3>
+      <p class="modal-desc" id="username-modal-desc">あなただけの名前を入力してください。<br>お気に入り・テーマ・マイセクションがこの名前に紐づいて保存されます。</p>
       <div class="form-group">
         <label class="form-label">ニックネーム</label>
         <input type="text" id="username-input" class="form-input" placeholder="例：田中" maxlength="20" autocomplete="off">
@@ -415,7 +415,7 @@
         <button class="btn-modal-secondary" id="username-skip">スキップ</button>
         <button class="btn-modal-primary" id="username-submit">
           <i class="fa-solid fa-spinner fa-spin" id="username-submit-spinner" hidden></i>
-          設定して始める
+          <span id="username-submit-text">設定して始める</span>
         </button>
       </div>
       <div class="username-security-row" id="username-security-row" hidden>

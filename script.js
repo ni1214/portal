@@ -341,6 +341,108 @@ async function isPINConfigured() {
 }
 
 // ========== ユーザー（ニックネーム）管理 ==========
+
+/**
+ * 旧ユーザー名から新ユーザー名へ全データを移行する
+ * - users/{old}/data/ サブドキュメント
+ * - users/{old}/private_sections/
+ * - users/{old}/private_cards/
+ * - users_list エントリ
+ * - assigned_tasks の assignedTo / assignedBy
+ * - dm_rooms / chat_rooms の members 配列
+ */
+async function migrateToNewUsername(oldName, newName) {
+  const batch = writeBatch(db);
+
+  // 1. data サブドキュメントをコピー
+  const dataDocIds = ['preferences', 'section_order', 'lock_pin', 'chat_reads'];
+  for (const docId of dataDocIds) {
+    try {
+      const snap = await getDoc(doc(db, 'users', oldName, 'data', docId));
+      if (snap.exists()) {
+        batch.set(doc(db, 'users', newName, 'data', docId), snap.data());
+        batch.delete(doc(db, 'users', oldName, 'data', docId));
+      }
+    } catch (_) {}
+  }
+
+  // 2. private_sections をコピー
+  try {
+    const psSnap = await getDocs(collection(db, 'users', oldName, 'private_sections'));
+    psSnap.forEach(d => {
+      batch.set(doc(db, 'users', newName, 'private_sections', d.id), d.data());
+      batch.delete(doc(db, 'users', oldName, 'private_sections', d.id));
+    });
+  } catch (_) {}
+
+  // 3. private_cards をコピー
+  try {
+    const pcSnap = await getDocs(collection(db, 'users', oldName, 'private_cards'));
+    pcSnap.forEach(d => {
+      batch.set(doc(db, 'users', newName, 'private_cards', d.id), d.data());
+      batch.delete(doc(db, 'users', oldName, 'private_cards', d.id));
+    });
+  } catch (_) {}
+
+  // 4. users_list を更新（旧削除 → 新作成）
+  batch.delete(doc(db, 'users_list', oldName));
+  batch.set(doc(db, 'users_list', newName), {
+    displayName: newName,
+    createdAt: serverTimestamp(),
+    lastLogin: serverTimestamp(),
+  });
+
+  await batch.commit();
+
+  // 5. assigned_tasks: assignedTo を更新
+  try {
+    const tasksTo = await getDocs(query(collection(db, 'assigned_tasks'), where('assignedTo', '==', oldName)));
+    if (!tasksTo.empty) {
+      const b2 = writeBatch(db);
+      tasksTo.forEach(d => b2.update(d.ref, { assignedTo: newName }));
+      await b2.commit();
+    }
+  } catch (_) {}
+
+  // 6. assigned_tasks: assignedBy を更新
+  try {
+    const tasksBy = await getDocs(query(collection(db, 'assigned_tasks'), where('assignedBy', '==', oldName)));
+    if (!tasksBy.empty) {
+      const b3 = writeBatch(db);
+      tasksBy.forEach(d => b3.update(d.ref, { assignedBy: newName }));
+      await b3.commit();
+    }
+  } catch (_) {}
+
+  // 7. dm_rooms: members 配列を更新
+  try {
+    const dmSnap = await getDocs(query(collection(db, 'dm_rooms'), where('members', 'array-contains', oldName)));
+    if (!dmSnap.empty) {
+      const b4 = writeBatch(db);
+      dmSnap.forEach(d => {
+        const members = (d.data().members || []).map(m => m === oldName ? newName : m);
+        b4.update(d.ref, { members });
+      });
+      await b4.commit();
+    }
+  } catch (_) {}
+
+  // 8. chat_rooms: members / createdBy を更新
+  try {
+    const crSnap = await getDocs(query(collection(db, 'chat_rooms'), where('members', 'array-contains', oldName)));
+    if (!crSnap.empty) {
+      const b5 = writeBatch(db);
+      crSnap.forEach(d => {
+        const members = (d.data().members || []).map(m => m === oldName ? newName : m);
+        const updates = { members };
+        if (d.data().createdBy === oldName) updates.createdBy = newName;
+        b5.update(d.ref, updates);
+      });
+      await b5.commit();
+    }
+  } catch (_) {}
+}
+
 function showUsernameModal(isEdit = false) {
   const input = document.getElementById('username-input');
   input.value = (isEdit && currentUsername) ? currentUsername : '';
@@ -348,6 +450,24 @@ function showUsernameModal(isEdit = false) {
   // セキュリティ設定ボタンはログイン済みのときのみ表示
   document.getElementById('username-security-row').hidden = !currentUsername;
   hideUsernameError();
+
+  // 編集モード（ログイン済み）かどうかでテキストを切り替え
+  if (isEdit && currentUsername) {
+    document.getElementById('username-modal-title').innerHTML =
+      '<i class="fa-solid fa-user-circle"></i> ニックネームを変更';
+    document.getElementById('username-modal-desc').innerHTML =
+      '新しいニックネームを入力してください。<br>チャット・タスク・マイセクションなどのデータはすべて引き継がれます。';
+    document.getElementById('username-submit-text').textContent = '変更する';
+    document.getElementById('username-skip').textContent = 'キャンセル';
+  } else {
+    document.getElementById('username-modal-title').innerHTML =
+      '<i class="fa-solid fa-user-circle"></i> ニックネームを設定';
+    document.getElementById('username-modal-desc').innerHTML =
+      'あなただけの名前を入力してください。<br>お気に入り・テーマ・マイセクションがこの名前に紐づいて保存されます。';
+    document.getElementById('username-submit-text').textContent = '設定して始める';
+    document.getElementById('username-skip').textContent = 'スキップ';
+  }
+
   setTimeout(() => input.focus(), 100);
 }
 
@@ -383,6 +503,7 @@ async function saveUsername(name) {
   // 重複チェック
   const submitBtn = document.getElementById('username-submit');
   const spinner = document.getElementById('username-submit-spinner');
+  const submitText = document.getElementById('username-submit-text');
   submitBtn.disabled = true;
   spinner.hidden = false;
   hideUsernameError();
@@ -398,6 +519,21 @@ async function saveUsername(name) {
       return;
     }
   } catch (_) { /* オフライン等は無視 */ }
+
+  // 既存ユーザーの場合はデータを旧名 → 新名へ移行
+  if (currentUsername) {
+    submitText.textContent = '移行中...';
+    try {
+      await migrateToNewUsername(currentUsername, name);
+    } catch (e) {
+      console.error('ユーザー名移行エラー:', e);
+      showUsernameError('データの移行に失敗しました。もう一度お試しください。');
+      submitBtn.disabled = false;
+      spinner.hidden = true;
+      submitText.textContent = '変更する';
+      return;
+    }
+  }
 
   submitBtn.disabled = false;
   spinner.hidden = true;
