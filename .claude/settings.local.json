@@ -1,15 +1,28 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls:*)",
-      "Bash(git add:*)",
+      "Bash(git *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git status)",
+      "Bash(git log *)",
+      "Bash(git diff *)",
+      "WebFetch(domain:mierukaweb.energymntr.com)",
+      "WebFetch(domain:embed.windy.com)",
       "Bash(git commit:*)",
-      "Bash(git push:*)",
-      "Bash(/c/portal/style.css:*)",
-      "Bash(git --version)",
-      "WebSearch",
-      "WebFetch(domain:ai.google.dev)",
-      "Bash(node -e \":*)"
+      "Read(//c/Users/frx/AppData/Local/GitHubDesktop//**)",
+      "Bash(github --add:*)",
+      "Bash(github /c/Users/frx/Desktop/portal)",
+      "Bash(echo:*)",
+      "Bash(github:*)",
+      "Bash(node --check:*)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\frx\\AppData\\Roaming\\Code\\User",
+      "C:\\Users\\frx\\Desktop\\portal\\.claude",
+      "C:\\Users\\frx\\Desktop",
+      "C:\\Users\\frx\\Desktop\\portal"
     ]
   }
 }
