@@ -226,9 +226,20 @@
         </button>
       </div>
 
-      <div class="chat-sidebar-section">
-        <div class="chat-sidebar-section-label">
+      <!-- タブ切り替え -->
+      <div class="chat-sidebar-tabs">
+        <button class="chat-sidebar-tab active" id="chat-tab-dm" data-tab="dm">
           <i class="fa-solid fa-user"></i> ダイレクト
+        </button>
+        <button class="chat-sidebar-tab" id="chat-tab-group" data-tab="group">
+          <i class="fa-solid fa-users"></i> グループ
+        </button>
+      </div>
+
+      <!-- DM パネル -->
+      <div class="chat-sidebar-panel" id="chat-panel-dm">
+        <div class="chat-sidebar-panel-header">
+          <span>ダイレクトメッセージ</span>
           <button class="chat-sidebar-add-btn" id="btn-new-dm" title="新しいDM">
             <i class="fa-solid fa-plus"></i>
           </button>
@@ -236,9 +247,10 @@
         <div id="dm-room-list" class="chat-room-list"></div>
       </div>
 
-      <div class="chat-sidebar-section">
-        <div class="chat-sidebar-section-label">
-          <i class="fa-solid fa-users"></i> グループ
+      <!-- グループ パネル -->
+      <div class="chat-sidebar-panel" id="chat-panel-group" hidden>
+        <div class="chat-sidebar-panel-header">
+          <span>グループ</span>
           <button class="chat-sidebar-add-btn" id="btn-new-group" title="新しいグループ">
             <i class="fa-solid fa-plus"></i>
           </button>

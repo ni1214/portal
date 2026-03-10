@@ -1064,6 +1064,13 @@ function updateChatBadge() {
   }
 }
 
+function switchChatSidebarTab(tab) {
+  document.getElementById('chat-tab-dm').classList.toggle('active', tab === 'dm');
+  document.getElementById('chat-tab-group').classList.toggle('active', tab === 'group');
+  document.getElementById('chat-panel-dm').hidden = (tab !== 'dm');
+  document.getElementById('chat-panel-group').hidden = (tab !== 'group');
+}
+
 function renderChatSidebar() {
   _renderRoomList('dm');
   _renderRoomList('group');
@@ -1118,6 +1125,8 @@ async function openRoom(roomId, type) {
   currentRoomId = roomId;
   currentRoomType = type;
   currentRoomMessages = [];
+  // 対応するタブに自動切り替え
+  switchChatSidebarTab(type === 'dm' ? 'dm' : 'group');
 
   document.getElementById('chat-no-room').hidden = true;
   const roomView = document.getElementById('chat-room-view');
@@ -4328,6 +4337,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     chatPanelOpen ? closeChatPanel() : openChatPanel();
   });
   document.getElementById('chat-panel-close').addEventListener('click', closeChatPanel);
+  document.getElementById('chat-tab-dm').addEventListener('click', () => switchChatSidebarTab('dm'));
+  document.getElementById('chat-tab-group').addEventListener('click', () => switchChatSidebarTab('group'));
   document.getElementById('chat-send-btn').addEventListener('click', sendChatMessage);
   document.getElementById('chat-input').addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
