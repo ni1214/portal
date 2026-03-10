@@ -5925,6 +5925,27 @@ html.font-xl { font-size: 21px; }
 }
 .btn-admin-reset-pin:hover    { background: rgba(239,68,68,0.25); }
 .btn-admin-reset-pin:disabled { opacity: 0.5; cursor: default; }
+.admin-user-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.btn-admin-delete-user {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(107,114,128,0.12);
+  border: 1px solid rgba(107,114,128,0.3);
+  color: #9ca3af;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.btn-admin-delete-user:hover {
+  background: rgba(239,68,68,0.15);
+  border-color: rgba(239,68,68,0.4);
+  color: #f87171;
+}
+.btn-admin-delete-user:disabled { opacity: 0.5; cursor: default; }
 
 /* ===========================
    設定パネル 管理者セクション

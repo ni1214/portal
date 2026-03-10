@@ -487,11 +487,12 @@ function hideUsernameError() {
 }
 
 async function applyUsername(name) {
+  const isSwitch = !!currentUsername && currentUsername !== name;
   currentUsername = name;
   localStorage.setItem('portal-username', name);
   updateUsernameDisplay();
   registerUserLogin(name);
-  loadPersonalData(name);
+  loadPersonalData(name, isSwitch);
   renderAllSections();
   closeUsernameModal();
 }
@@ -550,8 +551,10 @@ let lockClockTimer = null;
 let lastActivityAt = Date.now();
 let _autoLockTimer = null;
 
-async function loadLockSettings(username) {
+async function loadLockSettings(username, lockImmediately = false) {
   if (!username) return;
+  // ユーザー切り替え時に前のユーザーの設定をリセット
+  lockPinHash = null; lockPinEnabled = false; lockEnabled = false; autoLockMinutes = 5;
   try {
     const snap = await getDoc(doc(db, 'users', username, 'data', 'lock_pin'));
     if (snap.exists()) {
@@ -563,7 +566,11 @@ async function loadLockSettings(username) {
     }
   } catch (_) {}
   document.getElementById('btn-lock-header').hidden = !(lockEnabled && lockPinEnabled && currentUsername);
-  if (lockEnabled && lockPinEnabled) startActivityTracking();
+  if (lockEnabled && lockPinEnabled) {
+    startActivityTracking();
+    // ユーザー切り替え時はすぐにロック（PIN設定がある場合のみ）
+    if (lockImmediately) lockPortal();
+  }
 }
 
 async function saveLockSettings() {
@@ -748,6 +755,46 @@ function closeAdminModal() {
   document.getElementById('admin-modal').classList.remove('visible');
 }
 
+async function deleteUserData(username) {
+  // 1. users_list エントリ + data サブドキュメントを一括削除
+  const batch1 = writeBatch(db);
+  batch1.delete(doc(db, 'users_list', username));
+  for (const docId of ['preferences', 'section_order', 'lock_pin', 'chat_reads']) {
+    batch1.delete(doc(db, 'users', username, 'data', docId));
+  }
+  await batch1.commit();
+
+  // 2. private_sections
+  try {
+    const psSnap = await getDocs(collection(db, 'users', username, 'private_sections'));
+    if (!psSnap.empty) {
+      const b = writeBatch(db);
+      psSnap.forEach(d => b.delete(d.ref));
+      await b.commit();
+    }
+  } catch (_) {}
+
+  // 3. private_cards
+  try {
+    const pcSnap = await getDocs(collection(db, 'users', username, 'private_cards'));
+    if (!pcSnap.empty) {
+      const b = writeBatch(db);
+      pcSnap.forEach(d => b.delete(d.ref));
+      await b.commit();
+    }
+  } catch (_) {}
+
+  // 4. email_profiles
+  try {
+    const epSnap = await getDocs(collection(db, 'users', username, 'email_profiles'));
+    if (!epSnap.empty) {
+      const b = writeBatch(db);
+      epSnap.forEach(d => b.delete(d.ref));
+      await b.commit();
+    }
+  } catch (_) {}
+}
+
 async function loadUsersForAdmin() {
   const listEl = document.getElementById('admin-user-list');
   listEl.innerHTML = '<div class="admin-loading">読み込み中...</div>';
@@ -762,10 +809,15 @@ async function loadUsersForAdmin() {
       item.innerHTML = `
         <div class="admin-user-info">
           <span class="admin-user-avatar">${name.charAt(0).toUpperCase()}</span>
-          <span class="admin-user-name">${name}</span>
+          <span class="admin-user-name">${esc(name)}</span>
         </div>
-        <button class="btn-admin-reset-pin" data-username="${name}">PINリセット</button>
+        <div class="admin-user-actions">
+          <button class="btn-admin-reset-pin" data-username="${esc(name)}">PINリセット</button>
+          <button class="btn-admin-delete-user" data-username="${esc(name)}"><i class="fa-solid fa-trash-can"></i> 削除</button>
+        </div>
       `;
+
+      // PINリセット
       item.querySelector('.btn-admin-reset-pin').addEventListener('click', async (e) => {
         const btn = e.currentTarget;
         if (!confirm(`${name} さんのPINをリセットしますか？`)) return;
@@ -781,6 +833,34 @@ async function loadUsersForAdmin() {
           }
         } catch (_) { btn.disabled = false; btn.textContent = 'エラー'; }
       });
+
+      // ユーザー削除
+      item.querySelector('.btn-admin-delete-user').addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        if (!confirm(`「${name}」のアカウントとすべての個人データを削除しますか？\nこの操作は取り消せません。`)) return;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 削除中...';
+        try {
+          await deleteUserData(name);
+          item.remove();
+          // 自分自身を削除した場合はログアウト
+          if (name === currentUsername) {
+            currentUsername = null;
+            localStorage.removeItem('portal-username');
+            location.reload();
+          }
+          // リストが空になったか確認
+          if (!listEl.querySelector('.admin-user-item')) {
+            listEl.innerHTML = '<div class="admin-loading">ユーザーなし</div>';
+          }
+        } catch (err) {
+          console.error('ユーザー削除エラー:', err);
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-trash-can"></i> 削除';
+          alert('削除に失敗しました。');
+        }
+      });
+
       listEl.appendChild(item);
     }
   } catch (_) {
@@ -2441,7 +2521,7 @@ function savePreferencesToFirestore() {
   }, 600);
 }
 
-async function loadPersonalData(username) {
+async function loadPersonalData(username, lockOnSwitch = false) {
   if (!username) return;
   try {
     // ログイン記録を更新（並列で実行、失敗しても続行）
@@ -2487,7 +2567,7 @@ async function loadPersonalData(username) {
     loadChatReadTimes(username);
     startChatListeners(username);
     startTaskListeners(username);
-    loadLockSettings(username);
+    await loadLockSettings(username, lockOnSwitch);
   } catch (err) {
     console.error('個人データ読み込みエラー:', err);
   }
