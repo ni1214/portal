@@ -657,9 +657,43 @@ function lockPortal() {
   document.body.style.overflow = 'hidden';
   // リロード後も再ロックされるようにセッションストレージに記録
   sessionStorage.setItem('portal-locked', currentUsername);
+  // 通知インジケーター更新
+  updateLockNotifications();
   // 時計更新
   updateLockClock();
   lockClockTimer = setInterval(updateLockClock, 1000);
+}
+
+function updateLockNotifications() {
+  const el = document.getElementById('lock-notifications');
+  if (!el) return;
+
+  const items = [];
+
+  // チャット未読
+  const chatUnread = [...dmRooms, ...groupRooms].reduce((sum, r) => sum + getRoomUnread(r), 0);
+  if (chatUnread > 0) items.push({ icon: 'fa-comments',       count: chatUnread, color: '#60a5fa', label: 'チャット' });
+
+  // お知らせ未読
+  const noticeUnread = allNotices.filter(n => !readNoticeIds.has(n.id)).length;
+  if (noticeUnread > 0) items.push({ icon: 'fa-bell',          count: noticeUnread, color: '#a78bfa', label: 'お知らせ' });
+
+  // タスク（承諾待ち + 完了報告）
+  const taskCount = receivedTasks.filter(t => t.status === 'pending').length
+                  + sentTasks.filter(t => t.status === 'done' && !t.notifiedDone).length;
+  if (taskCount > 0) items.push({ icon: 'fa-list-check',      count: taskCount, color: '#fbbf24', label: 'タスク' });
+
+  // ファイル転送受信待ち
+  const ftCount = _ftIncoming.filter(s => s.status === 'pending').length;
+  if (ftCount > 0) items.push({ icon: 'fa-file-arrow-up',     count: ftCount, color: '#34d399', label: 'ファイル' });
+
+  if (!items.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML = items.map(item => `
+    <div class="lock-notif-item" title="${item.label} ${item.count}件">
+      <i class="fa-solid ${item.icon}" style="color:${item.color}"></i>
+      <span>${item.count}</span>
+    </div>`).join('');
 }
 
 function lockSwitchUser() {
@@ -1012,6 +1046,7 @@ function updateNoticeBadge() {
     badge.hidden = true;
     bell.classList.remove('has-unread');
   }
+  updateLockNotifications();
 }
 
 // お知らせボードが画面内に入ったら自動既読
@@ -1222,6 +1257,7 @@ function updateChatBadge() {
     badge.hidden = true;
     fab.classList.remove('has-unread');
   }
+  updateLockNotifications();
 }
 
 function switchChatSidebarTab(tab) {
@@ -1548,6 +1584,7 @@ function updateFtBadge() {
     badge.hidden = true;
     fab.classList.remove('has-pending');
   }
+  updateLockNotifications();
 }
 
 function renderFtPanel() {
@@ -2048,6 +2085,7 @@ function updateTaskBadge() {
     badge.hidden = true;
     btn.classList.remove('has-badge');
   }
+  updateLockNotifications();
 }
 
 function openTaskModal() {

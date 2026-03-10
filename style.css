@@ -6189,6 +6189,33 @@ html.font-xl { font-size: 21px; }
 .lock-key-del:active { background: rgba(255,255,255,0.1); }
 .lock-key-empty { visibility: hidden; }
 .lock-hint { margin-top: 28px; font-size: 0.68rem; color: rgba(255,255,255,0.25); text-align: center; }
+.lock-notifications {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 10px 0 4px;
+  min-height: 28px;
+}
+.lock-notif-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.75);
+  backdrop-filter: blur(6px);
+  animation: lockNotifIn 0.3s ease;
+}
+.lock-notif-item i  { font-size: 0.75rem; }
+.lock-notif-item span { font-weight: 700; font-size: 0.78rem; }
+@keyframes lockNotifIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.9); }
+  to   { opacity: 1; transform: none; }
+}
 .lock-switch-user { margin-top: 24px; text-align: center; }
 .btn-lock-switch {
   background: none;
