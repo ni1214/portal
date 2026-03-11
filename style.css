@@ -2483,8 +2483,8 @@ body::after {
 .card-context-menu {
   position: fixed;
   z-index: 9999;
-  background: rgba(16, 20, 50, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-glass);
   border-radius: 10px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   overflow: hidden;
@@ -2516,7 +2516,7 @@ body::after {
 }
 
 .ctx-item + .ctx-item {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--border-glass);
 }
 
 .ctx-edit:hover  { background: rgba(74, 158, 255, 0.15); color: var(--accent-blue); }
@@ -3433,6 +3433,11 @@ html.font-xl { font-size: 21px; }
 .ctx-add-child:hover {
   background: rgba(0, 200, 255, 0.15);
 }
+
+/* ウォームテーマ: コンテキストメニューホバー色 */
+[data-theme="warm"] .ctx-edit:hover     { background: rgba(255, 173, 96, 0.15); }
+[data-theme="warm"] .ctx-delete:hover   { background: rgba(255, 107, 157, 0.15); }
+[data-theme="warm"] .ctx-add-child:hover { background: rgba(255, 204, 122, 0.15); }
 
 /* テーマ別調整 */
 [data-theme="light"] .card-children-badge {
