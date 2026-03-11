@@ -4885,6 +4885,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
   });
 
+  // ===== チャット内ショートカット（タスク・ファイル転送） =====
+  document.getElementById('chat-launch-task').addEventListener('click', openTaskModal);
+  document.getElementById('chat-launch-ft').addEventListener('click', openFileTransferPanel);
+
   // ===== ファイル転送FAB・パネル =====
   document.getElementById('ft-fab').addEventListener('click', () => {
     _ftPanelOpen ? closeFileTransferPanel() : openFileTransferPanel();
@@ -5251,6 +5255,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fab   = document.getElementById('settings-fab');
     if (!panel.hasAttribute('hidden') && !panel.contains(e.target) && e.target !== fab && !fab.contains(e.target)) {
       closeSettingsPanel();
+    }
+  });
+
+  // ===== ファイル転送中のページ離脱警告 =====
+  window.addEventListener('beforeunload', e => {
+    const pendingOut = _ftOutgoing.filter(s => s.status === 'pending' || s.status === 'accepted');
+    const pendingIn  = _ftIncoming.filter(s => s.status === 'pending');
+    if (pendingOut.length > 0 || pendingIn.length > 0) {
+      e.preventDefault();
+      e.returnValue = '';
     }
   });
 });
