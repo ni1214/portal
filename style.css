@@ -1557,9 +1557,9 @@ body::after {
 }
 
 .btn-edit-card  { background: var(--accent-blue); }
-.btn-edit-card:hover  { background: #3a8eef; transform: scale(1.1); }
+.btn-edit-card:hover  { filter: brightness(0.85); transform: scale(1.1); }
 .btn-delete-card { background: var(--accent-pink); }
-.btn-delete-card:hover { background: #e04e8f; transform: scale(1.1); }
+.btn-delete-card:hover { filter: brightness(0.85); transform: scale(1.1); }
 
 /* ===========================
    Add Card Button
@@ -2916,6 +2916,12 @@ html.font-xl { font-size: 21px; }
   border-color: rgba(74, 100, 200, 0.35);
   box-shadow: 0 0 0 3px rgba(74, 100, 200, 0.1);
 }
+[data-theme="light"] .btn-favorites-only.active {
+  background: rgba(74, 158, 255, 0.12);
+  border-color: rgba(74, 158, 255, 0.45);
+  color: var(--accent-blue);
+  box-shadow: 0 0 12px rgba(74, 158, 255, 0.18);
+}
 [data-theme="light"] .btn-notice-bell.has-unread {
   border-color: rgba(245, 158, 11, 0.5);
 }
@@ -3438,6 +3444,28 @@ html.font-xl { font-size: 21px; }
 [data-theme="warm"] .ctx-edit:hover     { background: rgba(255, 173, 96, 0.15); }
 [data-theme="warm"] .ctx-delete:hover   { background: rgba(255, 107, 157, 0.15); }
 [data-theme="warm"] .ctx-add-child:hover { background: rgba(255, 204, 122, 0.15); }
+
+/* ウォームテーマ: お気に入りボタン */
+[data-theme="warm"] .btn-favorites-only:hover {
+  background: rgba(255, 173, 96, 0.12);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+[data-theme="warm"] .btn-favorites-only.active {
+  background: rgba(255, 173, 96, 0.18);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  box-shadow: 0 0 12px rgba(255, 173, 96, 0.3);
+}
+
+/* ウォームテーマ: 子カードバッジ */
+[data-theme="warm"] .card-children-badge {
+  color: var(--bg-primary);
+  box-shadow: 0 2px 8px rgba(255, 204, 122, 0.35);
+}
+[data-theme="warm"] .card-children-badge:hover {
+  box-shadow: 0 3px 12px rgba(255, 204, 122, 0.55);
+}
 
 /* テーマ別調整 */
 [data-theme="light"] .card-children-badge {
