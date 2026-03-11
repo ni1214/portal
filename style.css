@@ -3310,52 +3310,60 @@ html.font-xl { font-size: 21px; }
 /* 子カード数バッジ */
 .card-children-badge {
   position: absolute;
-  bottom: 7px;
-  right: 7px;
+  bottom: 8px;
+  right: 8px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   background: var(--accent-cyan);
   color: #0a0e27;
   border: none;
-  border-radius: 20px;
-  padding: 2px 8px 2px 6px;
-  font-size: 0.68rem;
+  border-radius: 24px;
+  padding: 5px 13px 5px 10px;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
   z-index: 3;
-  box-shadow: 0 2px 8px rgba(0, 200, 255, 0.35);
+  box-shadow: 0 3px 12px rgba(0, 200, 255, 0.45), 0 1px 4px rgba(0,0,0,0.3);
   pointer-events: all;
   line-height: 1.4;
 }
 .card-children-badge:hover {
-  transform: scale(1.08);
-  box-shadow: 0 3px 12px rgba(0, 200, 255, 0.55);
+  transform: scale(1.12);
+  box-shadow: 0 4px 18px rgba(0, 200, 255, 0.65), 0 2px 6px rgba(0,0,0,0.3);
 }
 .card-children-badge i {
-  font-size: 0.7rem;
+  font-size: 0.88rem;
 }
 
 /* ポップアップ本体 */
 .card-child-popup {
   position: absolute;
   z-index: 2000;
-  min-width: 260px;
+  min-width: 280px;
+  max-width: 360px;
   background: var(--bg-secondary);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
   border: 1px solid var(--border-glass);
+  border-top: 3px solid var(--accent-cyan);
   border-radius: var(--radius-lg);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    0 4px 16px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(0, 200, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   padding: 0;
   overflow: hidden;
-  animation: popupSlideIn 0.18s ease both;
+  animation: popupSlideIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 .card-child-popup.closing {
-  animation: popupSlideOut 0.18s ease both;
+  animation: popupSlideOut 0.16s ease both;
 }
 
 @keyframes popupSlideIn {
-  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+  from { opacity: 0; transform: translateY(-10px) scale(0.95); }
   to   { opacity: 1; transform: none; }
 }
 @keyframes popupSlideOut {
@@ -3369,37 +3377,38 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 10px 12px;
-  background: var(--bg-glass);
+  padding: 11px 14px;
+  background: linear-gradient(135deg, rgba(0, 200, 255, 0.1) 0%, transparent 60%);
   border-bottom: 1px solid var(--border-glass);
 }
 .card-child-popup__title {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 .card-child-popup__icon {
   display: flex;
   align-items: center;
-  font-size: 0.9rem;
-  opacity: 0.85;
+  font-size: 0.88rem;
 }
 .card-child-popup__close {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   background: none;
   border: 1px solid var(--border-glass);
   border-radius: 50%;
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
   flex-shrink: 0;
 }
 .card-child-popup__close:hover {
@@ -3408,28 +3417,78 @@ html.font-xl { font-size: 21px; }
   border-color: rgba(255, 80, 80, 0.4);
 }
 
-/* ポップアップ内カードグリッド */
+/* ポップアップ内カードリスト */
 .card-child-popup__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: var(--space-sm);
-  padding: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
 }
 
-/* ポップアップ内カードのディール（配布）アニメーション */
+/* ポップアップ内 link-card をリスト行スタイルに */
+.card-child-popup__grid .link-card {
+  flex-direction: row;
+  align-items: center;
+  min-height: 48px;
+  padding: 9px 14px 9px 12px;
+  gap: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.card-child-popup__grid .link-card::before {
+  display: none;
+}
+.card-child-popup__grid .link-card:hover {
+  background: rgba(0, 200, 255, 0.08);
+  border-color: rgba(0, 200, 255, 0.22);
+  transform: translateX(4px);
+  box-shadow: inset 3px 0 0 var(--accent-cyan), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.card-child-popup__grid .link-card .card-icon {
+  font-size: 1.4rem;
+  min-width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+  margin: 0;
+}
+.card-child-popup__grid .link-card .card-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: left;
+  white-space: normal;
+  line-height: 1.35;
+  color: var(--text-primary);
+  flex: 1;
+  margin: 0;
+}
+
+/* ポップアップ内カードの段階的フェードイン */
 .card-child-popup__grid .link-card,
 .card-child-popup__grid .btn-add-card {
-  animation: cardDeal 0.22s ease both;
+  animation: cardSlideIn 0.2s ease both;
 }
-@keyframes cardDeal {
-  from { opacity: 0; transform: translateY(-10px) scale(0.93); }
+.card-child-popup__grid .link-card:nth-child(1) { animation-delay: 0.03s; }
+.card-child-popup__grid .link-card:nth-child(2) { animation-delay: 0.07s; }
+.card-child-popup__grid .link-card:nth-child(3) { animation-delay: 0.11s; }
+.card-child-popup__grid .link-card:nth-child(4) { animation-delay: 0.15s; }
+.card-child-popup__grid .link-card:nth-child(n+5) { animation-delay: 0.18s; }
+@keyframes cardSlideIn {
+  from { opacity: 0; transform: translateX(-8px); }
   to   { opacity: 1; transform: none; }
 }
 
 /* ポップアップ内の追加ボタン */
 .card-child-popup__grid .btn-add-card {
   font-size: 0.8rem;
-  min-height: 70px;
+  min-height: 40px;
+  border-radius: 8px;
+  margin-top: 2px;
+  animation-delay: 0.22s;
 }
 
 /* コンテキストメニュー: 子カード追加 */
@@ -3461,18 +3520,56 @@ html.font-xl { font-size: 21px; }
 /* ウォームテーマ: 子カードバッジ */
 [data-theme="warm"] .card-children-badge {
   color: var(--bg-primary);
-  box-shadow: 0 2px 8px rgba(255, 204, 122, 0.35);
+  box-shadow: 0 3px 12px rgba(255, 204, 122, 0.45), 0 1px 4px rgba(0,0,0,0.3);
 }
 [data-theme="warm"] .card-children-badge:hover {
-  box-shadow: 0 3px 12px rgba(255, 204, 122, 0.55);
+  box-shadow: 0 4px 18px rgba(255, 204, 122, 0.65), 0 2px 6px rgba(0,0,0,0.3);
 }
 
-/* テーマ別調整 */
+/* ウォームテーマ: ポップアップ */
+[data-theme="warm"] .card-child-popup {
+  border-top-color: var(--accent-blue);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.45),
+    0 4px 16px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 173, 96, 0.1);
+}
+[data-theme="warm"] .card-child-popup__header {
+  background: linear-gradient(135deg, rgba(255, 173, 96, 0.1) 0%, transparent 60%);
+}
+[data-theme="warm"] .card-child-popup__title {
+  color: var(--accent-blue);
+}
+[data-theme="warm"] .card-child-popup__grid .link-card:hover {
+  background: rgba(255, 173, 96, 0.1);
+  border-color: rgba(255, 173, 96, 0.3);
+  box-shadow: inset 3px 0 0 var(--accent-blue), 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* ライトテーマ: 子カードバッジ */
 [data-theme="light"] .card-children-badge {
   color: #fff;
+  box-shadow: 0 3px 12px rgba(0, 120, 200, 0.4), 0 1px 4px rgba(0,0,0,0.15);
 }
+[data-theme="light"] .card-children-badge:hover {
+  box-shadow: 0 4px 18px rgba(0, 120, 200, 0.55), 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* ライトテーマ: ポップアップ */
 [data-theme="light"] .card-child-popup {
   background: rgba(240, 244, 255, 0.98);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.18),
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(0, 120, 200, 0.1);
+}
+[data-theme="light"] .card-child-popup__grid .link-card {
+  background: rgba(0, 0, 0, 0.02);
+}
+[data-theme="light"] .card-child-popup__grid .link-card:hover {
+  background: rgba(0, 120, 200, 0.07);
+  border-color: rgba(0, 120, 200, 0.2);
+  box-shadow: inset 3px 0 0 var(--accent-cyan), 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 /* ========== 個人TODOパネル ========== */
 .todo-section {
