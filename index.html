@@ -63,6 +63,11 @@
         <span class="task-badge" id="task-badge" hidden>0</span>
       </button>
 
+      <button class="btn-reqboard" id="btn-reqboard" title="部門間依頼・目安箱">
+        <i class="fa-solid fa-clipboard-list"></i>
+        <span class="req-badge" id="req-badge" hidden>0</span>
+      </button>
+
       <button class="btn-notice-bell" id="btn-notice-bell" title="お知らせ">
         <i class="fa-solid fa-bell"></i>
         <span class="notice-unread-badge" id="notice-unread-badge" hidden>0</span>
@@ -904,6 +909,17 @@
         <div class="admin-user-list" id="admin-user-list">
           <div class="admin-loading">読み込み中...</div>
         </div>
+
+        <!-- 目安箱 閲覧者管理 -->
+        <div class="admin-section">
+          <span class="admin-panel-subtitle"><i class="fa-solid fa-box-open"></i> 目安箱 閲覧者管理</span>
+          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">投稿された目安箱の内容を閲覧できるユーザー名を登録してください。</p>
+          <div id="admin-suggbox-viewers" class="admin-suggbox-viewers"></div>
+          <div class="admin-suggbox-add-row">
+            <input type="text" id="admin-suggbox-add-input" class="form-input" placeholder="ユーザー名を入力" style="flex:1;min-width:0">
+            <button class="btn-modal-primary" id="admin-suggbox-add-btn">追加</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1081,6 +1097,81 @@
 
       <div id="task-tab-content" class="task-tab-content"></div>
 
+    </div>
+  </div>
+
+  <!-- ==================== 部門間依頼・目安箱 モーダル ==================== -->
+  <div class="modal-overlay" id="reqboard-modal">
+    <div class="reqboard-modal-inner">
+
+      <div class="reqboard-modal-header">
+        <span><i class="fa-solid fa-clipboard-list"></i> 部門間依頼・目安箱</span>
+        <button class="reqboard-modal-close" id="reqboard-modal-close" title="閉じる">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- メインタブ -->
+      <div class="reqboard-tabs">
+        <button class="reqboard-tab active" data-tab="request">
+          <i class="fa-solid fa-arrows-left-right-to-line"></i> 部門間依頼
+          <span class="reqboard-tab-badge" id="req-tab-request-badge" hidden></span>
+        </button>
+        <button class="reqboard-tab" data-tab="suggestion">
+          <i class="fa-solid fa-box-open"></i> 目安箱
+          <span class="reqboard-tab-badge" id="req-tab-suggestion-badge" hidden></span>
+        </button>
+      </div>
+
+      <!-- 部門間依頼コンテンツ -->
+      <div id="reqboard-request-area">
+        <div class="reqboard-subtabs">
+          <button class="reqboard-subtab active" data-subtab="received">受け取った依頼</button>
+          <button class="reqboard-subtab" data-subtab="sent">自分の依頼</button>
+          <button class="reqboard-subtab" data-subtab="new"><i class="fa-solid fa-plus"></i> 新規投稿</button>
+        </div>
+        <div id="reqboard-request-content" class="reqboard-content"></div>
+      </div>
+
+      <!-- 目安箱コンテンツ -->
+      <div id="reqboard-suggestion-area" hidden>
+        <div id="reqboard-suggestion-content" class="reqboard-content"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ステータス変更モーダル -->
+  <div class="modal-overlay" id="req-status-modal">
+    <div class="modal-glass" style="max-width:400px;width:90%">
+      <h3 class="modal-title"><i class="fa-solid fa-pen-to-square"></i> ステータス変更</h3>
+      <div class="form-group">
+        <label class="form-label">新しいステータス</label>
+        <div class="req-status-select-group" id="req-status-select-group"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">コメント（任意）</label>
+        <textarea id="req-status-note" class="form-input" rows="3" placeholder="協議内容・決定事項など"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="req-status-cancel">キャンセル</button>
+        <button class="btn-modal-primary" id="req-status-ok">変更する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 目安箱返信モーダル -->
+  <div class="modal-overlay" id="sugg-reply-modal">
+    <div class="modal-glass" style="max-width:420px;width:90%">
+      <h3 class="modal-title"><i class="fa-solid fa-reply"></i> 返信を送る</h3>
+      <div class="form-group">
+        <label class="form-label">返信内容</label>
+        <textarea id="sugg-reply-text" class="form-input" rows="4" placeholder="投稿者への返信・回答を入力..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="sugg-reply-cancel">キャンセル</button>
+        <button class="btn-modal-primary" id="sugg-reply-ok">送信する</button>
+      </div>
     </div>
   </div>
 

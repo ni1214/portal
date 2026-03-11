@@ -333,6 +333,30 @@ let taskModalOpen = false;
 let activeTaskTab = 'received';
 let newTaskAssignee = '';
 
+// 部門間依頼・目安箱
+const DEFAULT_DEPARTMENTS = ['営業', '設計', '生産管理（バラ図）', '工場', '工事課'];
+const REQ_STATUS_LABEL = {
+  submitted: { text: '提出済み', cls: 'status-submitted' },
+  reviewing: { text: '検討中',   cls: 'status-reviewing' },
+  accepted:  { text: '対応する', cls: 'status-accepted' },
+  rejected:  { text: '見送り',   cls: 'status-rejected' },
+};
+let reqModalOpen = false;
+let activeReqTab = 'request';
+let activeReqSubTab = 'received';
+let receivedRequests = [];
+let sentRequests = [];
+let suggestionList = [];
+let _reqReceivedUnsub = null;
+let _reqSentUnsub = null;
+let _suggUnsub = null;
+let isSuggestionBoxViewer = false;
+let currentDepartments = [...DEFAULT_DEPARTMENTS];
+let suggestionBoxViewers = [];
+let _pendingStatusChange = null;    // { reqId, status }
+let _pendingSuggReply = null;       // suggId
+let lastViewedSuggestionsAt = 0;    // Unix秒
+
 // ========== PIN 認証 ==========
 const PIN_SALT = 'seisan-portal-v1';
 
@@ -2357,6 +2381,558 @@ async function deleteTask(taskId, confirmMsg) {
   } catch (err) { console.error('タスク削除エラー:', err); }
 }
 
+// ========== 部門間依頼・目安箱 ==========
+
+async function loadConfigDepartmentsAndViewers() {
+  try {
+    const snap = await getDoc(doc(db, 'portal', 'config'));
+    if (snap.exists()) {
+      const data = snap.data();
+      if (Array.isArray(data.departments) && data.departments.length > 0) {
+        currentDepartments = data.departments;
+      }
+      suggestionBoxViewers = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
+      isSuggestionBoxViewer = currentUsername ? suggestionBoxViewers.includes(currentUsername) : false;
+    }
+  } catch (err) { console.error('config読み込みエラー:', err); }
+}
+
+function startRequestListeners(username) {
+  if (!username) return;
+  if (_reqReceivedUnsub) { _reqReceivedUnsub(); _reqReceivedUnsub = null; }
+  if (_reqSentUnsub)     { _reqSentUnsub();     _reqSentUnsub = null; }
+  if (_suggUnsub)        { _suggUnsub();         _suggUnsub = null; }
+
+  // 自分の部署宛て依頼を監視
+  const myDept = userEmailProfile ? userEmailProfile.department : null;
+  if (myDept) {
+    const rQ = query(collection(db, 'cross_dept_requests'), where('toDept', '==', myDept));
+    _reqReceivedUnsub = onSnapshot(rQ, snap => {
+      receivedRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+      updateReqBadge();
+      if (reqModalOpen && activeReqTab === 'request' && activeReqSubTab === 'received') renderReqContent();
+    }, err => console.error('receivedRequests listener error:', err));
+  }
+
+  // 自分が送信した依頼を監視
+  const sQ = query(collection(db, 'cross_dept_requests'), where('createdBy', '==', username));
+  _reqSentUnsub = onSnapshot(sQ, snap => {
+    sentRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+    updateReqBadge();
+    if (reqModalOpen && activeReqTab === 'request' && activeReqSubTab === 'sent') renderReqContent();
+  }, err => console.error('sentRequests listener error:', err));
+
+  // 目安箱（閲覧権限あり）
+  if (isSuggestionBoxViewer) {
+    const suggQ = query(collection(db, 'suggestion_box'), orderBy('createdAt', 'desc'));
+    _suggUnsub = onSnapshot(suggQ, snap => {
+      suggestionList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      updateReqBadge();
+      if (reqModalOpen && activeReqTab === 'suggestion') renderReqContent();
+    }, err => console.error('suggestion_box listener error:', err));
+  }
+}
+
+function stopRequestListeners() {
+  if (_reqReceivedUnsub) { _reqReceivedUnsub(); _reqReceivedUnsub = null; }
+  if (_reqSentUnsub)     { _reqSentUnsub();     _reqSentUnsub = null; }
+  if (_suggUnsub)        { _suggUnsub();         _suggUnsub = null; }
+  receivedRequests = [];
+  sentRequests = [];
+  suggestionList = [];
+}
+
+function updateReqBadge() {
+  const badge = document.getElementById('req-badge');
+  if (!badge) return;
+  const myDept = userEmailProfile ? userEmailProfile.department : null;
+  // 受け取った依頼のうち「提出済み（未対応）」
+  const recvCount = myDept ? receivedRequests.filter(r => r.status === 'submitted').length : 0;
+  // 自分の依頼でステータス変更通知
+  const sentCount = sentRequests.filter(r => r.notifyCreator === true).length;
+  // 目安箱の未読
+  let suggCount = 0;
+  if (isSuggestionBoxViewer) {
+    const lastViewed = lastViewedSuggestionsAt;
+    suggCount = suggestionList.filter(s => (s.createdAt?.seconds ?? 0) > lastViewed).length;
+  }
+  const total = recvCount + sentCount + suggCount;
+  badge.hidden = total === 0;
+  badge.textContent = total > 99 ? '99+' : String(total);
+
+  // タブバッジ
+  const reqTabBadge  = document.getElementById('req-tab-request-badge');
+  const suggTabBadge = document.getElementById('req-tab-suggestion-badge');
+  if (reqTabBadge) {
+    const reqTotal = recvCount + sentCount;
+    reqTabBadge.hidden = reqTotal === 0;
+    reqTabBadge.textContent = reqTotal > 99 ? '99+' : String(reqTotal);
+  }
+  if (suggTabBadge) {
+    suggTabBadge.hidden = suggCount === 0;
+    suggTabBadge.textContent = suggCount > 99 ? '99+' : String(suggCount);
+  }
+}
+
+function openReqModal(initialTab) {
+  reqModalOpen = true;
+  if (initialTab) activeReqTab = initialTab;
+  document.getElementById('reqboard-modal').classList.add('visible');
+  _syncReqTabUI();
+  renderReqContent();
+}
+
+function closeReqModal() {
+  reqModalOpen = false;
+  document.getElementById('reqboard-modal').classList.remove('visible');
+}
+
+function switchReqTab(tab) {
+  activeReqTab = tab;
+  if (tab === 'suggestion') {
+    _markSuggestionsViewed();
+  }
+  _syncReqTabUI();
+  renderReqContent();
+}
+
+function switchReqSubTab(subtab) {
+  activeReqSubTab = subtab;
+  // 自分の依頼タブを開いたら notifyCreator=true のものをクリア
+  if (subtab === 'sent') {
+    sentRequests.filter(r => r.notifyCreator).forEach(r => markRequestSeen(r.id));
+  }
+  _syncReqSubTabUI();
+  renderReqContent();
+}
+
+function _syncReqTabUI() {
+  document.querySelectorAll('.reqboard-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === activeReqTab);
+  });
+  document.getElementById('reqboard-request-area').hidden    = activeReqTab !== 'request';
+  document.getElementById('reqboard-suggestion-area').hidden = activeReqTab !== 'suggestion';
+}
+
+function _syncReqSubTabUI() {
+  document.querySelectorAll('.reqboard-subtab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.subtab === activeReqSubTab);
+  });
+}
+
+function renderReqContent() {
+  if (!reqModalOpen) return;
+  if (activeReqTab === 'request') {
+    _syncReqSubTabUI();
+    const container = document.getElementById('reqboard-request-content');
+    if (!container) return;
+    if (activeReqSubTab === 'received')   _renderReceivedRequests(container);
+    else if (activeReqSubTab === 'sent')  _renderSentRequests(container);
+    else if (activeReqSubTab === 'new')   _renderNewRequestForm(container);
+  } else {
+    const container = document.getElementById('reqboard-suggestion-content');
+    if (!container) return;
+    _renderSuggestionPanel(container);
+  }
+}
+
+function _reqStatusHtml(status) {
+  const s = REQ_STATUS_LABEL[status] || { text: status, cls: '' };
+  return `<span class="req-status-badge ${s.cls}">${s.text}</span>`;
+}
+
+function _renderReceivedRequests(container) {
+  const myDept = userEmailProfile ? userEmailProfile.department : null;
+  if (!myDept) {
+    container.innerHTML = `<div class="req-empty"><i class="fa-solid fa-building"></i><p>まず設定から部署を登録してください</p></div>`;
+    return;
+  }
+  if (receivedRequests.length === 0) {
+    container.innerHTML = `<div class="req-empty"><i class="fa-solid fa-inbox"></i><p>受け取った依頼はありません</p></div>`;
+    return;
+  }
+  container.innerHTML = receivedRequests.map(r => `
+    <div class="req-item">
+      <div class="req-item-header">
+        ${_reqStatusHtml(r.status)}
+        <span class="req-dept-badge from">${escHtml(r.fromDept || r.createdBy)}</span>
+        <span class="req-arrow">→</span>
+        <span class="req-dept-badge to">${escHtml(r.toDept)}</span>
+        <span class="req-date">${_fmtTs(r.createdAt)}</span>
+      </div>
+      <div class="req-item-title">${escHtml(r.title)}</div>
+      <div class="req-item-body">${escHtml(r.content)}</div>
+      ${r.proposal ? `<div class="req-item-sub"><span class="req-sub-label">対策・提案</span>${escHtml(r.proposal)}</div>` : ''}
+      ${r.remarks  ? `<div class="req-item-sub"><span class="req-sub-label">備考</span>${escHtml(r.remarks)}</div>` : ''}
+      ${r.statusNote ? `<div class="req-item-sub"><span class="req-sub-label">コメント</span>${escHtml(r.statusNote)}</div>` : ''}
+      <div class="req-item-actions">
+        <button class="btn-req-status" data-id="${r.id}"><i class="fa-solid fa-pen-to-square"></i> ステータス変更</button>
+      </div>
+    </div>
+  `).join('');
+  container.querySelectorAll('.btn-req-status').forEach(btn => {
+    btn.addEventListener('click', () => openStatusModal(btn.dataset.id));
+  });
+}
+
+function _renderSentRequests(container) {
+  if (sentRequests.length === 0) {
+    container.innerHTML = `<div class="req-empty"><i class="fa-solid fa-paper-plane"></i><p>投稿した依頼はありません</p></div>`;
+    return;
+  }
+  container.innerHTML = sentRequests.map(r => `
+    <div class="req-item${r.notifyCreator ? ' req-item--notify' : ''}">
+      <div class="req-item-header">
+        ${_reqStatusHtml(r.status)}
+        <span class="req-dept-badge to">${escHtml(r.toDept)}</span>
+        <span class="req-date">${_fmtTs(r.createdAt)}</span>
+        ${r.notifyCreator ? '<span class="req-notify-dot" title="ステータスが変更されました">●</span>' : ''}
+      </div>
+      <div class="req-item-title">${escHtml(r.title)}</div>
+      <div class="req-item-body">${escHtml(r.content)}</div>
+      ${r.statusNote ? `<div class="req-item-sub"><span class="req-sub-label">コメント</span>${escHtml(r.statusNote)}</div>` : ''}
+      <div class="req-item-actions">
+        <button class="btn-req-status" data-id="${r.id}"><i class="fa-solid fa-pen-to-square"></i> ステータス変更</button>
+      </div>
+    </div>
+  `).join('');
+  container.querySelectorAll('.btn-req-status').forEach(btn => {
+    btn.addEventListener('click', () => openStatusModal(btn.dataset.id));
+  });
+}
+
+function _renderNewRequestForm(container) {
+  const deptOptions = currentDepartments.map(d =>
+    `<option value="${escHtml(d)}">${escHtml(d)}</option>`
+  ).join('');
+  container.innerHTML = `
+    <div class="req-form">
+      <div class="form-group">
+        <label class="form-label">件名 <span class="req-required">*</span></label>
+        <input type="text" id="req-new-title" class="form-input" placeholder="例：押し緑の向きについて" maxlength="60">
+      </div>
+      <div class="form-group">
+        <label class="form-label">依頼先部署 <span class="req-required">*</span></label>
+        <select id="req-new-todept" class="form-input">
+          <option value="">選択してください</option>
+          ${deptOptions}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">内容 <span class="req-required">*</span></label>
+        <textarea id="req-new-content" class="form-input" rows="4" placeholder="具体的な内容を記入してください"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">対策・提案（任意）</label>
+        <textarea id="req-new-proposal" class="form-input" rows="2" placeholder="改善案や提案があれば"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">備考（任意）</label>
+        <input type="text" id="req-new-remarks" class="form-input" placeholder="その他補足">
+      </div>
+      <div class="req-form-footer">
+        <span class="req-from-label">投稿者部署：<strong>${escHtml(userEmailProfile?.department || '未設定')}</strong></span>
+        <button class="btn-modal-primary" id="req-submit-btn"><i class="fa-solid fa-paper-plane"></i> 投稿する</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('req-submit-btn').addEventListener('click', submitRequest);
+}
+
+async function submitRequest() {
+  const title    = document.getElementById('req-new-title')?.value.trim();
+  const toDept   = document.getElementById('req-new-todept')?.value;
+  const content  = document.getElementById('req-new-content')?.value.trim();
+  const proposal = document.getElementById('req-new-proposal')?.value.trim();
+  const remarks  = document.getElementById('req-new-remarks')?.value.trim();
+  if (!title)   { document.getElementById('req-new-title').focus(); return; }
+  if (!toDept)  { document.getElementById('req-new-todept').focus(); return; }
+  if (!content) { document.getElementById('req-new-content').focus(); return; }
+  const btn = document.getElementById('req-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    await addDoc(collection(db, 'cross_dept_requests'), {
+      title,
+      toDept,
+      fromDept: userEmailProfile?.department || '',
+      content,
+      proposal: proposal || '',
+      remarks:  remarks  || '',
+      status: 'submitted',
+      createdBy: currentUsername,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      statusNote: '',
+      statusUpdatedBy: currentUsername,
+      notifyCreator: false,
+    });
+    switchReqSubTab('sent');
+  } catch (err) {
+    console.error('依頼投稿エラー:', err);
+    alert('投稿に失敗しました。もう一度お試しください。');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 投稿する';
+  }
+}
+
+function openStatusModal(reqId) {
+  _pendingStatusChange = { reqId, status: null };
+  // 現在のステータスを取得
+  const req = [...receivedRequests, ...sentRequests].find(r => r.id === reqId);
+  const current = req?.status || 'submitted';
+  const group = document.getElementById('req-status-select-group');
+  group.innerHTML = Object.entries(REQ_STATUS_LABEL).map(([val, info]) => `
+    <button class="req-status-option${current === val ? ' current' : ''}" data-status="${val}">
+      <span class="req-status-badge ${info.cls}">${info.text}</span>
+    </button>
+  `).join('');
+  group.querySelectorAll('.req-status-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      group.querySelectorAll('.req-status-option').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      _pendingStatusChange.status = btn.dataset.status;
+    });
+  });
+  document.getElementById('req-status-note').value = '';
+  document.getElementById('req-status-modal').classList.add('visible');
+}
+
+async function updateRequestStatus() {
+  if (!_pendingStatusChange?.status) {
+    alert('ステータスを選択してください');
+    return;
+  }
+  const { reqId, status } = _pendingStatusChange;
+  const note = document.getElementById('req-status-note').value.trim();
+  try {
+    const isCreator = sentRequests.some(r => r.id === reqId);
+    await updateDoc(doc(db, 'cross_dept_requests', reqId), {
+      status,
+      statusNote: note,
+      statusUpdatedBy: currentUsername,
+      updatedAt: serverTimestamp(),
+      notifyCreator: !isCreator, // 自分以外が変更したら通知
+    });
+    document.getElementById('req-status-modal').classList.remove('visible');
+    _pendingStatusChange = null;
+  } catch (err) {
+    console.error('ステータス更新エラー:', err);
+    alert('更新に失敗しました');
+  }
+}
+
+async function markRequestSeen(reqId) {
+  try {
+    await updateDoc(doc(db, 'cross_dept_requests', reqId), { notifyCreator: false });
+  } catch (_) { /* silent */ }
+}
+
+// 目安箱
+function _renderSuggestionPanel(container) {
+  const formHtml = `
+    <div class="sugg-form-section">
+      <h4 class="sugg-form-title"><i class="fa-solid fa-pen-to-square"></i> 投稿する</h4>
+      <div class="form-group">
+        <label class="form-label">カテゴリ</label>
+        <div class="sugg-category-group">
+          <button class="sugg-cat-btn active" data-cat="work">業務改善</button>
+          <button class="sugg-cat-btn" data-cat="facility">設備・環境</button>
+          <button class="sugg-cat-btn" data-cat="safety">安全</button>
+          <button class="sugg-cat-btn" data-cat="other">その他</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">内容 <span class="req-required">*</span></label>
+        <textarea id="sugg-content" class="form-input" rows="4" placeholder="提案・改善案・要望など、なんでもお気軽に。"></textarea>
+      </div>
+      <div class="sugg-form-footer">
+        <label class="sugg-anon-label">
+          <input type="checkbox" id="sugg-anonymous" checked>
+          <span>匿名で投稿する</span>
+        </label>
+        <button class="btn-modal-primary" id="sugg-submit-btn"><i class="fa-solid fa-paper-plane"></i> 投稿する</button>
+      </div>
+    </div>
+  `;
+
+  let listHtml = '';
+  if (isSuggestionBoxViewer) {
+    if (suggestionList.length === 0) {
+      listHtml = `<div class="req-empty"><i class="fa-solid fa-box-open"></i><p>まだ投稿はありません</p></div>`;
+    } else {
+      const SUGG_CAT_LABEL = { work: '業務改善', facility: '設備・環境', safety: '安全', other: 'その他' };
+      listHtml = `<div class="sugg-list-section">
+        <h4 class="sugg-form-title"><i class="fa-solid fa-list"></i> 投稿一覧（管理者のみ閲覧）</h4>
+        ${suggestionList.map(s => `
+          <div class="sugg-item">
+            <div class="sugg-item-header">
+              <span class="req-category-badge cat-${escHtml(s.category)}">${escHtml(SUGG_CAT_LABEL[s.category] || s.category)}</span>
+              <span class="sugg-author">${escHtml(s.isAnonymous ? '匿名' : (s.author || '匿名'))}</span>
+              <span class="req-date">${_fmtTs(s.createdAt)}</span>
+            </div>
+            <div class="sugg-item-content">${escHtml(s.content)}</div>
+            ${s.adminReply ? `
+              <div class="sugg-reply-box">
+                <span class="sugg-reply-label"><i class="fa-solid fa-reply"></i> 管理者より</span>
+                <div>${escHtml(s.adminReply)}</div>
+              </div>
+            ` : ''}
+            <div class="req-item-actions">
+              <button class="btn-sugg-reply" data-id="${s.id}"><i class="fa-solid fa-reply"></i> 返信</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+    }
+  }
+
+  container.innerHTML = formHtml + listHtml;
+
+  // カテゴリボタン
+  let selectedCat = 'work';
+  container.querySelectorAll('.sugg-cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.sugg-cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedCat = btn.dataset.cat;
+    });
+  });
+
+  // 投稿ボタン
+  document.getElementById('sugg-submit-btn').addEventListener('click', () => submitSuggestion(selectedCat));
+
+  // 返信ボタン
+  container.querySelectorAll('.btn-sugg-reply').forEach(btn => {
+    btn.addEventListener('click', () => openSuggReplyModal(btn.dataset.id));
+  });
+}
+
+async function submitSuggestion(category) {
+  const content   = document.getElementById('sugg-content')?.value.trim();
+  const anonymous = document.getElementById('sugg-anonymous')?.checked ?? true;
+  if (!content) { document.getElementById('sugg-content').focus(); return; }
+  const btn = document.getElementById('sugg-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    await addDoc(collection(db, 'suggestion_box'), {
+      content,
+      category: category || 'other',
+      isAnonymous: anonymous,
+      author: anonymous ? '匿名' : (currentUsername || '匿名'),
+      createdAt: serverTimestamp(),
+      adminReply: '',
+      repliedAt: null,
+      repliedBy: '',
+    });
+    document.getElementById('sugg-content').value = '';
+    alert('投稿しました。ありがとうございます！');
+  } catch (err) {
+    console.error('目安箱投稿エラー:', err);
+    alert('投稿に失敗しました。もう一度お試しください。');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 投稿する';
+  }
+}
+
+function openSuggReplyModal(suggId) {
+  _pendingSuggReply = suggId;
+  document.getElementById('sugg-reply-text').value = '';
+  document.getElementById('sugg-reply-modal').classList.add('visible');
+}
+
+async function sendSuggReply() {
+  const text = document.getElementById('sugg-reply-text').value.trim();
+  if (!text || !_pendingSuggReply) return;
+  try {
+    await updateDoc(doc(db, 'suggestion_box', _pendingSuggReply), {
+      adminReply: text,
+      repliedAt: serverTimestamp(),
+      repliedBy: currentUsername,
+    });
+    document.getElementById('sugg-reply-modal').classList.remove('visible');
+    _pendingSuggReply = null;
+  } catch (err) {
+    console.error('返信エラー:', err);
+    alert('返信に失敗しました');
+  }
+}
+
+async function _markSuggestionsViewed() {
+  if (!currentUsername || !isSuggestionBoxViewer) return;
+  try {
+    const now = new Date();
+    await setDoc(
+      doc(db, 'users', currentUsername, 'data', 'preferences'),
+      { lastViewedSuggestionsAt: now },
+      { merge: true }
+    );
+    lastViewedSuggestionsAt = Math.floor(now.getTime() / 1000);
+    updateReqBadge();
+  } catch (_) { /* silent */ }
+}
+
+// 管理者パネル：目安箱閲覧者管理
+async function renderAdminSuggBoxSection() {
+  const snap = await getDoc(doc(db, 'portal', 'config'));
+  const viewers = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
+  const container = document.getElementById('admin-suggbox-viewers');
+  if (!container) return;
+  if (viewers.length === 0) {
+    container.innerHTML = '<div class="admin-loading">登録なし</div>';
+  } else {
+    container.innerHTML = viewers.map(v => `
+      <div class="admin-suggbox-viewer-row">
+        <span>${escHtml(v)}</span>
+        <button class="btn-danger-sm admin-suggbox-remove" data-name="${escHtml(v)}">削除</button>
+      </div>
+    `).join('');
+    container.querySelectorAll('.admin-suggbox-remove').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const name = btn.dataset.name;
+        const newList = viewers.filter(v => v !== name);
+        await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
+        suggestionBoxViewers = newList;
+        isSuggestionBoxViewer = currentUsername ? newList.includes(currentUsername) : false;
+        renderAdminSuggBoxSection();
+      });
+    });
+  }
+}
+
+async function addSuggBoxViewer() {
+  const input = document.getElementById('admin-suggbox-add-input');
+  const name = input.value.trim();
+  if (!name) return;
+  const snap = await getDoc(doc(db, 'portal', 'config'));
+  const current = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
+  if (current.includes(name)) { alert('すでに登録されています'); return; }
+  const newList = [...current, name];
+  await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
+  suggestionBoxViewers = newList;
+  isSuggestionBoxViewer = currentUsername ? newList.includes(currentUsername) : false;
+  input.value = '';
+  renderAdminSuggBoxSection();
+}
+
+function _fmtTs(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000);
+  const y = d.getFullYear(), mo = d.getMonth() + 1, day = d.getDate();
+  const h = String(d.getHours()).padStart(2, '0'), mi = String(d.getMinutes()).padStart(2, '0');
+  return `${y}/${mo}/${day} ${h}:${mi}`;
+}
+
+function escHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ========== メール返信アシスタント ==========
 const DEFAULT_EMAIL_PROFILES = [
   {
@@ -2870,6 +3446,9 @@ async function loadPersonalData(username, lockOnSwitch = false) {
       favoritesOnlyMode = !!p.favOnly;
       if (p.theme)    applyTheme(p.theme, false);       // save=false: 読み込み時は保存しない
       if (p.fontSize) applyFontSize(p.fontSize, false); // save=false: 読み込み時は保存しない
+      if (p.lastViewedSuggestionsAt) {
+        lastViewedSuggestionsAt = p.lastViewedSuggestionsAt.seconds ?? Math.floor(p.lastViewedSuggestionsAt / 1000);
+      }
     } else {
       // 初回ログイン：localStorage に残っているデータがあれば Firestore へ移行
       const localFavs = (() => {
@@ -2895,6 +3474,8 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     startChatListeners(username);
     startTaskListeners(username);
     startFtListener();
+    await loadConfigDepartmentsAndViewers();
+    startRequestListeners(username);
     await loadLockSettings(username, lockOnSwitch);
   } catch (err) {
     console.error('個人データ読み込みエラー:', err);
@@ -4752,6 +5333,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('admin-auth-area').hidden  = true;
       document.getElementById('admin-panel-area').hidden = false;
       loadUsersForAdmin();
+      renderAdminSuggBoxSection();
     } else {
       errEl.hidden = false;
     }
@@ -4772,6 +5354,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('admin-setup-area').hidden = true;
     document.getElementById('admin-panel-area').hidden = false;
     loadUsersForAdmin();
+    renderAdminSuggBoxSection();
   });
   document.getElementById('admin-setup-cancel').addEventListener('click', closeAdminModal);
 
@@ -4944,6 +5527,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === e.currentTarget) document.getElementById('new-group-modal').classList.remove('visible');
   });
   document.getElementById('new-group-create').addEventListener('click', createGroupRoom);
+
+  // ===== 部門間依頼・目安箱ボタン =====
+  document.getElementById('btn-reqboard').addEventListener('click', () => openReqModal());
+  document.getElementById('reqboard-modal-close').addEventListener('click', closeReqModal);
+  document.getElementById('reqboard-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeReqModal();
+  });
+  document.querySelectorAll('.reqboard-tab').forEach(btn => {
+    btn.addEventListener('click', () => switchReqTab(btn.dataset.tab));
+  });
+  document.querySelectorAll('.reqboard-subtab').forEach(btn => {
+    btn.addEventListener('click', () => switchReqSubTab(btn.dataset.subtab));
+  });
+  // ステータス変更モーダル
+  document.getElementById('req-status-cancel').addEventListener('click', () => {
+    document.getElementById('req-status-modal').classList.remove('visible');
+    _pendingStatusChange = null;
+  });
+  document.getElementById('req-status-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) {
+      document.getElementById('req-status-modal').classList.remove('visible');
+      _pendingStatusChange = null;
+    }
+  });
+  document.getElementById('req-status-ok').addEventListener('click', updateRequestStatus);
+  // 目安箱返信モーダル
+  document.getElementById('sugg-reply-cancel').addEventListener('click', () => {
+    document.getElementById('sugg-reply-modal').classList.remove('visible');
+    _pendingSuggReply = null;
+  });
+  document.getElementById('sugg-reply-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) {
+      document.getElementById('sugg-reply-modal').classList.remove('visible');
+      _pendingSuggReply = null;
+    }
+  });
+  document.getElementById('sugg-reply-ok').addEventListener('click', sendSuggReply);
+  // 管理者パネル：目安箱閲覧者追加
+  document.getElementById('admin-suggbox-add-btn').addEventListener('click', addSuggBoxViewer);
+  document.getElementById('admin-suggbox-add-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addSuggBoxViewer();
+  });
 
   // ===== タスクボタン =====
   document.getElementById('btn-task').addEventListener('click', openTaskModal);

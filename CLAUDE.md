@@ -40,12 +40,14 @@
 | `notices/` | お知らせ |
 | `notice_reactions/{noticeId}` | リアクション |
 | `chat_messages/` | 全社チャット（廃止予定） |
-| `users/{name}/data/preferences` | 個人設定 |
+| `users/{name}/data/preferences` | 個人設定（lastViewedSuggestionsAt を含む） |
 | `users/{name}/data/lock_pin` | PINロック設定 |
 | `users/{name}/private_sections/` | マイセクション |
 | `users/{name}/private_cards/` | マイカード |
 | `users_list/{name}` | ログイン記録・ニックネーム重複チェック |
-| `portal/config` | 管理者PIN・Gemini APIキー等 |
+| `portal/config` | 管理者PIN・Gemini APIキー・departments[]・suggestionBoxViewers[] |
+| `cross_dept_requests/` | 部門間依頼（部署→部署の課題・お願い） |
+| `suggestion_box/` | 目安箱（全員投稿可、閲覧は管理者のみ） |
 
 ## セキュリティ
 - Firestore セキュリティルールなし（ユーザー名を知らないと個人データにアクセスできない「obscurity」方式）
