@@ -5305,9 +5305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (name) await applyUsername(name);
   });
   document.getElementById('username-skip').addEventListener('click', closeUsernameModal);
-  document.getElementById('username-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeUsernameModal();
-  });
+  // username-modal: 入力系のため枠外クリックでは閉じない
 
   // ===== ロックボタン =====
   document.getElementById('btn-lock-header').addEventListener('click', lockPortal);
@@ -5332,9 +5330,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     openSecurityModal();
   });
   document.getElementById('security-cancel').addEventListener('click', closeSecurityModal);
-  document.getElementById('security-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeSecurityModal();
-  });
+  // security-modal: PIN入力・設定系のため枠外クリックでは閉じない
 
   // ロック機能 ON/OFF トグル
   document.getElementById('lock-enabled-toggle').addEventListener('change', async e => {
@@ -5367,9 +5363,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('admin-cancel').addEventListener('click', closeAdminModal);
   document.getElementById('admin-close').addEventListener('click', closeAdminModal);
-  document.getElementById('admin-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeAdminModal();
-  });
+  // admin-modal: 設定入力系のため枠外クリックでは閉じない
   document.getElementById('admin-auth-btn').addEventListener('click', async () => {
     const pin   = document.getElementById('admin-pin-input').value;
     const errEl = document.getElementById('admin-auth-error');
@@ -5482,9 +5476,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ===== メール返信アシスタント =====
   document.getElementById('btn-email-assist').addEventListener('click', openEmailModal);
   document.getElementById('email-modal-close').addEventListener('click', closeEmailModal);
-  document.getElementById('email-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeEmailModal();
-  });
+  // email-modal: メール入力系のため枠外クリックでは閉じない
   document.getElementById('email-profile-save').addEventListener('click', saveEmailProfile);
   document.getElementById('email-profile-delete').addEventListener('click', deleteEmailProfile);
   document.getElementById('email-profile-add').addEventListener('click', addEmailProfile);
@@ -5561,25 +5553,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('new-dm-cancel').addEventListener('click', () => {
     document.getElementById('new-dm-modal').classList.remove('visible');
   });
-  document.getElementById('new-dm-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) document.getElementById('new-dm-modal').classList.remove('visible');
-  });
+  // new-dm-modal: ユーザー検索・選択系のため枠外クリックでは閉じない
 
   document.getElementById('btn-new-group').addEventListener('click', openNewGroupModal);
   document.getElementById('new-group-cancel').addEventListener('click', () => {
     document.getElementById('new-group-modal').classList.remove('visible');
   });
-  document.getElementById('new-group-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) document.getElementById('new-group-modal').classList.remove('visible');
-  });
+  // new-group-modal: グループ名入力・メンバー選択のため枠外クリックでは閉じない
   document.getElementById('new-group-create').addEventListener('click', createGroupRoom);
 
   // ===== 部門間依頼・目安箱ボタン =====
   document.getElementById('btn-reqboard').addEventListener('click', () => openReqModal());
   document.getElementById('reqboard-modal-close').addEventListener('click', closeReqModal);
-  document.getElementById('reqboard-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeReqModal();
-  });
+  // reqboard-modal: 依頼・投稿フォームのため枠外クリックでは閉じない
   document.querySelectorAll('.reqboard-tab').forEach(btn => {
     btn.addEventListener('click', () => switchReqTab(btn.dataset.tab));
   });
@@ -5591,24 +5577,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('req-status-modal').classList.remove('visible');
     _pendingStatusChange = null;
   });
-  document.getElementById('req-status-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) {
-      document.getElementById('req-status-modal').classList.remove('visible');
-      _pendingStatusChange = null;
-    }
-  });
+  // req-status-modal: コメント入力があるため枠外クリックでは閉じない
   document.getElementById('req-status-ok').addEventListener('click', updateRequestStatus);
   // 目安箱返信モーダル
   document.getElementById('sugg-reply-cancel').addEventListener('click', () => {
     document.getElementById('sugg-reply-modal').classList.remove('visible');
     _pendingSuggReply = null;
   });
-  document.getElementById('sugg-reply-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) {
-      document.getElementById('sugg-reply-modal').classList.remove('visible');
-      _pendingSuggReply = null;
-    }
-  });
+  // sugg-reply-modal: 返信テキスト入力のため枠外クリックでは閉じない
   document.getElementById('sugg-reply-ok').addEventListener('click', sendSuggReply);
   // 管理者パネル：目安箱閲覧者追加
   document.getElementById('admin-suggbox-add-btn').addEventListener('click', addSuggBoxViewer);
@@ -5619,9 +5595,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ===== タスクボタン =====
   document.getElementById('btn-task').addEventListener('click', openTaskModal);
   document.getElementById('task-modal-close').addEventListener('click', closeTaskModal);
-  document.getElementById('task-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeTaskModal();
-  });
+  // task-modal: タスク入力フォームのため枠外クリックでは閉じない
   document.querySelectorAll('.task-tab').forEach(btn => {
     btn.addEventListener('click', () => switchTaskTab(btn.dataset.tab));
   });
@@ -5641,9 +5615,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== プライベートセクションモーダル =====
   document.getElementById('private-section-cancel').addEventListener('click', closePrivateSectionModal);
-  document.getElementById('private-section-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closePrivateSectionModal();
-  });
+  // private-section-modal: セクション名・アイコン入力のため枠外クリックでは閉じない
 
   document.getElementById('private-section-icon').addEventListener('input', e => {
     const prev = document.getElementById('private-section-icon-preview');
@@ -5715,9 +5687,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('pin-cancel').addEventListener('click', closePinModal);
   document.getElementById('pin-submit').addEventListener('click', handlePinSubmit);
-  document.getElementById('pin-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closePinModal();
-  });
+  // pin-modal: PIN入力のため枠外クリックでは閉じない
 
   // ===== カード編集モーダル =====
   document.getElementById('card-cancel').addEventListener('click', closeCardModal);
@@ -5800,9 +5770,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== お知らせモーダル =====
   document.getElementById('notice-cancel').addEventListener('click', closeNoticeModal);
-  document.getElementById('notice-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeNoticeModal();
-  });
+  // notice-modal: お知らせ編集フォームのため枠外クリックでは閉じない
 
   document.getElementById('notice-save').addEventListener('click', async () => {
     const title = document.getElementById('notice-title').value.trim();
@@ -5843,9 +5811,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== カテゴリモーダル =====
   document.getElementById('cat-cancel').addEventListener('click', closeCategoryModal);
-  document.getElementById('category-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeCategoryModal();
-  });
+  // category-modal: カテゴリ名・アイコン入力のため枠外クリックでは閉じない
 
   document.getElementById('cat-icon').addEventListener('input', e => {
     updateCatIconPreview(e.target.value.trim());

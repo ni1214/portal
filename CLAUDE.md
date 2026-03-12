@@ -136,6 +136,57 @@ assigned_tasks/{taskId}
 
 ## UIパターン・実装規約
 
+### モーダルの外クリック動作（必須ルール）
+
+モーダルを新規追加するときは必ず以下の分類に従い、外クリックの動作を設定すること。
+
+#### ✅ 外クリックで閉じて良い（表示・選択系）
+入力内容がなく、閉じても作業データが消えないもの。
+
+| モーダル ID | 用途 |
+|---|---|
+| `guide-modal` | 使い方ガイド（表示のみ） |
+| `service-picker-modal` | サービスアイコン選択 |
+| `task-user-picker-modal` | タスク担当者選択（親モーダルが残る） |
+| `delete-confirm-modal` | 削除確認（Yes/No のみ） |
+
+実装例：
+```js
+document.getElementById('xxx-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeXxxModal();
+});
+```
+
+#### ❌ 外クリックで閉じてはいけない（入力・フォーム系）
+テキスト入力・選択・設定など、閉じると作業内容が失われる可能性があるもの。
+**外クリックリスナーは追加しない。代わりにコメントのみ残す。**
+
+| モーダル ID | 用途 |
+|---|---|
+| `card-modal` | カード編集 |
+| `category-modal` | カテゴリ編集 |
+| `private-section-modal` | マイセクション編集 |
+| `notice-modal` | お知らせ編集 |
+| `task-modal` | タスク管理（新規依頼フォーム） |
+| `reqboard-modal` | 部門間依頼・目安箱 |
+| `req-status-modal` | ステータス変更（コメント入力） |
+| `sugg-reply-modal` | 目安箱返信 |
+| `email-modal` | メール返信アシスタント |
+| `new-dm-modal` | 新規DM |
+| `new-group-modal` | 新規グループ作成 |
+| `username-modal` | ユーザー名入力 |
+| `security-modal` | セキュリティ・PIN設定 |
+| `admin-modal` | 管理者パネル |
+| `pin-modal` | PINロック設定 |
+
+実装例（コメントのみ書いて外クリックリスナーは書かない）：
+```js
+// xxx-modal: ○○入力フォームのため枠外クリックでは閉じない
+```
+
+#### 判断に迷ったら
+「閉じたときにユーザーが再入力しなければならない情報があるか？」→ あれば外クリック無効。
+
 ### モーダル縦スクロール（必須ルール）
 
 モーダル内でコンテンツがあふれてスクロールが出ない問題を防ぐため、新規モーダルを追加するときは必ず以下の構造パターンに従うこと。
