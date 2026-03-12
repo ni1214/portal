@@ -1632,6 +1632,32 @@ body::after {
 
 .form-input::placeholder { color: var(--text-muted); }
 
+/* ===========================
+   select / option テーマ対応（白飛び防止）
+   color-scheme でブラウザネイティブ UI も dark に統一し、
+   option に直接 CSS 変数を当てて全テーマで色を一致させる
+   =========================== */
+select {
+  color-scheme: dark; /* ← ネイティブドロップダウンを dark 表示にする */
+}
+select option {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+select option:checked {
+  background-color: var(--accent-blue);
+  color: #fff;
+}
+/* select 要素自身の背景は bg-glass が透明なため bg-secondary で塗り直す */
+select.form-input,
+select.todo-due-select {
+  background: var(--bg-secondary);
+}
+/* ライトテーマ：ネイティブ UI を light に戻す */
+[data-theme="light"] select {
+  color-scheme: light;
+}
+
 .form-hint {
   display: block;
   font-size: var(--font-size-xs);
@@ -3788,7 +3814,7 @@ html.font-xl { font-size: 21px; }
 .todo-input::placeholder { color: var(--text-muted); }
 
 .todo-due-select {
-  background: var(--bg-card);
+  background: var(--bg-secondary);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
@@ -3798,7 +3824,7 @@ html.font-xl { font-size: 21px; }
   white-space: nowrap;
   flex-shrink: 0;
 }
-.todo-due-select:focus { outline: none; border-color: #6366f1; }
+.todo-due-select:focus { outline: none; border-color: var(--accent-blue); }
 
 .todo-add-btn {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);

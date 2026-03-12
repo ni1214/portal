@@ -216,6 +216,28 @@ assigned_tasks/{taskId}
 - モーダル内の `overflow-y: auto` 要素に `overscroll-behavior: contain` を付け忘れる
 - `.modal-overlay` を使わず独自のオーバーレイ構造にする（body ロックが効かなくなる）
 
+### select ボックスのテーマ対応（必須ルール）
+
+ブラウザネイティブの `<select>` ドロップダウンはデフォルトで OS 標準の白背景になる。
+新しく `<select>` を追加する際は**必ず `.form-input` クラスを付ける**こと。それだけで以下の対策が自動適用される。
+
+**style.css に定義済みのグローバルルール（修正不要・維持すること）**
+```css
+select { color-scheme: dark; }           /* ネイティブ UI を dark に統一 */
+select option {
+  background-color: var(--bg-secondary); /* テーマ別背景色 */
+  color: var(--text-primary);
+}
+select.form-input { background: var(--bg-secondary); } /* 閉じた状態も塗る */
+[data-theme="light"] select { color-scheme: light; }   /* ライトは light に戻す */
+```
+
+#### ❌ やってはいけないこと
+- `<select>` に `.form-input` を付けずに使う（白飛びが再発する）
+- `option` に `background` / `color` を直書きする（テーマ切替で崩れる）
+- `select` に `background: var(--bg-glass)` を使う（透明色で option 背景が透けて白飛びする）
+- フォーカス時のボーダーをハードコード（例: `#6366f1`）にする → `var(--accent-blue)` を使うこと
+
 ### 日付入力フィールド（必須ルール）
 日付入力は常に「カレンダーアイコンのみ」で実装する。テキスト部分は非表示にし、アイコン色は各テーマに合わせる。
 
