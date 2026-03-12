@@ -13,6 +13,95 @@
 - Vercel等に切り替えればより良い方法がある場合は「Vercelに切り替えれば〇〇もできます」と**条件付きで提案するだけ**にする
 - ユーザーはVercel等への移行を現時点では望んでいない
 
+---
+
+## ⚡ リファクタリング不要開発ルール（コスト削減・最重要）
+
+> **背景**: script.js が 6,000 行超のモノリスになり、モジュール分割リファクタリングに大きなコストが発生した。
+> 同じ失敗を繰り返さないために、以下のルールを**すべての新機能・修正で必ず守ること**。
+
+### 🏗️ ルール1: 新機能は最初から `modules/` に作る
+
+```
+✅ 正しい: modules/new-feature.js を新規作成して実装
+❌ NG:     script.js に直接コードを追記する
+```
+
+- 新機能が小さくても `modules/` に独立ファイルとして作成する
+- script.js はエントリポイント（import + イベントリスナー）のみ。ロジックは書かない
+- **目安**: 機能が 30 行を超えそうなら迷わずモジュール化する
+
+### 📦 ルール2: モジュールのフォーマットを統一する
+
+```js
+// modules/xxx.js の必須構造
+import { state } from './state.js';
+import { db, ... } from './config.js';
+import { esc } from './utils.js';
+
+let deps = {};
+export function initXxx(d) { deps = d; }  // 外部依存はすべて deps 経由
+
+export function xxxFunction() { ... }
+```
+
+- 他モジュールの関数が必要な場合は **deps 経由** で受け取る（循環 import 防止）
+- deps の設計（何を受け取るか）は**実装前に先に決める**
+
+### 🗂️ ルール3: state.js を先に更新する
+
+- 新機能で状態変数が必要になったら、コーディング前に `state.js` に追加する
+- state.js に定義せずモジュール内に `let` を書くと、後で共有が必要になったときに大改修が発生する
+- **原則**: 2つ以上のモジュールで参照する可能性がある変数はすべて `state.js` に入れる
+
+### 🗄️ ルール4: Firestore 設計を先に CLAUDE.md に記録する
+
+- 新機能のコレクション名・フィールド名は**実装前に CLAUDE.md の「Firestore コレクション一覧」に追記**する
+- 後からフィールドを追加すると既存データとの整合性が崩れ、マイグレーションコストが発生する
+- フィールド追加でも事前にここに記録しておく
+
+### 🎨 ルール5: CSS クラスは再利用・追加は末尾に集約
+
+- 新 UI を作る前に style.css の既存クラスを確認し、流用できるものは流用する
+- 新しい CSS は**対応するモジュール名をコメントで明示**して style.css 末尾付近に追記
+- 1 UI = 1 セクション（`/* ===== 機能名 ===== */` でブロック化）
+
+### 📐 ルール6: HTML 要素 ID はモジュールプレフィックス付き
+
+| モジュール | ID プレフィックス | 例 |
+|---|---|---|
+| file-transfer.js | `ft-` | `ft-drive-area` |
+| chat.js | `chat-` | `chat-panel` |
+| tasks.js | `task-` | `task-modal` |
+| notices.js | `notice-` | `notice-list` |
+| auth.js | `auth-` / `lock-` | `lock-screen` |
+| 新機能 XYZ | `xyz-` | `xyz-modal` |
+
+- プレフィックスなしの ID は禁止（他機能との衝突リスク）
+
+### 🔄 ルール7: 1機能1コミット・機能追加とリファクタを混ぜない
+
+```
+✅ 正しいコミット例:
+  feat: タスク割り振り機能を追加
+  fix: Drive共有の開くボタンが自分のURLを開くバグを修正
+  style: チャットパネルのホバー色をCSS変数化
+
+❌ NGなコミット例:
+  いろいろ修正（機能追加＋スタイル修正＋リファクタが混在）
+```
+
+- 機能追加・バグ修正・スタイル改善・リファクタは**別々のコミット**にする
+- 「ついでに整理しておこう」という衝動を抑える
+
+### ⚠️ ルール8: 大きな変更前に設計を提案する
+
+- 複数ファイルにまたがる変更、または既存モジュールの大幅修正が必要な場合は
+  **実装前に「この方針で進めます」と変更概要を提示してからコーディングする**
+- ユーザーの承認なしに大規模リライトは行わない
+
+---
+
 ## Git ワークフロー
 - 機能変更のたびに `git add` → `git commit` → `git push origin master`
 - コミット後 GitHub Pages に自動デプロイされる（数分で反映）
@@ -48,71 +137,11 @@
 | `portal/config` | 管理者PIN・Gemini APIキー・departments[]・suggestionBoxViewers[] |
 | `cross_dept_requests/` | 部門間依頼（部署→部署の課題・お願い） |
 | `suggestion_box/` | 目安箱（全員投稿可、閲覧は管理者のみ） |
-| `drive_shares/{shareId}` | Google Drive大容量ファイル受け渡し（リンク共有） |
-| `users/{name}/data/drive_link` | 個人のDriveフォルダURL登録 |
-| `users/{name}/data/drive_contacts` | Drive連絡先記憶（相手ごとのDriveリンク保存） |
 
 ## セキュリティ
 - Firestore セキュリティルールなし（ユーザー名を知らないと個人データにアクセスできない「obscurity」方式）
 - 管理者PIN: `portal/config.pinHash`（SHA-256ハッシュ）
 - 個人PINロック: `users/{name}/data/lock_pin.hash`
-
-## Drive大容量ファイル受け渡し機能（実装済み）
-
-### 概要
-P2P転送では越えられないネットワーク障壁（企業FW・Symmetric NAT等）を回避するため、
-Google DriveのフォルダURLをポータル経由で相手に通知する仕組み。
-
-### Firestore 構造
-```
-drive_shares/{shareId}
-  - from       : 送信者ニックネーム
-  - to         : 受信者ニックネーム
-  - driveUrl   : Google DriveフォルダURL
-  - message    : 任意メッセージ（200文字以内）
-  - status     : 'pending'（未確認） | 'viewed'（開封済み）
-  - createdAt  : 作成日時
-  - viewedAt   : 開封日時
-
-users/{name}/data/drive_link
-  - url        : 自分の受け渡し用DriveフォルダURL
-  - updatedAt  : 更新日時
-
-users/{name}/data/drive_contacts
-  - contacts   : Map { [相手ニックネーム]: { url: string, savedAt: number(ms) } }
-  - updatedAt  : 更新日時
-```
-
-### Drive連絡先記憶（_driveContacts）
-- 送信時に「このリンクを連絡先として記憶する」チェックで `saveDriveContact()` を呼ぶ
-- ログイン時に `loadDriveContacts()` で読み込み、ログアウト時 `stopDriveListeners()` でクリア
-- パネル内「登録済み連絡先」一覧からクイック送信・削除が可能
-- モーダル内クイック選択エリアにも表示、クリックでURLを自動入力
-
-### 主要関数（script.js）
-| 関数 | 役割 |
-|---|---|
-| `loadMyDriveUrl(username)` | 自分のDriveリンクをFirestoreから読み込み |
-| `saveMyDriveUrl(url)` | 自分のDriveリンクを保存 |
-| `loadDriveContacts(username)` | Drive連絡先をFirestoreから読み込み |
-| `saveDriveContact(contactUser, url)` | Drive連絡先を追加・更新 |
-| `deleteDriveContact(contactUser)` | Drive連絡先を削除 |
-| `startDriveListeners(username)` | 受信・送信の onSnapshot を開始 |
-| `stopDriveListeners()` | リスナー停止・連絡先クリア（ユーザー切り替え時） |
-| `switchFtTab(tab)` | ft-panel のタブ切り替え（'p2p' / 'drive'） |
-| `renderDrivePanel()` | Drive タブの描画 |
-| `openDriveShare(id, url)` | リンクを開く＋既読に更新 |
-| `dismissDriveShare(id)` | Firestoreから削除 |
-| `openDriveSendModal()` | Drive送信モーダルを開く |
-| `confirmDriveSend()` | drive_shares に送信記録を作成 |
-| `openMyDriveLinkModal()` | 自分のDriveリンク登録モーダル |
-| `saveMyDriveLinkFromModal()` | モーダルから登録・保存 |
-
-### UI
-- ファイル転送パネルにタブ「P2P転送」「大容量(Drive)」を追加
-- Drive タブ内：受信リンク一覧・送信済み一覧・「Driveリンクを登録」ボタン
-- 受信者が「Driveを開く」クリック → 既読 → 送信者の送信済み欄に「確認済み ✓」表示
-- ft-badge（FABの数字）は P2P + Drive の未読合計を表示
 
 ## 次回実装予定タスク
 
@@ -195,159 +224,6 @@ assigned_tasks/{taskId}
 ウォームテーマではアクセント色が青→オレンジ系に変わる。ホバー背景に青の rgba を直書きした場合は `[data-theme="warm"]` のオーバーライドを忘れずに追加すること。
 
 ## UIパターン・実装規約
-
-### モーダルの外クリック動作（必須ルール）
-
-モーダルを新規追加するときは必ず以下の分類に従い、外クリックの動作を設定すること。
-
-#### ✅ 外クリックで閉じて良い（表示・選択系）
-入力内容がなく、閉じても作業データが消えないもの。
-
-| モーダル ID | 用途 |
-|---|---|
-| `guide-modal` | 使い方ガイド（表示のみ） |
-| `service-picker-modal` | サービスアイコン選択 |
-| `task-user-picker-modal` | タスク担当者選択（親モーダルが残る） |
-| `delete-confirm-modal` | 削除確認（Yes/No のみ） |
-
-実装例：
-```js
-document.getElementById('xxx-modal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeXxxModal();
-});
-```
-
-#### ❌ 外クリックで閉じてはいけない（入力・フォーム系）
-テキスト入力・選択・設定など、閉じると作業内容が失われる可能性があるもの。
-**外クリックリスナーは追加しない。代わりにコメントのみ残す。**
-
-| モーダル ID | 用途 |
-|---|---|
-| `card-modal` | カード編集 |
-| `category-modal` | カテゴリ編集 |
-| `private-section-modal` | マイセクション編集 |
-| `notice-modal` | お知らせ編集 |
-| `task-modal` | タスク管理（新規依頼フォーム） |
-| `reqboard-modal` | 部門間依頼・目安箱 |
-| `req-status-modal` | ステータス変更（コメント入力） |
-| `sugg-reply-modal` | 目安箱返信 |
-| `email-modal` | メール返信アシスタント |
-| `new-dm-modal` | 新規DM |
-| `new-group-modal` | 新規グループ作成 |
-| `username-modal` | ユーザー名入力 |
-| `security-modal` | セキュリティ・PIN設定 |
-| `admin-modal` | 管理者パネル |
-| `pin-modal` | PINロック設定 |
-
-実装例（コメントのみ書いて外クリックリスナーは書かない）：
-```js
-// xxx-modal: ○○入力フォームのため枠外クリックでは閉じない
-```
-
-#### 判断に迷ったら
-「閉じたときにユーザーが再入力しなければならない情報があるか？」→ あれば外クリック無効。
-
-### モーダル縦スクロール（必須ルール）
-
-モーダル内でコンテンツがあふれてスクロールが出ない問題を防ぐため、新規モーダルを追加するときは必ず以下の構造パターンに従うこと。
-
-#### パターン A：`.modal-glass` を使うシンプルなモーダル
-```html
-<div class="modal-overlay" id="xxx-modal">
-  <div class="modal-glass">
-    <!-- ヘッダー（固定） -->
-    <h3 class="modal-title">タイトル</h3>
-    <!-- コンテンツ（自動スクロール） -->
-    ...
-  </div>
-</div>
-```
-`.modal-glass` は `max-height: 90vh; overflow-y: auto` が定義済みなので追加CSS不要。
-
-#### パターン B：カスタム inner を使う複雑なモーダル（タブあり）
-```css
-/* inner: flex列 + 高さ上限 */
-.xxx-modal-inner {
-  display: flex;
-  flex-direction: column;
-  max-height: 90vh;
-  overflow: hidden;   /* ← hidden にして子に任せる */
-}
-
-/* ヘッダー・タブバーなど固定部分 */
-.xxx-modal-header,
-.xxx-tabs {
-  flex-shrink: 0;     /* ← 縮まないようにする */
-}
-
-/* コンテンツエリアのラッパー（タブ内ラッパー等） */
-#xxx-content-area {
-  flex: 1;
-  min-height: 0;      /* ← ★ これがないと flex:1 が効かない */
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-/* スクロールする本体 */
-.xxx-content {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-```
-
-#### ❌ よくあるミス
-- `overflow: hidden` の親の中で `overflow-y: auto` の子を使っても、**途中に `min-height: 0` なしの flex 子孫があると高さ制限が無効化される**
-- タブ切り替えで表示/非表示するラッパー div に flex/min-height を付け忘れる
-- `.modal-glass` 使用なのに別途 `max-height` を付けず無限に伸びる
-
-### モーダル内スクロールの背景伝播防止（必須ルール）
-
-モーダル内でスクロールすると背景ページも一緒にスクロールしてしまう問題（スクロールチェーン）を防ぐため、以下の2段階対策が**実装済み・必ず維持すること**。
-
-#### 対策①：CSS `overscroll-behavior: contain`
-モーダル内で `overflow-y: auto` を持つすべての要素に必ず追加する。
-```css
-.xxx-scrollable-area {
-  overflow-y: auto;
-  overscroll-behavior: contain; /* ← スクロール端で親に伝播しない */
-}
-```
-適用済み対象：`.modal-glass` / `.guide-body` / `.task-tab-content` / `.reqboard-content` /
-`.email-main-area` / `.email-profile-sidebar` / `.email-tab-content` /
-`.admin-user-list` / `.new-dm-user-list` / `.service-picker-grid` / `.icon-picker`
-
-#### 対策②：JS MutationObserver による body スクロールロック
-`script.js` の DOMContentLoaded 末尾に実装済み。`.modal-overlay.visible` が存在する間は
-`document.body.style.overflow = 'hidden'` を自動適用する。
-**新しいモーダルを追加する場合も `.modal-overlay` クラスを使えば自動で適用される。**
-
-#### ❌ やってはいけないこと
-- モーダル内の `overflow-y: auto` 要素に `overscroll-behavior: contain` を付け忘れる
-- `.modal-overlay` を使わず独自のオーバーレイ構造にする（body ロックが効かなくなる）
-
-### select ボックスのテーマ対応（必須ルール）
-
-ブラウザネイティブの `<select>` ドロップダウンはデフォルトで OS 標準の白背景になる。
-新しく `<select>` を追加する際は**必ず `.form-input` クラスを付ける**こと。それだけで以下の対策が自動適用される。
-
-**style.css に定義済みのグローバルルール（修正不要・維持すること）**
-```css
-select { color-scheme: dark; }           /* ネイティブ UI を dark に統一 */
-select option {
-  background-color: var(--bg-secondary); /* テーマ別背景色 */
-  color: var(--text-primary);
-}
-select.form-input { background: var(--bg-secondary); } /* 閉じた状態も塗る */
-[data-theme="light"] select { color-scheme: light; }   /* ライトは light に戻す */
-```
-
-#### ❌ やってはいけないこと
-- `<select>` に `.form-input` を付けずに使う（白飛びが再発する）
-- `option` に `background` / `color` を直書きする（テーマ切替で崩れる）
-- `select` に `background: var(--bg-glass)` を使う（透明色で option 背景が透けて白飛びする）
-- フォーカス時のボーダーをハードコード（例: `#6366f1`）にする → `var(--accent-blue)` を使うこと
 
 ### 日付入力フィールド（必須ルール）
 日付入力は常に「カレンダーアイコンのみ」で実装する。テキスト部分は非表示にし、アイコン色は各テーマに合わせる。
