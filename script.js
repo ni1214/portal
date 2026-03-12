@@ -331,6 +331,9 @@ let _driveIncomingSub     = null; // Firestoreリスナー（受信）
 let _driveOutgoingSub     = null; // Firestoreリスナー（送信）
 let _ftCurrentTab         = 'p2p'; // 'p2p' | 'drive'
 let _ftDriveSelectedUser  = null; // Drive送信モーダルで選択中のユーザー
+// Drive 連絡先（相手ごとに記憶したDriveリンク）
+// 構造: { [username]: { url: string, savedAt: number } }
+let _driveContacts        = {};
 
 // タスク割り振り
 let receivedTasks = [];
@@ -1859,6 +1862,43 @@ function stopDriveListeners() {
   if (_driveOutgoingSub) { _driveOutgoingSub(); _driveOutgoingSub = null; }
   _driveIncoming = [];
   _driveOutgoing = [];
+  _driveContacts = {};
+}
+
+// --- Drive 連絡先 読み込み ---
+async function loadDriveContacts(username) {
+  if (!username) return;
+  try {
+    const snap = await getDoc(doc(db, 'users', username, 'data', 'drive_contacts'));
+    _driveContacts = snap.exists() ? (snap.data().contacts || {}) : {};
+  } catch (_) { _driveContacts = {}; }
+}
+
+// --- Drive 連絡先 保存（追加・更新） ---
+async function saveDriveContact(contactUsername, url) {
+  if (!currentUsername || !contactUsername || !url) return;
+  _driveContacts[contactUsername] = { url, savedAt: Date.now() };
+  try {
+    await setDoc(
+      doc(db, 'users', currentUsername, 'data', 'drive_contacts'),
+      { contacts: _driveContacts, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  } catch (err) { console.error('Drive連絡先保存エラー:', err); }
+}
+
+// --- Drive 連絡先 削除 ---
+async function deleteDriveContact(contactUsername) {
+  if (!currentUsername || !contactUsername) return;
+  delete _driveContacts[contactUsername];
+  try {
+    await setDoc(
+      doc(db, 'users', currentUsername, 'data', 'drive_contacts'),
+      { contacts: _driveContacts, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  } catch (err) { console.error('Drive連絡先削除エラー:', err); }
+  renderDrivePanel();
 }
 
 // --- タブ切り替え ---
@@ -1878,7 +1918,41 @@ function renderDrivePanel() {
   const incomingTitle = document.getElementById('ft-drive-incoming-title');
   const outgoingTitle = document.getElementById('ft-drive-outgoing-title');
   const emptyEl       = document.getElementById('ft-drive-empty');
+  const contactsEl    = document.getElementById('ft-contacts-list');
+  const contactsTitle = document.getElementById('ft-contacts-title');
   if (!incomingEl) return;
+
+  // ===== 登録済み連絡先 =====
+  const contacts = Object.entries(_driveContacts)
+    .sort((a, b) => (b[1].savedAt || 0) - (a[1].savedAt || 0));
+  if (contactsTitle) contactsTitle.hidden = contacts.length === 0;
+  if (contactsEl) {
+    contactsEl.innerHTML = contacts.map(([name, info]) => {
+      const color = getUserColor(name);
+      const initial = name.charAt(0).toUpperCase();
+      const shortUrl = info.url.replace(/^https?:\/\/drive\.google\.com\//, '').slice(0, 30) + '…';
+      return `<div class="ft-contact-item">
+        <div class="ft-contact-avatar" style="background:${color}">${initial}</div>
+        <div class="ft-contact-name" title="${esc(name)}">${esc(name)}</div>
+        <button class="btn-ft-contact-send" data-name="${esc(name)}" data-url="${esc(info.url)}" title="このリンクを送る">
+          <i class="fa-brands fa-google-drive"></i> 送る
+        </button>
+        <button class="btn-ft-contact-del" data-name="${esc(name)}" title="連絡先を削除">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>`;
+    }).join('');
+    contactsEl.querySelectorAll('.btn-ft-contact-send').forEach(btn => {
+      btn.addEventListener('click', () => openDriveSendModal(btn.dataset.name, btn.dataset.url));
+    });
+    contactsEl.querySelectorAll('.btn-ft-contact-del').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (confirm(`「${btn.dataset.name}」の登録リンクを削除しますか？`)) {
+          await deleteDriveContact(btn.dataset.name);
+        }
+      });
+    });
+  }
 
   // 受信（pending のみ表示）
   const pending = _driveIncoming.filter(s => s.status === 'pending');
@@ -1963,20 +2037,74 @@ async function dismissDriveShare(id) {
 }
 
 // --- Drive送信モーダル ---
-async function openDriveSendModal() {
+// prefillUser / prefillUrl: 連絡先クイック送信ボタンから呼ぶとき指定
+async function openDriveSendModal(prefillUser = null, prefillUrl = null) {
   if (!currentUsername) { alert('ユーザーネームを設定してください'); return; }
-  _ftDriveSelectedUser = null;
+  _ftDriveSelectedUser = prefillUser || null;
+
+  // モーダルを初期化
   document.getElementById('ft-drive-user-search').value = '';
-  document.getElementById('ft-drive-form-group').hidden = true;
-  document.getElementById('ft-drive-confirm-btn').hidden = true;
-  document.getElementById('ft-drive-url-input').value = _myDriveUrl;
   document.getElementById('ft-drive-message').value = '';
   document.getElementById('ft-drive-send-modal').classList.add('visible');
+
+  // === 登録済み連絡先クイック選択エリアを構築 ===
+  const contacts = Object.entries(_driveContacts)
+    .sort((a, b) => (b[1].savedAt || 0) - (a[1].savedAt || 0));
+  const quickArea = document.getElementById('ft-drive-quick-contacts');
+  const quickList = document.getElementById('ft-drive-quick-list');
+  if (contacts.length > 0 && quickArea && quickList) {
+    quickList.innerHTML = contacts.map(([name, info]) => {
+      const color = getUserColor(name);
+      const initial = name.charAt(0).toUpperCase();
+      const shortUrl = info.url.length > 38 ? info.url.slice(0, 35) + '…' : info.url;
+      return `<div class="ft-drive-quick-item" data-name="${esc(name)}" data-url="${esc(info.url)}">
+        <div style="width:24px;height:24px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;color:#fff;flex-shrink:0">${initial}</div>
+        <div style="flex:1;min-width:0">
+          <div class="ft-drive-quick-item-name">${esc(name)}</div>
+          <div class="ft-drive-quick-item-url">${esc(shortUrl)}</div>
+        </div>
+        <i class="fa-brands fa-google-drive" style="color:#34a853;font-size:0.9rem;flex-shrink:0"></i>
+      </div>`;
+    }).join('');
+    quickArea.hidden = false;
+    // クイック選択クリック時：フォームに自動入力して選択状態に
+    quickList.querySelectorAll('.ft-drive-quick-item').forEach(item => {
+      item.addEventListener('click', () => {
+        selectDriveSendTarget(item.dataset.name, item.dataset.url);
+      });
+    });
+  } else {
+    if (quickArea) quickArea.hidden = true;
+  }
+
+  // prefill が指定されている場合（クイック送信ボタンから）は即選択状態に
+  if (prefillUser) {
+    const url = prefillUrl || _driveContacts[prefillUser]?.url || _myDriveUrl;
+    selectDriveSendTarget(prefillUser, url);
+  } else {
+    document.getElementById('ft-drive-form-group').hidden = true;
+    document.getElementById('ft-drive-confirm-btn').hidden = true;
+  }
+
   await loadUsersForChatPicker('ft-drive-user-list', 'ft-drive-user-search', name => {
-    _ftDriveSelectedUser = name;
-    document.getElementById('ft-drive-form-group').hidden = false;
-    document.getElementById('ft-drive-confirm-btn').hidden = false;
+    const savedUrl = _driveContacts[name]?.url || _myDriveUrl;
+    selectDriveSendTarget(name, savedUrl);
   }, true);
+}
+
+// 送信先決定時の共通処理（クイック選択 or 検索どちらからでも呼ばれる）
+function selectDriveSendTarget(name, url) {
+  _ftDriveSelectedUser = name;
+  const urlInput  = document.getElementById('ft-drive-url-input');
+  const badge     = document.getElementById('ft-drive-saved-badge');
+  const formGroup = document.getElementById('ft-drive-form-group');
+  const confirmBtn = document.getElementById('ft-drive-confirm-btn');
+  const hasSaved  = !!_driveContacts[name];
+
+  urlInput.value        = url || '';
+  if (badge)  badge.hidden = !hasSaved;
+  formGroup.hidden      = false;
+  confirmBtn.hidden     = false;
 }
 
 function closeDriveSendModal() {
@@ -1985,8 +2113,9 @@ function closeDriveSendModal() {
 }
 
 async function confirmDriveSend() {
-  const url = document.getElementById('ft-drive-url-input').value.trim();
-  const msg = document.getElementById('ft-drive-message').value.trim();
+  const url      = document.getElementById('ft-drive-url-input').value.trim();
+  const msg      = document.getElementById('ft-drive-message').value.trim();
+  const doSave   = document.getElementById('ft-drive-save-contact')?.checked ?? true;
   if (!_ftDriveSelectedUser) { alert('送信先を選択してください'); return; }
   if (!url) { document.getElementById('ft-drive-url-input').focus(); return; }
   if (!url.startsWith('http')) { alert('正しいURLを入力してください'); return; }
@@ -2003,10 +2132,13 @@ async function confirmDriveSend() {
       createdAt: serverTimestamp(),
       viewedAt:  null,
     });
-    // 送信したURLを自分のDriveリンクとして保存（任意）
+    // チェックボックスがONなら連絡先に記憶
+    if (doSave) await saveDriveContact(_ftDriveSelectedUser, url);
+    // 自分のDriveリンク未登録なら今回のURLで初期設定
     if (!_myDriveUrl && url) saveMyDriveUrl(url);
     closeDriveSendModal();
     switchFtTab('drive');
+    renderDrivePanel();
   } catch (err) {
     console.error('Drive送信エラー:', err);
     alert('送信に失敗しました');
@@ -3774,6 +3906,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     startTaskListeners(username);
     startFtListener();
     await loadMyDriveUrl(username);
+    await loadDriveContacts(username);
     startDriveListeners(username);
     await loadConfigDepartmentsAndViewers();
     startRequestListeners(username);

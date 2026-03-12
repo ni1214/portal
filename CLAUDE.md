@@ -50,6 +50,7 @@
 | `suggestion_box/` | 目安箱（全員投稿可、閲覧は管理者のみ） |
 | `drive_shares/{shareId}` | Google Drive大容量ファイル受け渡し（リンク共有） |
 | `users/{name}/data/drive_link` | 個人のDriveフォルダURL登録 |
+| `users/{name}/data/drive_contacts` | Drive連絡先記憶（相手ごとのDriveリンク保存） |
 
 ## セキュリティ
 - Firestore セキュリティルールなし（ユーザー名を知らないと個人データにアクセスできない「obscurity」方式）
@@ -76,15 +77,28 @@ drive_shares/{shareId}
 users/{name}/data/drive_link
   - url        : 自分の受け渡し用DriveフォルダURL
   - updatedAt  : 更新日時
+
+users/{name}/data/drive_contacts
+  - contacts   : Map { [相手ニックネーム]: { url: string, savedAt: number(ms) } }
+  - updatedAt  : 更新日時
 ```
+
+### Drive連絡先記憶（_driveContacts）
+- 送信時に「このリンクを連絡先として記憶する」チェックで `saveDriveContact()` を呼ぶ
+- ログイン時に `loadDriveContacts()` で読み込み、ログアウト時 `stopDriveListeners()` でクリア
+- パネル内「登録済み連絡先」一覧からクイック送信・削除が可能
+- モーダル内クイック選択エリアにも表示、クリックでURLを自動入力
 
 ### 主要関数（script.js）
 | 関数 | 役割 |
 |---|---|
 | `loadMyDriveUrl(username)` | 自分のDriveリンクをFirestoreから読み込み |
 | `saveMyDriveUrl(url)` | 自分のDriveリンクを保存 |
+| `loadDriveContacts(username)` | Drive連絡先をFirestoreから読み込み |
+| `saveDriveContact(contactUser, url)` | Drive連絡先を追加・更新 |
+| `deleteDriveContact(contactUser)` | Drive連絡先を削除 |
 | `startDriveListeners(username)` | 受信・送信の onSnapshot を開始 |
-| `stopDriveListeners()` | リスナー停止（ユーザー切り替え時） |
+| `stopDriveListeners()` | リスナー停止・連絡先クリア（ユーザー切り替え時） |
 | `switchFtTab(tab)` | ft-panel のタブ切り替え（'p2p' / 'drive'） |
 | `renderDrivePanel()` | Drive タブの描画 |
 | `openDriveShare(id, url)` | リンクを開く＋既読に更新 |

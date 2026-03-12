@@ -4406,6 +4406,109 @@ html.font-xl { font-size: 21px; }
 }
 .ft-drive-url-hint i { color: #60a5fa; margin-top: 2px; flex-shrink: 0; }
 
+/* ========== 仕組み説明ボックス ========== */
+.ft-how-it-works {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 0.73rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.ft-how-it-works b { color: var(--text-primary); }
+.ft-how-drive { border-color: rgba(52,168,83,0.25); background: rgba(52,168,83,0.05); }
+.ft-how-icon { font-size: 1.1rem; margin-top: 1px; flex-shrink: 0; color: var(--text-muted); }
+[data-theme="light"] .ft-how-it-works { background: rgba(0,0,0,0.04); }
+
+/* ========== Drive 登録済み連絡先（パネル内） ========== */
+.ft-contact-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+.ft-contact-item:last-child { margin-bottom: 0; }
+.ft-contact-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.ft-contact-name {
+  flex: 1; font-size: 0.78rem; font-weight: 600; color: var(--text-primary);
+  min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.btn-ft-contact-send {
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #1a73e8, #34a853);
+  color: #fff; border: none; border-radius: var(--radius-sm);
+  font-size: 0.72rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: opacity 0.15s; flex-shrink: 0;
+}
+.btn-ft-contact-send:hover { opacity: 0.85; }
+.btn-ft-contact-del {
+  padding: 4px 7px; background: none;
+  border: 1px solid var(--border-glass); border-radius: var(--radius-sm);
+  color: var(--text-muted); font-size: 0.72rem; cursor: pointer;
+  transition: all 0.15s; flex-shrink: 0;
+}
+.btn-ft-contact-del:hover { background: rgba(239,68,68,0.1); color: #ef4444; border-color: rgba(239,68,68,0.3); }
+
+/* ========== Drive 送信モーダル追加要素 ========== */
+.ft-drive-quick-label {
+  font-size: 0.72rem; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  margin-bottom: 8px; display: flex; align-items: center; gap: 5px;
+}
+.ft-drive-quick-label i { color: #f59e0b; }
+.ft-drive-quick-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.ft-drive-quick-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-glass); border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md); cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ft-drive-quick-item:hover { border-color: #34a853; background: rgba(52,168,83,0.06); }
+.ft-drive-quick-item-name { flex: 1; font-size: 0.78rem; font-weight: 600; color: var(--text-primary); }
+.ft-drive-quick-item-url {
+  font-size: 0.66rem; color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;
+}
+.ft-drive-quick-or {
+  font-size: 0.72rem; color: var(--text-muted); text-align: center;
+  margin: 8px 0; position: relative;
+}
+.ft-drive-quick-or::before,
+.ft-drive-quick-or::after {
+  content: ''; position: absolute; top: 50%; width: 28%; height: 1px;
+  background: var(--border-glass);
+}
+.ft-drive-quick-or::before { left: 0; }
+.ft-drive-quick-or::after  { right: 0; }
+.ft-drive-saved-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.65rem; font-weight: 600; color: #f59e0b;
+  background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3);
+  border-radius: 20px; padding: 1px 7px; margin-left: 6px; vertical-align: middle;
+}
+.ft-drive-save-contact-row {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 0.76rem; color: var(--text-secondary);
+  cursor: pointer; margin-bottom: 4px; user-select: none;
+}
+.ft-drive-save-contact-row input[type="checkbox"] {
+  accent-color: #34a853; width: 14px; height: 14px; cursor: pointer;
+}
+
 /* ========== ファイル送信モーダル ========== */
 .ft-file-drop {
   position: relative;
