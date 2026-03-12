@@ -1,0 +1,675 @@
+// ========== 認証・ユーザー管理・ロック画面 ==========
+import { db, doc, getDoc, setDoc, getDocs, deleteDoc, updateDoc, collection, query, where, writeBatch, serverTimestamp, onSnapshot } from './config.js';
+import { state } from './state.js';
+
+// Cross-module function references (set by script.js after all modules load)
+export const deps = {};
+
+// ========== PIN 認証 ==========
+const PIN_SALT = 'seisan-portal-v1';
+
+export async function hashPIN(pin) {
+  const data = new TextEncoder().encode(pin + PIN_SALT);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function verifyPIN(pin) {
+  const snap = await getDoc(doc(db, 'portal', 'config'));
+  if (!snap.exists() || !snap.data().pinHash) return false;
+  return (await hashPIN(pin)) === snap.data().pinHash;
+}
+
+export async function setPIN(pin) {
+  await setDoc(doc(db, 'portal', 'config'), { pinHash: await hashPIN(pin) }, { merge: true });
+}
+
+export async function isPINConfigured() {
+  const snap = await getDoc(doc(db, 'portal', 'config'));
+  return snap.exists() && !!snap.data().pinHash;
+}
+
+// ========== ユーザー（ニックネーム）管理 ==========
+
+/**
+ * 旧ユーザー名から新ユーザー名へ全データを移行する
+ * - users/{old}/data/ サブドキュメント
+ * - users/{old}/private_sections/
+ * - users/{old}/private_cards/
+ * - users_list エントリ
+ * - assigned_tasks の assignedTo / assignedBy
+ * - dm_rooms / chat_rooms の members 配列
+ */
+export async function migrateToNewUsername(oldName, newName) {
+  const batch = writeBatch(db);
+
+  // 1. data サブドキュメントをコピー
+  const dataDocIds = ['preferences', 'section_order', 'lock_pin', 'chat_reads'];
+  for (const docId of dataDocIds) {
+    try {
+      const snap = await getDoc(doc(db, 'users', oldName, 'data', docId));
+      if (snap.exists()) {
+        batch.set(doc(db, 'users', newName, 'data', docId), snap.data());
+        batch.delete(doc(db, 'users', oldName, 'data', docId));
+      }
+    } catch (_) {}
+  }
+
+  // 2. private_sections をコピー
+  try {
+    const psSnap = await getDocs(collection(db, 'users', oldName, 'private_sections'));
+    psSnap.forEach(d => {
+      batch.set(doc(db, 'users', newName, 'private_sections', d.id), d.data());
+      batch.delete(doc(db, 'users', oldName, 'private_sections', d.id));
+    });
+  } catch (_) {}
+
+  // 3. private_cards をコピー
+  try {
+    const pcSnap = await getDocs(collection(db, 'users', oldName, 'private_cards'));
+    pcSnap.forEach(d => {
+      batch.set(doc(db, 'users', newName, 'private_cards', d.id), d.data());
+      batch.delete(doc(db, 'users', oldName, 'private_cards', d.id));
+    });
+  } catch (_) {}
+
+  // 4. users_list を更新（旧削除 → 新作成）
+  batch.delete(doc(db, 'users_list', oldName));
+  batch.set(doc(db, 'users_list', newName), {
+    displayName: newName,
+    createdAt: serverTimestamp(),
+    lastLogin: serverTimestamp(),
+  });
+
+  await batch.commit();
+
+  // 5. assigned_tasks: assignedTo を更新
+  try {
+    const tasksTo = await getDocs(query(collection(db, 'assigned_tasks'), where('assignedTo', '==', oldName)));
+    if (!tasksTo.empty) {
+      const b2 = writeBatch(db);
+      tasksTo.forEach(d => b2.update(d.ref, { assignedTo: newName }));
+      await b2.commit();
+    }
+  } catch (_) {}
+
+  // 6. assigned_tasks: assignedBy を更新
+  try {
+    const tasksBy = await getDocs(query(collection(db, 'assigned_tasks'), where('assignedBy', '==', oldName)));
+    if (!tasksBy.empty) {
+      const b3 = writeBatch(db);
+      tasksBy.forEach(d => b3.update(d.ref, { assignedBy: newName }));
+      await b3.commit();
+    }
+  } catch (_) {}
+
+  // 7. dm_rooms: members 配列を更新
+  try {
+    const dmSnap = await getDocs(query(collection(db, 'dm_rooms'), where('members', 'array-contains', oldName)));
+    if (!dmSnap.empty) {
+      const b4 = writeBatch(db);
+      dmSnap.forEach(d => {
+        const members = (d.data().members || []).map(m => m === oldName ? newName : m);
+        b4.update(d.ref, { members });
+      });
+      await b4.commit();
+    }
+  } catch (_) {}
+
+  // 8. chat_rooms: members / createdBy を更新
+  try {
+    const crSnap = await getDocs(query(collection(db, 'chat_rooms'), where('members', 'array-contains', oldName)));
+    if (!crSnap.empty) {
+      const b5 = writeBatch(db);
+      crSnap.forEach(d => {
+        const members = (d.data().members || []).map(m => m === oldName ? newName : m);
+        const updates = { members };
+        if (d.data().createdBy === oldName) updates.createdBy = newName;
+        b5.update(d.ref, updates);
+      });
+      await b5.commit();
+    }
+  } catch (_) {}
+}
+
+export function showUsernameModal(isEdit = false) {
+  const input = document.getElementById('username-input');
+  input.value = (isEdit && state.currentUsername) ? state.currentUsername : '';
+  document.getElementById('username-modal').classList.add('visible');
+  // セキュリティ設定ボタンはログイン済みのときのみ表示
+  document.getElementById('username-security-row').hidden = !state.currentUsername;
+  hideUsernameError();
+
+  // 編集モード（ログイン済み）かどうかでテキストを切り替え
+  if (isEdit && state.currentUsername) {
+    document.getElementById('username-modal-title').innerHTML =
+      '<i class="fa-solid fa-user-circle"></i> ユーザーネームを変更';
+    document.getElementById('username-modal-desc').innerHTML =
+      '新しいユーザーネームを入力してください。<br>チャット・タスク・マイセクションなどのデータはすべて引き継がれます。';
+    document.getElementById('username-submit-text').textContent = '変更する';
+    document.getElementById('username-skip').textContent = 'キャンセル';
+  } else {
+    document.getElementById('username-modal-title').innerHTML =
+      '<i class="fa-solid fa-user-circle"></i> ユーザーネームを設定';
+    document.getElementById('username-modal-desc').innerHTML =
+      'あなただけの名前を入力してください。<br>お気に入り・テーマ・マイセクションがこの名前に紐づいて保存されます。';
+    document.getElementById('username-submit-text').textContent = '設定して始める';
+    document.getElementById('username-skip').textContent = 'スキップ';
+  }
+
+  setTimeout(() => input.focus(), 100);
+}
+
+export function closeUsernameModal() {
+  document.getElementById('username-modal').classList.remove('visible');
+}
+
+export function showUsernameError(msg) {
+  const box = document.getElementById('username-error-box');
+  document.getElementById('username-error-msg').textContent = msg;
+  box.hidden = false;
+}
+
+export function hideUsernameError() {
+  document.getElementById('username-error-box').hidden = true;
+  document.getElementById('username-reclaim').hidden = true;
+}
+
+export async function applyUsername(name) {
+  const isSwitch = !!state.currentUsername && state.currentUsername !== name;
+  state.currentUsername = name;
+  localStorage.setItem('portal-username', name);
+  updateUsernameDisplay();
+  registerUserLogin(name);
+  deps.loadPersonalData?.(name, isSwitch); // from personal.js
+  deps.renderAllSections?.(); // from render.js
+  closeUsernameModal();
+}
+
+export async function saveUsername(name) {
+  // 変更なしはそのまま閉じる
+  if (name === state.currentUsername) { closeUsernameModal(); return; }
+
+  // 重複チェック
+  const submitBtn = document.getElementById('username-submit');
+  const spinner = document.getElementById('username-submit-spinner');
+  const submitText = document.getElementById('username-submit-text');
+  submitBtn.disabled = true;
+  spinner.hidden = false;
+  hideUsernameError();
+
+  try {
+    const snap = await getDoc(doc(db, 'users_list', name));
+    if (snap.exists()) {
+      showUsernameError('このユーザーネームはすでに使用されています。');
+      // 自分のアカウント再ログイン用ボタンを表示
+      document.getElementById('username-reclaim').hidden = false;
+      submitBtn.disabled = false;
+      spinner.hidden = true;
+      return;
+    }
+  } catch (_) { /* オフライン等は無視 */ }
+
+  // 既存ユーザーの場合はデータを旧名 → 新名へ移行
+  if (state.currentUsername) {
+    submitText.textContent = '移行中...';
+    try {
+      await migrateToNewUsername(state.currentUsername, name);
+    } catch (e) {
+      console.error('ユーザー名移行エラー:', e);
+      showUsernameError('データの移行に失敗しました。もう一度お試しください。');
+      submitBtn.disabled = false;
+      spinner.hidden = true;
+      submitText.textContent = '変更する';
+      return;
+    }
+  }
+
+  submitBtn.disabled = false;
+  spinner.hidden = true;
+  await applyUsername(name);
+}
+
+// ========== PINロック ==========
+let lockClockTimer = null;
+
+export async function loadLockSettings(username, lockImmediately = false) {
+  if (!username) return;
+  // ユーザー切り替え時に前のユーザーの設定をリセット
+  state.lockPinHash = null; state.lockPinEnabled = false; state.lockEnabled = false; state.autoLockMinutes = 5;
+  try {
+    const snap = await getDoc(doc(db, 'users', username, 'data', 'lock_pin'));
+    if (snap.exists()) {
+      const data = snap.data();
+      state.lockPinHash      = data.hash || null;
+      state.lockPinEnabled   = !!state.lockPinHash;
+      state.lockEnabled      = data.enabled ?? false;
+      state.autoLockMinutes  = data.autoLockMinutes ?? 5;
+    }
+  } catch (_) {}
+  document.getElementById('btn-lock-header').hidden = !(state.lockEnabled && state.lockPinEnabled && state.currentUsername);
+  if (state.lockEnabled && state.lockPinEnabled) {
+    startActivityTracking();
+    // リロード後または切り替え時: セッションストレージにロックフラグがあれば再ロック
+    const shouldLock = lockImmediately || (sessionStorage.getItem('portal-locked') === username);
+    if (shouldLock) lockPortal();
+  } else {
+    // PIN無効ならロックフラグも消す
+    sessionStorage.removeItem('portal-locked');
+  }
+}
+
+export async function saveLockSettings() {
+  if (!state.currentUsername) return;
+  try {
+    await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), {
+      enabled: state.lockEnabled,
+      autoLockMinutes: state.autoLockMinutes
+    }, { merge: true });
+  } catch (err) { console.error('設定保存エラー:', err); }
+}
+
+export function startActivityTracking() {
+  ['mousemove', 'click', 'keydown', 'touchstart', 'scroll'].forEach(ev => {
+    document.addEventListener(ev, resetActivityTimer, { passive: true });
+  });
+  if (state._autoLockInterval) clearInterval(state._autoLockInterval);
+  state._autoLockInterval = setInterval(checkAutoLock, 30_000);
+}
+
+export function stopActivityTracking() {
+  if (state._autoLockInterval) { clearInterval(state._autoLockInterval); state._autoLockInterval = null; }
+}
+
+export function resetActivityTimer() { state.lastActivityAt = Date.now(); }
+
+export function checkAutoLock() {
+  if (!state.lockEnabled || !state.lockPinEnabled || !state.currentUsername) return;
+  if (!document.getElementById('lock-screen').hidden) return;
+  if (Date.now() - state.lastActivityAt >= state.autoLockMinutes * 60_000) lockPortal();
+}
+
+export async function setLockPin(newPin) {
+  const hash = await hashPIN(newPin);
+  try {
+    await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), { hash }, { merge: true });
+    state.lockPinHash    = hash;
+    state.lockPinEnabled = true;
+    document.getElementById('btn-lock-header').hidden = !(state.lockEnabled && state.currentUsername);
+    if (state.lockEnabled) startActivityTracking();
+  } catch (err) { console.error('PIN設定エラー:', err); throw err; }
+}
+
+export async function removeLockPin() {
+  try {
+    await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), { hash: null }, { merge: true });
+    state.lockPinHash    = null;
+    state.lockPinEnabled = false;
+    document.getElementById('btn-lock-header').hidden = true;
+    stopActivityTracking();
+  } catch (err) { console.error('PIN解除エラー:', err); throw err; }
+}
+
+export function lockPortal() {
+  if (!state.lockEnabled || !state.lockPinEnabled || !state.currentUsername) return;
+  state.lockCurrentInput = '';
+  updateLockDots();
+  // ロック画面の情報を更新
+  document.getElementById('lock-username').textContent = state.currentUsername;
+  const avatarEl = document.getElementById('lock-avatar');
+  avatarEl.textContent = state.currentUsername.charAt(0).toUpperCase();
+  avatarEl.style.background = getUserAvatarColor(state.currentUsername);
+  document.getElementById('lock-pin-error').hidden = true;
+  document.getElementById('lock-screen').hidden = false;
+  document.body.style.overflow = 'hidden';
+  // リロード後も再ロックされるようにセッションストレージに記録
+  sessionStorage.setItem('portal-locked', state.currentUsername);
+  // 通知インジケーター更新
+  updateLockNotifications();
+  // 時計更新
+  updateLockClock();
+  lockClockTimer = setInterval(updateLockClock, 1000);
+}
+
+export function updateLockNotifications() {
+  const el = document.getElementById('lock-notifications');
+  if (!el) return;
+
+  const items = [];
+
+  // チャット未読
+  const chatUnread = [...state.dmRooms, ...state.groupRooms].reduce((sum, r) => sum + (deps.getRoomUnread?.(r) || 0), 0); // from chat.js
+  if (chatUnread > 0) items.push({ icon: 'fa-comments',       count: chatUnread, color: '#60a5fa', label: 'チャット' });
+
+  // お知らせ未読
+  const noticeUnread = state.allNotices.filter(n => !state.readNoticeIds.has(n.id)).length;
+  if (noticeUnread > 0) items.push({ icon: 'fa-bell',          count: noticeUnread, color: '#a78bfa', label: 'お知らせ' });
+
+  // タスク（承諾待ち + 完了報告）
+  const taskCount = state.receivedTasks.filter(t => t.status === 'pending').length
+                  + state.sentTasks.filter(t => t.status === 'done' && !t.notifiedDone).length;
+  if (taskCount > 0) items.push({ icon: 'fa-list-check',      count: taskCount, color: '#fbbf24', label: 'タスク' });
+
+  // ファイル転送受信待ち（P2P + Drive）
+  const ftCount = state._ftIncoming.filter(s => s.status === 'pending').length
+                + state._driveIncoming.filter(s => s.status === 'pending').length;
+  if (ftCount > 0) items.push({ icon: 'fa-file-arrow-up',     count: ftCount, color: '#34d399', label: 'ファイル' });
+
+  if (!items.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML = items.map(item => `
+    <div class="lock-notif-item">
+      <div class="lock-notif-icon" style="border-color:${item.color}60; color:${item.color}">
+        <i class="fa-solid ${item.icon}"></i>
+        <span class="lock-notif-badge">${item.count > 99 ? '99+' : item.count}</span>
+      </div>
+      <div class="lock-notif-label">${item.label}</div>
+    </div>`).join('');
+}
+
+export function lockSwitchUser() {
+  // ロックフラグをクリアしてロック画面を閉じ、ユーザーネームモーダルを開く
+  sessionStorage.removeItem('portal-locked');
+  document.getElementById('lock-screen').hidden = true;
+  document.body.style.overflow = '';
+  clearInterval(lockClockTimer);
+  state.lockCurrentInput = '';
+  updateLockDots();
+  // ユーザーネーム設定モーダルを開く（新規入力扱い）
+  showUsernameModal(false);
+}
+
+export function updateLockClock() {
+  const now = new Date();
+  const h = now.getHours().toString().padStart(2, '0');
+  const m = now.getMinutes().toString().padStart(2, '0');
+  document.getElementById('lock-clock').textContent = `${h}:${m}`;
+}
+
+export async function handleLockKeyPress(digit) {
+  if (state.lockCurrentInput.length >= 4) return;
+  state.lockCurrentInput += digit;
+  updateLockDots();
+  if (state.lockCurrentInput.length === 4) {
+    await verifyLockPin(state.lockCurrentInput);
+  }
+}
+
+export function handleLockDelete() {
+  if (state.lockCurrentInput.length > 0) {
+    state.lockCurrentInput = state.lockCurrentInput.slice(0, -1);
+    updateLockDots();
+  }
+}
+
+export function updateLockDots() {
+  const dots = document.querySelectorAll('#lock-pin-dots span');
+  dots.forEach((dot, i) => {
+    dot.classList.toggle('filled', i < state.lockCurrentInput.length);
+  });
+}
+
+export async function verifyLockPin(pin) {
+  const hash = await hashPIN(pin);
+  if (hash === state.lockPinHash) {
+    // 解錠
+    sessionStorage.removeItem('portal-locked'); // ロックフラグをクリア
+    document.getElementById('lock-screen').hidden = true;
+    document.body.style.overflow = '';
+    clearInterval(lockClockTimer);
+    state.lockCurrentInput = '';
+    updateLockDots();
+  } else {
+    // 失敗
+    state.lockCurrentInput = '';
+    updateLockDots();
+    const errEl = document.getElementById('lock-pin-error');
+    errEl.hidden = false;
+    document.getElementById('lock-pin-dots').classList.add('shake');
+    setTimeout(() => {
+      document.getElementById('lock-pin-dots').classList.remove('shake');
+      errEl.hidden = true;
+    }, 800);
+  }
+}
+
+// セキュリティ設定モーダル
+export function openSecurityModal() {
+  // トグル状態を反映
+  document.getElementById('lock-enabled-toggle').checked = state.lockEnabled;
+
+  // 自動ロックセクション表示切り替え
+  document.getElementById('security-autolock-section').hidden = !state.lockEnabled;
+
+  // 選択中の自動ロック時間をハイライト
+  document.querySelectorAll('.autolock-time-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.minutes) === state.autoLockMinutes);
+  });
+
+  // PIN設定エリアのリセット
+  const setupArea  = document.getElementById('security-setup-area');
+  const manageArea = document.getElementById('security-manage-area');
+  document.getElementById('new-pin-input').value      = '';
+  document.getElementById('confirm-pin-input').value  = '';
+  document.getElementById('security-pin-error').hidden = true;
+  const curInput = document.getElementById('current-pin-input');
+  if (curInput) curInput.value = '';
+  const curErr = document.getElementById('security-current-error');
+  if (curErr) curErr.hidden = true;
+
+  if (state.lockPinEnabled) {
+    setupArea.hidden  = true;
+    manageArea.hidden = false;
+  } else {
+    setupArea.hidden  = false;
+    manageArea.hidden = true;
+  }
+
+  document.getElementById('security-modal').classList.add('visible');
+}
+
+export async function openAdminModal() {
+  document.getElementById('admin-auth-area').hidden  = false;
+  document.getElementById('admin-panel-area').hidden = true;
+  document.getElementById('admin-setup-area').hidden = true;
+  document.getElementById('admin-pin-input').value   = '';
+  document.getElementById('admin-auth-error').hidden = true;
+  document.getElementById('admin-modal').classList.add('visible');
+
+  // PIN未設定なら設定モードで開く
+  const configured = await isPINConfigured();
+  if (!configured) {
+    document.getElementById('admin-auth-area').hidden  = true;
+    document.getElementById('admin-setup-area').hidden = false;
+    document.getElementById('admin-new-pin').value         = '';
+    document.getElementById('admin-new-pin-confirm').value = '';
+    document.getElementById('admin-setup-error').hidden    = true;
+    setTimeout(() => document.getElementById('admin-new-pin').focus(), 100);
+  } else {
+    setTimeout(() => document.getElementById('admin-pin-input').focus(), 100);
+  }
+}
+
+export function closeAdminModal() {
+  document.getElementById('admin-modal').classList.remove('visible');
+}
+
+export async function deleteUserData(username) {
+  // 1. users_list エントリ + data サブドキュメントを一括削除
+  const batch1 = writeBatch(db);
+  batch1.delete(doc(db, 'users_list', username));
+  for (const docId of ['preferences', 'section_order', 'lock_pin', 'chat_reads']) {
+    batch1.delete(doc(db, 'users', username, 'data', docId));
+  }
+  await batch1.commit();
+
+  // 2. private_sections
+  try {
+    const psSnap = await getDocs(collection(db, 'users', username, 'private_sections'));
+    if (!psSnap.empty) {
+      const b = writeBatch(db);
+      psSnap.forEach(d => b.delete(d.ref));
+      await b.commit();
+    }
+  } catch (_) {}
+
+  // 3. private_cards
+  try {
+    const pcSnap = await getDocs(collection(db, 'users', username, 'private_cards'));
+    if (!pcSnap.empty) {
+      const b = writeBatch(db);
+      pcSnap.forEach(d => b.delete(d.ref));
+      await b.commit();
+    }
+  } catch (_) {}
+
+  // 4. email_profiles
+  try {
+    const epSnap = await getDocs(collection(db, 'users', username, 'email_profiles'));
+    if (!epSnap.empty) {
+      const b = writeBatch(db);
+      epSnap.forEach(d => b.delete(d.ref));
+      await b.commit();
+    }
+  } catch (_) {}
+}
+
+export async function loadUsersForAdmin() {
+  const listEl = document.getElementById('admin-user-list');
+  listEl.innerHTML = '<div class="admin-loading">読み込み中...</div>';
+  try {
+    const snap = await getDocs(collection(db, 'users_list'));
+    if (snap.empty) { listEl.innerHTML = '<div class="admin-loading">ユーザーなし</div>'; return; }
+    listEl.innerHTML = '';
+    for (const d of snap.docs) {
+      const name = d.id;
+      const item = document.createElement('div');
+      item.className = 'admin-user-item';
+      item.innerHTML = `
+        <div class="admin-user-info">
+          <span class="admin-user-avatar">${name.charAt(0).toUpperCase()}</span>
+          <span class="admin-user-name">${deps.esc?.(name) ?? name}</span>
+        </div>
+        <div class="admin-user-actions">
+          <button class="btn-admin-reset-pin" data-username="${deps.esc?.(name) ?? name}">PINリセット</button>
+          <button class="btn-admin-delete-user" data-username="${deps.esc?.(name) ?? name}"><i class="fa-solid fa-trash-can"></i> 削除</button>
+        </div>
+      `;
+
+      // PINリセット
+      item.querySelector('.btn-admin-reset-pin').addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        if (!confirm(`${name} さんのPINをリセットしますか？`)) return;
+        btn.disabled = true;
+        btn.textContent = '処理中...';
+        try {
+          await setDoc(doc(db, 'users', name, 'data', 'lock_pin'), { hash: null, enabled: false }, { merge: true });
+          btn.textContent = 'リセット済み ✓';
+          if (name === state.currentUsername) {
+            state.lockPinHash = null; state.lockPinEnabled = false; state.lockEnabled = false;
+            document.getElementById('btn-lock-header').hidden = true;
+            stopActivityTracking();
+          }
+        } catch (_) { btn.disabled = false; btn.textContent = 'エラー'; }
+      });
+
+      // ユーザー削除
+      item.querySelector('.btn-admin-delete-user').addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        if (!confirm(`「${name}」のアカウントとすべての個人データを削除しますか？\nこの操作は取り消せません。`)) return;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 削除中...';
+        try {
+          await deleteUserData(name);
+          item.remove();
+          // 自分自身を削除した場合はログアウト
+          if (name === state.currentUsername) {
+            state.currentUsername = null;
+            localStorage.removeItem('portal-username');
+            location.reload();
+          }
+          // リストが空になったか確認
+          if (!listEl.querySelector('.admin-user-item')) {
+            listEl.innerHTML = '<div class="admin-loading">ユーザーなし</div>';
+          }
+        } catch (err) {
+          console.error('ユーザー削除エラー:', err);
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-trash-can"></i> 削除';
+          alert('削除に失敗しました。');
+        }
+      });
+
+      listEl.appendChild(item);
+    }
+  } catch (_) {
+    listEl.innerHTML = '<div class="admin-loading">読み込みエラー</div>';
+  }
+}
+
+export function closeSecurityModal() {
+  document.getElementById('security-modal').classList.remove('visible');
+}
+
+// ユーザー名の頭文字から一貫したアバターカラーを生成
+export function getUserAvatarColor(name) {
+  const colors = [
+    'linear-gradient(135deg,#6366f1,#8b5cf6)',
+    'linear-gradient(135deg,#0ea5e9,#06b6d4)',
+    'linear-gradient(135deg,#10b981,#059669)',
+    'linear-gradient(135deg,#f59e0b,#d97706)',
+    'linear-gradient(135deg,#ef4444,#dc2626)',
+    'linear-gradient(135deg,#ec4899,#db2777)',
+    'linear-gradient(135deg,#14b8a6,#0d9488)',
+    'linear-gradient(135deg,#f97316,#ea580c)',
+  ];
+  let hash = 0;
+  for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) & 0xffff;
+  return colors[hash % colors.length];
+}
+
+export function updateUsernameDisplay() {
+  const nameEl    = document.getElementById('username-display');
+  const greetEl   = document.getElementById('user-greeting');
+  const avatarEl  = document.getElementById('user-avatar');
+  const btnEl     = document.getElementById('btn-user');
+
+  if (state.currentUsername) {
+    const initial = state.currentUsername.charAt(0).toUpperCase();
+    if (avatarEl) {
+      avatarEl.textContent = initial;
+      avatarEl.style.background = getUserAvatarColor(state.currentUsername);
+    }
+    if (nameEl)  nameEl.textContent  = state.currentUsername;
+    if (greetEl) greetEl.textContent = 'こんにちは';
+    if (btnEl)   btnEl.classList.add('btn-user--active');
+  } else {
+    if (avatarEl) {
+      avatarEl.innerHTML = '<i class="fa-solid fa-user"></i>';
+      avatarEl.style.background = '';
+    }
+    if (nameEl)  nameEl.textContent  = '';
+    if (greetEl) greetEl.textContent = '名前を設定してください';
+    if (btnEl)   btnEl.classList.remove('btn-user--active');
+  }
+}
+
+// Firestore の users_list にログイン記録（管理者が全員を把握できる）
+export async function registerUserLogin(username) {
+  if (!username) return;
+  try {
+    const ref  = doc(db, 'users_list', username);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        displayName: username,
+        createdAt:   serverTimestamp(),
+        lastLogin:   serverTimestamp(),
+      });
+    } else {
+      await updateDoc(ref, { lastLogin: serverTimestamp() });
+    }
+  } catch (err) {
+    console.error('ユーザー登録エラー:', err);
+  }
+}

@@ -1,3804 +1,171 @@
-// ========== Firebase Imports ==========
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+// ========== Portal エントリポイント ==========
+// 全モジュールを import し、依存関係を注入して初期化する
+
+// ===== Foundation =====
 import {
-  getFirestore, collection, doc,
-  getDocs, getDoc, setDoc, addDoc, deleteDoc, updateDoc,
-  query, where, orderBy, limit, writeBatch, serverTimestamp, onSnapshot,
-  arrayUnion, arrayRemove
-} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  db, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc,
+  collection, query, where, orderBy, limit, writeBatch, serverTimestamp, onSnapshot,
+  arrayUnion, arrayRemove,
+  WEATHER_API_KEY, WEATHER_LAT, WEATHER_LON,
+  SVG_ICONS, PRESET_SERVICES, CATEGORY_COLORS, ICON_PICKER_LIST,
+  DEFAULT_CATEGORIES, INITIAL_CARDS
+} from './modules/config.js';
+
+import { state } from './modules/state.js';
+
+import { esc, escHtml, _fmtTs, getUserAvatarColor, formatFileSize, getFileIcon, confirmDelete } from './modules/utils.js';
+
+// ===== Feature modules =====
+import {
+  deps as authDeps,
+  hashPIN, verifyPIN, setPIN, isPINConfigured,
+  migrateToNewUsername,
+  showUsernameModal, closeUsernameModal, showUsernameError, hideUsernameError,
+  applyUsername, saveUsername,
+  loadLockSettings, saveLockSettings,
+  startActivityTracking, stopActivityTracking, resetActivityTimer, checkAutoLock,
+  setLockPin, removeLockPin,
+  lockPortal, updateLockNotifications,
+  lockSwitchUser, updateLockClock,
+  handleLockKeyPress, handleLockDelete, updateLockDots, verifyLockPin,
+  openSecurityModal, openAdminModal, closeAdminModal, deleteUserData, loadUsersForAdmin,
+  closeSecurityModal,
+  updateUsernameDisplay, registerUserLogin
+} from './modules/auth.js';
+
+import {
+  deps as chatDeps,
+  getDmRoomId, initChatResize,
+  openChatPanel, closeChatPanel,
+  startChatListeners, stopChatListeners,
+  subscribeUsersList, stopUsersListListener,
+  loadChatReadTimes, markRoomRead, getRoomUnread, updateChatBadge,
+  switchChatSidebarTab, renderChatSidebar,
+  openRoom, sendChatMessage, deleteChatMessage,
+  renderChatMessages, scrollChatToBottom,
+  openNewDmModal, deleteDmRoom, openOrCreateDm,
+  openNewGroupModal, renderNewGroupSelected, createGroupRoom,
+  loadUsersForChatPicker
+} from './modules/chat.js';
+
+import {
+  deps as ftDeps,
+  openFileTransferPanel, closeFileTransferPanel,
+  updateFtBadge, renderFtPanel,
+  startFtListener, stopFtListener,
+  loadMyDriveUrl, saveMyDriveUrl,
+  startDriveListeners, stopDriveListeners,
+  loadDriveContacts, saveDriveContact, deleteDriveContact,
+  switchFtTab, renderDrivePanel,
+  openDriveShare, dismissDriveShare,
+  openDriveSendModal, selectDriveSendTarget, closeDriveSendModal, confirmDriveSend,
+  openMyDriveLinkModal, closeMyDriveLinkModal, saveMyDriveLinkFromModal,
+  openFtSendModal, closeFtSendModal, confirmFtSend,
+  initiateFileTransfer, acceptFtTransfer, rejectFtTransfer,
+  formatFileSize as ftFormatFileSize,
+  getFileIcon as ftGetFileIcon
+} from './modules/file-transfer.js';
+
+import {
+  deps as noticeDeps,
+  loadReadNotices, markAllNoticesRead, updateNoticeBadge, setupNoticeObserver,
+  loadAllNoticeReactions, toggleReaction, buildReactionBar,
+  subscribeNotices, saveNotice as moduleSaveNotice, addNotice as moduleAddNotice, deleteNotice as moduleDeleteNotice,
+  renderNotices, openNoticeModal, closeNoticeModal
+} from './modules/notices.js';
+
+import {
+  deps as taskDeps,
+  startTaskListeners, updateTaskBadge,
+  openTaskModal, closeTaskModal, switchTaskTab, renderTaskTabContent,
+  openTaskUserPicker, submitNewTask,
+  acceptTask, completeTask, acknowledgeTask, deleteTask
+} from './modules/tasks.js';
+
+import {
+  deps as reqDeps,
+  loadConfigDepartmentsAndViewers,
+  startRequestListeners, stopRequestListeners,
+  updateReqBadge,
+  openReqModal, closeReqModal,
+  switchReqTab, switchReqSubTab,
+  renderReqContent,
+  submitRequest, openStatusModal, updateRequestStatus,
+  markRequestSeen,
+  submitSuggestion, openSuggReplyModal, sendSuggReply,
+  _markSuggestionsViewed,
+  renderAdminSuggBoxSection, addSuggBoxViewer,
+  _renderSuggestionPanel
+} from './modules/reqboard.js';
+
+import {
+  initEmail,
+  loadEmailData, renderEmailProfileList, selectEmailProfile,
+  saveEmailProfile, addEmailProfile, deleteEmailProfile,
+  saveGeminiApiKey,
+  generateEmailReply, copyEmailOutput, resetEmailOutput,
+  saveUserEmailProfile, resetSignatureTemplate, updateSignaturePreview,
+  switchEmailTab, openEmailModal, closeEmailModal
+} from './modules/email.js';
+
+
+// ========== 依存注入 ==========
+// 各モジュールが必要とするクロスモジュール関数を注入
+
+Object.assign(authDeps, {
+  loadPersonalData,
+  renderAllSections,
+  esc,
+  getRoomUnread
+});
+
+Object.assign(chatDeps, {
+  stopFtListener,
+  stopDriveListeners,
+  updateLockNotifications,
+  confirmDelete,
+  loadUsersForChatPicker
+});
+
+Object.assign(ftDeps, {
+  updateLockNotifications,
+  loadUsersForChatPicker
+});
+
+Object.assign(noticeDeps, {
+  updateLockNotifications
+});
+
+Object.assign(taskDeps, {
+  updateLockNotifications,
+  loadUsersForChatPicker
+});
+
+Object.assign(reqDeps, {
+  // reqboard は現在 deps なし
+});
+
+initEmail({ confirmDelete });
 
-// ========== Firebase 設定 ==========
-const firebaseConfig = {
-  apiKey: "AIzaSyBDrBUN2elbCAdxfbnTFWQNWF4xhz9yaJ0",
-  authDomain: "kategu-sys-v15.firebaseapp.com",
-  projectId: "kategu-sys-v15",
-  storageBucket: "kategu-sys-v15.firebasestorage.app",
-  messagingSenderId: "992448511434",
-  appId: "1:992448511434:web:ef53560b55264f1e656333"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-// ========== 天気設定 ==========
-const WEATHER_API_KEY = '4131c5bca956c19b2b60b014b4045c12';
-const WEATHER_LAT = 36.3219;
-const WEATHER_LON = 139.0033;
-
-// ========== アイコン: Google ファビコン API で公式ブランドアイコンを取得 ==========
-const _fav = d =>
-  `<img src="https://www.google.com/s2/favicons?domain=${d}&sz=128" loading="lazy" alt="${d}">`;
-
-const SVG_ICONS = {
-  'svg:notion':     _fav('notion.so'),
-  'svg:slack':      _fav('slack.com'),
-  'svg:gdrive':     _fav('drive.google.com'),
-  'svg:box':        _fav('box.com'),
-  'svg:teams':      _fav('teams.microsoft.com'),
-  'svg:onedrive':   _fav('onedrive.live.com'),
-  'svg:sharepoint': _fav('sharepoint.com'),
-  'svg:dropbox':    _fav('dropbox.com'),
-  'svg:gmail':      _fav('mail.google.com'),
-  'svg:zoom':       _fav('zoom.us'),
-  'svg:github':     _fav('github.com'),
-  'svg:kintone':    _fav('kintone.com'),
-  'svg:trello':     _fav('trello.com'),
-};
-
-// ========== 外部ツール プリセットサービス ==========
-const PRESET_SERVICES = [
-  { label: 'Notion',       icon: 'svg:notion',     url: 'https://www.notion.so/' },
-  { label: 'Slack',        icon: 'svg:slack',      url: 'https://slack.com/' },
-  { label: 'Google Drive', icon: 'svg:gdrive',     url: 'https://drive.google.com/' },
-  { label: 'Box',          icon: 'svg:box',        url: 'https://www.box.com/' },
-  { label: 'Teams',        icon: 'svg:teams',      url: 'https://teams.microsoft.com/' },
-  { label: 'OneDrive',     icon: 'svg:onedrive',   url: 'https://onedrive.live.com/' },
-  { label: 'SharePoint',   icon: 'svg:sharepoint', url: 'https://www.sharepoint.com/' },
-  { label: 'Dropbox',      icon: 'svg:dropbox',    url: 'https://www.dropbox.com/' },
-  { label: 'Gmail',        icon: 'svg:gmail',      url: 'https://mail.google.com/' },
-  { label: 'Zoom',         icon: 'svg:zoom',       url: 'https://zoom.us/' },
-  { label: 'GitHub',       icon: 'svg:github',     url: 'https://github.com/' },
-  { label: 'kintone',      icon: 'svg:kintone',    url: 'https://kintone.cybozu.co.jp/' },
-  { label: 'Trello',       icon: 'svg:trello',     url: 'https://trello.com/' },
-  { label: '太陽光発電',   icon: 'fa-solid fa-solar-panel', url: 'solar:open' },
-];
-
-// ========== カテゴリカラープリセット ==========
-const CATEGORY_COLORS = [
-  { index: 1, label: 'ブルー',   gradient: 'linear-gradient(135deg, #4a9eff, #3a7cd9)' },
-  { index: 2, label: 'シアン',   gradient: 'linear-gradient(135deg, #00d4aa, #00a888)' },
-  { index: 3, label: 'パープル', gradient: 'linear-gradient(135deg, #7c5cff, #5a3fd9)' },
-  { index: 4, label: 'オレンジ', gradient: 'linear-gradient(135deg, #ff8c42, #e67530)' },
-  { index: 5, label: 'ピンク',   gradient: 'linear-gradient(135deg, #ff5ea0, #d94080)' },
-  { index: 6, label: 'レッド',   gradient: 'linear-gradient(135deg, #ff4444, #cc2222)' },
-  { index: 7, label: 'グリーン', gradient: 'linear-gradient(135deg, #44cc44, #228822)' },
-  { index: 8, label: 'ゴールド', gradient: 'linear-gradient(135deg, #ffcc00, #dd9900)' },
-];
-
-// ========== アイコンピッカー用アイコン一覧 ==========
-const ICON_PICKER_LIST = [
-  { icon: 'fa-solid fa-folder-open',          label: 'フォルダ(開)' },
-  { icon: 'fa-solid fa-folder',               label: 'フォルダ' },
-  { icon: 'fa-solid fa-file-lines',           label: 'ファイル' },
-  { icon: 'fa-solid fa-file-circle-plus',     label: 'ファイル追加' },
-  { icon: 'fa-solid fa-file-circle-check',    label: 'ファイル確認' },
-  { icon: 'fa-solid fa-file-invoice',         label: '請求書' },
-  { icon: 'fa-solid fa-file-contract',        label: '契約書' },
-  { icon: 'fa-solid fa-box-archive',          label: 'アーカイブ' },
-  { icon: 'fa-solid fa-clipboard',            label: 'クリップボード' },
-  { icon: 'fa-solid fa-clipboard-check',      label: 'チェック' },
-  { icon: 'fa-solid fa-clipboard-list',       label: 'リスト' },
-  { icon: 'fa-solid fa-book',                 label: 'ブック' },
-  { icon: 'fa-solid fa-book-open',            label: '開いた本' },
-  { icon: 'fa-solid fa-bookmark',             label: 'ブックマーク' },
-  { icon: 'fa-solid fa-paperclip',            label: 'クリップ' },
-  { icon: 'fa-solid fa-print',                label: '印刷' },
-  { icon: 'fa-solid fa-calendar-days',        label: 'カレンダー' },
-  { icon: 'fa-solid fa-calendar-check',       label: '確認' },
-  { icon: 'fa-solid fa-calendar-plus',        label: '追加' },
-  { icon: 'fa-solid fa-calendar-xmark',       label: '削除' },
-  { icon: 'fa-solid fa-clock',                label: '時計' },
-  { icon: 'fa-solid fa-stopwatch',            label: 'ストップウォッチ' },
-  { icon: 'fa-solid fa-hourglass-half',       label: '砂時計' },
-  { icon: 'fa-solid fa-business-time',        label: '業務時間' },
-  { icon: 'fa-solid fa-bars-progress',        label: '進捗' },
-  { icon: 'fa-solid fa-chart-bar',            label: '棒グラフ' },
-  { icon: 'fa-solid fa-chart-line',           label: '折れ線' },
-  { icon: 'fa-solid fa-chart-pie',            label: '円グラフ' },
-  { icon: 'fa-solid fa-chart-column',         label: '縦棒グラフ' },
-  { icon: 'fa-solid fa-list-check',           label: 'チェックリスト' },
-  { icon: 'fa-solid fa-table',                label: '表' },
-  { icon: 'fa-solid fa-table-list',           label: 'テーブル' },
-  { icon: 'fa-solid fa-database',             label: 'DB' },
-  { icon: 'fa-solid fa-magnifying-glass-chart', label: '分析' },
-  { icon: 'fa-solid fa-industry',             label: '工場' },
-  { icon: 'fa-solid fa-gears',                label: 'ギア複数' },
-  { icon: 'fa-solid fa-gear',                 label: 'ギア' },
-  { icon: 'fa-solid fa-screwdriver-wrench',   label: '工具' },
-  { icon: 'fa-solid fa-hammer',               label: 'ハンマー' },
-  { icon: 'fa-solid fa-wrench',               label: 'レンチ' },
-  { icon: 'fa-solid fa-screwdriver',          label: 'ドライバー' },
-  { icon: 'fa-solid fa-toolbox',              label: 'ツールボックス' },
-  { icon: 'fa-solid fa-warehouse',            label: '倉庫' },
-  { icon: 'fa-solid fa-cubes',                label: '在庫(複数)' },
-  { icon: 'fa-solid fa-cube',                 label: 'キューブ' },
-  { icon: 'fa-solid fa-drafting-compass',     label: 'コンパス' },
-  { icon: 'fa-solid fa-ruler-combined',       label: '定規' },
-  { icon: 'fa-solid fa-ruler',                label: 'ルーラー' },
-  { icon: 'fa-solid fa-calculator',           label: '計算機' },
-  { icon: 'fa-solid fa-microscope',           label: '顕微鏡' },
-  { icon: 'fa-solid fa-flask',                label: 'フラスコ' },
-  { icon: 'fa-solid fa-hard-hat',             label: 'ヘルメット' },
-  { icon: 'fa-solid fa-cart-shopping',        label: 'カート' },
-  { icon: 'fa-solid fa-truck',                label: 'トラック' },
-  { icon: 'fa-solid fa-truck-fast',           label: '急配' },
-  { icon: 'fa-solid fa-box',                  label: '箱' },
-  { icon: 'fa-solid fa-boxes-stacked',        label: '積み箱' },
-  { icon: 'fa-solid fa-pallet',               label: 'パレット' },
-  { icon: 'fa-solid fa-dolly',                label: 'ドーリー' },
-  { icon: 'fa-solid fa-handshake',            label: '取引' },
-  { icon: 'fa-solid fa-receipt',              label: 'レシート' },
-  { icon: 'fa-solid fa-tags',                 label: 'タグ複数' },
-  { icon: 'fa-solid fa-tag',                  label: 'タグ' },
-  { icon: 'fa-solid fa-barcode',              label: 'バーコード' },
-  { icon: 'fa-solid fa-qrcode',               label: 'QRコード' },
-  { icon: 'fa-solid fa-door-open',            label: 'ドア(開)' },
-  { icon: 'fa-solid fa-door-closed',          label: 'ドア(閉)' },
-  { icon: 'fa-solid fa-building',             label: 'ビル' },
-  { icon: 'fa-solid fa-house',                label: '家' },
-  { icon: 'fa-solid fa-stairs',               label: '階段' },
-  { icon: 'fa-solid fa-users',                label: 'ユーザー複数' },
-  { icon: 'fa-solid fa-user',                 label: 'ユーザー' },
-  { icon: 'fa-solid fa-user-tie',             label: 'スタッフ' },
-  { icon: 'fa-solid fa-user-gear',            label: '管理者' },
-  { icon: 'fa-solid fa-address-book',         label: 'アドレス帳' },
-  { icon: 'fa-solid fa-comment-dots',         label: 'コメント' },
-  { icon: 'fa-solid fa-comments',             label: '会話' },
-  { icon: 'fa-solid fa-envelope',             label: 'メール' },
-  { icon: 'fa-solid fa-phone',                label: '電話' },
-  { icon: 'fa-solid fa-headset',              label: 'ヘッドセット' },
-  { icon: 'fa-solid fa-bell',                 label: '通知' },
-  { icon: 'fa-solid fa-bullhorn',             label: 'アナウンス' },
-  { icon: 'fa-solid fa-triangle-exclamation', label: '警告' },
-  { icon: 'fa-solid fa-circle-check',         label: 'OK' },
-  { icon: 'fa-solid fa-circle-xmark',         label: 'NG' },
-  { icon: 'fa-solid fa-circle-info',          label: 'インフォ' },
-  { icon: 'fa-solid fa-flag',                 label: 'フラグ' },
-  { icon: 'fa-solid fa-shield-halved',        label: 'シールド' },
-  { icon: 'fa-solid fa-thumbs-up',            label: 'いいね' },
-  { icon: 'fa-solid fa-check',                label: 'チェック' },
-  { icon: 'fa-solid fa-bolt',                 label: '電気' },
-  { icon: 'fa-solid fa-fill-drip',            label: '充填' },
-  { icon: 'fa-solid fa-bars',                 label: '鋼材' },
-  { icon: 'fa-solid fa-fire',                 label: '炎' },
-  { icon: 'fa-solid fa-water',                label: '水' },
-  { icon: 'fa-solid fa-wind',                 label: '風' },
-  { icon: 'fa-solid fa-plug',                 label: 'プラグ' },
-  { icon: 'fa-solid fa-battery-full',         label: 'バッテリー' },
-  { icon: 'fa-solid fa-solar-panel',          label: '太陽光' },
-  { icon: 'fa-solid fa-download',             label: 'ダウンロード' },
-  { icon: 'fa-solid fa-upload',               label: 'アップロード' },
-  { icon: 'fa-solid fa-share-nodes',          label: '共有' },
-  { icon: 'fa-solid fa-link',                 label: 'リンク' },
-  { icon: 'fa-solid fa-arrow-up-right-from-square', label: '外部リンク' },
-  { icon: 'fa-solid fa-desktop',              label: 'PC' },
-  { icon: 'fa-solid fa-laptop',               label: 'ノートPC' },
-  { icon: 'fa-solid fa-mobile',               label: 'スマホ' },
-  { icon: 'fa-solid fa-server',               label: 'サーバー' },
-  { icon: 'fa-solid fa-wifi',                 label: 'Wi-Fi' },
-  { icon: 'fa-solid fa-network-wired',        label: 'ネットワーク' },
-  { icon: 'fa-solid fa-sitemap',              label: '組織図' },
-  { icon: 'fa-solid fa-cloud',                label: 'クラウド' },
-  { icon: 'fa-solid fa-star',                 label: 'スター' },
-  { icon: 'fa-solid fa-heart',                label: 'ハート' },
-  { icon: 'fa-solid fa-key',                  label: 'キー' },
-  { icon: 'fa-solid fa-lock',                 label: '鍵' },
-  { icon: 'fa-solid fa-sliders',              label: '設定' },
-  { icon: 'fa-solid fa-square-poll-vertical', label: 'アンケート' },
-  { icon: 'fa-solid fa-newspaper',            label: 'ニュース' },
-  { icon: 'fa-solid fa-map',                  label: 'マップ' },
-  { icon: 'fa-solid fa-location-dot',         label: '場所' },
-  { icon: 'fa-solid fa-ellipsis',             label: 'その他' },
-];
-
-// ========== デフォルトカテゴリ定義 ==========
-const DEFAULT_CATEGORIES = [
-  { id: 'external',    label: '外部ツール', icon: 'fa-solid fa-arrow-up-right-from-square', colorIndex: 0, order: 0, isExternal: true },
-  { id: 'management',  label: '管理・報告', icon: 'fa-solid fa-clipboard-check',            colorIndex: 1, order: 1 },
-  { id: 'arrangement', label: '手配・製作', icon: 'fa-solid fa-gears',                      colorIndex: 2, order: 2 },
-  { id: 'hardware',    label: '金物・在庫', icon: 'fa-solid fa-cubes',                      colorIndex: 3, order: 3 },
-  { id: 'materials',   label: '資材・設計', icon: 'fa-solid fa-drafting-compass',           colorIndex: 4, order: 4 },
-  { id: 'others',      label: 'その他',     icon: 'fa-solid fa-ellipsis',                   colorIndex: 5, order: 5 },
-];
-
-// ========== 初期データ（Firestore 読み込み前の表示用） ==========
-const INITIAL_CARDS = [
-  { label: 'Notion',          icon: 'svg:notion', url: 'https://www.notion.so/',    category: 'external',    categoryOrder: 0, order: 0, isExternalTool: true },
-  { label: 'Slack',           icon: 'svg:slack',  url: 'https://slack.com/',        category: 'external',    categoryOrder: 0, order: 1, isExternalTool: true },
-  { label: 'Google Drive',    icon: 'svg:gdrive', url: 'https://drive.google.com/', category: 'external',    categoryOrder: 0, order: 2, isExternalTool: true },
-  { label: '太陽光発電',       icon: 'fa-solid fa-solar-panel', url: 'solar:open',   category: 'external',    categoryOrder: 0, order: 3, isExternalTool: true },
-  { label: '工程管理',         icon: 'fa-solid fa-bars-progress',        url: '#', category: 'management',  categoryOrder: 1, order: 0, isExternalTool: false },
-  { label: '図面保管庫',        icon: 'fa-solid fa-folder-open',          url: '#', category: 'management',  categoryOrder: 1, order: 1, isExternalTool: false },
-  { label: 'アドレス帳',        icon: 'fa-solid fa-address-book',         url: '#', category: 'management',  categoryOrder: 1, order: 2, isExternalTool: false },
-  { label: 'トラブル報告',      icon: 'fa-solid fa-triangle-exclamation', url: '#', category: 'management',  categoryOrder: 1, order: 3, isExternalTool: false },
-  { label: 'トラブル回答',      icon: 'fa-solid fa-comment-dots',         url: '#', category: 'management',  categoryOrder: 1, order: 4, isExternalTool: false },
-  { label: '手配書作成',        icon: 'fa-solid fa-file-circle-plus',     url: '#', category: 'arrangement', categoryOrder: 2, order: 0, isExternalTool: false },
-  { label: '手配書リスト',      icon: 'fa-solid fa-list-check',           url: '#', category: 'arrangement', categoryOrder: 2, order: 1, isExternalTool: false },
-  { label: '工場予定表',        icon: 'fa-solid fa-calendar-days',        url: '#', category: 'arrangement', categoryOrder: 2, order: 2, isExternalTool: false },
-  { label: '外注製作',          icon: 'fa-solid fa-handshake',            url: '#', category: 'arrangement', categoryOrder: 2, order: 3, isExternalTool: false },
-  { label: '建具管理',          icon: 'fa-solid fa-door-open',            url: '#', category: 'arrangement', categoryOrder: 2, order: 4, isExternalTool: false },
-  { label: '標準金物',          icon: 'fa-solid fa-screwdriver-wrench',   url: '#', category: 'hardware',    categoryOrder: 3, order: 0, isExternalTool: false },
-  { label: '金物資料',          icon: 'fa-solid fa-file-lines',           url: '#', category: 'hardware',    categoryOrder: 3, order: 1, isExternalTool: false },
-  { label: '工場在庫',          icon: 'fa-solid fa-warehouse',            url: '#', category: 'hardware',    categoryOrder: 3, order: 2, isExternalTool: false },
-  { label: '電気代',            icon: 'fa-solid fa-bolt',                 url: '#', category: 'hardware',    categoryOrder: 3, order: 3, isExternalTool: false },
-  { label: '充填材',            icon: 'fa-solid fa-fill-drip',            url: '#', category: 'materials',   categoryOrder: 4, order: 0, isExternalTool: false },
-  { label: '鋼材',              icon: 'fa-solid fa-bars',                 url: '#', category: 'materials',   categoryOrder: 4, order: 1, isExternalTool: false },
-  { label: '鋼材注文',          icon: 'fa-solid fa-cart-shopping',        url: '#', category: 'materials',   categoryOrder: 4, order: 2, isExternalTool: false },
-  { label: '図面保管庫',        icon: 'fa-solid fa-box-archive',          url: '#', category: 'materials',   categoryOrder: 4, order: 3, isExternalTool: false },
-  { label: '金型シミュレーター', icon: 'fa-solid fa-calculator',          url: '#', category: 'materials',   categoryOrder: 4, order: 4, isExternalTool: false },
-  { label: 'マニュアル',        icon: 'fa-solid fa-book',                 url: '#', category: 'others',      categoryOrder: 5, order: 0, isExternalTool: false },
-  { label: '資料ダウンロード',   icon: 'fa-solid fa-download',            url: '#', category: 'others',      categoryOrder: 5, order: 1, isExternalTool: false },
-  { label: '基準図',            icon: 'fa-solid fa-ruler-combined',       url: '#', category: 'others',      categoryOrder: 5, order: 2, isExternalTool: false },
-  { label: 'アンケート(回答)',   icon: 'fa-solid fa-square-poll-vertical', url: '#', category: 'others',     categoryOrder: 5, order: 3, isExternalTool: false },
-  { label: '運行作業日報',       icon: 'fa-solid fa-truck',               url: '#', category: 'others',      categoryOrder: 5, order: 4, isExternalTool: false },
-];
-
-// ========== アプリ状態 ==========
-let allCards = [];
-let allCategories = [...DEFAULT_CATEGORIES];
-let allNotices = [];
-let _noticeUnsub = null;
-let isEditMode = true;
-let editingDocId = null;
-let editingCategory = null;
-let editingNoticeId = null;
-let editingCategoryId = null;
-let selectedColorIndex = 1;
-let failedAttempts = 0;
-let lockoutUntil = 0;
-let unsubscribeCards = null;
-
-// ドラッグ&ドロップ状態
-let dragSrcId = null;
-let dragSrcSectionId = null;
-
-// お気に入りのみ表示モード（Firestoreから読み込む。初回はfalse）
-let favoritesOnlyMode = false;
-
-// お気に入りリスト（Firestoreから読み込むメモリキャッシュ）
-let personalFavorites = [];
-
-// ニックネーム・個人データ
-let currentUsername = localStorage.getItem('portal-username') || null;
-let personalSectionOrder = [];
-let privateCategories = [];
-let privateCards = [];
-let editingIsPrivate = false;
-let editingPrivateSectionDocId = null;
-let editingPrivateSectionId = null; // for private section modal
-let privateSectionColorIndex = 1;
-
-// カード階層
-let activeChildPopup = null;
-let editingParentId = null;
-
-// 個人TODO
-let personalTodos = [];
-let todoCollapsed = false;
-let _todoUnsubscribe = null; // onSnapshot の解除用
-
-// お知らせ未読管理
-let readNoticeIds = new Set();
-let _noticeObserver = null; // IntersectionObserver
-
-// お知らせリアクション { [noticeId]: { '👍': ['user1', 'user2'], ... } }
-let noticeReactions = {};
-
-// チャット（DM + グループ）
-let chatPanelOpen = false;
-let dmRooms = [];
-let groupRooms = [];
-let currentRoomId = null;
-let currentRoomType = null; // 'dm' | 'group'
-let currentRoomMessages = [];
-let _dmRoomsUnsubscribe = null;
-let _groupRoomsUnsubscribe = null;
-let _roomMsgUnsubscribe = null;
-let chatReadTimes = {}; // { roomId: Date | null }
-
-const CHAT_MSG_MAX = 200;
-let _knownUsernames = null; // users_list のリアルタイム Set（DMフィルタリング用）
-let _usersListUnsub = null;
-
-// P2P ファイル転送
-const RTC_CONFIG    = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
-const FILE_CHUNK_SIZE = 16384; // 16 KB
-let _p2pConnections  = {}; // sessionId → { pc, dc, unsub, role, addedFromIdx, addedToIdx, rcvd }
-let _receivedFiles   = {}; // sessionId → { url, fileName } (受信ファイルのObjectURL)
-let _sendProgress    = {}; // sessionId → 0-100
-let _receiveProgress = {}; // sessionId → 0-100
-let _ftPanelOpen     = false;
-let _ftIncomingSub   = null; // Firestore listener for incoming signals
-let _ftIncoming      = [];   // [{id, from, fileName, fileSize, fileType, createdAt}]
-let _ftOutgoing      = [];   // [{sessionId, to, fileName, fileSize, status}]
-let _ftSelectedUser  = null;
-let _ftSelectedFile  = null;
-// Drive シェア
-let _myDriveUrl          = '';    // 登録済み自分のDriveフォルダURL
-let _driveIncoming        = [];   // 受信Driveシェア配列
-let _driveOutgoing        = [];   // 送信Driveシェア配列
-let _driveIncomingSub     = null; // Firestoreリスナー（受信）
-let _driveOutgoingSub     = null; // Firestoreリスナー（送信）
-let _ftCurrentTab         = 'p2p'; // 'p2p' | 'drive'
-let _ftDriveSelectedUser  = null; // Drive送信モーダルで選択中のユーザー
-// Drive 連絡先（相手ごとに記憶したDriveリンク）
-// 構造: { [username]: { url: string, savedAt: number } }
-let _driveContacts        = {};
-
-// タスク割り振り
-let receivedTasks = [];
-let sentTasks = [];
-let _receivedTasksUnsub = null;
-let _sentTasksUnsub = null;
-let taskModalOpen = false;
-let activeTaskTab = 'received';
-let newTaskAssignee = '';
-
-// 部門間依頼・目安箱
-const DEFAULT_DEPARTMENTS = ['営業', '設計', '生産管理（バラ図）', '工場', '工事課'];
-const REQ_STATUS_LABEL = {
-  submitted: { text: '提出済み', cls: 'status-submitted' },
-  reviewing: { text: '検討中',   cls: 'status-reviewing' },
-  accepted:  { text: '対応する', cls: 'status-accepted' },
-  rejected:  { text: '見送り',   cls: 'status-rejected' },
-};
-let reqModalOpen = false;
-let activeReqTab = 'request';
-let activeReqSubTab = 'received';
-let receivedRequests = [];
-let sentRequests = [];
-let suggestionList = [];
-let _reqReceivedUnsub = null;
-let _reqSentUnsub = null;
-let _suggUnsub = null;
-let isSuggestionBoxViewer = false;
-let currentDepartments = [...DEFAULT_DEPARTMENTS];
-let suggestionBoxViewers = [];
-let _pendingStatusChange = null;    // { reqId, status }
-let _pendingSuggReply = null;       // suggId
-let lastViewedSuggestionsAt = 0;    // Unix秒
-
-// ========== PIN 認証 ==========
-const PIN_SALT = 'seisan-portal-v1';
-
-async function hashPIN(pin) {
-  const data = new TextEncoder().encode(pin + PIN_SALT);
-  const buf = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function verifyPIN(pin) {
-  const snap = await getDoc(doc(db, 'portal', 'config'));
-  if (!snap.exists() || !snap.data().pinHash) return false;
-  return (await hashPIN(pin)) === snap.data().pinHash;
-}
-
-async function setPIN(pin) {
-  await setDoc(doc(db, 'portal', 'config'), { pinHash: await hashPIN(pin) }, { merge: true });
-}
-
-async function isPINConfigured() {
-  const snap = await getDoc(doc(db, 'portal', 'config'));
-  return snap.exists() && !!snap.data().pinHash;
-}
-
-// ========== ユーザー（ニックネーム）管理 ==========
-
-/**
- * 旧ユーザー名から新ユーザー名へ全データを移行する
- * - users/{old}/data/ サブドキュメント
- * - users/{old}/private_sections/
- * - users/{old}/private_cards/
- * - users_list エントリ
- * - assigned_tasks の assignedTo / assignedBy
- * - dm_rooms / chat_rooms の members 配列
- */
-async function migrateToNewUsername(oldName, newName) {
-  const batch = writeBatch(db);
-
-  // 1. data サブドキュメントをコピー
-  const dataDocIds = ['preferences', 'section_order', 'lock_pin', 'chat_reads'];
-  for (const docId of dataDocIds) {
-    try {
-      const snap = await getDoc(doc(db, 'users', oldName, 'data', docId));
-      if (snap.exists()) {
-        batch.set(doc(db, 'users', newName, 'data', docId), snap.data());
-        batch.delete(doc(db, 'users', oldName, 'data', docId));
-      }
-    } catch (_) {}
-  }
-
-  // 2. private_sections をコピー
-  try {
-    const psSnap = await getDocs(collection(db, 'users', oldName, 'private_sections'));
-    psSnap.forEach(d => {
-      batch.set(doc(db, 'users', newName, 'private_sections', d.id), d.data());
-      batch.delete(doc(db, 'users', oldName, 'private_sections', d.id));
-    });
-  } catch (_) {}
-
-  // 3. private_cards をコピー
-  try {
-    const pcSnap = await getDocs(collection(db, 'users', oldName, 'private_cards'));
-    pcSnap.forEach(d => {
-      batch.set(doc(db, 'users', newName, 'private_cards', d.id), d.data());
-      batch.delete(doc(db, 'users', oldName, 'private_cards', d.id));
-    });
-  } catch (_) {}
-
-  // 4. users_list を更新（旧削除 → 新作成）
-  batch.delete(doc(db, 'users_list', oldName));
-  batch.set(doc(db, 'users_list', newName), {
-    displayName: newName,
-    createdAt: serverTimestamp(),
-    lastLogin: serverTimestamp(),
-  });
-
-  await batch.commit();
-
-  // 5. assigned_tasks: assignedTo を更新
-  try {
-    const tasksTo = await getDocs(query(collection(db, 'assigned_tasks'), where('assignedTo', '==', oldName)));
-    if (!tasksTo.empty) {
-      const b2 = writeBatch(db);
-      tasksTo.forEach(d => b2.update(d.ref, { assignedTo: newName }));
-      await b2.commit();
-    }
-  } catch (_) {}
-
-  // 6. assigned_tasks: assignedBy を更新
-  try {
-    const tasksBy = await getDocs(query(collection(db, 'assigned_tasks'), where('assignedBy', '==', oldName)));
-    if (!tasksBy.empty) {
-      const b3 = writeBatch(db);
-      tasksBy.forEach(d => b3.update(d.ref, { assignedBy: newName }));
-      await b3.commit();
-    }
-  } catch (_) {}
-
-  // 7. dm_rooms: members 配列を更新
-  try {
-    const dmSnap = await getDocs(query(collection(db, 'dm_rooms'), where('members', 'array-contains', oldName)));
-    if (!dmSnap.empty) {
-      const b4 = writeBatch(db);
-      dmSnap.forEach(d => {
-        const members = (d.data().members || []).map(m => m === oldName ? newName : m);
-        b4.update(d.ref, { members });
-      });
-      await b4.commit();
-    }
-  } catch (_) {}
-
-  // 8. chat_rooms: members / createdBy を更新
-  try {
-    const crSnap = await getDocs(query(collection(db, 'chat_rooms'), where('members', 'array-contains', oldName)));
-    if (!crSnap.empty) {
-      const b5 = writeBatch(db);
-      crSnap.forEach(d => {
-        const members = (d.data().members || []).map(m => m === oldName ? newName : m);
-        const updates = { members };
-        if (d.data().createdBy === oldName) updates.createdBy = newName;
-        b5.update(d.ref, updates);
-      });
-      await b5.commit();
-    }
-  } catch (_) {}
-}
-
-function showUsernameModal(isEdit = false) {
-  const input = document.getElementById('username-input');
-  input.value = (isEdit && currentUsername) ? currentUsername : '';
-  document.getElementById('username-modal').classList.add('visible');
-  // セキュリティ設定ボタンはログイン済みのときのみ表示
-  document.getElementById('username-security-row').hidden = !currentUsername;
-  hideUsernameError();
-
-  // 編集モード（ログイン済み）かどうかでテキストを切り替え
-  if (isEdit && currentUsername) {
-    document.getElementById('username-modal-title').innerHTML =
-      '<i class="fa-solid fa-user-circle"></i> ユーザーネームを変更';
-    document.getElementById('username-modal-desc').innerHTML =
-      '新しいユーザーネームを入力してください。<br>チャット・タスク・マイセクションなどのデータはすべて引き継がれます。';
-    document.getElementById('username-submit-text').textContent = '変更する';
-    document.getElementById('username-skip').textContent = 'キャンセル';
-  } else {
-    document.getElementById('username-modal-title').innerHTML =
-      '<i class="fa-solid fa-user-circle"></i> ユーザーネームを設定';
-    document.getElementById('username-modal-desc').innerHTML =
-      'あなただけの名前を入力してください。<br>お気に入り・テーマ・マイセクションがこの名前に紐づいて保存されます。';
-    document.getElementById('username-submit-text').textContent = '設定して始める';
-    document.getElementById('username-skip').textContent = 'スキップ';
-  }
-
-  setTimeout(() => input.focus(), 100);
-}
-
-function closeUsernameModal() {
-  document.getElementById('username-modal').classList.remove('visible');
-}
-
-function showUsernameError(msg) {
-  const box = document.getElementById('username-error-box');
-  document.getElementById('username-error-msg').textContent = msg;
-  box.hidden = false;
-}
-
-function hideUsernameError() {
-  document.getElementById('username-error-box').hidden = true;
-  document.getElementById('username-reclaim').hidden = true;
-}
-
-async function applyUsername(name) {
-  const isSwitch = !!currentUsername && currentUsername !== name;
-  currentUsername = name;
-  localStorage.setItem('portal-username', name);
-  updateUsernameDisplay();
-  registerUserLogin(name);
-  loadPersonalData(name, isSwitch);
-  renderAllSections();
-  closeUsernameModal();
-}
-
-async function saveUsername(name) {
-  // 変更なしはそのまま閉じる
-  if (name === currentUsername) { closeUsernameModal(); return; }
-
-  // 重複チェック
-  const submitBtn = document.getElementById('username-submit');
-  const spinner = document.getElementById('username-submit-spinner');
-  const submitText = document.getElementById('username-submit-text');
-  submitBtn.disabled = true;
-  spinner.hidden = false;
-  hideUsernameError();
-
-  try {
-    const snap = await getDoc(doc(db, 'users_list', name));
-    if (snap.exists()) {
-      showUsernameError('このユーザーネームはすでに使用されています。');
-      // 自分のアカウント再ログイン用ボタンを表示
-      document.getElementById('username-reclaim').hidden = false;
-      submitBtn.disabled = false;
-      spinner.hidden = true;
-      return;
-    }
-  } catch (_) { /* オフライン等は無視 */ }
-
-  // 既存ユーザーの場合はデータを旧名 → 新名へ移行
-  if (currentUsername) {
-    submitText.textContent = '移行中...';
-    try {
-      await migrateToNewUsername(currentUsername, name);
-    } catch (e) {
-      console.error('ユーザー名移行エラー:', e);
-      showUsernameError('データの移行に失敗しました。もう一度お試しください。');
-      submitBtn.disabled = false;
-      spinner.hidden = true;
-      submitText.textContent = '変更する';
-      return;
-    }
-  }
-
-  submitBtn.disabled = false;
-  spinner.hidden = true;
-  await applyUsername(name);
-}
-
-// ========== PINロック ==========
-let lockPinHash = null;      // Firestoreから読み込んだハッシュ
-let lockPinEnabled = false;  // PIN設定済みか
-let lockEnabled = false;     // ロック機能ON/OFF
-let autoLockMinutes = 5;     // 自動ロックまでの時間（分）
-let lockCurrentInput = '';   // 現在入力中のPIN文字列
-let lockClockTimer = null;
-let lastActivityAt = Date.now();
-let _autoLockTimer = null;
-
-async function loadLockSettings(username, lockImmediately = false) {
-  if (!username) return;
-  // ユーザー切り替え時に前のユーザーの設定をリセット
-  lockPinHash = null; lockPinEnabled = false; lockEnabled = false; autoLockMinutes = 5;
-  try {
-    const snap = await getDoc(doc(db, 'users', username, 'data', 'lock_pin'));
-    if (snap.exists()) {
-      const data = snap.data();
-      lockPinHash      = data.hash || null;
-      lockPinEnabled   = !!lockPinHash;
-      lockEnabled      = data.enabled ?? false;
-      autoLockMinutes  = data.autoLockMinutes ?? 5;
-    }
-  } catch (_) {}
-  document.getElementById('btn-lock-header').hidden = !(lockEnabled && lockPinEnabled && currentUsername);
-  if (lockEnabled && lockPinEnabled) {
-    startActivityTracking();
-    // リロード後または切り替え時: セッションストレージにロックフラグがあれば再ロック
-    const shouldLock = lockImmediately || (sessionStorage.getItem('portal-locked') === username);
-    if (shouldLock) lockPortal();
-  } else {
-    // PIN無効ならロックフラグも消す
-    sessionStorage.removeItem('portal-locked');
-  }
-}
-
-async function saveLockSettings() {
-  if (!currentUsername) return;
-  try {
-    await setDoc(doc(db, 'users', currentUsername, 'data', 'lock_pin'), {
-      enabled: lockEnabled,
-      autoLockMinutes
-    }, { merge: true });
-  } catch (err) { console.error('設定保存エラー:', err); }
-}
-
-function startActivityTracking() {
-  ['mousemove', 'click', 'keydown', 'touchstart', 'scroll'].forEach(ev => {
-    document.addEventListener(ev, resetActivityTimer, { passive: true });
-  });
-  if (_autoLockTimer) clearInterval(_autoLockTimer);
-  _autoLockTimer = setInterval(checkAutoLock, 30_000);
-}
-
-function stopActivityTracking() {
-  if (_autoLockTimer) { clearInterval(_autoLockTimer); _autoLockTimer = null; }
-}
-
-function resetActivityTimer() { lastActivityAt = Date.now(); }
-
-function checkAutoLock() {
-  if (!lockEnabled || !lockPinEnabled || !currentUsername) return;
-  if (!document.getElementById('lock-screen').hidden) return;
-  if (Date.now() - lastActivityAt >= autoLockMinutes * 60_000) lockPortal();
-}
-
-async function setLockPin(newPin) {
-  const hash = await hashPIN(newPin);
-  try {
-    await setDoc(doc(db, 'users', currentUsername, 'data', 'lock_pin'), { hash }, { merge: true });
-    lockPinHash    = hash;
-    lockPinEnabled = true;
-    document.getElementById('btn-lock-header').hidden = !(lockEnabled && currentUsername);
-    if (lockEnabled) startActivityTracking();
-  } catch (err) { console.error('PIN設定エラー:', err); throw err; }
-}
-
-async function removeLockPin() {
-  try {
-    await setDoc(doc(db, 'users', currentUsername, 'data', 'lock_pin'), { hash: null }, { merge: true });
-    lockPinHash    = null;
-    lockPinEnabled = false;
-    document.getElementById('btn-lock-header').hidden = true;
-    stopActivityTracking();
-  } catch (err) { console.error('PIN解除エラー:', err); throw err; }
-}
-
-function lockPortal() {
-  if (!lockEnabled || !lockPinEnabled || !currentUsername) return;
-  lockCurrentInput = '';
-  updateLockDots();
-  // ロック画面の情報を更新
-  document.getElementById('lock-username').textContent = currentUsername;
-  const avatarEl = document.getElementById('lock-avatar');
-  avatarEl.textContent = currentUsername.charAt(0).toUpperCase();
-  avatarEl.style.background = getUserAvatarColor(currentUsername);
-  document.getElementById('lock-pin-error').hidden = true;
-  document.getElementById('lock-screen').hidden = false;
-  document.body.style.overflow = 'hidden';
-  // リロード後も再ロックされるようにセッションストレージに記録
-  sessionStorage.setItem('portal-locked', currentUsername);
-  // 通知インジケーター更新
-  updateLockNotifications();
-  // 時計更新
-  updateLockClock();
-  lockClockTimer = setInterval(updateLockClock, 1000);
-}
-
-function updateLockNotifications() {
-  const el = document.getElementById('lock-notifications');
-  if (!el) return;
-
-  const items = [];
-
-  // チャット未読
-  const chatUnread = [...dmRooms, ...groupRooms].reduce((sum, r) => sum + getRoomUnread(r), 0);
-  if (chatUnread > 0) items.push({ icon: 'fa-comments',       count: chatUnread, color: '#60a5fa', label: 'チャット' });
-
-  // お知らせ未読
-  const noticeUnread = allNotices.filter(n => !readNoticeIds.has(n.id)).length;
-  if (noticeUnread > 0) items.push({ icon: 'fa-bell',          count: noticeUnread, color: '#a78bfa', label: 'お知らせ' });
-
-  // タスク（承諾待ち + 完了報告）
-  const taskCount = receivedTasks.filter(t => t.status === 'pending').length
-                  + sentTasks.filter(t => t.status === 'done' && !t.notifiedDone).length;
-  if (taskCount > 0) items.push({ icon: 'fa-list-check',      count: taskCount, color: '#fbbf24', label: 'タスク' });
-
-  // ファイル転送受信待ち（P2P + Drive）
-  const ftCount = _ftIncoming.filter(s => s.status === 'pending').length
-                + _driveIncoming.filter(s => s.status === 'pending').length;
-  if (ftCount > 0) items.push({ icon: 'fa-file-arrow-up',     count: ftCount, color: '#34d399', label: 'ファイル' });
-
-  if (!items.length) { el.innerHTML = ''; return; }
-
-  el.innerHTML = items.map(item => `
-    <div class="lock-notif-item">
-      <div class="lock-notif-icon" style="border-color:${item.color}60; color:${item.color}">
-        <i class="fa-solid ${item.icon}"></i>
-        <span class="lock-notif-badge">${item.count > 99 ? '99+' : item.count}</span>
-      </div>
-      <div class="lock-notif-label">${item.label}</div>
-    </div>`).join('');
-}
-
-function lockSwitchUser() {
-  // ロックフラグをクリアしてロック画面を閉じ、ユーザーネームモーダルを開く
-  sessionStorage.removeItem('portal-locked');
-  document.getElementById('lock-screen').hidden = true;
-  document.body.style.overflow = '';
-  clearInterval(lockClockTimer);
-  lockCurrentInput = '';
-  updateLockDots();
-  // ユーザーネーム設定モーダルを開く（新規入力扱い）
-  showUsernameModal(false);
-}
-
-function updateLockClock() {
-  const now = new Date();
-  const h = now.getHours().toString().padStart(2, '0');
-  const m = now.getMinutes().toString().padStart(2, '0');
-  document.getElementById('lock-clock').textContent = `${h}:${m}`;
-}
-
-async function handleLockKeyPress(digit) {
-  if (lockCurrentInput.length >= 4) return;
-  lockCurrentInput += digit;
-  updateLockDots();
-  if (lockCurrentInput.length === 4) {
-    await verifyLockPin(lockCurrentInput);
-  }
-}
-
-function handleLockDelete() {
-  if (lockCurrentInput.length > 0) {
-    lockCurrentInput = lockCurrentInput.slice(0, -1);
-    updateLockDots();
-  }
-}
-
-function updateLockDots() {
-  const dots = document.querySelectorAll('#lock-pin-dots span');
-  dots.forEach((dot, i) => {
-    dot.classList.toggle('filled', i < lockCurrentInput.length);
-  });
-}
-
-async function verifyLockPin(pin) {
-  const hash = await hashPIN(pin);
-  if (hash === lockPinHash) {
-    // 解錠
-    sessionStorage.removeItem('portal-locked'); // ロックフラグをクリア
-    document.getElementById('lock-screen').hidden = true;
-    document.body.style.overflow = '';
-    clearInterval(lockClockTimer);
-    lockCurrentInput = '';
-    updateLockDots();
-  } else {
-    // 失敗
-    lockCurrentInput = '';
-    updateLockDots();
-    const errEl = document.getElementById('lock-pin-error');
-    errEl.hidden = false;
-    document.getElementById('lock-pin-dots').classList.add('shake');
-    setTimeout(() => {
-      document.getElementById('lock-pin-dots').classList.remove('shake');
-      errEl.hidden = true;
-    }, 800);
-  }
-}
-
-// セキュリティ設定モーダル
-function openSecurityModal() {
-  // トグル状態を反映
-  document.getElementById('lock-enabled-toggle').checked = lockEnabled;
-
-  // 自動ロックセクション表示切り替え
-  document.getElementById('security-autolock-section').hidden = !lockEnabled;
-
-  // 選択中の自動ロック時間をハイライト
-  document.querySelectorAll('.autolock-time-btn').forEach(btn => {
-    btn.classList.toggle('active', parseInt(btn.dataset.minutes) === autoLockMinutes);
-  });
-
-  // PIN設定エリアのリセット
-  const setupArea  = document.getElementById('security-setup-area');
-  const manageArea = document.getElementById('security-manage-area');
-  document.getElementById('new-pin-input').value      = '';
-  document.getElementById('confirm-pin-input').value  = '';
-  document.getElementById('security-pin-error').hidden = true;
-  const curInput = document.getElementById('current-pin-input');
-  if (curInput) curInput.value = '';
-  const curErr = document.getElementById('security-current-error');
-  if (curErr) curErr.hidden = true;
-
-  if (lockPinEnabled) {
-    setupArea.hidden  = true;
-    manageArea.hidden = false;
-  } else {
-    setupArea.hidden  = false;
-    manageArea.hidden = true;
-  }
-
-  document.getElementById('security-modal').classList.add('visible');
-}
-
-async function openAdminModal() {
-  document.getElementById('admin-auth-area').hidden  = false;
-  document.getElementById('admin-panel-area').hidden = true;
-  document.getElementById('admin-setup-area').hidden = true;
-  document.getElementById('admin-pin-input').value   = '';
-  document.getElementById('admin-auth-error').hidden = true;
-  document.getElementById('admin-modal').classList.add('visible');
-
-  // PIN未設定なら設定モードで開く
-  const configured = await isPINConfigured();
-  if (!configured) {
-    document.getElementById('admin-auth-area').hidden  = true;
-    document.getElementById('admin-setup-area').hidden = false;
-    document.getElementById('admin-new-pin').value         = '';
-    document.getElementById('admin-new-pin-confirm').value = '';
-    document.getElementById('admin-setup-error').hidden    = true;
-    setTimeout(() => document.getElementById('admin-new-pin').focus(), 100);
-  } else {
-    setTimeout(() => document.getElementById('admin-pin-input').focus(), 100);
-  }
-}
-
-function closeAdminModal() {
-  document.getElementById('admin-modal').classList.remove('visible');
-}
-
-async function deleteUserData(username) {
-  // 1. users_list エントリ + data サブドキュメントを一括削除
-  const batch1 = writeBatch(db);
-  batch1.delete(doc(db, 'users_list', username));
-  for (const docId of ['preferences', 'section_order', 'lock_pin', 'chat_reads']) {
-    batch1.delete(doc(db, 'users', username, 'data', docId));
-  }
-  await batch1.commit();
-
-  // 2. private_sections
-  try {
-    const psSnap = await getDocs(collection(db, 'users', username, 'private_sections'));
-    if (!psSnap.empty) {
-      const b = writeBatch(db);
-      psSnap.forEach(d => b.delete(d.ref));
-      await b.commit();
-    }
-  } catch (_) {}
-
-  // 3. private_cards
-  try {
-    const pcSnap = await getDocs(collection(db, 'users', username, 'private_cards'));
-    if (!pcSnap.empty) {
-      const b = writeBatch(db);
-      pcSnap.forEach(d => b.delete(d.ref));
-      await b.commit();
-    }
-  } catch (_) {}
-
-  // 4. email_profiles
-  try {
-    const epSnap = await getDocs(collection(db, 'users', username, 'email_profiles'));
-    if (!epSnap.empty) {
-      const b = writeBatch(db);
-      epSnap.forEach(d => b.delete(d.ref));
-      await b.commit();
-    }
-  } catch (_) {}
-}
-
-async function loadUsersForAdmin() {
-  const listEl = document.getElementById('admin-user-list');
-  listEl.innerHTML = '<div class="admin-loading">読み込み中...</div>';
-  try {
-    const snap = await getDocs(collection(db, 'users_list'));
-    if (snap.empty) { listEl.innerHTML = '<div class="admin-loading">ユーザーなし</div>'; return; }
-    listEl.innerHTML = '';
-    for (const d of snap.docs) {
-      const name = d.id;
-      const item = document.createElement('div');
-      item.className = 'admin-user-item';
-      item.innerHTML = `
-        <div class="admin-user-info">
-          <span class="admin-user-avatar">${name.charAt(0).toUpperCase()}</span>
-          <span class="admin-user-name">${esc(name)}</span>
-        </div>
-        <div class="admin-user-actions">
-          <button class="btn-admin-reset-pin" data-username="${esc(name)}">PINリセット</button>
-          <button class="btn-admin-delete-user" data-username="${esc(name)}"><i class="fa-solid fa-trash-can"></i> 削除</button>
-        </div>
-      `;
-
-      // PINリセット
-      item.querySelector('.btn-admin-reset-pin').addEventListener('click', async (e) => {
-        const btn = e.currentTarget;
-        if (!confirm(`${name} さんのPINをリセットしますか？`)) return;
-        btn.disabled = true;
-        btn.textContent = '処理中...';
-        try {
-          await setDoc(doc(db, 'users', name, 'data', 'lock_pin'), { hash: null, enabled: false }, { merge: true });
-          btn.textContent = 'リセット済み ✓';
-          if (name === currentUsername) {
-            lockPinHash = null; lockPinEnabled = false; lockEnabled = false;
-            document.getElementById('btn-lock-header').hidden = true;
-            stopActivityTracking();
-          }
-        } catch (_) { btn.disabled = false; btn.textContent = 'エラー'; }
-      });
-
-      // ユーザー削除
-      item.querySelector('.btn-admin-delete-user').addEventListener('click', async (e) => {
-        const btn = e.currentTarget;
-        if (!confirm(`「${name}」のアカウントとすべての個人データを削除しますか？\nこの操作は取り消せません。`)) return;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 削除中...';
-        try {
-          await deleteUserData(name);
-          item.remove();
-          // 自分自身を削除した場合はログアウト
-          if (name === currentUsername) {
-            currentUsername = null;
-            localStorage.removeItem('portal-username');
-            location.reload();
-          }
-          // リストが空になったか確認
-          if (!listEl.querySelector('.admin-user-item')) {
-            listEl.innerHTML = '<div class="admin-loading">ユーザーなし</div>';
-          }
-        } catch (err) {
-          console.error('ユーザー削除エラー:', err);
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fa-solid fa-trash-can"></i> 削除';
-          alert('削除に失敗しました。');
-        }
-      });
-
-      listEl.appendChild(item);
-    }
-  } catch (_) {
-    listEl.innerHTML = '<div class="admin-loading">読み込みエラー</div>';
-  }
-}
-
-function closeSecurityModal() {
-  document.getElementById('security-modal').classList.remove('visible');
-}
-
-// ユーザー名の頭文字から一貫したアバターカラーを生成
-function getUserAvatarColor(name) {
-  const colors = [
-    'linear-gradient(135deg,#6366f1,#8b5cf6)',
-    'linear-gradient(135deg,#0ea5e9,#06b6d4)',
-    'linear-gradient(135deg,#10b981,#059669)',
-    'linear-gradient(135deg,#f59e0b,#d97706)',
-    'linear-gradient(135deg,#ef4444,#dc2626)',
-    'linear-gradient(135deg,#ec4899,#db2777)',
-    'linear-gradient(135deg,#14b8a6,#0d9488)',
-    'linear-gradient(135deg,#f97316,#ea580c)',
-  ];
-  let hash = 0;
-  for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) & 0xffff;
-  return colors[hash % colors.length];
-}
-
-function updateUsernameDisplay() {
-  const nameEl    = document.getElementById('username-display');
-  const greetEl   = document.getElementById('user-greeting');
-  const avatarEl  = document.getElementById('user-avatar');
-  const btnEl     = document.getElementById('btn-user');
-
-  if (currentUsername) {
-    const initial = currentUsername.charAt(0).toUpperCase();
-    if (avatarEl) {
-      avatarEl.textContent = initial;
-      avatarEl.style.background = getUserAvatarColor(currentUsername);
-    }
-    if (nameEl)  nameEl.textContent  = currentUsername;
-    if (greetEl) greetEl.textContent = 'こんにちは';
-    if (btnEl)   btnEl.classList.add('btn-user--active');
-  } else {
-    if (avatarEl) {
-      avatarEl.innerHTML = '<i class="fa-solid fa-user"></i>';
-      avatarEl.style.background = '';
-    }
-    if (nameEl)  nameEl.textContent  = '';
-    if (greetEl) greetEl.textContent = '名前を設定してください';
-    if (btnEl)   btnEl.classList.remove('btn-user--active');
-  }
-}
-
-// Firestore の users_list にログイン記録（管理者が全員を把握できる）
-async function registerUserLogin(username) {
-  if (!username) return;
-  try {
-    const ref  = doc(db, 'users_list', username);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
-      await setDoc(ref, {
-        displayName: username,
-        createdAt:   serverTimestamp(),
-        lastLogin:   serverTimestamp(),
-      });
-    } else {
-      await updateDoc(ref, { lastLogin: serverTimestamp() });
-    }
-  } catch (err) {
-    console.error('ユーザー登録エラー:', err);
-  }
-}
-
-// ========== 個人データ（Firestore） ==========
-// ========== お知らせ未読管理 ==========
-async function loadReadNotices(username) {
-  if (!username) { readNoticeIds = new Set(); updateNoticeBadge(); return; }
-  try {
-    const snap = await getDocs(collection(db, 'users', username, 'read_notices'));
-    readNoticeIds = new Set(snap.docs.map(d => d.id));
-    updateNoticeBadge();
-    renderNotices(allNotices); // 既読状態を反映して再描画
-  } catch (err) {
-    console.error('既読データ読み込みエラー:', err);
-  }
-}
-
-async function markAllNoticesRead() {
-  if (!currentUsername || !allNotices.length) return;
-  const batch = writeBatch(db);
-  allNotices.forEach(n => {
-    if (!readNoticeIds.has(n.id)) {
-      batch.set(doc(db, 'users', currentUsername, 'read_notices', n.id), {
-        readAt: serverTimestamp()
-      });
-    }
-  });
-  await batch.commit();
-  allNotices.forEach(n => readNoticeIds.add(n.id));
-  updateNoticeBadge();
-  renderNotices(allNotices);
-}
-
-function updateNoticeBadge() {
-  const badge = document.getElementById('notice-unread-badge');
-  const bell  = document.getElementById('btn-notice-bell');
-  if (!badge || !bell) return;
-  const unreadCount = allNotices.filter(n => !readNoticeIds.has(n.id)).length;
-  if (unreadCount > 0) {
-    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-    badge.hidden = false;
-    bell.classList.add('has-unread');
-  } else {
-    badge.hidden = true;
-    bell.classList.remove('has-unread');
-  }
-  updateLockNotifications();
-}
-
-// お知らせボードが画面内に入ったら自動既読
-function setupNoticeObserver() {
-  if (_noticeObserver) { _noticeObserver.disconnect(); _noticeObserver = null; }
-  const board = document.getElementById('notice-board');
-  if (!board || !currentUsername) return;
-  _noticeObserver = new IntersectionObserver(entries => {
-    if (entries[0].isIntersecting) markAllNoticesRead();
-  }, { threshold: 0.3 });
-  _noticeObserver.observe(board);
-}
-
-// ========== お知らせリアクション ==========
-const REACTION_EMOJIS = ['👍', '✅', '👀', '😊', '🙏'];
-
-async function loadAllNoticeReactions() {
-  try {
-    const snap = await getDocs(collection(db, 'notice_reactions'));
-    noticeReactions = {};
-    snap.docs.forEach(d => { noticeReactions[d.id] = d.data(); });
-    renderNotices(allNotices);
-  } catch (err) {
-    console.error('リアクション読み込みエラー:', err);
-  }
-}
-
-async function toggleReaction(noticeId, emoji) {
-  if (!currentUsername) return;
-  const ref = doc(db, 'notice_reactions', noticeId);
-  const current = (noticeReactions[noticeId] || {})[emoji] || [];
-  const alreadyReacted = current.includes(currentUsername);
-  // 楽観的UI更新
-  if (!noticeReactions[noticeId]) noticeReactions[noticeId] = {};
-  if (alreadyReacted) {
-    noticeReactions[noticeId][emoji] = current.filter(u => u !== currentUsername);
-  } else {
-    noticeReactions[noticeId][emoji] = [...current, currentUsername];
-  }
-  renderNotices(allNotices);
-  try {
-    if (alreadyReacted) {
-      await updateDoc(ref, { [emoji]: arrayRemove(currentUsername) });
-    } else {
-      await setDoc(ref, { [emoji]: arrayUnion(currentUsername) }, { merge: true });
-    }
-  } catch (err) {
-    console.error('リアクション更新エラー:', err);
-    // ロールバック
-    await loadAllNoticeReactions();
-  }
-}
-
-function buildReactionBar(noticeId) {
-  const reactions = noticeReactions[noticeId] || {};
-  const btns = REACTION_EMOJIS.map(emoji => {
-    const users = reactions[emoji] || [];
-    const count = users.length;
-    const active = currentUsername && users.includes(currentUsername) ? ' active' : '';
-    const countHtml = count > 0 ? `<span class="reaction-count">${count}</span>` : '';
-    return `<button class="reaction-btn${active}" data-notice-id="${noticeId}" data-emoji="${emoji}" title="${users.join(', ') || ''}">${emoji}${countHtml}</button>`;
-  }).join('');
-  return `<div class="notice-reactions">${btns}</div>`;
-}
-
-// ========== チャット（DM + グループ）==========
-
-function getDmRoomId(a, b) {
-  return [a, b].sort().join('_');
-}
-
-function initChatResize() {
-  const panel = document.getElementById('chat-panel');
-  const handle = document.getElementById('chat-resize-handle');
-  if (!handle || !panel) return;
-
-  let resizing = false, startX, startY, startW, startH;
-
-  const onStart = (cx, cy) => {
-    resizing = true;
-    startX = cx; startY = cy;
-    startW = panel.offsetWidth; startH = panel.offsetHeight;
-    document.body.style.cursor = 'nw-resize';
-    document.body.style.userSelect = 'none';
-  };
-  const onMove = (cx, cy) => {
-    if (!resizing) return;
-    const newW = Math.max(460, Math.min(window.innerWidth  - 40, startW + (startX - cx)));
-    const newH = Math.max(340, Math.min(window.innerHeight - 100, startH + (startY - cy)));
-    panel.style.width  = newW + 'px';
-    panel.style.height = newH + 'px';
-    // ft-panel がチャット横配置中なら追従させる
-    const ftPanel = document.getElementById('ft-panel');
-    if (ftPanel && ftPanel.style.left) {
-      const chatRect = panel.getBoundingClientRect();
-      const gap = 8;
-      const ftWidth = 340;
-      const leftEdge = chatRect.left - gap - ftWidth;
-      if (leftEdge >= 8) {
-        ftPanel.style.right  = 'auto';
-        ftPanel.style.left   = leftEdge + 'px';
-        ftPanel.style.bottom = (window.innerHeight - chatRect.bottom) + 'px';
-      }
-    }
-  };
-  const onEnd = () => {
-    if (!resizing) return;
-    resizing = false;
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-  };
-
-  handle.addEventListener('mousedown', e => { e.preventDefault(); onStart(e.clientX, e.clientY); });
-  document.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
-  document.addEventListener('mouseup', onEnd);
-
-  handle.addEventListener('touchstart', e => { e.preventDefault(); onStart(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
-  document.addEventListener('touchmove', e => { if (resizing) { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
-  document.addEventListener('touchend', onEnd);
-}
-
-function openChatPanel() {
-  chatPanelOpen = true;
-  const panel = document.getElementById('chat-panel');
-  panel.removeAttribute('hidden');
-  setTimeout(() => panel.classList.add('open'), 10);
-  renderChatSidebar();
-}
-
-function closeChatPanel() {
-  chatPanelOpen = false;
-  const panel = document.getElementById('chat-panel');
-  panel.classList.remove('open');
-  setTimeout(() => panel.setAttribute('hidden', ''), 280);
-  // ft-panel がチャット横に配置されていた場合は位置リセット
-  const ftPanel = document.getElementById('ft-panel');
-  if (ftPanel && (ftPanel.style.left || ftPanel.style.bottom)) {
-    ftPanel.style.left   = '';
-    ftPanel.style.right  = '';
-    ftPanel.style.bottom = '';
-  }
-}
-
-function startChatListeners(username) {
-  if (!username) return;
-  stopChatListeners();
-  subscribeUsersList();
-
-  const dmQ = query(collection(db, 'dm_rooms'), where('members', 'array-contains', username));
-  _dmRoomsUnsubscribe = onSnapshot(dmQ, snap => {
-    dmRooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (chatPanelOpen) renderChatSidebar();
-    updateChatBadge();
-  });
-
-  const grpQ = query(collection(db, 'chat_rooms'), where('members', 'array-contains', username));
-  _groupRoomsUnsubscribe = onSnapshot(grpQ, snap => {
-    groupRooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (chatPanelOpen) renderChatSidebar();
-    updateChatBadge();
-  });
-}
-
-function stopChatListeners() {
-  if (_dmRoomsUnsubscribe) { _dmRoomsUnsubscribe(); _dmRoomsUnsubscribe = null; }
-  if (_groupRoomsUnsubscribe) { _groupRoomsUnsubscribe(); _groupRoomsUnsubscribe = null; }
-  if (_roomMsgUnsubscribe) { _roomMsgUnsubscribe(); _roomMsgUnsubscribe = null; }
-  dmRooms = [];
-  groupRooms = [];
-  currentRoomId = null;
-  currentRoomType = null;
-  stopUsersListListener();
-  stopFtListener();
-  stopDriveListeners();
-  _myDriveUrl = '';
-  _ftCurrentTab = 'p2p';
-}
-
-function subscribeUsersList() {
-  if (_usersListUnsub) return;
-  _usersListUnsub = onSnapshot(collection(db, 'users_list'), snap => {
-    _knownUsernames = new Set(snap.docs.map(d => d.id));
-    // 現在開いているDMルームの相手が存在しないユーザーならパネルを閉じる
-    if (currentRoomId && currentRoomType === 'dm') {
-      const room = dmRooms.find(r => r.id === currentRoomId);
-      if (room) {
-        const other = (room.members || []).find(m => m !== currentUsername);
-        if (other && !_knownUsernames.has(other)) {
-          currentRoomId = null;
-          currentRoomType = null;
-          const roomView = document.getElementById('chat-room-view');
-          if (roomView) roomView.setAttribute('hidden', '');
-        }
-      }
-    }
-    if (chatPanelOpen) renderChatSidebar();
-    updateChatBadge(); // バッジとリストの整合性を保つ
-  });
-}
-
-function stopUsersListListener() {
-  if (_usersListUnsub) { _usersListUnsub(); _usersListUnsub = null; }
-  _knownUsernames = null;
-}
-
-async function loadChatReadTimes(username) {
-  if (!username) return;
-  try {
-    const snap = await getDoc(doc(db, 'users', username, 'data', 'chat_reads'));
-    if (snap.exists()) {
-      chatReadTimes = {};
-      Object.entries(snap.data()).forEach(([roomId, ts]) => {
-        chatReadTimes[roomId] = ts?.toDate?.() || null;
-      });
-    }
-    updateChatBadge();
-  } catch (_) {}
-}
-
-async function markRoomRead(roomId) {
-  chatReadTimes[roomId] = new Date();
-  updateChatBadge();
-  if (chatPanelOpen) renderChatSidebar();
-  if (!currentUsername) return;
-  try {
-    await setDoc(
-      doc(db, 'users', currentUsername, 'data', 'chat_reads'),
-      { [roomId]: serverTimestamp() },
-      { merge: true }
-    );
-  } catch (_) {}
-}
-
-function getRoomUnread(room) {
-  if (!room.lastAt || !room.lastSender || room.lastSender === currentUsername) return 0;
-  const lastAt = room.lastAt?.toDate?.() || null;
-  if (!lastAt) return 0;
-  const readTime = chatReadTimes[room.id] || null;
-  return (!readTime || lastAt > readTime) ? 1 : 0;
-}
-
-function updateChatBadge() {
-  const badge = document.getElementById('chat-unread-badge');
-  const fab   = document.getElementById('chat-fab');
-  if (!badge || !fab) return;
-  // _knownUsernames でフィルタした DM ルームのみカウント（リスト表示と整合）
-  const visibleDm = _knownUsernames
-    ? dmRooms.filter(room => {
-        const other = (room.members || []).find(m => m !== currentUsername);
-        return !other || _knownUsernames.has(other);
-      })
-    : dmRooms;
-  const total = [...visibleDm, ...groupRooms].reduce((sum, r) => sum + getRoomUnread(r), 0);
-  if (total > 0) {
-    badge.textContent = total > 99 ? '99+' : total;
-    badge.hidden = false;
-    fab.classList.add('has-unread');
-  } else {
-    badge.hidden = true;
-    fab.classList.remove('has-unread');
-  }
-  updateLockNotifications();
-}
-
-function switchChatSidebarTab(tab) {
-  document.getElementById('chat-tab-dm').classList.toggle('active', tab === 'dm');
-  document.getElementById('chat-tab-group').classList.toggle('active', tab === 'group');
-  document.getElementById('chat-panel-dm').hidden = (tab !== 'dm');
-  document.getElementById('chat-panel-group').hidden = (tab !== 'group');
-}
-
-function renderChatSidebar() {
-  _renderRoomList('dm');
-  _renderRoomList('group');
-}
-
-function _renderRoomList(type) {
-  const listEl = document.getElementById(type === 'dm' ? 'dm-room-list' : 'group-room-list');
-  if (!listEl) return;
-  const rooms = type === 'dm' ? dmRooms : groupRooms;
-
-  let filtered = [...rooms];
-  // DM: users_listに存在しないユーザーとのルームを非表示
-  if (type === 'dm' && _knownUsernames) {
-    filtered = filtered.filter(room => {
-      const other = (room.members || []).find(m => m !== currentUsername);
-      return !other || _knownUsernames.has(other);
-    });
-  }
-
-  if (!filtered.length) {
-    listEl.innerHTML = `<div class="chat-room-empty">${type === 'dm' ? 'まだDMがありません' : 'まだグループがありません'}</div>`;
-    return;
-  }
-
-  const sorted = filtered.sort((a, b) => {
-    const ta = a.lastAt?.toDate?.() || new Date(0);
-    const tb = b.lastAt?.toDate?.() || new Date(0);
-    return tb - ta;
-  });
-
-  listEl.innerHTML = sorted.map(room => {
-    const unread = getRoomUnread(room);
-    const isActive = room.id === currentRoomId;
-    const name = type === 'dm'
-      ? (room.members || []).find(m => m !== currentUsername) || '?'
-      : (room.name || 'グループ');
-    const lastMsg = room.lastMessage
-      ? esc(room.lastMessage).slice(0, 22) + (room.lastMessage.length > 22 ? '…' : '')
-      : '';
-    const color = getUserAvatarColor(name);
-    const initial = name.charAt(0).toUpperCase();
-    const unreadHtml = unread > 0 ? `<span class="chat-room-unread">${unread}</span>` : '';
-    const deleteBtn = type === 'dm'
-      ? `<button class="chat-room-delete-btn" data-room-id="${room.id}" title="DMを削除">🗑</button>`
-      : '';
-    return `
-      <div class="chat-room-item${isActive ? ' active' : ''}" data-room-id="${room.id}" data-room-type="${type}">
-        <div class="chat-room-item-avatar" style="background:${color}">${initial}</div>
-        <div class="chat-room-item-body">
-          <div class="chat-room-item-name">${esc(name)}</div>
-          ${lastMsg ? `<div class="chat-room-item-preview">${lastMsg}</div>` : ''}
-        </div>
-        ${unreadHtml}
-        ${deleteBtn}
-      </div>`;
-  }).join('');
-
-  listEl.querySelectorAll('.chat-room-item').forEach(el => {
-    el.addEventListener('click', (e) => {
-      if (e.target.closest('.chat-room-delete-btn')) return;
-      openRoom(el.dataset.roomId, el.dataset.roomType);
-    });
-  });
-  listEl.querySelectorAll('.chat-room-delete-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      deleteDmRoom(btn.dataset.roomId);
-    });
-  });
-}
-
-async function openRoom(roomId, type) {
-  if (_roomMsgUnsubscribe) { _roomMsgUnsubscribe(); _roomMsgUnsubscribe = null; }
-  currentRoomId = roomId;
-  currentRoomType = type;
-  currentRoomMessages = [];
-  // 対応するタブに自動切り替え
-  switchChatSidebarTab(type === 'dm' ? 'dm' : 'group');
-
-  document.getElementById('chat-no-room').hidden = true;
-  const roomView = document.getElementById('chat-room-view');
-  roomView.removeAttribute('hidden');
-
-  const room = type === 'dm'
-    ? dmRooms.find(r => r.id === roomId)
-    : groupRooms.find(r => r.id === roomId);
-
-  const titleEl = document.getElementById('chat-room-title');
-  const membersEl = document.getElementById('chat-room-members');
-  if (room) {
-    if (type === 'dm') {
-      titleEl.textContent = (room.members || []).find(m => m !== currentUsername) || '?';
-      membersEl.textContent = '';
-    } else {
-      titleEl.textContent = room.name || 'グループ';
-      membersEl.textContent = (room.members || []).join(' · ');
-    }
-  }
-
-  const loginReq = document.getElementById('chat-login-required');
-  const inputRow = document.getElementById('chat-input-row');
-  if (currentUsername) {
-    loginReq.hidden = true;
-    inputRow.hidden = false;
-    setTimeout(() => document.getElementById('chat-input')?.focus(), 100);
-  } else {
-    loginReq.hidden = false;
-    inputRow.hidden = true;
-    if (fileBtn) fileBtn.hidden = true;
-  }
-
-  const colRef = type === 'dm'
-    ? collection(db, 'dm_rooms', roomId, 'messages')
-    : collection(db, 'chat_rooms', roomId, 'messages');
-  const msgQ = query(colRef, orderBy('createdAt', 'asc'), limit(CHAT_MSG_MAX));
-
-  _roomMsgUnsubscribe = onSnapshot(msgQ, snap => {
-    currentRoomMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderChatMessages();
-    scrollChatToBottom();
-    markRoomRead(roomId);
-  });
-
-  renderChatSidebar();
-}
-
-async function sendChatMessage() {
-  if (!currentUsername || !currentRoomId) return;
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-
-  const colRef = currentRoomType === 'dm'
-    ? collection(db, 'dm_rooms', currentRoomId, 'messages')
-    : collection(db, 'chat_rooms', currentRoomId, 'messages');
-  const roomRef = currentRoomType === 'dm'
-    ? doc(db, 'dm_rooms', currentRoomId)
-    : doc(db, 'chat_rooms', currentRoomId);
-
-  try {
-    if (currentRoomMessages.length >= CHAT_MSG_MAX) {
-      const oldest = currentRoomMessages[0];
-      const oldRef = currentRoomType === 'dm'
-        ? doc(db, 'dm_rooms', currentRoomId, 'messages', oldest.id)
-        : doc(db, 'chat_rooms', currentRoomId, 'messages', oldest.id);
-      await deleteDoc(oldRef);
-    }
-    await addDoc(colRef, { username: currentUsername, text, createdAt: serverTimestamp() });
-    await setDoc(roomRef, { lastMessage: text, lastAt: serverTimestamp(), lastSender: currentUsername }, { merge: true });
-  } catch (err) { console.error('チャット送信エラー:', err); }
-}
-
-async function deleteChatMessage(msgId) {
-  if (!currentRoomId) return;
-  const ok = await confirmDelete('このメッセージを削除しますか？');
-  if (!ok) return;
-  const msgRef = currentRoomType === 'dm'
-    ? doc(db, 'dm_rooms', currentRoomId, 'messages', msgId)
-    : doc(db, 'chat_rooms', currentRoomId, 'messages', msgId);
-  try { await deleteDoc(msgRef); }
-  catch (err) { console.error('メッセージ削除エラー:', err); }
-}
-
-function renderChatMessages() {
-  const container = document.getElementById('chat-messages');
-  if (!container) return;
-  if (!currentRoomMessages.length) {
-    container.innerHTML = '<div class="chat-empty">まだメッセージはありません。<br>最初のメッセージを送ってみましょう！</div>';
-    return;
-  }
-  container.innerHTML = '';
-  let lastDate = '';
-  currentRoomMessages.forEach(msg => {
-    const isOwn = msg.username === currentUsername;
-    const ts = msg.createdAt?.toDate ? msg.createdAt.toDate() : new Date();
-    const dateStr = ts.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' });
-    const timeStr = ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-    if (dateStr !== lastDate) {
-      const sep = document.createElement('div');
-      sep.className = 'chat-date-sep';
-      sep.textContent = dateStr;
-      container.appendChild(sep);
-      lastDate = dateStr;
-    }
-    const color = getUserAvatarColor(msg.username);
-    const initial = msg.username.charAt(0).toUpperCase();
-    const el = document.createElement('div');
-    el.className = `chat-msg${isOwn ? ' chat-msg--own' : ''}`;
-
-    // ===== テキストバブル =====
-    if (msg.type === 'file') return; // 旧形式は無視
-    el.innerHTML = `
-      ${!isOwn ? `<div class="chat-avatar" style="background:${color}">${initial}</div>` : ''}
-      <div class="chat-msg-body">
-        ${!isOwn ? `<div class="chat-msg-name">${esc(msg.username)}</div>` : ''}
-        <div class="chat-bubble">
-          ${esc(msg.text)}
-          ${isOwn ? `<button class="chat-msg-delete" data-id="${msg.id}" title="削除"><i class="fa-solid fa-trash-can"></i></button>` : ''}
-        </div>
-        <div class="chat-msg-time">${timeStr}</div>
-      </div>
-      ${isOwn ? `<div class="chat-avatar" style="background:${color}">${initial}</div>` : ''}
-    `;
-    if (isOwn) {
-      el.querySelector('.chat-msg-delete').addEventListener('click', () => deleteChatMessage(msg.id));
-    }
-    container.appendChild(el);
-  });
-}
-
-function scrollChatToBottom() {
-  const c = document.getElementById('chat-messages');
-  if (c) c.scrollTop = c.scrollHeight;
-}
-
-// ========== P2P ファイル転送 ==========
-
-function formatFileSize(bytes) {
-  if (!bytes) return '0 B';
-  if (bytes < 1024)             return bytes + ' B';
-  if (bytes < 1024 * 1024)      return (bytes / 1024).toFixed(1) + ' KB';
-  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
-}
-
-function getFileIcon(mimeType) {
-  if (!mimeType) return 'fa-file';
-  if (mimeType.startsWith('image/')) return 'fa-file-image';
-  if (mimeType.startsWith('video/')) return 'fa-file-video';
-  if (mimeType.startsWith('audio/')) return 'fa-file-audio';
-  if (mimeType.includes('pdf'))      return 'fa-file-pdf';
-  if (mimeType.includes('word') || mimeType.includes('document')) return 'fa-file-word';
-  if (mimeType.includes('excel') || mimeType.includes('sheet'))   return 'fa-file-excel';
-  if (mimeType.includes('zip') || mimeType.includes('compressed') || mimeType.includes('archive')) return 'fa-file-zipper';
-  if (mimeType.startsWith('text/')) return 'fa-file-lines';
-  return 'fa-file';
-}
-
-function updateFileProgressUI(sessionId, pct) {
-  const fill  = document.querySelector(`.ft-progress-fill[data-session="${sessionId}"]`);
-  const label = document.querySelector(`.ft-pct[data-session="${sessionId}"]`);
-  if (fill)  fill.style.width = Math.min(100, pct).toFixed(1) + '%';
-  if (label) label.textContent = Math.round(Math.min(100, pct)) + '%';
-}
-
-async function cleanupP2p(sessionId) {
-  const conn = _p2pConnections[sessionId];
-  if (conn) {
-    try { if (conn.unsub) conn.unsub(); } catch (_) {}
-    try { if (conn.dc) conn.dc.close(); } catch (_) {}
-    try { if (conn.pc) conn.pc.close(); } catch (_) {}
-    delete _p2pConnections[sessionId];
-  }
-  delete _sendProgress[sessionId];
-  delete _receiveProgress[sessionId];
-  try { await deleteDoc(doc(db, 'p2p_signals', sessionId)); } catch (_) {}
-}
-
-async function sendFileChunks(dc, file, sessionId) {
-  const buffer = await file.arrayBuffer();
-  const total  = buffer.byteLength;
-  // まずメタ情報を送信
-  dc.send(JSON.stringify({ type: 'meta', totalSize: total, fileName: file.name, fileType: file.type || 'application/octet-stream' }));
-  let sent = 0;
-  const sendNext = () => {
-    while (sent < total) {
-      if (dc.bufferedAmount > FILE_CHUNK_SIZE * 16) {
-        dc.bufferedAmountLowThreshold = FILE_CHUNK_SIZE * 4;
-        dc.onbufferedamountlow = sendNext;
-        return;
-      }
-      const end   = Math.min(sent + FILE_CHUNK_SIZE, total);
-      dc.send(buffer.slice(sent, end));
-      sent = end;
-      const pct = (sent / total) * 100;
-      _sendProgress[sessionId] = pct;
-      updateFileProgressUI(sessionId, pct);
-    }
-    dc.onbufferedamountlow = null;
-    _sendProgress[sessionId] = 100;
-    updateFileProgressUI(sessionId, 100);
-  };
-  sendNext();
-}
-
-// ===== ファイル転送パネル UI =====
-
-function openFileTransferPanel() {
-  _ftPanelOpen = true;
-  const panel = document.getElementById('ft-panel');
-  panel.removeAttribute('hidden');
-
-  // チャットパネルが開いているときは左横に動的配置
-  const chatPanel = document.getElementById('chat-panel');
-  if (chatPanel && chatPanel.classList.contains('open')) {
-    const chatRect = chatPanel.getBoundingClientRect();
-    const gap = 8;
-    const panelWidth = 340;
-    const leftEdge = chatRect.left - gap - panelWidth;
-    if (leftEdge >= 8) {
-      // 左に十分なスペースがある → チャットパネルの左横に配置
-      panel.style.right  = 'auto';
-      panel.style.left   = leftEdge + 'px';
-      panel.style.bottom = (window.innerHeight - chatRect.bottom) + 'px';
-    } else {
-      // スペース不足時はチャットパネルの上に重ねる（フォールバック）
-      panel.style.right  = 'auto';
-      panel.style.left   = Math.max(8, chatRect.left) + 'px';
-      panel.style.bottom = (window.innerHeight - chatRect.top + gap) + 'px';
-    }
-  } else {
-    // チャットパネルが閉じている場合はデフォルト位置（CSS）
-    panel.style.left   = '';
-    panel.style.right  = '';
-    panel.style.bottom = '';
-  }
-
-  setTimeout(() => panel.classList.add('open'), 10);
-  // タブ状態を復元
-  switchFtTab(_ftCurrentTab);
-  renderFtPanel();
-  startFtListener();
-}
-
-function closeFileTransferPanel() {
-  _ftPanelOpen = false;
-  const panel = document.getElementById('ft-panel');
-  panel.classList.remove('open');
-  setTimeout(() => panel.setAttribute('hidden', ''), 200);
-}
-
-function updateFtBadge() {
-  const badge = document.getElementById('ft-badge');
-  const fab   = document.getElementById('ft-fab');
-  if (!badge || !fab) return;
-  const p2pCount   = _ftIncoming.filter(s => s.status === 'pending').length;
-  const driveCount = _driveIncoming.filter(s => s.status === 'pending').length;
-  const count = p2pCount + driveCount;
-  // Drive タブバッジ
-  const driveBadge = document.getElementById('ft-drive-tab-badge');
-  if (driveBadge) {
-    driveBadge.hidden = driveCount === 0;
-    driveBadge.textContent = driveCount > 99 ? '99+' : driveCount;
-  }
-  if (count > 0) {
-    badge.textContent = count;
-    badge.hidden = false;
-    fab.classList.add('has-pending');
-  } else {
-    badge.hidden = true;
-    fab.classList.remove('has-pending');
-  }
-  updateLockNotifications();
-}
-
-function renderFtPanel() {
-  if (!_ftPanelOpen) return;
-  const loginEl    = document.getElementById('ft-login-required');
-  const contentEl  = document.getElementById('ft-content');
-  if (!currentUsername) {
-    if (loginEl) loginEl.hidden = false;
-    if (contentEl) contentEl.hidden = true;
-    return;
-  }
-  if (loginEl) loginEl.hidden = true;
-  if (contentEl) contentEl.hidden = false;
-
-  const incomingEl    = document.getElementById('ft-incoming-list');
-  const outgoingEl    = document.getElementById('ft-outgoing-list');
-  const incomingTitle = document.getElementById('ft-incoming-title');
-  const outgoingTitle = document.getElementById('ft-outgoing-title');
-  const emptyEl       = document.getElementById('ft-empty');
-
-  // 受信待ち（pending のみ表示）
-  const pending = _ftIncoming.filter(s => s.status === 'pending');
-  if (incomingTitle) incomingTitle.hidden = pending.length === 0;
-  if (incomingEl) {
-    incomingEl.innerHTML = pending.map(s => {
-      const icon = getFileIcon(s.fileType || '');
-      return `<div class="ft-item">
-        <div class="ft-item-top">
-          <i class="fa-solid ${icon} ft-item-icon"></i>
-          <div class="ft-item-meta">
-            <div class="ft-item-name" title="${esc(s.fileName)}">${esc(s.fileName)}</div>
-            <div class="ft-item-size">${formatFileSize(s.fileSize)} · 送信者: ${esc(s.from)}</div>
-          </div>
-        </div>
-        <div class="ft-item-actions">
-          <button class="btn-ft-accept" data-sid="${s.id}">受け取る</button>
-          <button class="btn-ft-reject" data-sid="${s.id}">断る</button>
-        </div>
-      </div>`;
-    }).join('');
-    incomingEl.querySelectorAll('.btn-ft-accept').forEach(btn =>
-      btn.addEventListener('click', () => acceptFtTransfer(btn.dataset.sid)));
-    incomingEl.querySelectorAll('.btn-ft-reject').forEach(btn =>
-      btn.addEventListener('click', () => rejectFtTransfer(btn.dataset.sid)));
-  }
-
-  // 送信中・受信完了
-  const active = _ftOutgoing.filter(s => ['pending','accepted','done'].includes(s.status));
-  if (outgoingTitle) outgoingTitle.hidden = active.length === 0;
-  if (outgoingEl) {
-    outgoingEl.innerHTML = active.map(s => {
-      const icon = getFileIcon(s.fileType || '');
-      const pct  = _sendProgress[s.sessionId] ?? 0;
-      const received = _receivedFiles[s.sessionId];
-      let statusHtml = '';
-      if (s.status === 'done' || received) {
-        statusHtml = `<div class="ft-item-status done">✓ 転送完了</div>`;
-        if (received) {
-          statusHtml += `<div class="ft-item-actions">
-            <a class="btn-ft-download" href="${received.url}" download="${esc(received.fileName)}">ダウンロード</a>
-          </div>`;
-        }
-      } else if (s.status === 'rejected') {
-        statusHtml = `<div class="ft-item-status rejected">辞退されました</div>`;
-      } else if (s.status === 'accepted' || pct > 0) {
-        statusHtml = `<div class="ft-progress-bar">
-          <div class="ft-progress-fill" data-session="${s.sessionId}" style="width:${pct.toFixed(1)}%"></div>
-        </div>
-        <div class="ft-item-status"><span class="ft-pct" data-session="${s.sessionId}">${Math.round(pct)}%</span></div>`;
-      } else {
-        statusHtml = `<div class="ft-item-status">相手の受け取り待ち…</div>`;
-      }
-      return `<div class="ft-item">
-        <div class="ft-item-top">
-          <i class="fa-solid ${icon} ft-item-icon"></i>
-          <div class="ft-item-meta">
-            <div class="ft-item-name" title="${esc(s.fileName)}">${esc(s.fileName)}</div>
-            <div class="ft-item-size">${formatFileSize(s.fileSize)} → ${esc(s.to)}</div>
-          </div>
-        </div>
-        ${statusHtml}
-      </div>`;
-    }).join('');
-  }
-
-  if (emptyEl) emptyEl.hidden = (pending.length + active.length) > 0;
-}
-
-function startFtListener() {
-  if (!currentUsername || _ftIncomingSub) return;
-  const q = query(collection(db, 'p2p_signals'), where('to', '==', currentUsername));
-  _ftIncomingSub = onSnapshot(q, snap => {
-    _ftIncoming = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    updateFtBadge();
-    renderFtPanel();
-  });
-}
-
-function stopFtListener() {
-  if (_ftIncomingSub) { _ftIncomingSub(); _ftIncomingSub = null; }
-  _ftIncoming = [];
-  _ftOutgoing = [];
-  updateFtBadge();
-}
-
-// ========== Drive シェア ==========
-
-// --- 自分のDriveリンク 読み書き ---
-async function loadMyDriveUrl(username) {
-  if (!username) return;
-  try {
-    const snap = await getDoc(doc(db, 'users', username, 'data', 'drive_link'));
-    _myDriveUrl = snap.exists() ? (snap.data().url || '') : '';
-  } catch (_) { _myDriveUrl = ''; }
-}
-
-async function saveMyDriveUrl(url) {
-  if (!currentUsername) return;
-  _myDriveUrl = url;
-  await setDoc(doc(db, 'users', currentUsername, 'data', 'drive_link'), { url, updatedAt: serverTimestamp() });
-}
-
-// --- Firestoreリスナー ---
-function startDriveListeners(username) {
-  if (!username) return;
-  // 受信リスナー
-  if (!_driveIncomingSub) {
-    const qIn = query(collection(db, 'drive_shares'), where('to', '==', username));
-    _driveIncomingSub = onSnapshot(qIn, snap => {
-      _driveIncoming = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      updateFtBadge();
-      renderDrivePanel();
-    });
-  }
-  // 送信リスナー
-  if (!_driveOutgoingSub) {
-    const qOut = query(collection(db, 'drive_shares'), where('from', '==', username));
-    _driveOutgoingSub = onSnapshot(qOut, snap => {
-      _driveOutgoing = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderDrivePanel();
-    });
-  }
-}
-
-function stopDriveListeners() {
-  if (_driveIncomingSub) { _driveIncomingSub(); _driveIncomingSub = null; }
-  if (_driveOutgoingSub) { _driveOutgoingSub(); _driveOutgoingSub = null; }
-  _driveIncoming = [];
-  _driveOutgoing = [];
-  _driveContacts = {};
-}
-
-// --- Drive 連絡先 読み込み ---
-async function loadDriveContacts(username) {
-  if (!username) return;
-  try {
-    const snap = await getDoc(doc(db, 'users', username, 'data', 'drive_contacts'));
-    _driveContacts = snap.exists() ? (snap.data().contacts || {}) : {};
-  } catch (_) { _driveContacts = {}; }
-}
-
-// --- Drive 連絡先 保存（追加・更新） ---
-async function saveDriveContact(contactUsername, url) {
-  if (!currentUsername || !contactUsername || !url) return;
-  _driveContacts[contactUsername] = { url, savedAt: Date.now() };
-  try {
-    await setDoc(
-      doc(db, 'users', currentUsername, 'data', 'drive_contacts'),
-      { contacts: _driveContacts, updatedAt: serverTimestamp() },
-      { merge: true }
-    );
-  } catch (err) { console.error('Drive連絡先保存エラー:', err); }
-}
-
-// --- Drive 連絡先 削除 ---
-async function deleteDriveContact(contactUsername) {
-  if (!currentUsername || !contactUsername) return;
-  delete _driveContacts[contactUsername];
-  try {
-    await setDoc(
-      doc(db, 'users', currentUsername, 'data', 'drive_contacts'),
-      { contacts: _driveContacts, updatedAt: serverTimestamp() },
-      { merge: true }
-    );
-  } catch (err) { console.error('Drive連絡先削除エラー:', err); }
-  renderDrivePanel();
-}
-
-// --- タブ切り替え ---
-function switchFtTab(tab) {
-  _ftCurrentTab = tab;
-  document.querySelectorAll('.ft-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-  document.getElementById('ft-p2p-area').hidden   = (tab !== 'p2p');
-  document.getElementById('ft-drive-area').hidden = (tab !== 'drive');
-  if (tab === 'drive') renderDrivePanel();
-}
-
-// --- Drive パネル描画 ---
-function renderDrivePanel() {
-  if (!_ftPanelOpen || _ftCurrentTab !== 'drive') return;
-  const incomingEl    = document.getElementById('ft-drive-incoming-list');
-  const outgoingEl    = document.getElementById('ft-drive-outgoing-list');
-  const incomingTitle = document.getElementById('ft-drive-incoming-title');
-  const outgoingTitle = document.getElementById('ft-drive-outgoing-title');
-  const emptyEl       = document.getElementById('ft-drive-empty');
-  const contactsEl    = document.getElementById('ft-contacts-list');
-  const contactsTitle = document.getElementById('ft-contacts-title');
-  if (!incomingEl) return;
-
-  // ===== 登録済み連絡先 =====
-  const contacts = Object.entries(_driveContacts)
-    .sort((a, b) => (b[1].savedAt || 0) - (a[1].savedAt || 0));
-  if (contactsTitle) contactsTitle.hidden = contacts.length === 0;
-  if (contactsEl) {
-    contactsEl.innerHTML = contacts.map(([name, info]) => {
-      const color = getUserColor(name);
-      const initial = name.charAt(0).toUpperCase();
-      const shortUrl = info.url.replace(/^https?:\/\/drive\.google\.com\//, '').slice(0, 30) + '…';
-      return `<div class="ft-contact-item">
-        <div class="ft-contact-avatar" style="background:${color}">${initial}</div>
-        <div class="ft-contact-name" title="${esc(name)}">${esc(name)}</div>
-        <button class="btn-ft-contact-send" data-name="${esc(name)}" data-url="${esc(info.url)}" title="このリンクを送る">
-          <i class="fa-brands fa-google-drive"></i> 送る
-        </button>
-        <button class="btn-ft-contact-del" data-name="${esc(name)}" title="連絡先を削除">
-          <i class="fa-solid fa-trash"></i>
-        </button>
-      </div>`;
-    }).join('');
-    contactsEl.querySelectorAll('.btn-ft-contact-send').forEach(btn => {
-      btn.addEventListener('click', () => openDriveSendModal(btn.dataset.name, btn.dataset.url));
-    });
-    contactsEl.querySelectorAll('.btn-ft-contact-del').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (confirm(`「${btn.dataset.name}」の登録リンクを削除しますか？`)) {
-          await deleteDriveContact(btn.dataset.name);
-        }
-      });
-    });
-  }
-
-  // 受信（pending のみ表示）
-  const pending = _driveIncoming.filter(s => s.status === 'pending');
-  if (incomingTitle) incomingTitle.hidden = pending.length === 0;
-  incomingEl.innerHTML = pending.map(s => {
-    const ts = s.createdAt?.seconds ? new Date(s.createdAt.seconds * 1000).toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
-    const msg = s.message ? `<div class="ft-drive-item-msg">${esc(s.message)}</div>` : '';
-    return `<div class="ft-drive-item">
-      <div class="ft-drive-item-header">
-        <i class="fa-brands fa-google-drive ft-drive-item-icon"></i>
-        <div class="ft-drive-item-meta">
-          <div class="ft-drive-item-from"><i class="fa-solid fa-arrow-right" style="font-size:0.65rem;opacity:0.5"></i> ${esc(s.from)} から</div>
-          <div class="ft-drive-item-time">${ts}</div>
-        </div>
-      </div>
-      ${msg}
-      <div class="ft-drive-item-actions">
-        <button class="btn-ft-drive-open" data-id="${s.id}" data-url="${esc(s.driveUrl)}">
-          <i class="fa-brands fa-google-drive"></i> Driveを開く
-        </button>
-        <button class="btn-ft-drive-dismiss" data-id="${s.id}" title="消去">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-    </div>`;
-  }).join('');
-  incomingEl.querySelectorAll('.btn-ft-drive-open').forEach(btn =>
-    btn.addEventListener('click', () => openDriveShare(btn.dataset.id, btn.dataset.url)));
-  incomingEl.querySelectorAll('.btn-ft-drive-dismiss').forEach(btn =>
-    btn.addEventListener('click', () => dismissDriveShare(btn.dataset.id)));
-
-  // 送信済み（直近10件）
-  const sent = [..._driveOutgoing]
-    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
-    .slice(0, 10);
-  if (outgoingTitle) outgoingTitle.hidden = sent.length === 0;
-  outgoingEl.innerHTML = sent.map(s => {
-    const ts = s.createdAt?.seconds ? new Date(s.createdAt.seconds * 1000).toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
-    const statusHtml = s.status === 'viewed'
-      ? `<div class="ft-drive-status-viewed"><i class="fa-solid fa-check-double"></i> ${esc(s.to)} が確認済み</div>`
-      : `<div class="ft-drive-status-pending">→ ${esc(s.to)} 未確認</div>`;
-    return `<div class="ft-drive-item">
-      <div class="ft-drive-item-header">
-        <i class="fa-brands fa-google-drive ft-drive-item-icon"></i>
-        <div class="ft-drive-item-meta">
-          <div class="ft-drive-item-from">→ ${esc(s.to)}</div>
-          <div class="ft-drive-item-time">${ts}</div>
-        </div>
-        <button class="btn-ft-drive-dismiss" data-id="${s.id}" title="消去" style="margin-left:auto">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-      ${statusHtml}
-    </div>`;
-  }).join('');
-  outgoingEl.querySelectorAll('.btn-ft-drive-dismiss').forEach(btn =>
-    btn.addEventListener('click', () => dismissDriveShare(btn.dataset.id)));
-
-  if (emptyEl) emptyEl.hidden = (pending.length + sent.length) > 0;
-
-  // 登録済みDriveリンクがあればボタンラベルを更新
-  const settingBtn = document.getElementById('ft-my-drive-link-btn');
-  if (settingBtn) {
-    settingBtn.innerHTML = _myDriveUrl
-      ? `<i class="fa-solid fa-check" style="color:#10b981"></i> Driveリンク登録済み（変更）`
-      : `<i class="fa-solid fa-gear"></i> 自分のDriveリンクを登録`;
-  }
-
-  // 自分のDriveリンク表示エリアを更新
-  const myDisplayEl  = document.getElementById('ft-my-drive-display');
-  const myDisplayUrl = document.getElementById('ft-my-drive-display-url');
-  const myDisplayCopy= document.getElementById('ft-my-drive-display-copy');
-  const myDisplayOpen= document.getElementById('ft-my-drive-display-open');
-  if (myDisplayEl) {
-    if (_myDriveUrl) {
-      myDisplayEl.hidden = false;
-      if (myDisplayUrl) myDisplayUrl.textContent = _myDriveUrl;
-      // コピーボタン（毎回付け直して重複防止）
-      if (myDisplayCopy) {
-        const newCopy = myDisplayCopy.cloneNode(true);
-        myDisplayCopy.replaceWith(newCopy);
-        newCopy.addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(_myDriveUrl);
-            newCopy.innerHTML = '<i class="fa-solid fa-check"></i>';
-            setTimeout(() => { newCopy.innerHTML = '<i class="fa-solid fa-copy"></i>'; }, 1500);
-          } catch (_) { alert(_myDriveUrl); }
-        });
-      }
-      // 開くボタン
-      if (myDisplayOpen) {
-        const newOpen = myDisplayOpen.cloneNode(true);
-        myDisplayOpen.replaceWith(newOpen);
-        newOpen.addEventListener('click', () => {
-          window.open(_myDriveUrl, '_blank', 'noopener,noreferrer');
-        });
-      }
-    } else {
-      myDisplayEl.hidden = true;
-    }
-  }
-}
-
-// --- Driveを開く（既読にする） ---
-async function openDriveShare(id, url) {
-  if (!url) return;
-  try {
-    await updateDoc(doc(db, 'drive_shares', id), { status: 'viewed', viewedAt: serverTimestamp() });
-  } catch (_) {}
-  window.open(url, '_blank', 'noopener,noreferrer');
-}
-
-// --- 消去 ---
-async function dismissDriveShare(id) {
-  try { await deleteDoc(doc(db, 'drive_shares', id)); } catch (_) {}
-}
-
-// --- Drive送信モーダル ---
-// prefillUser / prefillUrl: 連絡先クイック送信ボタンから呼ぶとき指定
-async function openDriveSendModal(prefillUser = null, prefillUrl = null) {
-  if (!currentUsername) { alert('ユーザーネームを設定してください'); return; }
-  _ftDriveSelectedUser = prefillUser || null;
-
-  // モーダルを初期化
-  document.getElementById('ft-drive-user-search').value = '';
-  document.getElementById('ft-drive-message').value = '';
-  document.getElementById('ft-drive-send-modal').classList.add('visible');
-
-  // === 登録済み連絡先クイック選択エリアを構築 ===
-  const contacts = Object.entries(_driveContacts)
-    .sort((a, b) => (b[1].savedAt || 0) - (a[1].savedAt || 0));
-  const quickArea = document.getElementById('ft-drive-quick-contacts');
-  const quickList = document.getElementById('ft-drive-quick-list');
-  // 連絡先がある、または自分のDriveリンクが登録済みなら表示
-  const showQuick = contacts.length > 0 || !!_myDriveUrl;
-  if (showQuick && quickArea && quickList) {
-    // 連絡先がなく自分のURLのみの場合は「自分のURLをURLとして使用」アイテムを追加
-    const ownItem = (_myDriveUrl && contacts.length === 0)
-      ? `<div class="ft-drive-quick-item" data-name="" data-url="${esc(_myDriveUrl)}" style="border-color:rgba(52,168,83,0.35)">
-          <div style="width:24px;height:24px;border-radius:50%;background:#34a853;display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;color:#fff;flex-shrink:0">自</div>
-          <div style="flex:1;min-width:0">
-            <div class="ft-drive-quick-item-name">自分のDriveリンクをURLとして使用</div>
-            <div class="ft-drive-quick-item-url">${esc(_myDriveUrl.length > 38 ? _myDriveUrl.slice(0, 35) + '…' : _myDriveUrl)}</div>
-          </div>
-          <i class="fa-brands fa-google-drive" style="color:#34a853;font-size:0.9rem;flex-shrink:0"></i>
-        </div>`
-      : '';
-    quickList.innerHTML = ownItem + contacts.map(([name, info]) => {
-      const color = getUserColor(name);
-      const initial = name.charAt(0).toUpperCase();
-      const shortUrl = info.url.length > 38 ? info.url.slice(0, 35) + '…' : info.url;
-      return `<div class="ft-drive-quick-item" data-name="${esc(name)}" data-url="${esc(info.url)}">
-        <div style="width:24px;height:24px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;color:#fff;flex-shrink:0">${initial}</div>
-        <div style="flex:1;min-width:0">
-          <div class="ft-drive-quick-item-name">${esc(name)}</div>
-          <div class="ft-drive-quick-item-url">${esc(shortUrl)}</div>
-        </div>
-        <i class="fa-brands fa-google-drive" style="color:#34a853;font-size:0.9rem;flex-shrink:0"></i>
-      </div>`;
-    }).join('');
-    quickArea.hidden = false;
-    // クイック選択クリック時：フォームに自動入力して選択状態に
-    quickList.querySelectorAll('.ft-drive-quick-item').forEach(item => {
-      item.addEventListener('click', () => {
-        if (item.dataset.name) {
-          // 通常連絡先：名前＋URLをセット
-          selectDriveSendTarget(item.dataset.name, item.dataset.url);
-        } else {
-          // 自分のURL候補：URLフィールドのみセット（名前は検索から選ぶ）
-          const urlInput = document.getElementById('ft-drive-url-input');
-          if (urlInput) urlInput.value = item.dataset.url;
-        }
-      });
-    });
-  } else {
-    if (quickArea) quickArea.hidden = true;
-  }
-
-  // prefill が指定されている場合（クイック送信ボタンから）は即選択状態に
-  if (prefillUser) {
-    const url = prefillUrl || _driveContacts[prefillUser]?.url || _myDriveUrl;
-    selectDriveSendTarget(prefillUser, url);
-  } else {
-    document.getElementById('ft-drive-form-group').hidden = true;
-    document.getElementById('ft-drive-confirm-btn').hidden = true;
-  }
-
-  await loadUsersForChatPicker('ft-drive-user-list', 'ft-drive-user-search', name => {
-    const savedUrl = _driveContacts[name]?.url || _myDriveUrl;
-    selectDriveSendTarget(name, savedUrl);
-  }, true);
-}
-
-// 送信先決定時の共通処理（クイック選択 or 検索どちらからでも呼ばれる）
-function selectDriveSendTarget(name, url) {
-  _ftDriveSelectedUser = name;
-  const urlInput  = document.getElementById('ft-drive-url-input');
-  const badge     = document.getElementById('ft-drive-saved-badge');
-  const formGroup = document.getElementById('ft-drive-form-group');
-  const confirmBtn = document.getElementById('ft-drive-confirm-btn');
-  const hasSaved  = !!_driveContacts[name];
-
-  urlInput.value        = url || '';
-  if (badge)  badge.hidden = !hasSaved;
-  formGroup.hidden      = false;
-  confirmBtn.hidden     = false;
-}
-
-function closeDriveSendModal() {
-  document.getElementById('ft-drive-send-modal').classList.remove('visible');
-  _ftDriveSelectedUser = null;
-}
-
-async function confirmDriveSend() {
-  const url      = document.getElementById('ft-drive-url-input').value.trim();
-  const msg      = document.getElementById('ft-drive-message').value.trim();
-  const doSave   = document.getElementById('ft-drive-save-contact')?.checked ?? true;
-  if (!_ftDriveSelectedUser) { alert('送信先を選択してください'); return; }
-  if (!url) { document.getElementById('ft-drive-url-input').focus(); return; }
-  if (!url.startsWith('http')) { alert('正しいURLを入力してください'); return; }
-  const btn = document.getElementById('ft-drive-confirm-btn');
-  btn.disabled = true;
-  btn.textContent = '送信中…';
-  try {
-    await addDoc(collection(db, 'drive_shares'), {
-      from:      currentUsername,
-      to:        _ftDriveSelectedUser,
-      driveUrl:  url,
-      message:   msg,
-      status:    'pending',
-      createdAt: serverTimestamp(),
-      viewedAt:  null,
-    });
-    // チェックボックスがONなら連絡先に記憶
-    if (doSave) await saveDriveContact(_ftDriveSelectedUser, url);
-    // 自分のDriveリンク未登録なら今回のURLで初期設定
-    if (!_myDriveUrl && url) saveMyDriveUrl(url);
-    closeDriveSendModal();
-    switchFtTab('drive');
-    renderDrivePanel();
-  } catch (err) {
-    console.error('Drive送信エラー:', err);
-    alert('送信に失敗しました');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '送信する';
-  }
-}
-
-// --- 自分のDriveリンク登録モーダル ---
-function openMyDriveLinkModal() {
-  document.getElementById('ft-my-drive-url').value = _myDriveUrl;
-  document.getElementById('ft-my-drive-modal').classList.add('visible');
-}
-
-function closeMyDriveLinkModal() {
-  document.getElementById('ft-my-drive-modal').classList.remove('visible');
-}
-
-async function saveMyDriveLinkFromModal() {
-  const url = document.getElementById('ft-my-drive-url').value.trim();
-  if (url && !url.startsWith('http')) { alert('正しいURLを入力してください'); return; }
-  const btn = document.getElementById('ft-my-drive-save-btn');
-  btn.disabled = true;
-  btn.textContent = '保存中…';
-  try {
-    await saveMyDriveUrl(url);
-    closeMyDriveLinkModal();
-    // 登録ボタンのラベル更新
-    const settingBtn = document.getElementById('ft-my-drive-link-btn');
-    if (settingBtn) settingBtn.innerHTML = `<i class="fa-solid fa-check" style="color:#10b981"></i> Driveリンク登録済み`;
-  } catch (err) {
-    alert('保存に失敗しました');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '保存する';
-  }
-}
-
-// ===== ファイル送信モーダル =====
-
-async function openFtSendModal() {
-  if (!currentUsername) { alert('ユーザーネームを設定してください'); return; }
-  _ftSelectedUser = null;
-  _ftSelectedFile = null;
-  document.getElementById('ft-user-search').value = '';
-  document.getElementById('ft-file-group').hidden = true;
-  document.getElementById('ft-selected-file').hidden = true;
-  document.getElementById('ft-confirm-btn').hidden = true;
-  document.getElementById('ft-file-input').value = '';
-  document.getElementById('ft-send-modal').classList.add('visible');
-  await loadUsersForChatPicker('ft-user-list', 'ft-user-search', (name) => {
-    _ftSelectedUser = name;
-    document.getElementById('ft-target-label').textContent = `送信先：${name}`;
-    document.getElementById('ft-file-group').hidden = false;
-  }, true);
-}
-
-function closeFtSendModal() {
-  document.getElementById('ft-send-modal').classList.remove('visible');
-  _ftSelectedUser = null;
-  _ftSelectedFile = null;
-}
-
-async function confirmFtSend() {
-  if (!_ftSelectedUser || !_ftSelectedFile) return;
-  const file      = _ftSelectedFile;
-  const recipient = _ftSelectedUser;
-  closeFtSendModal();
-  await initiateFileTransfer(file, recipient);
-}
-
-// ===== P2P 転送コア =====
-
-async function initiateFileTransfer(file, recipientUsername) {
-  if (!currentUsername || !recipientUsername) return;
-
-  const sessionId  = `${currentUsername}_${recipientUsername}_${Date.now()}`;
-  const signalRef  = doc(db, 'p2p_signals', sessionId);
-  const pc         = new RTCPeerConnection(RTC_CONFIG);
-  const dc         = pc.createDataChannel('file');
-  const conn       = { pc, dc, role: 'sender', unsub: null, addedToIdx: 0 };
-  _p2pConnections[sessionId] = conn;
-  _sendProgress[sessionId]   = 0;
-
-  // アウトゴーイングリストに追加
-  _ftOutgoing.push({ sessionId, to: recipientUsername, fileName: file.name, fileSize: file.size, fileType: file.type || '', status: 'pending' });
-  if (!_ftPanelOpen) openFileTransferPanel();
-  renderFtPanel();
-
-  pc.onicecandidate = async e => {
-    if (e.candidate) {
-      try { await updateDoc(signalRef, { fromCandidates: arrayUnion(JSON.stringify(e.candidate.toJSON())) }); } catch (_) {}
-    }
-  };
-
-  dc.onopen  = () => sendFileChunks(dc, file, sessionId);
-  dc.onerror = () => { cleanupP2p(sessionId); _updateOutgoing(sessionId, 'error'); renderFtPanel(); };
-
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-
-  await setDoc(signalRef, {
-    from: currentUsername, to: recipientUsername,
-    fileName: file.name, fileSize: file.size,
-    fileType: file.type || 'application/octet-stream',
-    status: 'pending', offer: JSON.stringify(offer), answer: null,
-    fromCandidates: [], toCandidates: [],
-    createdAt: serverTimestamp()
-  });
-
-  // answer / toCandidates を監視
-  conn.unsub = onSnapshot(signalRef, async snap => {
-    if (!snap.exists()) { _updateOutgoing(sessionId, 'done'); renderFtPanel(); return; }
-    const data = snap.data();
-    const c = _p2pConnections[sessionId];
-    if (!c) return;
-    _updateOutgoing(sessionId, data.status);
-    renderFtPanel();
-    if (data.answer && !c.pc.currentRemoteDescription) {
-      try { await c.pc.setRemoteDescription(JSON.parse(data.answer)); } catch (e) { console.error('setRemoteDescription:', e); }
-    }
-    const toCands = data.toCandidates || [];
-    for (let i = c.addedToIdx; i < toCands.length; i++) {
-      try { await c.pc.addIceCandidate(JSON.parse(toCands[i])); c.addedToIdx = i + 1; } catch (_) {}
-    }
-    if (data.status === 'rejected') {
-      cleanupP2p(sessionId);
-      _updateOutgoing(sessionId, 'rejected');
-      renderFtPanel();
-    }
-  });
-}
-
-function _updateOutgoing(sessionId, status) {
-  const item = _ftOutgoing.find(o => o.sessionId === sessionId);
-  if (item) item.status = status;
-}
-
-async function acceptFtTransfer(sessionId) {
-  if (!currentUsername) return;
-  const signalRef  = doc(db, 'p2p_signals', sessionId);
-  let signalSnap;
-  try { signalSnap = await getDoc(signalRef); } catch (_) { alert('転送セッションの取得に失敗しました。'); return; }
-  if (!signalSnap.exists()) { alert('転送セッションが見つかりません。送信側がオフラインの可能性があります。'); return; }
-  const signal = signalSnap.data();
-  if (signal.status !== 'pending') return;
-
-  const pc   = new RTCPeerConnection(RTC_CONFIG);
-  const rcvd = { meta: null, buffers: [], receivedSize: 0 };
-  const conn = { pc, dc: null, role: 'receiver', unsub: null, addedFromIdx: 0, rcvd };
-  _p2pConnections[sessionId] = conn;
-  _receiveProgress[sessionId] = 0;
-  // 受信アイテムをアウトゴーイングリストに追加（進捗表示用）
-  _ftOutgoing.push({ sessionId, to: signal.from, fileName: signal.fileName, fileSize: signal.fileSize, fileType: signal.fileType || '', status: 'accepted' });
-  // 受信待ちリストから除外
-  _ftIncoming = _ftIncoming.filter(s => s.id !== sessionId);
-  renderFtPanel();
-
-  pc.onicecandidate = async e => {
-    if (e.candidate) {
-      try { await updateDoc(signalRef, { toCandidates: arrayUnion(JSON.stringify(e.candidate.toJSON())) }); } catch (_) {}
-    }
-  };
-
-  pc.ondatachannel = e => {
-    const dc = e.channel;
-    conn.dc  = dc;
-    dc.binaryType = 'arraybuffer';
-    dc.onmessage  = async ev => {
-      if (!_p2pConnections[sessionId]) return;
-      if (typeof ev.data === 'string') {
-        try {
-          const m = JSON.parse(ev.data);
-          if (m.type === 'meta') { conn.rcvd.meta = m; conn.rcvd.buffers = []; conn.rcvd.receivedSize = 0; }
-        } catch (_) {}
-      } else if (ev.data instanceof ArrayBuffer) {
-        conn.rcvd.buffers.push(ev.data);
-        conn.rcvd.receivedSize += ev.data.byteLength;
-        if (conn.rcvd.meta) {
-          const pct = (conn.rcvd.receivedSize / conn.rcvd.meta.totalSize) * 100;
-          _receiveProgress[sessionId] = pct;
-          updateFileProgressUI(sessionId, pct);
-          if (conn.rcvd.receivedSize >= conn.rcvd.meta.totalSize) {
-            const blob = new Blob(conn.rcvd.buffers, { type: conn.rcvd.meta.fileType });
-            _receivedFiles[sessionId] = { url: URL.createObjectURL(blob), fileName: conn.rcvd.meta.fileName };
-            try { await updateDoc(signalRef, { status: 'done' }); } catch (_) {}
-            try { if (conn.unsub) conn.unsub(); } catch (_) {}
-            try { dc.close(); } catch (_) {}
-            try { pc.close(); } catch (_) {}
-            delete _p2pConnections[sessionId];
-            delete _receiveProgress[sessionId];
-            try { await deleteDoc(signalRef); } catch (_) {}
-            _updateOutgoing(sessionId, 'done');
-            renderFtPanel();
-          }
-        }
-      }
-    };
-    dc.onerror = () => cleanupP2p(sessionId);
-  };
-
-  await pc.setRemoteDescription(JSON.parse(signal.offer));
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  await updateDoc(signalRef, { answer: JSON.stringify(answer), status: 'accepted' });
-
-  for (const candStr of (signal.fromCandidates || [])) {
-    try { await pc.addIceCandidate(JSON.parse(candStr)); conn.addedFromIdx++; } catch (_) {}
-  }
-
-  conn.unsub = onSnapshot(signalRef, async snap => {
-    if (!snap.exists()) return;
-    const c = _p2pConnections[sessionId];
-    if (!c) return;
-    const froms = snap.data().fromCandidates || [];
-    for (let i = c.addedFromIdx; i < froms.length; i++) {
-      try { await c.pc.addIceCandidate(JSON.parse(froms[i])); c.addedFromIdx = i + 1; } catch (_) {}
-    }
-  });
-}
-
-async function rejectFtTransfer(sessionId) {
-  try {
-    await updateDoc(doc(db, 'p2p_signals', sessionId), { status: 'rejected' });
-    _ftIncoming = _ftIncoming.filter(s => s.id !== sessionId);
-    updateFtBadge();
-    renderFtPanel();
-    setTimeout(() => cleanupP2p(sessionId), 1500);
-  } catch (err) { console.error('rejectFtTransfer:', err); }
-}
-
-// ===== DM作成モーダル =====
-async function openNewDmModal() {
-  if (!currentUsername) { alert('チャットするにはユーザーネームを設定してください。'); return; }
-  const modal = document.getElementById('new-dm-modal');
-  modal.classList.add('visible');
-  document.getElementById('new-dm-search').value = '';
-  await loadUsersForChatPicker('new-dm-user-list', 'new-dm-search', async (name) => {
-    modal.classList.remove('visible');
-    await openOrCreateDm(name);
-  }, true);
-}
-
-async function deleteDmRoom(roomId) {
-  if (!currentUsername || !roomId) return;
-  if (!confirm('このDMを削除しますか？（自分の一覧からのみ消えます）')) return;
-  try {
-    const roomRef = doc(db, 'dm_rooms', roomId);
-    await updateDoc(roomRef, { members: arrayRemove(currentUsername) });
-    // 現在開いているルームだったら閉じる
-    if (currentRoomId === roomId) {
-      currentRoomId = null;
-      currentRoomType = null;
-      if (_roomMsgUnsubscribe) { _roomMsgUnsubscribe(); _roomMsgUnsubscribe = null; }
-      document.getElementById('chat-no-room').hidden = false;
-      const roomView = document.getElementById('chat-room-view');
-      if (roomView) roomView.setAttribute('hidden', '');
-    }
-  } catch (e) {
-    console.error('DM削除失敗:', e);
-    alert('削除に失敗しました');
-  }
-}
-
-async function openOrCreateDm(targetUser) {
-  if (!currentUsername || !targetUser) return;
-  // 既存のDMルームをmembersで検索（名前変更後の旧ルームIDにも対応）
-  const existingRoom = dmRooms.find(r =>
-    Array.isArray(r.members) &&
-    r.members.includes(currentUsername) &&
-    r.members.includes(targetUser)
-  );
-  let roomId;
-  if (existingRoom) {
-    roomId = existingRoom.id;
-  } else {
-    roomId = getDmRoomId(currentUsername, targetUser);
-    const roomRef = doc(db, 'dm_rooms', roomId);
-    const snap = await getDoc(roomRef);
-    if (!snap.exists()) {
-      await setDoc(roomRef, {
-        members: [currentUsername, targetUser].sort(),
-        createdAt: serverTimestamp(),
-        lastMessage: '',
-        lastAt: null,
-        lastSender: ''
-      });
-    } else {
-      // どちらかが削除していた場合は再追加
-      await updateDoc(roomRef, { members: arrayUnion(currentUsername, targetUser) });
-    }
-  }
-  if (!chatPanelOpen) openChatPanel();
-  setTimeout(() => openRoom(roomId, 'dm'), 150);
-}
-
-// ===== グループ作成モーダル =====
-let _newGroupSelected = [];
-
-async function openNewGroupModal() {
-  if (!currentUsername) { alert('チャットするにはユーザーネームを設定してください。'); return; }
-  _newGroupSelected = [];
-  document.getElementById('new-group-name').value = '';
-  document.getElementById('new-group-member-search').value = '';
-  renderNewGroupSelected();
-  document.getElementById('new-group-modal').classList.add('visible');
-  await loadUsersForChatPicker('new-group-member-list', 'new-group-member-search', (name) => {
-    if (!_newGroupSelected.includes(name)) {
-      _newGroupSelected.push(name);
-      renderNewGroupSelected();
-    }
-  }, false);
-}
-
-function renderNewGroupSelected() {
-  const el = document.getElementById('new-group-selected');
-  if (!el) return;
-  if (!_newGroupSelected.length) {
-    el.innerHTML = '<span class="group-no-member">まだ選択されていません</span>';
-    return;
-  }
-  el.innerHTML = _newGroupSelected.map(name =>
-    `<span class="group-member-chip">${esc(name)}<button class="group-chip-rm" data-name="${esc(name)}">×</button></span>`
-  ).join('');
-  el.querySelectorAll('.group-chip-rm').forEach(btn => {
-    btn.addEventListener('click', () => {
-      _newGroupSelected = _newGroupSelected.filter(m => m !== btn.dataset.name);
-      renderNewGroupSelected();
-    });
-  });
-}
-
-async function createGroupRoom() {
-  const name = document.getElementById('new-group-name').value.trim();
-  if (!name) { document.getElementById('new-group-name').focus(); return; }
-  if (!_newGroupSelected.length) { alert('メンバーを1人以上選んでください。'); return; }
-  const members = [...new Set([currentUsername, ..._newGroupSelected])];
-  try {
-    const roomRef = await addDoc(collection(db, 'chat_rooms'), {
-      name,
-      members,
-      createdBy: currentUsername,
-      createdAt: serverTimestamp(),
-      lastMessage: '',
-      lastAt: null,
-      lastSender: ''
-    });
-    document.getElementById('new-group-modal').classList.remove('visible');
-    if (!chatPanelOpen) openChatPanel();
-    setTimeout(() => openRoom(roomRef.id, 'group'), 150);
-  } catch (err) { console.error('グループ作成エラー:', err); alert('作成に失敗しました。'); }
-}
-
-// ===== ユーザーピッカー（DM/グループ共通）=====
-async function loadUsersForChatPicker(listElId, searchElId, onSelect, excludeSelf) {
-  const listEl = document.getElementById(listElId);
-  if (!listEl) return;
-  listEl.innerHTML = '<div class="new-dm-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>';
-  let users = [];
-  try {
-    const snap = await getDocs(collection(db, 'users_list'));
-    users = snap.docs.map(d => d.id);
-    if (excludeSelf) users = users.filter(u => u !== currentUsername);
-  } catch (_) {
-    listEl.innerHTML = '<div class="new-dm-empty">読み込み失敗</div>';
-    return;
-  }
-  const searchEl = document.getElementById(searchElId);
-  const render = (filter = '') => {
-    const list = filter ? users.filter(u => u.toLowerCase().includes(filter.toLowerCase())) : users;
-    if (!list.length) {
-      listEl.innerHTML = '<div class="new-dm-empty">ユーザーが見つかりません</div>';
-      return;
-    }
-    listEl.innerHTML = list.map(name => {
-      const color = getUserAvatarColor(name);
-      const initial = name.charAt(0).toUpperCase();
-      return `<div class="new-dm-user-item" data-name="${esc(name)}">
-        <div class="chat-avatar" style="background:${color};width:30px;height:30px;font-size:0.75rem">${initial}</div>
-        <span>${esc(name)}</span>
-      </div>`;
-    }).join('');
-    listEl.querySelectorAll('.new-dm-user-item').forEach(el => {
-      el.addEventListener('click', () => onSelect(el.dataset.name));
-    });
-  };
-  render();
-  if (searchEl) {
-    if (searchEl._chatPickerHandler) searchEl.removeEventListener('input', searchEl._chatPickerHandler);
-    searchEl._chatPickerHandler = e => render(e.target.value);
-    searchEl.addEventListener('input', searchEl._chatPickerHandler);
-  }
-}
-
-// ========== タスク割り振り ==========
-
-const TASK_STATUS_LABEL = {
-  pending:  { text: '承諾待ち', cls: 'status-pending' },
-  accepted: { text: '進行中',   cls: 'status-accepted' },
-  done:     { text: '完了',     cls: 'status-done' },
-};
-
-function startTaskListeners(username) {
-  if (!username) return;
-  if (_receivedTasksUnsub) { _receivedTasksUnsub(); _receivedTasksUnsub = null; }
-  if (_sentTasksUnsub)     { _sentTasksUnsub();     _sentTasksUnsub = null; }
-
-  // orderBy を外してクライアント側でソート（複合インデックス不要）
-  const rQ = query(collection(db, 'assigned_tasks'), where('assignedTo', '==', username));
-  _receivedTasksUnsub = onSnapshot(rQ, snap => {
-    receivedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
-    updateTaskBadge();
-    if (taskModalOpen && activeTaskTab === 'received') renderTaskTabContent();
-  }, err => console.error('receivedTasks listener error:', err));
-
-  const sQ = query(collection(db, 'assigned_tasks'), where('assignedBy', '==', username));
-  _sentTasksUnsub = onSnapshot(sQ, snap => {
-    sentTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
-    updateTaskBadge();
-    if (taskModalOpen && activeTaskTab === 'sent') renderTaskTabContent();
-  }, err => console.error('sentTasks listener error:', err));
-}
-
-function updateTaskBadge() {
-  const badge = document.getElementById('task-badge');
-  const btn   = document.getElementById('btn-task');
-  if (!badge || !btn) return;
-  const incoming   = receivedTasks.filter(t => t.status === 'pending').length;
-  const completions = sentTasks.filter(t => t.status === 'done' && !t.notifiedDone).length;
-  const count = incoming + completions;
-
-  // タブバッジも更新
-  const rBadge = document.getElementById('task-tab-received-badge');
-  const sBadge = document.getElementById('task-tab-sent-badge');
-  if (rBadge) { rBadge.textContent = incoming; rBadge.hidden = incoming === 0; }
-  if (sBadge) { sBadge.textContent = completions; sBadge.hidden = completions === 0; }
-
-  if (count > 0) {
-    badge.textContent = count > 99 ? '99+' : count;
-    badge.hidden = false;
-    btn.classList.add('has-badge');
-  } else {
-    badge.hidden = true;
-    btn.classList.remove('has-badge');
-  }
-  updateLockNotifications();
-}
-
-function openTaskModal() {
-  taskModalOpen = true;
-  document.getElementById('task-modal').classList.add('visible');
-  switchTaskTab(activeTaskTab);
-}
-
-function closeTaskModal() {
-  taskModalOpen = false;
-  document.getElementById('task-modal').classList.remove('visible');
-}
-
-function switchTaskTab(tab) {
-  activeTaskTab = tab;
-  document.querySelectorAll('.task-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-  renderTaskTabContent();
-}
-
-function renderTaskTabContent() {
-  const content = document.getElementById('task-tab-content');
-  if (!content) return;
-  if (!currentUsername) {
-    content.innerHTML = '<div class="task-empty"><i class="fa-solid fa-user-slash"></i><p>ユーザーネームを設定してください</p></div>';
-    return;
-  }
-  if (activeTaskTab === 'received') _renderReceivedTasks(content);
-  else if (activeTaskTab === 'sent') _renderSentTasks(content);
-  else _renderNewTaskForm(content);
-}
-
-function _renderReceivedTasks(container) {
-  if (!receivedTasks.length) {
-    container.innerHTML = '<div class="task-empty"><i class="fa-solid fa-inbox"></i><p>受け取ったタスクはありません</p></div>';
-    return;
-  }
-  container.innerHTML = receivedTasks.map(t => {
-    const s = TASK_STATUS_LABEL[t.status] || TASK_STATUS_LABEL.pending;
-    const due = t.dueDate ? `<span class="task-due"><i class="fa-regular fa-calendar"></i> ${esc(t.dueDate)}</span>` : '';
-    let actions = '';
-    if (t.status === 'pending') {
-      actions = `<button class="task-action-btn task-action-accept" data-id="${t.id}"><i class="fa-solid fa-check"></i> 承諾する</button>`;
-    } else if (t.status === 'accepted') {
-      actions = `<button class="task-action-btn task-action-done" data-id="${t.id}"><i class="fa-solid fa-flag-checkered"></i> 完了報告</button>`;
-    } else {
-      actions = `<span class="task-done-stamp"><i class="fa-solid fa-circle-check"></i> 完了済み</span>
-        <button class="task-action-btn task-action-delete" data-id="${t.id}" title="削除"><i class="fa-solid fa-trash"></i> 削除</button>`;
-    }
-    return `
-      <div class="task-item task-item--${t.status}">
-        <div class="task-item-meta">
-          <span class="task-status-badge ${s.cls}">${s.text}</span>
-          <span class="task-partner"><i class="fa-solid fa-arrow-right-to-bracket"></i> 依頼: ${esc(t.assignedBy)}</span>
-          ${due}
-        </div>
-        <div class="task-item-title">${esc(t.title)}</div>
-        ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
-        <div class="task-item-actions">${actions}</div>
-      </div>`;
-  }).join('');
-
-  container.querySelectorAll('.task-action-accept').forEach(btn =>
-    btn.addEventListener('click', () => acceptTask(btn.dataset.id)));
-  container.querySelectorAll('.task-action-done').forEach(btn =>
-    btn.addEventListener('click', () => completeTask(btn.dataset.id)));
-  container.querySelectorAll('.task-action-delete').forEach(btn =>
-    btn.addEventListener('click', () => deleteTask(btn.dataset.id, 'この完了タスクを削除しますか？')));
-}
-
-function _renderSentTasks(container) {
-  if (!sentTasks.length) {
-    container.innerHTML = '<div class="task-empty"><i class="fa-solid fa-paper-plane"></i><p>依頼したタスクはありません</p></div>';
-    return;
-  }
-  container.innerHTML = sentTasks.map(t => {
-    const s = TASK_STATUS_LABEL[t.status] || TASK_STATUS_LABEL.pending;
-    const due = t.dueDate ? `<span class="task-due"><i class="fa-regular fa-calendar"></i> ${esc(t.dueDate)}</span>` : '';
-    const isNewDone = t.status === 'done' && !t.notifiedDone;
-    let actions = '';
-    if (isNewDone) {
-      actions = `<button class="task-action-btn task-action-ack" data-id="${t.id}"><i class="fa-solid fa-circle-check"></i> 完了を確認した</button>
-        <button class="task-action-btn task-action-delete" data-id="${t.id}" title="削除"><i class="fa-solid fa-trash"></i> 削除</button>`;
-    } else if (t.status === 'done') {
-      actions = `<button class="task-action-btn task-action-delete" data-id="${t.id}" title="削除"><i class="fa-solid fa-trash"></i> 削除</button>`;
-    } else if (t.status === 'pending') {
-      actions = `<button class="task-action-btn task-action-cancel" data-id="${t.id}" title="依頼を取り消す"><i class="fa-solid fa-xmark"></i> 取り消す</button>`;
-    }
-    return `
-      <div class="task-item task-item--${t.status}${isNewDone ? ' task-item--alert' : ''}">
-        <div class="task-item-meta">
-          <span class="task-status-badge ${s.cls}">${s.text}</span>
-          <span class="task-partner"><i class="fa-solid fa-arrow-right-from-bracket"></i> 担当: ${esc(t.assignedTo)}</span>
-          ${due}
-        </div>
-        <div class="task-item-title">${esc(t.title)}</div>
-        ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
-        ${actions ? `<div class="task-item-actions">${actions}</div>` : ''}
-      </div>`;
-  }).join('');
-
-  container.querySelectorAll('.task-action-ack').forEach(btn =>
-    btn.addEventListener('click', () => acknowledgeTask(btn.dataset.id)));
-  container.querySelectorAll('.task-action-delete').forEach(btn =>
-    btn.addEventListener('click', () => deleteTask(btn.dataset.id, 'この完了タスクを削除しますか？')));
-  container.querySelectorAll('.task-action-cancel').forEach(btn =>
-    btn.addEventListener('click', () => deleteTask(btn.dataset.id, 'この依頼を取り消しますか？相手側からも消えます。')));
-}
-
-function _renderNewTaskForm(container) {
-  newTaskAssignee = '';
-  container.innerHTML = `
-    <div class="task-new-form">
-      <div class="form-group">
-        <label class="form-label">担当者 <span class="required-mark">*</span></label>
-        <div class="task-assignee-row">
-          <span class="task-assignee-display" id="new-task-assignee-display">未選択</span>
-          <button class="task-pick-btn" id="task-pick-user"><i class="fa-solid fa-user-plus"></i> 選択</button>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">タスク名 <span class="required-mark">*</span></label>
-        <input type="text" id="new-task-title" class="form-input" placeholder="例：〇〇の資料作成" maxlength="60" autocomplete="off">
-      </div>
-      <div class="form-group">
-        <label class="form-label">詳細（省略可）</label>
-        <textarea id="new-task-desc" class="form-input" rows="3" placeholder="詳しい説明や注意点..."></textarea>
-      </div>
-      <div class="form-group form-group-inline">
-        <input type="date" id="new-task-due" class="date-icon-only">
-        <label class="form-label" for="new-task-due">期限入力（省略可）</label>
-      </div>
-      <button class="btn-modal-primary" id="new-task-submit" style="width:100%;margin-top:4px">
-        <i class="fa-solid fa-paper-plane"></i> タスクを依頼する
-      </button>
-    </div>`;
-
-  document.getElementById('task-pick-user').addEventListener('click', openTaskUserPicker);
-  document.getElementById('new-task-submit').addEventListener('click', submitNewTask);
-}
-
-async function openTaskUserPicker() {
-  document.getElementById('task-user-picker-modal').classList.add('visible');
-  document.getElementById('task-user-search').value = '';
-  await loadUsersForChatPicker('task-user-list', 'task-user-search', (name) => {
-    newTaskAssignee = name;
-    const el = document.getElementById('new-task-assignee-display');
-    if (el) { el.textContent = name; el.classList.add('selected'); }
-    document.getElementById('task-user-picker-modal').classList.remove('visible');
-  }, true);
-}
-
-async function submitNewTask() {
-  if (!newTaskAssignee) { alert('担当者を選択してください。'); return; }
-  const title = document.getElementById('new-task-title')?.value.trim();
-  if (!title) { document.getElementById('new-task-title')?.focus(); return; }
-  const description = document.getElementById('new-task-desc')?.value.trim() || '';
-  const dueDate = document.getElementById('new-task-due')?.value || '';
-
-  const btn = document.getElementById('new-task-submit');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> 送信中...';
-  try {
-    await addDoc(collection(db, 'assigned_tasks'), {
-      title, description,
-      assignedBy: currentUsername,
-      assignedTo: newTaskAssignee,
-      status: 'pending',
-      createdAt: serverTimestamp(),
-      acceptedAt: null,
-      doneAt: null,
-      dueDate,
-      notifiedDone: false,
-    });
-    // フォームをリセット
-    newTaskAssignee = '';
-    const titleEl = document.getElementById('new-task-title');
-    const descEl  = document.getElementById('new-task-desc');
-    const dueEl   = document.getElementById('new-task-due');
-    if (titleEl) titleEl.value = '';
-    if (descEl)  descEl.value  = '';
-    if (dueEl)   dueEl.value   = '';
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> タスクを依頼する';
-    switchTaskTab('sent');
-  } catch (err) {
-    console.error('タスク作成エラー:', err);
-    alert('送信に失敗しました: ' + err.message);
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> タスクを依頼する';
-  }
-}
-
-async function acceptTask(taskId) {
-  try {
-    await updateDoc(doc(db, 'assigned_tasks', taskId), {
-      status: 'accepted',
-      acceptedAt: serverTimestamp(),
-    });
-  } catch (err) { console.error('タスク承諾エラー:', err); }
-}
-
-async function completeTask(taskId) {
-  if (!confirm('このタスクを完了として報告しますか？')) return;
-  try {
-    await updateDoc(doc(db, 'assigned_tasks', taskId), {
-      status: 'done',
-      doneAt: serverTimestamp(),
-    });
-  } catch (err) { console.error('タスク完了エラー:', err); }
-}
-
-async function acknowledgeTask(taskId) {
-  try {
-    await updateDoc(doc(db, 'assigned_tasks', taskId), { notifiedDone: true });
-  } catch (err) { console.error('タスク確認エラー:', err); }
-}
-
-async function deleteTask(taskId, confirmMsg) {
-  if (!confirm(confirmMsg)) return;
-  try {
-    await deleteDoc(doc(db, 'assigned_tasks', taskId));
-  } catch (err) { console.error('タスク削除エラー:', err); }
-}
-
-// ========== 部門間依頼・目安箱 ==========
-
-async function loadConfigDepartmentsAndViewers() {
-  try {
-    const snap = await getDoc(doc(db, 'portal', 'config'));
-    if (snap.exists()) {
-      const data = snap.data();
-      if (Array.isArray(data.departments) && data.departments.length > 0) {
-        currentDepartments = data.departments;
-      }
-      suggestionBoxViewers = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
-      isSuggestionBoxViewer = currentUsername ? suggestionBoxViewers.includes(currentUsername) : false;
-    }
-  } catch (err) { console.error('config読み込みエラー:', err); }
-}
-
-function startRequestListeners(username) {
-  if (!username) return;
-  if (_reqReceivedUnsub) { _reqReceivedUnsub(); _reqReceivedUnsub = null; }
-  if (_reqSentUnsub)     { _reqSentUnsub();     _reqSentUnsub = null; }
-  if (_suggUnsub)        { _suggUnsub();         _suggUnsub = null; }
-
-  // 自分の部署宛て依頼を監視
-  const myDept = userEmailProfile ? userEmailProfile.department : null;
-  if (myDept) {
-    const rQ = query(collection(db, 'cross_dept_requests'), where('toDept', '==', myDept));
-    _reqReceivedUnsub = onSnapshot(rQ, snap => {
-      receivedRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
-      updateReqBadge();
-      if (reqModalOpen && activeReqTab === 'request' && activeReqSubTab === 'received') renderReqContent();
-    }, err => console.error('receivedRequests listener error:', err));
-  }
-
-  // 自分が送信した依頼を監視
-  const sQ = query(collection(db, 'cross_dept_requests'), where('createdBy', '==', username));
-  _reqSentUnsub = onSnapshot(sQ, snap => {
-    sentRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
-    updateReqBadge();
-    if (reqModalOpen && activeReqTab === 'request' && activeReqSubTab === 'sent') renderReqContent();
-  }, err => console.error('sentRequests listener error:', err));
-
-  // 目安箱（閲覧権限あり）
-  if (isSuggestionBoxViewer) {
-    const suggQ = query(collection(db, 'suggestion_box'), orderBy('createdAt', 'desc'));
-    _suggUnsub = onSnapshot(suggQ, snap => {
-      suggestionList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      updateReqBadge();
-      if (reqModalOpen && activeReqTab === 'suggestion') renderReqContent();
-    }, err => console.error('suggestion_box listener error:', err));
-  }
-}
-
-function stopRequestListeners() {
-  if (_reqReceivedUnsub) { _reqReceivedUnsub(); _reqReceivedUnsub = null; }
-  if (_reqSentUnsub)     { _reqSentUnsub();     _reqSentUnsub = null; }
-  if (_suggUnsub)        { _suggUnsub();         _suggUnsub = null; }
-  receivedRequests = [];
-  sentRequests = [];
-  suggestionList = [];
-}
-
-function updateReqBadge() {
-  const badge = document.getElementById('req-badge');
-  if (!badge) return;
-  const myDept = userEmailProfile ? userEmailProfile.department : null;
-  // 受け取った依頼のうち「提出済み（未対応）」
-  const recvCount = myDept ? receivedRequests.filter(r => r.status === 'submitted').length : 0;
-  // 自分の依頼でステータス変更通知
-  const sentCount = sentRequests.filter(r => r.notifyCreator === true).length;
-  // 目安箱の未読
-  let suggCount = 0;
-  if (isSuggestionBoxViewer) {
-    const lastViewed = lastViewedSuggestionsAt;
-    suggCount = suggestionList.filter(s => (s.createdAt?.seconds ?? 0) > lastViewed).length;
-  }
-  const total = recvCount + sentCount + suggCount;
-  badge.hidden = total === 0;
-  badge.textContent = total > 99 ? '99+' : String(total);
-
-  // タブバッジ
-  const reqTabBadge  = document.getElementById('req-tab-request-badge');
-  const suggTabBadge = document.getElementById('req-tab-suggestion-badge');
-  if (reqTabBadge) {
-    const reqTotal = recvCount + sentCount;
-    reqTabBadge.hidden = reqTotal === 0;
-    reqTabBadge.textContent = reqTotal > 99 ? '99+' : String(reqTotal);
-  }
-  if (suggTabBadge) {
-    suggTabBadge.hidden = suggCount === 0;
-    suggTabBadge.textContent = suggCount > 99 ? '99+' : String(suggCount);
-  }
-}
-
-function openReqModal(initialTab) {
-  reqModalOpen = true;
-  if (initialTab) activeReqTab = initialTab;
-  document.getElementById('reqboard-modal').classList.add('visible');
-  _syncReqTabUI();
-  renderReqContent();
-}
-
-function closeReqModal() {
-  reqModalOpen = false;
-  document.getElementById('reqboard-modal').classList.remove('visible');
-}
-
-function switchReqTab(tab) {
-  activeReqTab = tab;
-  if (tab === 'suggestion') {
-    _markSuggestionsViewed();
-  }
-  _syncReqTabUI();
-  renderReqContent();
-}
-
-function switchReqSubTab(subtab) {
-  activeReqSubTab = subtab;
-  // 自分の依頼タブを開いたら notifyCreator=true のものをクリア
-  if (subtab === 'sent') {
-    sentRequests.filter(r => r.notifyCreator).forEach(r => markRequestSeen(r.id));
-  }
-  _syncReqSubTabUI();
-  renderReqContent();
-}
-
-function _syncReqTabUI() {
-  document.querySelectorAll('.reqboard-tab').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === activeReqTab);
-  });
-  document.getElementById('reqboard-request-area').hidden    = activeReqTab !== 'request';
-  document.getElementById('reqboard-suggestion-area').hidden = activeReqTab !== 'suggestion';
-}
-
-function _syncReqSubTabUI() {
-  document.querySelectorAll('.reqboard-subtab').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.subtab === activeReqSubTab);
-  });
-}
-
-function renderReqContent() {
-  if (!reqModalOpen) return;
-  if (activeReqTab === 'request') {
-    _syncReqSubTabUI();
-    const container = document.getElementById('reqboard-request-content');
-    if (!container) return;
-    if (activeReqSubTab === 'received')   _renderReceivedRequests(container);
-    else if (activeReqSubTab === 'sent')  _renderSentRequests(container);
-    else if (activeReqSubTab === 'new')   _renderNewRequestForm(container);
-  } else {
-    const container = document.getElementById('reqboard-suggestion-content');
-    if (!container) return;
-    _renderSuggestionPanel(container);
-  }
-}
-
-function _reqStatusHtml(status) {
-  const s = REQ_STATUS_LABEL[status] || { text: status, cls: '' };
-  return `<span class="req-status-badge ${s.cls}">${s.text}</span>`;
-}
-
-function _renderReceivedRequests(container) {
-  const myDept = userEmailProfile ? userEmailProfile.department : null;
-  if (!myDept) {
-    container.innerHTML = `<div class="req-empty"><i class="fa-solid fa-building"></i><p>まず設定から部署を登録してください</p></div>`;
-    return;
-  }
-  if (receivedRequests.length === 0) {
-    container.innerHTML = `<div class="req-empty"><i class="fa-solid fa-inbox"></i><p>受け取った依頼はありません</p></div>`;
-    return;
-  }
-  container.innerHTML = receivedRequests.map(r => `
-    <div class="req-item">
-      <div class="req-item-header">
-        ${_reqStatusHtml(r.status)}
-        <span class="req-dept-badge from">${escHtml(r.fromDept || r.createdBy)}</span>
-        <span class="req-arrow">→</span>
-        <span class="req-dept-badge to">${escHtml(r.toDept)}</span>
-        <span class="req-date">${_fmtTs(r.createdAt)}</span>
-      </div>
-      <div class="req-item-title">${escHtml(r.title)}</div>
-      <div class="req-item-body">${escHtml(r.content)}</div>
-      ${r.proposal ? `<div class="req-item-sub"><span class="req-sub-label">対策・提案</span>${escHtml(r.proposal)}</div>` : ''}
-      ${r.remarks  ? `<div class="req-item-sub"><span class="req-sub-label">備考</span>${escHtml(r.remarks)}</div>` : ''}
-      ${r.statusNote ? `<div class="req-item-sub"><span class="req-sub-label">コメント</span>${escHtml(r.statusNote)}</div>` : ''}
-      <div class="req-item-actions">
-        <button class="btn-req-status" data-id="${r.id}"><i class="fa-solid fa-pen-to-square"></i> ステータス変更</button>
-      </div>
-    </div>
-  `).join('');
-  container.querySelectorAll('.btn-req-status').forEach(btn => {
-    btn.addEventListener('click', () => openStatusModal(btn.dataset.id));
-  });
-}
-
-function _renderSentRequests(container) {
-  if (sentRequests.length === 0) {
-    container.innerHTML = `<div class="req-empty"><i class="fa-solid fa-paper-plane"></i><p>投稿した依頼はありません</p></div>`;
-    return;
-  }
-  container.innerHTML = sentRequests.map(r => `
-    <div class="req-item${r.notifyCreator ? ' req-item--notify' : ''}">
-      <div class="req-item-header">
-        ${_reqStatusHtml(r.status)}
-        <span class="req-dept-badge to">${escHtml(r.toDept)}</span>
-        <span class="req-date">${_fmtTs(r.createdAt)}</span>
-        ${r.notifyCreator ? '<span class="req-notify-dot" title="ステータスが変更されました">●</span>' : ''}
-      </div>
-      <div class="req-item-title">${escHtml(r.title)}</div>
-      <div class="req-item-body">${escHtml(r.content)}</div>
-      ${r.statusNote ? `<div class="req-item-sub"><span class="req-sub-label">コメント</span>${escHtml(r.statusNote)}</div>` : ''}
-      <div class="req-item-actions">
-        <button class="btn-req-status" data-id="${r.id}"><i class="fa-solid fa-pen-to-square"></i> ステータス変更</button>
-      </div>
-    </div>
-  `).join('');
-  container.querySelectorAll('.btn-req-status').forEach(btn => {
-    btn.addEventListener('click', () => openStatusModal(btn.dataset.id));
-  });
-}
-
-function _renderNewRequestForm(container) {
-  const deptOptions = currentDepartments.map(d =>
-    `<option value="${escHtml(d)}">${escHtml(d)}</option>`
-  ).join('');
-  container.innerHTML = `
-    <div class="req-form">
-      <div class="form-group">
-        <label class="form-label">件名 <span class="req-required">*</span></label>
-        <input type="text" id="req-new-title" class="form-input" placeholder="例：押し緑の向きについて" maxlength="60">
-      </div>
-      <div class="form-group">
-        <label class="form-label">依頼先部署 <span class="req-required">*</span></label>
-        <select id="req-new-todept" class="form-input">
-          <option value="">選択してください</option>
-          ${deptOptions}
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">内容 <span class="req-required">*</span></label>
-        <textarea id="req-new-content" class="form-input" rows="4" placeholder="具体的な内容を記入してください"></textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">対策・提案（任意）</label>
-        <textarea id="req-new-proposal" class="form-input" rows="2" placeholder="改善案や提案があれば"></textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">備考（任意）</label>
-        <input type="text" id="req-new-remarks" class="form-input" placeholder="その他補足">
-      </div>
-      <div class="req-form-footer">
-        <span class="req-from-label">投稿者部署：<strong>${escHtml(userEmailProfile?.department || '未設定')}</strong></span>
-        <button class="btn-modal-primary" id="req-submit-btn"><i class="fa-solid fa-paper-plane"></i> 投稿する</button>
-      </div>
-    </div>
-  `;
-  document.getElementById('req-submit-btn').addEventListener('click', submitRequest);
-}
-
-async function submitRequest() {
-  const title    = document.getElementById('req-new-title')?.value.trim();
-  const toDept   = document.getElementById('req-new-todept')?.value;
-  const content  = document.getElementById('req-new-content')?.value.trim();
-  const proposal = document.getElementById('req-new-proposal')?.value.trim();
-  const remarks  = document.getElementById('req-new-remarks')?.value.trim();
-  if (!title)   { document.getElementById('req-new-title').focus(); return; }
-  if (!toDept)  { document.getElementById('req-new-todept').focus(); return; }
-  if (!content) { document.getElementById('req-new-content').focus(); return; }
-  const btn = document.getElementById('req-submit-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>';
-  try {
-    await addDoc(collection(db, 'cross_dept_requests'), {
-      title,
-      toDept,
-      fromDept: userEmailProfile?.department || '',
-      content,
-      proposal: proposal || '',
-      remarks:  remarks  || '',
-      status: 'submitted',
-      createdBy: currentUsername,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      statusNote: '',
-      statusUpdatedBy: currentUsername,
-      notifyCreator: false,
-    });
-    switchReqSubTab('sent');
-  } catch (err) {
-    console.error('依頼投稿エラー:', err);
-    alert('投稿に失敗しました。もう一度お試しください。');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 投稿する';
-  }
-}
-
-function openStatusModal(reqId) {
-  _pendingStatusChange = { reqId, status: null };
-  // 現在のステータスを取得
-  const req = [...receivedRequests, ...sentRequests].find(r => r.id === reqId);
-  const current = req?.status || 'submitted';
-  const group = document.getElementById('req-status-select-group');
-  group.innerHTML = Object.entries(REQ_STATUS_LABEL).map(([val, info]) => `
-    <button class="req-status-option${current === val ? ' current' : ''}" data-status="${val}">
-      <span class="req-status-badge ${info.cls}">${info.text}</span>
-    </button>
-  `).join('');
-  group.querySelectorAll('.req-status-option').forEach(btn => {
-    btn.addEventListener('click', () => {
-      group.querySelectorAll('.req-status-option').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      _pendingStatusChange.status = btn.dataset.status;
-    });
-  });
-  document.getElementById('req-status-note').value = '';
-  document.getElementById('req-status-modal').classList.add('visible');
-}
-
-async function updateRequestStatus() {
-  if (!_pendingStatusChange?.status) {
-    alert('ステータスを選択してください');
-    return;
-  }
-  const { reqId, status } = _pendingStatusChange;
-  const note = document.getElementById('req-status-note').value.trim();
-  try {
-    const isCreator = sentRequests.some(r => r.id === reqId);
-    await updateDoc(doc(db, 'cross_dept_requests', reqId), {
-      status,
-      statusNote: note,
-      statusUpdatedBy: currentUsername,
-      updatedAt: serverTimestamp(),
-      notifyCreator: !isCreator, // 自分以外が変更したら通知
-    });
-    document.getElementById('req-status-modal').classList.remove('visible');
-    _pendingStatusChange = null;
-  } catch (err) {
-    console.error('ステータス更新エラー:', err);
-    alert('更新に失敗しました');
-  }
-}
-
-async function markRequestSeen(reqId) {
-  try {
-    await updateDoc(doc(db, 'cross_dept_requests', reqId), { notifyCreator: false });
-  } catch (_) { /* silent */ }
-}
-
-// 目安箱
-function _renderSuggestionPanel(container) {
-  const formHtml = `
-    <div class="sugg-form-section">
-      <h4 class="sugg-form-title"><i class="fa-solid fa-pen-to-square"></i> 投稿する</h4>
-      <div class="form-group">
-        <label class="form-label">カテゴリ</label>
-        <div class="sugg-category-group">
-          <button class="sugg-cat-btn active" data-cat="work">業務改善</button>
-          <button class="sugg-cat-btn" data-cat="facility">設備・環境</button>
-          <button class="sugg-cat-btn" data-cat="safety">安全</button>
-          <button class="sugg-cat-btn" data-cat="other">その他</button>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">内容 <span class="req-required">*</span></label>
-        <textarea id="sugg-content" class="form-input" rows="4" placeholder="提案・改善案・要望など、なんでもお気軽に。"></textarea>
-      </div>
-      <div class="sugg-form-footer">
-        <label class="sugg-anon-label">
-          <input type="checkbox" id="sugg-anonymous" checked>
-          <span>匿名で投稿する</span>
-        </label>
-        <button class="btn-modal-primary" id="sugg-submit-btn"><i class="fa-solid fa-paper-plane"></i> 投稿する</button>
-      </div>
-    </div>
-  `;
-
-  let listHtml = '';
-  if (isSuggestionBoxViewer) {
-    if (suggestionList.length === 0) {
-      listHtml = `<div class="req-empty"><i class="fa-solid fa-box-open"></i><p>まだ投稿はありません</p></div>`;
-    } else {
-      const SUGG_CAT_LABEL = { work: '業務改善', facility: '設備・環境', safety: '安全', other: 'その他' };
-      listHtml = `<div class="sugg-list-section">
-        <h4 class="sugg-form-title"><i class="fa-solid fa-list"></i> 投稿一覧（管理者のみ閲覧）</h4>
-        ${suggestionList.map(s => `
-          <div class="sugg-item">
-            <div class="sugg-item-header">
-              <span class="req-category-badge cat-${escHtml(s.category)}">${escHtml(SUGG_CAT_LABEL[s.category] || s.category)}</span>
-              <span class="sugg-author">${escHtml(s.isAnonymous ? '匿名' : (s.author || '匿名'))}</span>
-              <span class="req-date">${_fmtTs(s.createdAt)}</span>
-            </div>
-            <div class="sugg-item-content">${escHtml(s.content)}</div>
-            ${s.adminReply ? `
-              <div class="sugg-reply-box">
-                <span class="sugg-reply-label"><i class="fa-solid fa-reply"></i> 管理者より</span>
-                <div>${escHtml(s.adminReply)}</div>
-              </div>
-            ` : ''}
-            <div class="req-item-actions">
-              <button class="btn-sugg-reply" data-id="${s.id}"><i class="fa-solid fa-reply"></i> 返信</button>
-            </div>
-          </div>
-        `).join('')}
-      </div>`;
-    }
-  }
-
-  container.innerHTML = formHtml + listHtml;
-
-  // カテゴリボタン
-  let selectedCat = 'work';
-  container.querySelectorAll('.sugg-cat-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      container.querySelectorAll('.sugg-cat-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      selectedCat = btn.dataset.cat;
-    });
-  });
-
-  // 投稿ボタン
-  document.getElementById('sugg-submit-btn').addEventListener('click', () => submitSuggestion(selectedCat));
-
-  // 返信ボタン
-  container.querySelectorAll('.btn-sugg-reply').forEach(btn => {
-    btn.addEventListener('click', () => openSuggReplyModal(btn.dataset.id));
-  });
-}
-
-async function submitSuggestion(category) {
-  const content   = document.getElementById('sugg-content')?.value.trim();
-  const anonymous = document.getElementById('sugg-anonymous')?.checked ?? true;
-  if (!content) { document.getElementById('sugg-content').focus(); return; }
-  const btn = document.getElementById('sugg-submit-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>';
-  try {
-    await addDoc(collection(db, 'suggestion_box'), {
-      content,
-      category: category || 'other',
-      isAnonymous: anonymous,
-      author: anonymous ? '匿名' : (currentUsername || '匿名'),
-      createdAt: serverTimestamp(),
-      adminReply: '',
-      repliedAt: null,
-      repliedBy: '',
-    });
-    document.getElementById('sugg-content').value = '';
-    alert('投稿しました。ありがとうございます！');
-  } catch (err) {
-    console.error('目安箱投稿エラー:', err);
-    alert('投稿に失敗しました。もう一度お試しください。');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 投稿する';
-  }
-}
-
-function openSuggReplyModal(suggId) {
-  _pendingSuggReply = suggId;
-  document.getElementById('sugg-reply-text').value = '';
-  document.getElementById('sugg-reply-modal').classList.add('visible');
-}
-
-async function sendSuggReply() {
-  const text = document.getElementById('sugg-reply-text').value.trim();
-  if (!text || !_pendingSuggReply) return;
-  try {
-    await updateDoc(doc(db, 'suggestion_box', _pendingSuggReply), {
-      adminReply: text,
-      repliedAt: serverTimestamp(),
-      repliedBy: currentUsername,
-    });
-    document.getElementById('sugg-reply-modal').classList.remove('visible');
-    _pendingSuggReply = null;
-  } catch (err) {
-    console.error('返信エラー:', err);
-    alert('返信に失敗しました');
-  }
-}
-
-async function _markSuggestionsViewed() {
-  if (!currentUsername || !isSuggestionBoxViewer) return;
-  try {
-    const now = new Date();
-    await setDoc(
-      doc(db, 'users', currentUsername, 'data', 'preferences'),
-      { lastViewedSuggestionsAt: now },
-      { merge: true }
-    );
-    lastViewedSuggestionsAt = Math.floor(now.getTime() / 1000);
-    updateReqBadge();
-  } catch (_) { /* silent */ }
-}
-
-// 管理者パネル：目安箱閲覧者管理
-async function renderAdminSuggBoxSection() {
-  const snap = await getDoc(doc(db, 'portal', 'config'));
-  const viewers = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
-  const container = document.getElementById('admin-suggbox-viewers');
-  if (!container) return;
-  if (viewers.length === 0) {
-    container.innerHTML = '<div class="admin-loading">登録なし</div>';
-  } else {
-    container.innerHTML = viewers.map(v => `
-      <div class="admin-suggbox-viewer-row">
-        <span>${escHtml(v)}</span>
-        <button class="btn-danger-sm admin-suggbox-remove" data-name="${escHtml(v)}">削除</button>
-      </div>
-    `).join('');
-    container.querySelectorAll('.admin-suggbox-remove').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const name = btn.dataset.name;
-        const newList = viewers.filter(v => v !== name);
-        await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
-        suggestionBoxViewers = newList;
-        isSuggestionBoxViewer = currentUsername ? newList.includes(currentUsername) : false;
-        renderAdminSuggBoxSection();
-      });
-    });
-  }
-}
-
-async function addSuggBoxViewer() {
-  const input = document.getElementById('admin-suggbox-add-input');
-  const name = input.value.trim();
-  if (!name) return;
-  const snap = await getDoc(doc(db, 'portal', 'config'));
-  const current = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
-  if (current.includes(name)) { alert('すでに登録されています'); return; }
-  const newList = [...current, name];
-  await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
-  suggestionBoxViewers = newList;
-  isSuggestionBoxViewer = currentUsername ? newList.includes(currentUsername) : false;
-  input.value = '';
-  renderAdminSuggBoxSection();
-}
-
-function _fmtTs(ts) {
-  if (!ts) return '';
-  const d = ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000);
-  const y = d.getFullYear(), mo = d.getMonth() + 1, day = d.getDate();
-  const h = String(d.getHours()).padStart(2, '0'), mi = String(d.getMinutes()).padStart(2, '0');
-  return `${y}/${mo}/${day} ${h}:${mi}`;
-}
-
-function escHtml(str) {
-  if (str === null || str === undefined) return '';
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ========== メール返信アシスタント ==========
-const DEFAULT_EMAIL_PROFILES = [
-  {
-    id: 'internal',
-    name: '社内向け',
-    prompt: '社内の同僚へのメールです。敬語は使いますが堅すぎず、簡潔で分かりやすい文体で返信を作成してください。要点は箇条書きにしても構いません。件名・宛名・署名は含めないでください。'
-  },
-  {
-    id: 'drawing',
-    name: '作図業者',
-    prompt: '外部の作図業者へのメールです。発注者として丁寧かつ明確に、作業内容・納期・注意点を具体的に伝える文体で返信を作成してください。件名・宛名・署名は含めないでください。'
-  },
-  {
-    id: 'subcontractor',
-    name: '下請け業者',
-    prompt: '下請け業者（協力会社）へのメールです。発注者として丁寧に、工程・品質・安全に関する指示や依頼を明確に伝える文体で返信を作成してください。件名・宛名・署名は含めないでください。'
-  },
-  {
-    id: 'client',
-    name: 'ゼネコン（お客様）',
-    prompt: '元請けゼネコン・お客様へのメールです。最上級の敬語を使い、丁寧かつ誠実な文体で返信を作成してください。懸念事項には真摯に対応する姿勢を示してください。件名・宛名・署名は含めないでください。'
-  }
-];
-
-let emailProfiles = [];
-let selectedEmailProfileId = 'internal';
-let geminiApiKey = null;
-let emailModalLoaded = false;
-let userEmailProfile = { realName: '', department: '', email: '', phone: '', signatureTemplate: '' };
-
-const DEFAULT_SIGNATURE_TEMPLATE =
-`━━━━━━━━━━━━━━━━━━━━━━
-{realName}　{department}
-日建フレメックス株式会社
-TEL：{phone}
-E-mail：{email}
-━━━━━━━━━━━━━━━━━━━━━━`;
-
-async function loadEmailData() {
-  // APIキーをFirestoreから取得
-  try {
-    const snap = await getDoc(doc(db, 'portal', 'config'));
-    geminiApiKey = snap.data()?.geminiApiKey || null;
-  } catch (_) {}
-
-  // ユーザーのカスタムプロファイルを取得
-  let userProfiles = [];
-  if (currentUsername) {
-    try {
-      const snap = await getDocs(
-        query(collection(db, 'users', currentUsername, 'email_profiles'), orderBy('createdAt', 'asc'))
-      );
-      userProfiles = snap.docs.map(d => ({ id: d.id, isCustom: true, ...d.data() }));
-    } catch (_) {}
-  }
-
-  // デフォルトにユーザーのカスタマイズをマージ
-  const mergedDefaults = DEFAULT_EMAIL_PROFILES.map(p => {
-    const override = userProfiles.find(u => u.id === p.id);
-    return override ? { ...p, ...override, isDefault: true } : { ...p, isDefault: true };
-  });
-  const onlyCustom = userProfiles.filter(u => !DEFAULT_EMAIL_PROFILES.find(d => d.id === u.id));
-  emailProfiles = [...mergedDefaults, ...onlyCustom];
-
-  // ユーザープロフィール（名前・所属・署名）を読み込み
-  if (currentUsername) {
-    try {
-      const profSnap = await getDoc(doc(db, 'users', currentUsername, 'data', 'email_profile'));
-      if (profSnap.exists()) {
-        userEmailProfile = { ...userEmailProfile, ...profSnap.data() };
-      }
-    } catch (_) {}
-  }
-
-  updateApiKeyUI();
-  renderEmailProfileList();
-  selectEmailProfile(selectedEmailProfileId);
-  renderProfileTab();
-  emailModalLoaded = true;
-}
-
-function updateApiKeyUI() {
-  const area = document.getElementById('email-api-key-area');
-  if (!area) return;
-  area.hidden = !!geminiApiKey;
-}
-
-function renderEmailProfileList() {
-  const list = document.getElementById('email-profile-list');
-  if (!list) return;
-  list.innerHTML = '';
-  emailProfiles.forEach(p => {
-    const wrap = document.createElement('div');
-    wrap.className = 'email-profile-list-item';
-
-    const btn = document.createElement('button');
-    btn.className = `email-profile-item${p.id === selectedEmailProfileId ? ' active' : ''}`;
-    btn.dataset.id = p.id;
-    btn.innerHTML = `<span>${esc(p.name)}</span>${p.isDefault ? '' : '<span class="email-custom-tag">カスタム</span>'}`;
-    btn.addEventListener('click', () => selectEmailProfile(p.id));
-    wrap.appendChild(btn);
-
-    if (!p.isDefault) {
-      const renameBtn = document.createElement('button');
-      renameBtn.className = 'email-profile-rename-btn';
-      renameBtn.title = '名前を変更';
-      renameBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>';
-      renameBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        selectEmailProfile(p.id);
-        document.getElementById('email-prompt-details').open = true;
-        setTimeout(() => {
-          const nameInput = document.getElementById('email-profile-name');
-          nameInput.select();
-          nameInput.focus();
-        }, 50);
-      });
-      wrap.appendChild(renameBtn);
-    }
-
-    list.appendChild(wrap);
-  });
-}
-
-function selectEmailProfile(id) {
-  const profile = emailProfiles.find(p => p.id === id);
-  if (!profile) return;
-  selectedEmailProfileId = id;
-  document.querySelectorAll('.email-profile-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.id === id);
-  });
-  document.getElementById('email-selected-profile-name').textContent = profile.name;
-  document.getElementById('email-profile-name').value = profile.name;
-  document.getElementById('email-profile-prompt').value = profile.prompt;
-  const delBtn = document.getElementById('email-profile-delete');
-  delBtn.style.display = profile.isDefault ? 'none' : 'inline-flex';
-}
-
-async function saveEmailProfile() {
-  if (!currentUsername) { alert('ユーザーネームを設定してください'); return; }
-  const name   = document.getElementById('email-profile-name').value.trim();
-  const prompt = document.getElementById('email-profile-prompt').value.trim();
-  if (!name || !prompt) return;
-  try {
-    await setDoc(
-      doc(db, 'users', currentUsername, 'email_profiles', selectedEmailProfileId),
-      { name, prompt, updatedAt: serverTimestamp() }, { merge: true }
-    );
-    const idx = emailProfiles.findIndex(p => p.id === selectedEmailProfileId);
-    if (idx !== -1) { emailProfiles[idx].name = name; emailProfiles[idx].prompt = prompt; }
-    document.getElementById('email-selected-profile-name').textContent = name;
-    renderEmailProfileList();
-    // フィードバック
-    const btn = document.getElementById('email-profile-save');
-    const orig = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存しました';
-    setTimeout(() => { btn.innerHTML = orig; }, 1500);
-  } catch (err) { console.error('プロファイル保存エラー:', err); }
-}
-
-async function addEmailProfile() {
-  if (!currentUsername) { alert('ユーザーネームを設定してください'); return; }
-  const id = `custom_${Date.now()}`;
-  const newProfile = { id, name: '新しいパターン', prompt: '丁寧な文体でメールの返信を作成してください。件名・宛名・署名は含めないでください。', isCustom: true };
-  try {
-    await setDoc(
-      doc(db, 'users', currentUsername, 'email_profiles', id),
-      { name: newProfile.name, prompt: newProfile.prompt, createdAt: serverTimestamp() }
-    );
-    emailProfiles.push(newProfile);
-    renderEmailProfileList();
-    selectEmailProfile(id);
-    // 詳細を開いてパターン名にフォーカス
-    document.getElementById('email-prompt-details').open = true;
-    setTimeout(() => {
-      const nameInput = document.getElementById('email-profile-name');
-      nameInput.select();
-      nameInput.focus();
-    }, 50);
-  } catch (err) { console.error('プロファイル追加エラー:', err); }
-}
-
-async function deleteEmailProfile() {
-  const profile = emailProfiles.find(p => p.id === selectedEmailProfileId);
-  if (!profile || profile.isDefault) return;
-  const ok = await confirmDelete(`「${profile.name}」を削除しますか？`);
-  if (!ok) return;
-  try {
-    await deleteDoc(doc(db, 'users', currentUsername, 'email_profiles', selectedEmailProfileId));
-    emailProfiles = emailProfiles.filter(p => p.id !== selectedEmailProfileId);
-    selectedEmailProfileId = emailProfiles[0]?.id || 'internal';
-    renderEmailProfileList();
-    selectEmailProfile(selectedEmailProfileId);
-  } catch (err) { console.error('プロファイル削除エラー:', err); }
-}
-
-async function saveGeminiApiKey() {
-  const key = document.getElementById('email-api-key-input').value.trim();
-  if (!key) return;
-  try {
-    await setDoc(doc(db, 'portal', 'config'), { geminiApiKey: key }, { merge: true });
-    geminiApiKey = key;
-    document.getElementById('email-api-key-input').value = '';
-    updateApiKeyUI();
-  } catch (err) { console.error('APIキー保存エラー:', err); }
-}
-
-async function generateEmailReply() {
-  if (!geminiApiKey) {
-    document.getElementById('email-api-key-area').hidden = false;
-    document.getElementById('email-api-key-input').focus();
-    return;
-  }
-  const received = document.getElementById('email-received').value.trim();
-  if (!received) { document.getElementById('email-received').focus(); return; }
-  const profile = emailProfiles.find(p => p.id === selectedEmailProfileId);
-  if (!profile) return;
-
-  const btn = document.getElementById('email-generate');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中...';
-  const outputArea = document.getElementById('email-output-area');
-  outputArea.hidden = true;
-
-  const senderName = userEmailProfile.realName ? `日建フレメックスの${userEmailProfile.realName}` : '日建フレメックスの担当者';
-  const sigTemplate = userEmailProfile.signatureTemplate || DEFAULT_SIGNATURE_TEMPLATE;
-  const filledSig   = fillSignature(sigTemplate);
-
-  const fullPrompt = `あなたは日本の建設会社「日建フレメックス」の社員（${senderName}）です。以下の受信メールに対する返信文を作成してください。
-
-【返信パターン：${profile.name}】
-${profile.prompt}
-
-【必須ルール】
-- 返信文の書き出しは必ず「${senderName}です。」から始めてください
-- 件名・宛名は含めないでください
-- 返信本文の最後に、以下の署名をそのまま追加してください（改変不可）：
-
-${filledSig}
-
-【受信したメール】
-${received}
-
-返信文：`;
-
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiApiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: fullPrompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
-        })
-      }
-    );
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error?.message || `HTTP ${res.status}`);
-    }
-    const data = await res.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '（生成結果が空でした）';
-    document.getElementById('email-output').textContent = text;
-    outputArea.hidden = false;
-    outputArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  } catch (err) {
-    document.getElementById('email-output').textContent = `エラー: ${err.message}`;
-    outputArea.hidden = false;
-    console.error('Gemini APIエラー:', err);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 返信を生成する';
-  }
-}
-
-function copyEmailOutput() {
-  const text = document.getElementById('email-output').textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById('btn-copy-output');
-    const orig = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-check"></i> コピーしました！';
-    setTimeout(() => { btn.innerHTML = orig; }, 2000);
-  });
-}
-
-function resetEmailOutput() {
-  document.getElementById('email-output-area').hidden = true;
-  document.getElementById('email-output').textContent = '';
-}
-
-// プロフィールタブを描画
-function renderProfileTab() {
-  document.getElementById('ep-real-name').value   = userEmailProfile.realName   || '';
-  document.getElementById('ep-department').value  = userEmailProfile.department  || '';
-  document.getElementById('ep-email').value        = userEmailProfile.email        || '';
-  document.getElementById('ep-phone').value        = userEmailProfile.phone        || '';
-  const sig = userEmailProfile.signatureTemplate || DEFAULT_SIGNATURE_TEMPLATE;
-  document.getElementById('ep-signature').value = sig;
-  updateSignaturePreview(sig);
-}
-
-function fillSignature(template) {
-  return template
-    .replace(/\{realName\}/g,   userEmailProfile.realName   || '（名前未設定）')
-    .replace(/\{department\}/g, userEmailProfile.department  || '（所属未設定）')
-    .replace(/\{email\}/g,      userEmailProfile.email        || '（メール未設定）')
-    .replace(/\{phone\}/g,      userEmailProfile.phone        || '（電話未設定）');
-}
-
-function updateSignaturePreview(template) {
-  const el = document.getElementById('ep-signature-preview');
-  if (el) el.textContent = fillSignature(template || DEFAULT_SIGNATURE_TEMPLATE);
-}
-
-async function saveUserEmailProfile() {
-  userEmailProfile.realName          = document.getElementById('ep-real-name').value.trim();
-  userEmailProfile.department        = document.getElementById('ep-department').value.trim();
-  userEmailProfile.email             = document.getElementById('ep-email').value.trim();
-  userEmailProfile.phone             = document.getElementById('ep-phone').value.trim();
-  userEmailProfile.signatureTemplate = document.getElementById('ep-signature').value;
-
-  if (currentUsername) {
-    try {
-      await setDoc(
-        doc(db, 'users', currentUsername, 'data', 'email_profile'),
-        { ...userEmailProfile, updatedAt: serverTimestamp() }, { merge: true }
-      );
-    } catch (err) { console.error('プロフィール保存エラー:', err); }
-  }
-  // フィードバック
-  const btn = document.getElementById('ep-save');
-  const orig = btn.innerHTML;
-  btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存しました';
-  setTimeout(() => { btn.innerHTML = orig; }, 1500);
-  updateSignaturePreview(userEmailProfile.signatureTemplate);
-}
-
-function resetSignatureTemplate() {
-  document.getElementById('ep-signature').value = DEFAULT_SIGNATURE_TEMPLATE;
-  updateSignaturePreview(DEFAULT_SIGNATURE_TEMPLATE);
-}
-
-// タブ切り替え
-function switchEmailTab(tabId) {
-  document.querySelectorAll('.email-tab').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === tabId);
-  });
-  document.querySelectorAll('.email-tab-content').forEach(el => {
-    el.hidden = el.id !== `email-tab-${tabId}`;
-  });
-}
-
-function openEmailModal() {
-  document.getElementById('email-modal').classList.add('visible');
-  if (!emailModalLoaded) loadEmailData();
-}
-
-function closeEmailModal() {
-  document.getElementById('email-modal').classList.remove('visible');
-}
 
 // ========== 個人TODO ==========
 function loadTodos(username) {
-  // 既存リスナーを解除
-  if (_todoUnsubscribe) { _todoUnsubscribe(); _todoUnsubscribe = null; }
-  if (!username) { personalTodos = []; renderTodoSection(); return; }
+  if (state._todoUnsubscribe) { state._todoUnsubscribe(); state._todoUnsubscribe = null; }
+  if (!username) { state.personalTodos = []; renderTodoSection(); return; }
 
   const q = query(
     collection(db, 'users', username, 'todos'),
     orderBy('createdAt', 'asc')
   );
-  _todoUnsubscribe = onSnapshot(q, snap => {
-    personalTodos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  state._todoUnsubscribe = onSnapshot(q, snap => {
+    state.personalTodos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderTodoSection();
   }, err => console.error('TODO読み込みエラー:', err));
 }
 
 async function addTodo(text, dueDate) {
-  if (!currentUsername || !text.trim()) return;
-  await addDoc(collection(db, 'users', currentUsername, 'todos'), {
+  if (!state.currentUsername || !text.trim()) return;
+  await addDoc(collection(db, 'users', state.currentUsername, 'todos'), {
     text:      text.trim(),
     done:      false,
     dueDate:   dueDate || null,
@@ -3807,15 +174,15 @@ async function addTodo(text, dueDate) {
 }
 
 async function toggleTodo(todoId, currentDone) {
-  if (!currentUsername) return;
-  await updateDoc(doc(db, 'users', currentUsername, 'todos', todoId), {
+  if (!state.currentUsername) return;
+  await updateDoc(doc(db, 'users', state.currentUsername, 'todos', todoId), {
     done: !currentDone,
   });
 }
 
 async function deleteTodo(todoId) {
-  if (!currentUsername) return;
-  await deleteDoc(doc(db, 'users', currentUsername, 'todos', todoId));
+  if (!state.currentUsername) return;
+  await deleteDoc(doc(db, 'users', state.currentUsername, 'todos', todoId));
 }
 
 function renderTodoSection() {
@@ -3825,32 +192,28 @@ function renderTodoSection() {
   const body    = document.getElementById('todo-body');
   if (!section || !list) return;
 
-  // ニックネーム未設定なら非表示
-  if (!currentUsername) { section.hidden = true; return; }
+  if (!state.currentUsername) { section.hidden = true; return; }
   section.hidden = false;
 
-  // 折りたたみ状態
-  body.classList.toggle('todo-body--collapsed', todoCollapsed);
+  body.classList.toggle('todo-body--collapsed', state.todoCollapsed);
   const toggleBtn = document.getElementById('todo-toggle-btn');
   if (toggleBtn) {
-    toggleBtn.querySelector('i').className = todoCollapsed
+    toggleBtn.querySelector('i').className = state.todoCollapsed
       ? 'fa-solid fa-chevron-down'
       : 'fa-solid fa-chevron-up';
-    toggleBtn.title = todoCollapsed ? '展開する' : '折りたたむ';
+    toggleBtn.title = state.todoCollapsed ? '展開する' : '折りたたむ';
   }
 
-  // カウント表示
-  const total  = personalTodos.length;
-  const doneN  = personalTodos.filter(t => t.done).length;
+  const total  = state.personalTodos.length;
+  const doneN  = state.personalTodos.filter(t => t.done).length;
   if (countEl) {
     countEl.textContent = total ? `${doneN}/${total} 完了` : '';
     countEl.className   = 'todo-count' + (doneN === total && total > 0 ? ' todo-count--all-done' : '');
   }
 
-  // リスト描画（未完了→完了の順）
   const sorted = [
-    ...personalTodos.filter(t => !t.done),
-    ...personalTodos.filter(t =>  t.done),
+    ...state.personalTodos.filter(t => !t.done),
+    ...state.personalTodos.filter(t =>  t.done),
   ];
 
   list.innerHTML = '';
@@ -3883,22 +246,23 @@ function renderTodoSection() {
   }
 }
 
+
 // ========== 個人設定 Firestore 保存（デバウンス付き） ==========
 let _prefSaveTimer = null;
 function savePreferencesToFirestore() {
-  if (!currentUsername) return;
+  if (!state.currentUsername) return;
   clearTimeout(_prefSaveTimer);
   _prefSaveTimer = setTimeout(async () => {
     try {
       const theme    = localStorage.getItem('portal-theme')     || 'dark';
       const fontSize = localStorage.getItem('portal-font-size') || 'font-md';
       await setDoc(
-        doc(db, 'users', currentUsername, 'data', 'preferences'),
+        doc(db, 'users', state.currentUsername, 'data', 'preferences'),
         {
           theme,
           fontSize,
-          favOnly:   favoritesOnlyMode,
-          favorites: personalFavorites,
+          favOnly:   state.favoritesOnlyMode,
+          favorites: state.personalFavorites,
           updatedAt: serverTimestamp()
         },
         { merge: true }
@@ -3912,7 +276,6 @@ function savePreferencesToFirestore() {
 async function loadPersonalData(username, lockOnSwitch = false) {
   if (!username) return;
   try {
-    // ログイン記録を更新（並列で実行、失敗しても続行）
     registerUserLogin(username);
 
     const [orderSnap, prefSnap, privSecSnap, privCardSnap] = await Promise.all([
@@ -3922,32 +285,29 @@ async function loadPersonalData(username, lockOnSwitch = false) {
       getDocs(collection(db, 'users', username, 'private_cards')),
     ]);
 
-    personalSectionOrder = orderSnap.exists() ? (orderSnap.data().order || []) : [];
+    state.personalSectionOrder = orderSnap.exists() ? (orderSnap.data().order || []) : [];
 
     if (prefSnap.exists()) {
-      // Firestore から設定を復元
       const p = prefSnap.data();
-      personalFavorites = Array.isArray(p.favorites) ? p.favorites : [];
-      favoritesOnlyMode = !!p.favOnly;
-      if (p.theme)    applyTheme(p.theme, false);       // save=false: 読み込み時は保存しない
-      if (p.fontSize) applyFontSize(p.fontSize, false); // save=false: 読み込み時は保存しない
+      state.personalFavorites = Array.isArray(p.favorites) ? p.favorites : [];
+      state.favoritesOnlyMode = !!p.favOnly;
+      if (p.theme)    applyTheme(p.theme, false);
+      if (p.fontSize) applyFontSize(p.fontSize, false);
       if (p.lastViewedSuggestionsAt) {
-        lastViewedSuggestionsAt = p.lastViewedSuggestionsAt.seconds ?? Math.floor(p.lastViewedSuggestionsAt / 1000);
+        state.lastViewedSuggestionsAt = p.lastViewedSuggestionsAt.seconds ?? Math.floor(p.lastViewedSuggestionsAt / 1000);
       }
     } else {
-      // 初回ログイン：localStorage に残っているデータがあれば Firestore へ移行
       const localFavs = (() => {
         try { return JSON.parse(localStorage.getItem('portal-favorites') || '[]'); } catch { return []; }
       })();
       const localFavOnly = localStorage.getItem('portal-fav-only') === '1';
-      personalFavorites = localFavs;
-      favoritesOnlyMode = localFavOnly;
-      // Firestore へ保存（移行）
+      state.personalFavorites = localFavs;
+      state.favoritesOnlyMode = localFavOnly;
       savePreferencesToFirestore();
     }
 
-    privateCategories = privSecSnap.docs.map(d => ({ docId: d.id, isPrivate: true, ...d.data() }));
-    privateCards      = privCardSnap.docs.map(d => ({ id: d.id, isPrivate: true, ...d.data() }));
+    state.privateCategories = privSecSnap.docs.map(d => ({ docId: d.id, isPrivate: true, ...d.data() }));
+    state.privateCards      = privCardSnap.docs.map(d => ({ id: d.id, isPrivate: true, ...d.data() }));
 
     renderAllSections();
     renderFavorites();
@@ -3975,56 +335,59 @@ async function savePersonalSectionOrder(username, order) {
   await setDoc(doc(db, 'users', username, 'data', 'section_order'), { order, updatedAt: serverTimestamp() });
 }
 
+
+// ========== プライベートセクション CRUD ==========
 async function addPrivateSection(data) {
-  if (!currentUsername) return;
-  const ref = await addDoc(collection(db, 'users', currentUsername, 'private_sections'), { ...data, createdAt: serverTimestamp() });
-  privateCategories.push({ docId: ref.id, isPrivate: true, ...data });
+  if (!state.currentUsername) return;
+  const ref = await addDoc(collection(db, 'users', state.currentUsername, 'private_sections'), { ...data, createdAt: serverTimestamp() });
+  state.privateCategories.push({ docId: ref.id, isPrivate: true, ...data });
 }
 
 async function updatePrivateSection(docId, data) {
-  if (!currentUsername) return;
-  await updateDoc(doc(db, 'users', currentUsername, 'private_sections', docId), { ...data, updatedAt: serverTimestamp() });
-  const idx = privateCategories.findIndex(c => c.docId === docId);
-  if (idx !== -1) privateCategories[idx] = { ...privateCategories[idx], ...data };
+  if (!state.currentUsername) return;
+  await updateDoc(doc(db, 'users', state.currentUsername, 'private_sections', docId), { ...data, updatedAt: serverTimestamp() });
+  const idx = state.privateCategories.findIndex(c => c.docId === docId);
+  if (idx !== -1) state.privateCategories[idx] = { ...state.privateCategories[idx], ...data };
 }
 
 async function deletePrivateSection(docId) {
-  if (!currentUsername) return;
-  await deleteDoc(doc(db, 'users', currentUsername, 'private_sections', docId));
-  privateCategories = privateCategories.filter(c => c.docId !== docId);
+  if (!state.currentUsername) return;
+  await deleteDoc(doc(db, 'users', state.currentUsername, 'private_sections', docId));
+  state.privateCategories = state.privateCategories.filter(c => c.docId !== docId);
 }
 
 async function addPrivateCard(data) {
-  if (!currentUsername) return;
+  if (!state.currentUsername) return;
   const siblings = data.parentId
-    ? privateCards.filter(c => c.parentId === data.parentId)
-    : privateCards.filter(c => c.sectionId === data.sectionId && !c.parentId);
+    ? state.privateCards.filter(c => c.parentId === data.parentId)
+    : state.privateCards.filter(c => c.sectionId === data.sectionId && !c.parentId);
   const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(c => c.order || 0)) + 1 : 0;
   const newData = { ...data, parentId: data.parentId || null, order: maxOrder, updatedAt: serverTimestamp() };
-  const ref = await addDoc(collection(db, 'users', currentUsername, 'private_cards'), newData);
-  privateCards.push({ id: ref.id, isPrivate: true, ...newData });
+  const ref = await addDoc(collection(db, 'users', state.currentUsername, 'private_cards'), newData);
+  state.privateCards.push({ id: ref.id, isPrivate: true, ...newData });
   renderAllSections();
 }
 
 async function savePrivateCard(cardId, data) {
-  if (!currentUsername) return;
-  await updateDoc(doc(db, 'users', currentUsername, 'private_cards', cardId), { ...data, updatedAt: serverTimestamp() });
-  const idx = privateCards.findIndex(c => c.id === cardId);
-  if (idx !== -1) privateCards[idx] = { ...privateCards[idx], ...data };
+  if (!state.currentUsername) return;
+  await updateDoc(doc(db, 'users', state.currentUsername, 'private_cards', cardId), { ...data, updatedAt: serverTimestamp() });
+  const idx = state.privateCards.findIndex(c => c.id === cardId);
+  if (idx !== -1) state.privateCards[idx] = { ...state.privateCards[idx], ...data };
   renderAllSections();
 }
 
 async function deletePrivateCard(cardId) {
-  if (!currentUsername) return;
-  await deleteDoc(doc(db, 'users', currentUsername, 'private_cards', cardId));
-  privateCards = privateCards.filter(c => c.id !== cardId);
+  if (!state.currentUsername) return;
+  await deleteDoc(doc(db, 'users', state.currentUsername, 'private_cards', cardId));
+  state.privateCards = state.privateCards.filter(c => c.id !== cardId);
   renderAllSections();
 }
+
 
 // ========== 個人セクション順序 ==========
 function applyPersonalOrder(cats) {
   const result = [];
-  personalSectionOrder.forEach(sid => {
+  state.personalSectionOrder.forEach(sid => {
     const cat = cats.find(c =>
       sid.startsWith('priv:')
         ? c.isPrivate && c.docId === sid.slice(5)
@@ -4034,19 +397,19 @@ function applyPersonalOrder(cats) {
   });
   cats.forEach(cat => {
     const sid = cat.isPrivate ? `priv:${cat.docId}` : cat.id;
-    if (!personalSectionOrder.includes(sid)) result.push(cat);
+    if (!state.personalSectionOrder.includes(sid)) result.push(cat);
   });
   return result;
 }
 
 async function reorderSections(srcId, targetId) {
-  const publicCats = [...allCategories].sort((a, b) => a.order - b.order);
-  const privCats = [...privateCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const publicCats = [...state.allCategories].sort((a, b) => a.order - b.order);
+  const privCats = [...state.privateCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
   const allCats = [...publicCats, ...privCats];
 
   let currentIds;
-  if (personalSectionOrder.length) {
-    currentIds = [...personalSectionOrder];
+  if (state.personalSectionOrder.length) {
+    currentIds = [...state.personalSectionOrder];
     allCats.forEach(cat => {
       const sid = cat.isPrivate ? `priv:${cat.docId}` : cat.id;
       if (!currentIds.includes(sid)) currentIds.push(sid);
@@ -4061,11 +424,12 @@ async function reorderSections(srcId, targetId) {
 
   currentIds.splice(srcIdx, 1);
   currentIds.splice(tgtIdx, 0, srcId);
-  personalSectionOrder = currentIds;
+  state.personalSectionOrder = currentIds;
 
-  if (currentUsername) await savePersonalSectionOrder(currentUsername, currentIds);
+  if (state.currentUsername) await savePersonalSectionOrder(state.currentUsername, currentIds);
   renderAllSections();
 }
+
 
 // ========== セクション ドラッグ&ドロップ ==========
 function setupSectionDraggable(section, sectionId) {
@@ -4073,7 +437,7 @@ function setupSectionDraggable(section, sectionId) {
   if (!handle) return;
 
   handle.addEventListener('dragstart', e => {
-    dragSrcSectionId = sectionId;
+    state.dragSrcSectionId = sectionId;
     e.dataTransfer.effectAllowed = 'move';
     setTimeout(() => section.classList.add('section-dragging'), 0);
   });
@@ -4081,11 +445,11 @@ function setupSectionDraggable(section, sectionId) {
   handle.addEventListener('dragend', () => {
     section.classList.remove('section-dragging');
     document.querySelectorAll('.section-drag-over').forEach(el => el.classList.remove('section-drag-over'));
-    dragSrcSectionId = null;
+    state.dragSrcSectionId = null;
   });
 
   section.addEventListener('dragover', e => {
-    if (!dragSrcSectionId || dragSrcSectionId === sectionId) return;
+    if (!state.dragSrcSectionId || state.dragSrcSectionId === sectionId) return;
     e.preventDefault();
     section.classList.add('section-drag-over');
   });
@@ -4097,17 +461,18 @@ function setupSectionDraggable(section, sectionId) {
   section.addEventListener('drop', async e => {
     e.preventDefault();
     section.classList.remove('section-drag-over');
-    if (!dragSrcSectionId || dragSrcSectionId === sectionId) return;
-    const src = dragSrcSectionId;
-    dragSrcSectionId = null;
+    if (!state.dragSrcSectionId || state.dragSrcSectionId === sectionId) return;
+    const src = state.dragSrcSectionId;
+    state.dragSrcSectionId = null;
     await reorderSections(src, sectionId);
   });
 }
 
+
 // ========== プライベートセクション管理モーダル ==========
 function openPrivateSectionModal(cat) {
-  editingPrivateSectionId = cat?.docId || null;
-  privateSectionColorIndex = cat?.colorIndex || 1;
+  state.editingPrivateSectionId = cat?.docId || null;
+  state.privateSectionColorIndex = cat?.colorIndex || 1;
   document.getElementById('private-section-modal-title').innerHTML = cat
     ? '<i class="fa-solid fa-lock"></i> マイセクションを編集'
     : '<i class="fa-solid fa-lock"></i> マイセクションを追加';
@@ -4121,11 +486,11 @@ function openPrivateSectionModal(cat) {
   CATEGORY_COLORS.forEach(({ index, label, gradient }) => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = `color-swatch${index === privateSectionColorIndex ? ' selected' : ''}`;
+    btn.className = `color-swatch${index === state.privateSectionColorIndex ? ' selected' : ''}`;
     btn.style.background = gradient;
     btn.title = label;
     btn.addEventListener('click', () => {
-      privateSectionColorIndex = index;
+      state.privateSectionColorIndex = index;
       grid.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
     });
@@ -4137,8 +502,9 @@ function openPrivateSectionModal(cat) {
 
 function closePrivateSectionModal() {
   document.getElementById('private-section-modal').classList.remove('visible');
-  editingPrivateSectionId = null;
+  state.editingPrivateSectionId = null;
 }
+
 
 // ========== Firestore CRUD (カード) ==========
 async function migrateIfNeeded() {
@@ -4187,12 +553,11 @@ async function loadCategories() {
   const q = query(collection(db, 'categories'), orderBy('order'));
   const snap = await getDocs(q);
   if (snap.docs.length > 0) {
-    allCategories = snap.docs.map(d => {
+    state.allCategories = snap.docs.map(d => {
       const data = d.data();
       return {
         docId: d.id,
         ...data,
-        // Firestore に isExternal が未保存の場合は id で判定
         isExternal: data.isExternal ?? (data.id === 'external')
       };
     });
@@ -4200,10 +565,10 @@ async function loadCategories() {
 }
 
 function subscribeCards() {
-  if (unsubscribeCards) unsubscribeCards();
+  if (state.unsubscribeCards) state.unsubscribeCards();
   const q = query(collection(db, 'cards'), orderBy('categoryOrder'));
-  unsubscribeCards = onSnapshot(q, snapshot => {
-    allCards = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+  state.unsubscribeCards = onSnapshot(q, snapshot => {
+    state.allCards = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (a.categoryOrder ?? 0) - (b.categoryOrder ?? 0) || (a.order ?? 0) - (b.order ?? 0));
     renderAllSections();
     renderFavorites();
@@ -4212,17 +577,16 @@ function subscribeCards() {
 
 async function saveCard(docId, data) {
   await updateDoc(doc(db, 'cards', docId), { ...data, updatedAt: serverTimestamp() });
-  const idx = allCards.findIndex(c => c.id === docId);
-  if (idx !== -1) allCards[idx] = { ...allCards[idx], ...data };
+  const idx = state.allCards.findIndex(c => c.id === docId);
+  if (idx !== -1) state.allCards[idx] = { ...state.allCards[idx], ...data };
 }
 
 async function addCard(data) {
-  // parentId がある場合はその子カード群の中での最大 order を取得
   const siblings = data.parentId
-    ? allCards.filter(c => c.parentId === data.parentId)
-    : allCards.filter(c => c.category === data.category && !c.parentId);
+    ? state.allCards.filter(c => c.parentId === data.parentId)
+    : state.allCards.filter(c => c.category === data.category && !c.parentId);
   const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(c => c.order)) + 1 : 0;
-  const catDef = allCategories.find(c => c.id === data.category);
+  const catDef = state.allCategories.find(c => c.id === data.category);
   const newData = {
     ...data,
     parentId: data.parentId || null,
@@ -4232,56 +596,31 @@ async function addCard(data) {
     updatedAt: serverTimestamp()
   };
   await addDoc(collection(db, 'cards'), newData);
-  // onSnapshot が自動で再描画するため手動追加不要
 }
 
 async function deleteCard(docId) {
   await deleteDoc(doc(db, 'cards', docId));
-  allCards = allCards.filter(c => c.id !== docId);
+  state.allCards = state.allCards.filter(c => c.id !== docId);
 }
 
-// ========== Firestore CRUD (お知らせ) ==========
-function subscribeNotices() {
-  if (_noticeUnsub) return; // 既に購読中
-  const q = query(collection(db, 'notices'), orderBy('createdAt', 'desc'));
-  _noticeUnsub = onSnapshot(q, snap => {
-    allNotices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderNotices(allNotices);
-    updateNoticeBadge();
-  });
-}
-
-async function saveNotice(id, data) {
-  await updateDoc(doc(db, 'notices', id), { ...data, updatedAt: serverTimestamp() });
-  // onSnapshot が自動で allNotices を更新するためローカル更新は不要
-}
-
-async function addNotice(data) {
-  await addDoc(collection(db, 'notices'), { ...data, createdAt: serverTimestamp() });
-  // onSnapshot が自動で allNotices を更新するためローカル更新は不要
-}
-
-async function deleteNotice(id) {
-  await deleteDoc(doc(db, 'notices', id));
-  // onSnapshot が自動で allNotices を更新するためローカル更新は不要
-}
 
 // ========== Firestore CRUD (カテゴリ) ==========
 async function addCategoryToFirestore(data) {
   const ref = await addDoc(collection(db, 'categories'), { ...data, updatedAt: serverTimestamp() });
-  allCategories.push({ docId: ref.id, ...data });
+  state.allCategories.push({ docId: ref.id, ...data });
 }
 
 async function updateCategoryInFirestore(docId, data) {
   await updateDoc(doc(db, 'categories', docId), { ...data, updatedAt: serverTimestamp() });
-  const idx = allCategories.findIndex(c => c.docId === docId);
-  if (idx !== -1) allCategories[idx] = { ...allCategories[idx], ...data };
+  const idx = state.allCategories.findIndex(c => c.docId === docId);
+  if (idx !== -1) state.allCategories[idx] = { ...state.allCategories[idx], ...data };
 }
 
 async function deleteCategoryFromFirestore(docId) {
   await deleteDoc(doc(db, 'categories', docId));
-  allCategories = allCategories.filter(c => c.docId !== docId);
+  state.allCategories = state.allCategories.filter(c => c.docId !== docId);
 }
+
 
 // ========== DOM 描画 ==========
 function getCategoryGradient(cat) {
@@ -4296,17 +635,17 @@ function renderAllSections() {
   const noResults = document.getElementById('no-results');
   main.querySelectorAll('.category-section:not(#favorites-section), .external-tools, .btn-add-category-wrap').forEach(el => el.remove());
 
-  const publicSorted = [...allCategories].sort((a, b) => a.order - b.order);
-  const privateSorted = [...privateCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const publicSorted = [...state.allCategories].sort((a, b) => a.order - b.order);
+  const privateSorted = [...state.privateCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
   const allCats = [...publicSorted, ...privateSorted];
-  const sorted = personalSectionOrder.length ? applyPersonalOrder(allCats) : allCats;
+  const sorted = state.personalSectionOrder.length ? applyPersonalOrder(allCats) : allCats;
 
   sorted.forEach(cat => {
     let catCards;
     if (cat.isPrivate) {
-      catCards = privateCards.filter(c => c.sectionId === cat.docId).sort((a, b) => (a.order || 0) - (b.order || 0));
+      catCards = state.privateCards.filter(c => c.sectionId === cat.docId).sort((a, b) => (a.order || 0) - (b.order || 0));
     } else {
-      catCards = allCards.filter(c => c.category === cat.id).sort((a, b) => a.order - b.order);
+      catCards = state.allCards.filter(c => c.category === cat.id).sort((a, b) => a.order - b.order);
     }
     main.insertBefore(buildSection(cat, catCards), noResults);
   });
@@ -4318,14 +657,14 @@ function renderAllSections() {
       <button class="btn-add-category"><i class="fa-solid fa-plus"></i> カテゴリを追加</button>
       <p class="add-btn-desc"><i class="fa-solid fa-users"></i> 全社員に共有されます</p>
     </div>`;
-  if (currentUsername) btnsHtml += `
+  if (state.currentUsername) btnsHtml += `
     <div class="add-btn-group">
       <button class="btn-add-private-section"><i class="fa-solid fa-lock"></i> マイセクションを追加</button>
       <p class="add-btn-desc add-btn-desc--private"><i class="fa-solid fa-user-secret"></i> 自分だけに表示されます</p>
     </div>`;
   addWrap.innerHTML = btnsHtml;
   addWrap.querySelector('.btn-add-category').addEventListener('click', () => openCategoryModal(null));
-  if (currentUsername) addWrap.querySelector('.btn-add-private-section').addEventListener('click', () => openPrivateSectionModal(null));
+  if (state.currentUsername) addWrap.querySelector('.btn-add-private-section').addEventListener('click', () => openPrivateSectionModal(null));
   main.insertBefore(addWrap, noResults);
 }
 
@@ -4337,7 +676,7 @@ function buildSection(cat, cards) {
   if (cat.isExternal) {
     section.className = 'external-tools';
     section.id = `section-${cat.id}`;
-    const editBtns = isEditMode
+    const editBtns = state.isEditMode
       ? `<button class="btn-edit-category" data-docid="${cat.docId || ''}" title="カテゴリ編集"><i class="fa-solid fa-pen"></i></button>`
       : '';
     section.innerHTML = `
@@ -4351,7 +690,7 @@ function buildSection(cat, cards) {
     const grid = section.querySelector('.external-grid');
     grid.appendChild(buildSolarIconWrap());
     cards.filter(c => c.url !== 'solar:open').forEach(c => grid.appendChild(buildExternalCard(c)));
-    if (isEditMode) {
+    if (state.isEditMode) {
       const addWrap = document.createElement('div');
       addWrap.className = 'ext-icon-wrap';
       const addBtn = document.createElement('button');
@@ -4361,16 +700,15 @@ function buildSection(cat, cards) {
       addWrap.appendChild(addBtn);
       grid.appendChild(addWrap);
     }
-    if (isEditMode) {
+    if (state.isEditMode) {
       const editBtn = section.querySelector('.btn-edit-category');
       if (editBtn) editBtn.addEventListener('click', () => {
-        const catObj = allCategories.find(c => c.docId === editBtn.dataset.docid || c.id === cat.id);
+        const catObj = state.allCategories.find(c => c.docId === editBtn.dataset.docid || c.id === cat.id);
         openCategoryModal(catObj);
       });
     }
 
   } else if (cat.isPrivate) {
-    // プライベートセクション
     section.className = 'category-section private-section';
     section.id = `section-priv-${cat.docId}`;
     const color = CATEGORY_COLORS.find(c => c.index === cat.colorIndex);
@@ -4390,7 +728,6 @@ function buildSection(cat, cards) {
     grid.appendChild(buildAddButton(null, true, cat.docId));
     section.querySelector('.btn-edit-category').addEventListener('click', () => openPrivateSectionModal(cat));
 
-    // セクションまとめてお気に入り
     const favs = getFavorites();
     const allFaved = cards.length > 0 && cards.every(c => favs.includes(c.id));
     const sBtn = document.createElement('button');
@@ -4401,10 +738,9 @@ function buildSection(cat, cards) {
     section.querySelector('.category-header').appendChild(sBtn);
 
   } else {
-    // 通常パブリックセクション
     section.className = 'category-section';
     section.id = `section-${cat.id}`;
-    const editBtns = isEditMode
+    const editBtns = state.isEditMode
       ? `<button class="btn-edit-category" data-docid="${cat.docId || ''}" title="カテゴリ編集"><i class="fa-solid fa-pen"></i></button>`
       : '';
     section.innerHTML = `
@@ -4419,19 +755,18 @@ function buildSection(cat, cards) {
     const grid = section.querySelector('.card-grid');
     const rootCards = cards.filter(c => !c.parentId);
     rootCards.forEach(c => grid.appendChild(buildCardNode(c, cards, gradient, false)));
-    if (isEditMode) grid.appendChild(buildAddButton(cat.id));
+    if (state.isEditMode) grid.appendChild(buildAddButton(cat.id));
 
-    if (isEditMode) {
+    if (state.isEditMode) {
       const editBtn = section.querySelector('.btn-edit-category');
       if (editBtn) editBtn.addEventListener('click', () => {
-        const catObj = allCategories.find(c => c.docId === editBtn.dataset.docid || c.id === cat.id);
+        const catObj = state.allCategories.find(c => c.docId === editBtn.dataset.docid || c.id === cat.id);
         openCategoryModal(catObj);
       });
     }
 
-    // セクションまとめてお気に入り
     const favs = getFavorites();
-    const catCardsForFav = allCards.filter(c => c.category === cat.id);
+    const catCardsForFav = state.allCards.filter(c => c.category === cat.id);
     const allFaved = catCardsForFav.length > 0 && catCardsForFav.every(c => favs.includes(c.id));
     const sBtn = document.createElement('button');
     sBtn.className = 'btn-section-favorite' + (allFaved ? ' active' : '');
@@ -4441,8 +776,7 @@ function buildSection(cat, cards) {
     section.querySelector('.category-header').appendChild(sBtn);
   }
 
-  // セクションドラッグハンドル（ユーザーネーム設定済みの場合）
-  if (currentUsername) {
+  if (state.currentUsername) {
     const handle = document.createElement('div');
     handle.className = 'section-drag-handle';
     handle.title = 'ドラッグしてセクションを並び替え';
@@ -4489,11 +823,9 @@ function buildLinkCard(card, isFav = false, gradient = '') {
     ${starBtn}
   `;
 
-  // カードアイコンに動的カラー適用
   if (gradient) {
     const iconEl = a.querySelector('.card-icon');
     if (iconEl) {
-      // SVGでなければ gradient を text-fill で適用
       if (!card.icon?.startsWith('svg:')) {
         iconEl.style.background = gradient;
         iconEl.style.webkitBackgroundClip = 'text';
@@ -4503,7 +835,6 @@ function buildLinkCard(card, isFav = false, gradient = '') {
     }
   }
 
-  // お気に入りボタン
   a.querySelector('.btn-favorite').addEventListener('click', e => {
     e.preventDefault();
     e.stopPropagation();
@@ -4515,13 +846,11 @@ function buildLinkCard(card, isFav = false, gradient = '') {
       e.preventDefault();
       showContextMenu(e, card);
     });
-    // ドラッグ&ドロップ
     setupDraggable(a, card);
   }
   return a;
 }
 
-// 太陽光カード: 常に先頭固定・削除不可
 function buildSolarIconWrap() {
   const wrap = document.createElement('div');
   wrap.className = 'ext-icon-wrap ext-icon-solar-pinned';
@@ -4597,14 +926,14 @@ function buildAddButton(categoryId, isPrivate = false, privateSectionDocId = nul
   return btn;
 }
 
-// ========== カード階層: ノード構築（バッジ＋ポップアップ方式） ==========
+
+// ========== カード階層: ノード構築 ==========
 function buildCardNode(card, allCatCards, gradient, isPrivate) {
   const children = allCatCards.filter(c => c.parentId === card.id);
   const a = buildLinkCard(card, false, gradient);
 
   if (children.length === 0) return a;
 
-  // 子カードがある → スタックバッジを追加（カード本体はそのまま）
   a.classList.add('card-has-children');
 
   const badge = document.createElement('button');
@@ -4614,8 +943,7 @@ function buildCardNode(card, allCatCards, gradient, isPrivate) {
   badge.addEventListener('click', e => {
     e.preventDefault();
     e.stopPropagation();
-    // 同じポップアップを再クリックで閉じる
-    if (activeChildPopup && activeChildPopup.dataset.parentId === card.id) {
+    if (state.activeChildPopup && state.activeChildPopup.dataset.parentId === card.id) {
       closeChildPopup();
       return;
     }
@@ -4633,7 +961,6 @@ function openChildPopup(parentCard, children, allCatCards, gradient, isPrivate, 
   popup.className = 'card-child-popup';
   popup.dataset.parentId = parentCard.id;
 
-  // ヘッダー
   const iconHtml = parentCard.icon && parentCard.icon.startsWith('svg:')
     ? (SVG_ICONS[parentCard.icon] || '')
     : `<i class="${parentCard.icon || 'fa-solid fa-star'}"></i>`;
@@ -4649,7 +976,6 @@ function openChildPopup(parentCard, children, allCatCards, gradient, isPrivate, 
   `;
   popup.appendChild(header);
 
-  // 子カードグリッド
   const grid = document.createElement('div');
   grid.className = 'card-child-popup__grid';
   children.forEach((child, i) => {
@@ -4658,7 +984,6 @@ function openChildPopup(parentCard, children, allCatCards, gradient, isPrivate, 
     grid.appendChild(node);
   });
 
-  // 子カード追加ボタン
   const catId = parentCard.category || parentCard.sectionId;
   const addBtn = buildAddButton(catId, isPrivate, isPrivate ? parentCard.sectionId : null, parentCard.id);
   addBtn.style.animationDelay = `${children.length * 0.04}s`;
@@ -4667,7 +992,6 @@ function openChildPopup(parentCard, children, allCatCards, gradient, isPrivate, 
   popup.appendChild(grid);
   document.body.appendChild(popup);
 
-  // ポップアップの位置を調整
   positionChildPopup(popup, anchorEl);
 
   header.querySelector('.card-child-popup__close').addEventListener('click', e => {
@@ -4675,9 +999,8 @@ function openChildPopup(parentCard, children, allCatCards, gradient, isPrivate, 
     closeChildPopup();
   });
 
-  activeChildPopup = popup;
+  state.activeChildPopup = popup;
 
-  // 外側クリックで閉じる（少し遅延してバインド）
   setTimeout(() => {
     document.addEventListener('click', closeChildPopupOnOutside);
   }, 30);
@@ -4693,13 +1016,11 @@ function positionChildPopup(popup, anchorEl) {
   const maxW = Math.min(540, vw - 32);
   popup.style.maxWidth = maxW + 'px';
 
-  // まず仮位置に配置してサイズ取得
   popup.style.visibility = 'hidden';
   popup.style.left = '0px';
   popup.style.top = '0px';
   const popupH = popup.offsetHeight || 300;
 
-  // カードの下に出す。下に収まらない場合は上に
   let top = rect.bottom + scrollY + 8;
   if (rect.bottom + popupH + 8 > vh) {
     top = rect.top + scrollY - popupH - 8;
@@ -4717,80 +1038,29 @@ function positionChildPopup(popup, anchorEl) {
 }
 
 function closeChildPopupOnOutside(e) {
-  if (activeChildPopup && !activeChildPopup.contains(e.target)) {
+  if (state.activeChildPopup && !state.activeChildPopup.contains(e.target)) {
     closeChildPopup();
   }
 }
 
 function closeChildPopup() {
-  if (activeChildPopup) {
-    activeChildPopup.classList.add('closing');
-    const el = activeChildPopup;
-    activeChildPopup = null;
+  if (state.activeChildPopup) {
+    state.activeChildPopup.classList.add('closing');
+    const el = state.activeChildPopup;
+    state.activeChildPopup = null;
     setTimeout(() => el.remove(), 180);
   }
   document.removeEventListener('click', closeChildPopupOnOutside);
 }
 
-// ========== 削除確認モーダル（誤削除防止） ==========
-function confirmDelete(message) {
-  return new Promise(resolve => {
-    const modal   = document.getElementById('delete-confirm-modal');
-    const msgEl   = document.getElementById('delete-confirm-message');
-    const okBtn   = document.getElementById('delete-confirm-ok');
-    const cancelBtn = document.getElementById('delete-confirm-cancel');
-
-    msgEl.textContent = message;
-    okBtn.disabled = true;
-    okBtn.innerHTML = '削除 (<span id="delete-confirm-count">2</span>)';
-    modal.classList.add('visible');
-
-    let count = 2;
-    const iv = setInterval(() => {
-      count--;
-      const el = document.getElementById('delete-confirm-count');
-      if (el) el.textContent = count;
-      if (count <= 0) {
-        clearInterval(iv);
-        okBtn.disabled = false;
-        okBtn.textContent = '削除する';
-        okBtn.classList.add('ready');
-      }
-    }, 1000);
-
-    function cleanup() {
-      clearInterval(iv);
-      modal.classList.remove('visible');
-      okBtn.classList.remove('ready');
-      okBtn.removeEventListener('click', onOk);
-      cancelBtn.removeEventListener('click', onCancel);
-      modal.removeEventListener('click', onOverlay);
-    }
-    function onOk()      { cleanup(); resolve(true);  }
-    function onCancel()  { cleanup(); resolve(false); }
-    function onOverlay(e){ if (e.target === modal) { cleanup(); resolve(false); } }
-
-    okBtn.addEventListener('click', onOk, { once: true });
-    cancelBtn.addEventListener('click', onCancel, { once: true });
-    modal.addEventListener('click', onOverlay);
-  });
-}
-
-function esc(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
 
 // ========== お気に入り ==========
 function getFavorites() {
-  return [...personalFavorites];
+  return [...state.personalFavorites];
 }
 
 function setFavorites(ids) {
-  personalFavorites = [...ids];
+  state.personalFavorites = [...ids];
   savePreferencesToFirestore();
 }
 
@@ -4800,7 +1070,6 @@ function toggleFavorite(docId) {
   if (idx === -1) favs.push(docId); else favs.splice(idx, 1);
   setFavorites(favs);
   renderFavorites();
-  // 全カードの星ボタン更新
   document.querySelectorAll(`.btn-favorite[data-id="${docId}"]`).forEach(b => {
     const active = favs.includes(docId);
     b.classList.toggle('active', active);
@@ -4814,11 +1083,10 @@ function renderFavorites() {
   const grid = document.getElementById('favorites-grid');
   const count = document.getElementById('favorites-count');
 
-  const cards = favIds.map(id => allCards.find(c => c.id === id)).filter(Boolean);
+  const cards = favIds.map(id => state.allCards.find(c => c.id === id)).filter(Boolean);
 
   if (!cards.length) {
-    if (favoritesOnlyMode) {
-      // お気に入りのみモードでは空でもセクションを表示
+    if (state.favoritesOnlyMode) {
       section.hidden = false;
       grid.innerHTML = '<p class="fav-empty"><i class="fa-regular fa-star"></i> お気に入りが未登録です。カードを右クリック → 編集 または各カードの ☆ をクリックして登録してください。</p>';
       if (count) count.textContent = '0 件';
@@ -4834,106 +1102,15 @@ function renderFavorites() {
   cards.forEach(card => grid.appendChild(buildLinkCard(card, true)));
 }
 
-// ========== お知らせ ==========
-function renderNotices(notices) {
-  const board = document.getElementById('notice-board');
-  if (!board) return;
-
-  if (!notices.length && !isEditMode) {
-    board.innerHTML = '';
-    return;
-  }
-
-  const addBtn = isEditMode
-    ? `<button class="btn-add-notice"><i class="fa-solid fa-plus"></i> お知らせを追加</button>`
-    : '';
-
-  const unreadCount = allNotices.filter(n => !readNoticeIds.has(n.id)).length;
-  const readAllBtn = (currentUsername && unreadCount > 0)
-    ? `<button class="btn-read-all" id="btn-read-all"><i class="fa-solid fa-check-double"></i> 全て既読</button>`
-    : '';
-
-  board.innerHTML = `
-    <div class="notice-header">
-      <i class="fa-solid fa-bullhorn"></i>
-      <span>お知らせ</span>
-      ${unreadCount > 0 ? `<span class="notice-unread-label">${unreadCount}件 未読</span>` : ''}
-      ${readAllBtn}
-      ${addBtn}
-    </div>
-    <div class="notice-list" id="notice-list"></div>
-  `;
-
-  if (currentUsername && unreadCount > 0) {
-    board.querySelector('#btn-read-all')?.addEventListener('click', markAllNoticesRead);
-  }
-
-  if (isEditMode) {
-    board.querySelector('.btn-add-notice').addEventListener('click', () => openNoticeModal(null));
-  }
-
-  const list = board.querySelector('#notice-list');
-  notices.forEach(n => {
-    const isUnread = currentUsername && !readNoticeIds.has(n.id);
-    const item = document.createElement('div');
-    item.className = `notice-item${n.priority === 'urgent' ? ' urgent' : ''}${isUnread ? ' notice-unread' : ''}`;
-    const dateStr = n.createdAt?.toDate
-      ? n.createdAt.toDate().toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' })
-      : '';
-    const newBadge = isUnread ? `<span class="notice-new-badge">NEW</span>` : '';
-    const editBtns = isEditMode
-      ? `<button class="btn-notice-edit" data-id="${n.id}"><i class="fa-solid fa-pen"></i></button>`
-      : '';
-    item.innerHTML = `
-      <div class="notice-item-header">
-        ${newBadge}
-        <span class="notice-badge ${n.priority === 'urgent' ? 'badge-urgent' : 'badge-normal'}">${n.priority === 'urgent' ? '重要' : 'お知らせ'}</span>
-        <span class="notice-title">${esc(n.title || '')}</span>
-        <span class="notice-date">${dateStr}</span>
-        ${editBtns}
-      </div>
-      ${n.body ? `<div class="notice-body">${esc(n.body)}</div>` : ''}
-      ${buildReactionBar(n.id)}
-    `;
-    if (isEditMode) {
-      item.querySelector('.btn-notice-edit').addEventListener('click', () => openNoticeModal(n));
-    }
-    list.appendChild(item);
-  });
-
-  // リアクションボタン（イベントデリゲーション）
-  list.addEventListener('click', e => {
-    const btn = e.target.closest('.reaction-btn');
-    if (!btn) return;
-    if (!currentUsername) { alert('リアクションするにはユーザーネームを設定してください'); return; }
-    toggleReaction(btn.dataset.noticeId, btn.dataset.emoji);
-  });
-}
-
-function openNoticeModal(notice) {
-  editingNoticeId = notice ? notice.id : null;
-  document.getElementById('notice-modal-title').textContent = notice ? 'お知らせを編集' : 'お知らせを追加';
-  document.getElementById('notice-priority').value = notice?.priority || 'normal';
-  document.getElementById('notice-title').value = notice?.title || '';
-  document.getElementById('notice-body').value = notice?.body || '';
-  document.getElementById('notice-delete').style.display = notice ? 'inline-flex' : 'none';
-  document.getElementById('notice-modal').classList.add('visible');
-  setTimeout(() => document.getElementById('notice-title').focus(), 100);
-}
-
-function closeNoticeModal() {
-  document.getElementById('notice-modal').classList.remove('visible');
-  editingNoticeId = null;
-}
 
 // ========== カテゴリ管理 ==========
 function openCategoryModal(cat) {
-  editingCategoryId = cat?.docId || null;
+  state.editingCategoryId = cat?.docId || null;
   document.getElementById('category-modal-title').textContent = cat ? 'カテゴリを編集' : 'カテゴリを追加';
   document.getElementById('cat-label').value = cat?.label || '';
   document.getElementById('cat-icon').value = cat?.icon || 'fa-solid fa-star';
   document.getElementById('cat-delete').style.display = (cat && !cat.isExternal) ? 'inline-flex' : 'none';
-  selectedColorIndex = cat?.colorIndex || 1;
+  state.selectedColorIndex = cat?.colorIndex || 1;
   updateCatIconPreview(cat?.icon || 'fa-solid fa-star');
   buildColorPicker();
   document.getElementById('category-modal').classList.add('visible');
@@ -4942,7 +1119,7 @@ function openCategoryModal(cat) {
 
 function closeCategoryModal() {
   document.getElementById('category-modal').classList.remove('visible');
-  editingCategoryId = null;
+  state.editingCategoryId = null;
 }
 
 function updateCatIconPreview(iconClass) {
@@ -4958,11 +1135,11 @@ function buildColorPicker() {
   CATEGORY_COLORS.forEach(({ index, label, gradient }) => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = `color-swatch${index === selectedColorIndex ? ' selected' : ''}`;
+    btn.className = `color-swatch${index === state.selectedColorIndex ? ' selected' : ''}`;
     btn.style.background = gradient;
     btn.title = label;
     btn.addEventListener('click', () => {
-      selectedColorIndex = index;
+      state.selectedColorIndex = index;
       grid.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
     });
@@ -4970,12 +1147,13 @@ function buildColorPicker() {
   });
 }
 
+
 // ========== ドラッグ&ドロップ ==========
 function setupDraggable(el, card) {
   el.setAttribute('draggable', 'true');
 
   el.addEventListener('dragstart', e => {
-    dragSrcId = card.id;
+    state.dragSrcId = card.id;
     e.dataTransfer.effectAllowed = 'move';
     setTimeout(() => el.classList.add('dragging'), 0);
   });
@@ -4988,7 +1166,7 @@ function setupDraggable(el, card) {
   el.addEventListener('dragover', e => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    if (dragSrcId !== card.id) el.classList.add('drag-over');
+    if (state.dragSrcId !== card.id) el.classList.add('drag-over');
   });
 
   el.addEventListener('dragleave', () => {
@@ -4998,18 +1176,18 @@ function setupDraggable(el, card) {
   el.addEventListener('drop', async e => {
     e.preventDefault();
     el.classList.remove('drag-over');
-    if (!dragSrcId || dragSrcId === card.id) return;
-    await reorderCards(dragSrcId, card.id);
-    dragSrcId = null;
+    if (!state.dragSrcId || state.dragSrcId === card.id) return;
+    await reorderCards(state.dragSrcId, card.id);
+    state.dragSrcId = null;
   });
 }
 
 async function reorderCards(srcId, targetId) {
-  const src = allCards.find(c => c.id === srcId);
-  const target = allCards.find(c => c.id === targetId);
+  const src = state.allCards.find(c => c.id === srcId);
+  const target = state.allCards.find(c => c.id === targetId);
   if (!src || !target || src.category !== target.category) return;
 
-  const catCards = allCards
+  const catCards = state.allCards
     .filter(c => c.category === src.category)
     .sort((a, b) => a.order - b.order);
 
@@ -5025,9 +1203,10 @@ async function reorderCards(srcId, targetId) {
   await batch.commit();
 }
 
+
 // ========== 編集モード ==========
 function enterEditMode() {
-  isEditMode = true;
+  state.isEditMode = true;
   document.body.classList.add('edit-mode');
   document.getElementById('edit-banner').hidden = false;
   const fab = document.getElementById('admin-fab');
@@ -5035,11 +1214,11 @@ function enterEditMode() {
   fab.classList.add('active');
   fab.title = '編集モードを終了';
   renderAllSections();
-  renderNotices(allNotices);
+  renderNotices(state.allNotices);
 }
 
 function exitEditMode() {
-  isEditMode = false;
+  state.isEditMode = false;
   document.body.classList.remove('edit-mode');
   document.getElementById('edit-banner').hidden = true;
   const fab = document.getElementById('admin-fab');
@@ -5047,19 +1226,20 @@ function exitEditMode() {
   fab.classList.remove('active');
   fab.title = '管理者ログイン';
   renderAllSections();
-  renderNotices(allNotices);
+  renderNotices(state.allNotices);
 }
+
 
 // ========== カード編集モーダル ==========
 function openCardModal(docId, categoryId = null, isPrivate = false, privateSectionDocId = null, parentId = null) {
-  editingDocId = docId;
-  editingCategory = categoryId;
-  editingIsPrivate = isPrivate;
-  editingPrivateSectionDocId = privateSectionDocId;
-  editingParentId = parentId;
+  state.editingDocId = docId;
+  state.editingCategory = categoryId;
+  state.editingIsPrivate = isPrivate;
+  state.editingPrivateSectionDocId = privateSectionDocId;
+  state.editingParentId = parentId;
 
   const card = docId
-    ? (isPrivate ? privateCards.find(c => c.id === docId) : allCards.find(c => c.id === docId))
+    ? (isPrivate ? state.privateCards.find(c => c.id === docId) : state.allCards.find(c => c.id === docId))
     : null;
   const isSVG = card?.icon?.startsWith('svg:');
 
@@ -5081,11 +1261,11 @@ function openCardModal(docId, categoryId = null, isPrivate = false, privateSecti
 
 function closeCardModal() {
   document.getElementById('card-modal').classList.remove('visible');
-  editingDocId = null;
-  editingCategory = null;
-  editingIsPrivate = false;
-  editingPrivateSectionDocId = null;
-  editingParentId = null;
+  state.editingDocId = null;
+  state.editingCategory = null;
+  state.editingIsPrivate = false;
+  state.editingPrivateSectionDocId = null;
+  state.editingParentId = null;
 }
 
 function updateIconPreview(iconClass) {
@@ -5127,6 +1307,7 @@ function buildIconPicker(selectedIcon) {
   if (selected) selected.scrollIntoView({ block: 'nearest' });
 }
 
+
 // ========== PIN モーダル ==========
 function openPinModal(isSetup) {
   const modal = document.getElementById('pin-modal');
@@ -5147,11 +1328,12 @@ function closePinModal() {
   document.getElementById('pin-modal').classList.remove('visible');
 }
 
+
 // ========== サービスピッカー ==========
 function openServicePicker() {
   const grid = document.getElementById('service-picker-grid');
   const addedUrls = new Set(
-    allCards.filter(c => c.isExternalTool || c.category === 'external').map(c => c.url)
+    state.allCards.filter(c => c.isExternalTool || c.category === 'external').map(c => c.url)
   );
 
   grid.innerHTML = PRESET_SERVICES.map(svc => {
@@ -5193,7 +1375,8 @@ function closeServicePicker() {
   document.getElementById('service-picker-modal').classList.remove('visible');
 }
 
-// ========== 天気パネル（雨雲レーダー / 太陽光発電 タブ） ==========
+
+// ========== 天気パネル ==========
 const WINDY_URL = `https://embed.windy.com/embed2.html?lat=${WEATHER_LAT}&lon=${WEATHER_LON}&detailLat=${WEATHER_LAT}&detailLon=${WEATHER_LON}&zoom=9&level=surface&overlay=rain&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1`;
 const SOLAR_SRC = 'https://mierukaweb.energymntr.com/48429893PZ';
 
@@ -5204,7 +1387,6 @@ function openWeatherPanel(tab) {
   widget.removeAttribute('hidden');
   panel.removeAttribute('hidden');
   switchWeatherTab(tab);
-  // 天気データが未ロードなら取得
   const current = document.getElementById('weather-current');
   if (current && !current.innerHTML.trim()) fetchAndRenderWeather();
   setTimeout(() => widget.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
@@ -5228,6 +1410,7 @@ function switchWeatherTab(tab) {
   document.getElementById('wpanel-content').innerHTML =
     `<iframe src="${src}" class="wpanel-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" allowfullscreen></iframe>`;
 }
+
 
 // ========== 天気 ==========
 function calcHeatIndex(tempC, humidity) {
@@ -5302,7 +1485,6 @@ async function fetchAndRenderWeather() {
       </div>
     `;
 
-    // 予報
     if (forecastEl) {
       forecastEl.innerHTML = '';
       frc.list.slice(1, 9).forEach(item => {
@@ -5335,6 +1517,7 @@ async function fetchAndRenderWeather() {
   }
 }
 
+
 // ========== コンテキストメニュー ==========
 let activeContextMenu = null;
 
@@ -5342,7 +1525,6 @@ function showContextMenu(e, card) {
   closeContextMenu();
   const menu = document.createElement('div');
   menu.className = 'card-context-menu';
-  // 画面端はみ出し防止
   const x = Math.min(e.clientX, window.innerWidth - 170);
   const y = Math.min(e.clientY, window.innerHeight - 90);
   menu.style.left = x + 'px';
@@ -5389,12 +1571,13 @@ function closeContextMenu() {
   if (activeContextMenu) { activeContextMenu.remove(); activeContextMenu = null; }
 }
 
+
 // ========== お気に入りのみ表示 ==========
 function applyFavoritesOnlyMode() {
-  document.querySelector('.main').classList.toggle('favorites-only', favoritesOnlyMode);
+  document.querySelector('.main').classList.toggle('favorites-only', state.favoritesOnlyMode);
   const btn = document.getElementById('btn-favorites-only');
   if (!btn) return;
-  if (favoritesOnlyMode) {
+  if (state.favoritesOnlyMode) {
     btn.classList.add('active');
     btn.title = 'すべて表示';
     btn.innerHTML = '<i class="fa-solid fa-star"></i><span class="btn-fav-label">すべて表示</span>';
@@ -5407,16 +1590,17 @@ function applyFavoritesOnlyMode() {
 }
 
 function toggleFavoritesOnly() {
-  favoritesOnlyMode = !favoritesOnlyMode;
+  state.favoritesOnlyMode = !state.favoritesOnlyMode;
   savePreferencesToFirestore();
   applyFavoritesOnlyMode();
 }
 
+
 // ========== セクションまとめてお気に入り ==========
 function toggleSectionFavorite(catId, isPrivate = false) {
   const catCards = isPrivate
-    ? privateCards.filter(c => c.sectionId === catId)
-    : allCards.filter(c => c.category === catId);
+    ? state.privateCards.filter(c => c.sectionId === catId)
+    : state.allCards.filter(c => c.category === catId);
   if (!catCards.length) return;
   const favs = getFavorites();
   const allFaved = catCards.every(c => favs.includes(c.id));
@@ -5428,7 +1612,6 @@ function toggleSectionFavorite(catId, isPrivate = false) {
   }
   setFavorites(newFavs);
   renderFavorites();
-  // セクション内の星ボタンと、セクション自体のまとめ星ボタンを更新
   catCards.forEach(card => {
     document.querySelectorAll(`.btn-favorite[data-id="${card.id}"]`).forEach(b => {
       const active = newFavs.includes(card.id);
@@ -5436,7 +1619,6 @@ function toggleSectionFavorite(catId, isPrivate = false) {
       b.innerHTML = `<i class="fa-${active ? 'solid' : 'regular'} fa-star"></i>`;
     });
   });
-  // まとめ星ボタンの状態更新
   const sectionEl = isPrivate
     ? document.getElementById(`section-priv-${catId}`)
     : document.getElementById(`section-${catId}`);
@@ -5451,9 +1633,9 @@ function toggleSectionFavorite(catId, isPrivate = false) {
   }
 }
 
-// ========== 検索（イベント委任） ==========
+
+// ========== 検索 ==========
 function normalizeForSearch(s) {
-  // 全角→半角変換 + 小文字化（NFKC正規化で全角英数・記号を半角に統一）
   return (s || '').normalize('NFKC').toLowerCase();
 }
 
@@ -5462,10 +1644,8 @@ function initSearch() {
   const container   = searchInput.closest('.search-container');
   const noResults   = document.getElementById('no-results');
 
-  // コンテナクリックで入力フォーカス
   container.addEventListener('click', () => searchInput.focus());
 
-  // Escape で検索クリア＆折りたたみ
   searchInput.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       searchInput.value = '';
@@ -5480,18 +1660,16 @@ function initSearch() {
     container.classList.toggle('has-value', raw.length > 0);
     let total = 0;
 
-    // 子カードを含む全カードデータから「表示すべきルートカードID」を収集
-    const directRootIds  = new Set(); // 自身がヒットしたルートカード
-    const childOnlyRootIds = new Set(); // 子カードがヒットしたルートカード
+    const directRootIds  = new Set();
+    const childOnlyRootIds = new Set();
 
     if (q) {
-      const allData = [...(allCards || []), ...(privateCards || [])];
+      const allData = [...(state.allCards || []), ...(state.privateCards || [])];
       allData.forEach(card => {
         if (!normalizeForSearch(card.label).includes(q)) return;
         if (!card.parentId) {
           directRootIds.add(card.id);
         } else {
-          // 親を辿ってルートカードを見つける
           let cur = card;
           while (cur && cur.parentId) {
             cur = allData.find(c => c.id === cur.parentId) || null;
@@ -5537,6 +1715,7 @@ function initSearch() {
   });
 }
 
+
 // ========== 時計 ==========
 function updateClock() {
   const now = new Date();
@@ -5548,11 +1727,12 @@ function updateClock() {
   }
 }
 
+
 // ========== PIN 送信処理 ==========
 async function handlePinSubmit() {
   const now = Date.now();
-  if (now < lockoutUntil) {
-    document.getElementById('pin-error').textContent = `${Math.ceil((lockoutUntil - now) / 1000)}秒後に再試行してください`;
+  if (now < state.lockoutUntil) {
+    document.getElementById('pin-error').textContent = `${Math.ceil((state.lockoutUntil - now) / 1000)}秒後に再試行してください`;
     return;
   }
 
@@ -5585,17 +1765,17 @@ async function handlePinSubmit() {
     try {
       const ok = await verifyPIN(digits);
       if (ok) {
-        failedAttempts = 0;
+        state.failedAttempts = 0;
         closePinModal();
         enterEditMode();
       } else {
-        failedAttempts++;
-        if (failedAttempts >= 3) {
-          lockoutUntil = Date.now() + 30000;
-          failedAttempts = 0;
+        state.failedAttempts++;
+        if (state.failedAttempts >= 3) {
+          state.lockoutUntil = Date.now() + 30000;
+          state.failedAttempts = 0;
           document.getElementById('pin-error').textContent = '3回失敗。30秒後に再試行してください';
         } else {
-          document.getElementById('pin-error').textContent = `PINが違います（残り${3 - failedAttempts}回）`;
+          document.getElementById('pin-error').textContent = `PINが違います（残り${3 - state.failedAttempts}回）`;
         }
         document.querySelectorAll('.pin-digit').forEach(el => {
           el.value = '';
@@ -5611,18 +1791,17 @@ async function handlePinSubmit() {
   }
 }
 
+
 // ========== 表示設定（テーマ・文字サイズ） ==========
 const THEMES     = ['dark', 'light', 'warm'];
 const FONTSIZES  = ['font-sm', 'font-md', 'font-lg', 'font-xl'];
 
 function applyTheme(theme, save = true) {
-  // 廃止テーマ（glass/night/wood）はダークにフォールバック
   const t = THEMES.includes(theme) ? theme : 'dark';
   document.body.setAttribute('data-theme', t);
   document.querySelectorAll('#theme-grid .theme-card').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.theme === t);
   });
-  // localStorage はフラッシュ防止キャッシュとして常に更新
   localStorage.setItem('portal-theme', t);
   if (save) savePreferencesToFirestore();
 }
@@ -5634,7 +1813,6 @@ function applyFontSize(sizeClass, save = true) {
   document.querySelectorAll('#fontsize-grid .fontsize-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.size === s);
   });
-  // localStorage はフラッシュ防止キャッシュとして常に更新
   localStorage.setItem('portal-font-size', s);
   if (save) savePreferencesToFirestore();
 }
@@ -5657,6 +1835,7 @@ function closeSettingsPanel() {
   document.getElementById('settings-fab').classList.remove('active');
 }
 
+
 // ========== 初期化 ==========
 document.addEventListener('DOMContentLoaded', async () => {
   // 最初に設定を適用（フラッシュ防止）
@@ -5669,25 +1848,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.body.classList.add('edit-mode');
 
   // まず初期データで即時描画
-  allCards = INITIAL_CARDS.map((c, i) => ({ id: `init-${i}`, ...c }));
+  state.allCards = INITIAL_CARDS.map((c, i) => ({ id: `init-${i}`, ...c }));
   renderAllSections();
   initSearch();
   renderFavorites();
 
-  // お知らせリアクションを先行読み込み（ログイン不要）
+  // お知らせリアクションを先行読み込み
   loadAllNoticeReactions();
 
   // 天気は即時取得（30分ごと更新）
   fetchAndRenderWeather();
   setInterval(fetchAndRenderWeather, 30 * 60 * 1000);
 
-  // ===== 天気パネル タブ切り替え・閉じる =====
+  // ===== 天気パネル =====
   document.getElementById('wpanel-close').addEventListener('click', closeWeatherPanel);
   document.getElementById('tab-radar').addEventListener('click', () => switchWeatherTab('radar'));
   document.getElementById('tab-solar').addEventListener('click', () => switchWeatherTab('solar'));
 
-  // ===== 太陽光発電カード（イベント委譲） =====
-  // data-solar-open 属性を持つ要素をどこでもクリックで天気パネルを開く
+  // ===== 太陽光発電カード =====
   document.addEventListener('click', e => {
     const card = e.target.closest('[data-solar-open]');
     if (card) {
@@ -5707,7 +1885,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === e.currentTarget) document.getElementById('guide-modal').classList.remove('visible');
   });
 
-  // ===== サービスピッカー 閉じる =====
+  // ===== サービスピッカー =====
   document.getElementById('service-picker-cancel').addEventListener('click', closeServicePicker);
   document.getElementById('service-picker-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeServicePicker();
@@ -5719,8 +1897,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await migrateCategories();
     await migrateAddBox();
     await loadCategories();
-    subscribeNotices(); // onSnapshot 開始（以降は自動更新）
-    subscribeCards();   // onSnapshot 開始（以降は自動更新）
+    subscribeNotices();
+    subscribeCards();
   } catch (err) {
     console.error('Firestore エラー:', err);
   }
@@ -5729,7 +1907,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-favorites-only').addEventListener('click', toggleFavoritesOnly);
   applyFavoritesOnlyMode();
 
-  // ===== ニックネーム（ユーザー）モーダル =====
+  // ===== ニックネーム =====
   document.getElementById('btn-user').addEventListener('click', () => showUsernameModal(true));
   updateUsernameDisplay();
 
@@ -5747,7 +1925,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (name) await applyUsername(name);
   });
   document.getElementById('username-skip').addEventListener('click', closeUsernameModal);
-  // username-modal: 入力系のため枠外クリックでは閉じない
 
   // ===== ロックボタン =====
   document.getElementById('btn-lock-header').addEventListener('click', lockPortal);
@@ -5759,27 +1936,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('lock-key-del').addEventListener('click', handleLockDelete);
   document.getElementById('btn-lock-switch-user').addEventListener('click', lockSwitchUser);
 
-  // キーボードでもPIN入力可
+  // キーボードでもPIN入力
   document.addEventListener('keydown', e => {
     if (document.getElementById('lock-screen').hidden) return;
     if (/^[0-9]$/.test(e.key)) handleLockKeyPress(e.key);
     if (e.key === 'Backspace') handleLockDelete();
   });
 
-  // セキュリティ設定モーダル
+  // セキュリティ設定
   document.getElementById('btn-open-security').addEventListener('click', () => {
     closeUsernameModal();
     openSecurityModal();
   });
   document.getElementById('security-cancel').addEventListener('click', closeSecurityModal);
-  // security-modal: PIN入力・設定系のため枠外クリックでは閉じない
 
   // ロック機能 ON/OFF トグル
   document.getElementById('lock-enabled-toggle').addEventListener('change', async e => {
-    lockEnabled = e.target.checked;
-    document.getElementById('security-autolock-section').hidden = !lockEnabled;
-    document.getElementById('btn-lock-header').hidden = !(lockEnabled && lockPinEnabled && currentUsername);
-    if (lockEnabled && lockPinEnabled) {
+    state.lockEnabled = e.target.checked;
+    document.getElementById('security-autolock-section').hidden = !state.lockEnabled;
+    document.getElementById('btn-lock-header').hidden = !(state.lockEnabled && state.lockPinEnabled && state.currentUsername);
+    if (state.lockEnabled && state.lockPinEnabled) {
       startActivityTracking();
     } else {
       stopActivityTracking();
@@ -5787,14 +1963,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     await saveLockSettings();
   });
 
-  // 自動ロック時間ボタン
+  // 自動ロック時間
   document.getElementById('autolock-time-grid').addEventListener('click', async e => {
     const btn = e.target.closest('.autolock-time-btn');
     if (!btn) return;
-    autoLockMinutes = parseInt(btn.dataset.minutes);
+    state.autoLockMinutes = parseInt(btn.dataset.minutes);
     document.querySelectorAll('.autolock-time-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    lastActivityAt = Date.now();
+    state.lastActivityAt = Date.now();
     await saveLockSettings();
   });
 
@@ -5805,7 +1981,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('admin-cancel').addEventListener('click', closeAdminModal);
   document.getElementById('admin-close').addEventListener('click', closeAdminModal);
-  // admin-modal: 設定入力系のため枠外クリックでは閉じない
   document.getElementById('admin-auth-btn').addEventListener('click', async () => {
     const pin   = document.getElementById('admin-pin-input').value;
     const errEl = document.getElementById('admin-auth-error');
@@ -5848,25 +2023,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     errEl.hidden  = true;
     if (!/^\d{4}$/.test(newPin))   { errEl.textContent = '4桁の数字を入力してください'; errEl.hidden = false; return; }
     if (newPin !== confirm)         { errEl.textContent = 'PINが一致しません';           errEl.hidden = false; return; }
-    if (!currentUsername)           { errEl.textContent = 'ユーザーネームを設定してください'; errEl.hidden = false; return; }
+    if (!state.currentUsername)     { errEl.textContent = 'ユーザーネームを設定してください'; errEl.hidden = false; return; }
     try {
       await setLockPin(newPin);
       closeSecurityModal();
-      // フィードバック
       const btn = document.getElementById('btn-lock-header');
       btn.classList.add('lock-set-flash');
       setTimeout(() => btn.classList.remove('lock-set-flash'), 1000);
     } catch (_) { errEl.textContent = '設定に失敗しました'; errEl.hidden = false; }
   });
 
-  // PIN変更（現在PIN確認後、設定エリアを再表示）
+  // PIN変更
   document.getElementById('btn-change-pin').addEventListener('click', async () => {
     const cur    = document.getElementById('current-pin-input').value;
     const errEl  = document.getElementById('security-current-error');
     errEl.hidden = true;
     const hash   = await hashPIN(cur);
-    if (hash !== lockPinHash) { errEl.textContent = 'PINが正しくありません'; errEl.hidden = false; return; }
-    // 設定エリアに切り替え
+    if (hash !== state.lockPinHash) { errEl.textContent = 'PINが正しくありません'; errEl.hidden = false; return; }
     document.getElementById('security-manage-area').hidden = true;
     document.getElementById('security-setup-area').hidden  = false;
     document.getElementById('new-pin-input').value    = '';
@@ -5881,22 +2054,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     const errEl  = document.getElementById('security-current-error');
     errEl.hidden = true;
     const hash   = await hashPIN(cur);
-    if (hash !== lockPinHash) { errEl.textContent = 'PINが正しくありません'; errEl.hidden = false; return; }
+    if (hash !== state.lockPinHash) { errEl.textContent = 'PINが正しくありません'; errEl.hidden = false; return; }
     await removeLockPin();
     closeSecurityModal();
   });
 
-  // 初回訪問時にニックネームモーダルを表示
-  if (!currentUsername) {
+  // 初回訪問時にニックネームモーダル
+  if (!state.currentUsername) {
     setTimeout(() => showUsernameModal(false), 600);
-    renderTodoSection(); // 非ログイン時は非表示にする
+    renderTodoSection();
   } else {
-    loadPersonalData(currentUsername);
+    loadPersonalData(state.currentUsername);
   }
 
   // ===== TODO パネル =====
   document.getElementById('todo-toggle-btn').addEventListener('click', () => {
-    todoCollapsed = !todoCollapsed;
+    state.todoCollapsed = !state.todoCollapsed;
     renderTodoSection();
   });
 
@@ -5918,7 +2091,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ===== メール返信アシスタント =====
   document.getElementById('btn-email-assist').addEventListener('click', openEmailModal);
   document.getElementById('email-modal-close').addEventListener('click', closeEmailModal);
-  // email-modal: メール入力系のため枠外クリックでは閉じない
   document.getElementById('email-profile-save').addEventListener('click', saveEmailProfile);
   document.getElementById('email-profile-delete').addEventListener('click', deleteEmailProfile);
   document.getElementById('email-profile-add').addEventListener('click', addEmailProfile);
@@ -5926,18 +2098,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-copy-output').addEventListener('click', copyEmailOutput);
   document.getElementById('btn-reset-output').addEventListener('click', resetEmailOutput);
   document.getElementById('email-api-key-save').addEventListener('click', saveGeminiApiKey);
-  // タブ切り替え
   document.querySelectorAll('.email-tab').forEach(btn => {
     btn.addEventListener('click', () => switchEmailTab(btn.dataset.tab));
   });
-  // プロフィールタブ
   document.getElementById('ep-save').addEventListener('click', saveUserEmailProfile);
   document.getElementById('ep-reset-sig').addEventListener('click', resetSignatureTemplate);
   document.getElementById('ep-signature').addEventListener('input', e => updateSignaturePreview(e.target.value));
 
   // ===== チャットFAB =====
   document.getElementById('chat-fab').addEventListener('click', () => {
-    chatPanelOpen ? closeChatPanel() : openChatPanel();
+    state.chatPanelOpen ? closeChatPanel() : openChatPanel();
   });
   document.getElementById('chat-panel-close').addEventListener('click', closeChatPanel);
   initChatResize();
@@ -5948,13 +2118,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
   });
 
-  // ===== チャット内ショートカット（タスク・ファイル転送） =====
+  // ===== チャット内ショートカット =====
   document.getElementById('chat-launch-task').addEventListener('click', openTaskModal);
   document.getElementById('chat-launch-ft').addEventListener('click', openFileTransferPanel);
 
-  // ===== ファイル転送FAB・パネル =====
+  // ===== ファイル転送 =====
   document.getElementById('ft-fab').addEventListener('click', () => {
-    _ftPanelOpen ? closeFileTransferPanel() : openFileTransferPanel();
+    state._ftPanelOpen ? closeFileTransferPanel() : openFileTransferPanel();
   });
   document.getElementById('ft-panel-close').addEventListener('click', closeFileTransferPanel);
   document.getElementById('ft-new-btn').addEventListener('click', openFtSendModal);
@@ -5962,26 +2132,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('ft-confirm-btn').addEventListener('click', confirmFtSend);
 
   // ===== Drive シェア =====
-  // タブ切り替え
   document.querySelectorAll('.ft-tab').forEach(btn =>
     btn.addEventListener('click', () => switchFtTab(btn.dataset.tab)));
-  // Drive送信ボタン
   document.getElementById('ft-drive-send-btn').addEventListener('click', openDriveSendModal);
-  // Drive送信モーダル
   document.getElementById('ft-drive-cancel-btn').addEventListener('click', closeDriveSendModal);
   document.getElementById('ft-drive-confirm-btn').addEventListener('click', confirmDriveSend);
-  // ft-drive-send-modal: 入力フォームのため枠外クリックでは閉じない
-  // 自分のDriveリンク登録
   document.getElementById('ft-my-drive-link-btn').addEventListener('click', openMyDriveLinkModal);
   document.getElementById('ft-my-drive-cancel-btn').addEventListener('click', closeMyDriveLinkModal);
   document.getElementById('ft-my-drive-save-btn').addEventListener('click', saveMyDriveLinkFromModal);
-  // ft-my-drive-modal: URL入力のため枠外クリックでは閉じない
 
   // ファイル送信モーダル: ファイル選択
   document.getElementById('ft-file-input').addEventListener('change', e => {
     const file = e.target.files[0];
     if (!file) return;
-    _ftSelectedFile = file;
+    state._ftSelectedFile = file;
     const selEl = document.getElementById('ft-selected-file');
     selEl.innerHTML = `<i class="fa-solid ${getFileIcon(file.type)}"></i> ${esc(file.name)} <span style="color:var(--text-muted)">(${formatFileSize(file.size)})</span>`;
     selEl.hidden = false;
@@ -5998,7 +2162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       dropZone.classList.remove('drag-over');
       const file = e.dataTransfer.files[0];
       if (!file) return;
-      _ftSelectedFile = file;
+      state._ftSelectedFile = file;
       const selEl = document.getElementById('ft-selected-file');
       selEl.innerHTML = `<i class="fa-solid ${getFileIcon(file.type)}"></i> ${esc(file.name)} <span style="color:var(--text-muted)">(${formatFileSize(file.size)})</span>`;
       selEl.hidden = false;
@@ -6011,49 +2175,39 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('new-dm-cancel').addEventListener('click', () => {
     document.getElementById('new-dm-modal').classList.remove('visible');
   });
-  // new-dm-modal: ユーザー検索・選択系のため枠外クリックでは閉じない
-
   document.getElementById('btn-new-group').addEventListener('click', openNewGroupModal);
   document.getElementById('new-group-cancel').addEventListener('click', () => {
     document.getElementById('new-group-modal').classList.remove('visible');
   });
-  // new-group-modal: グループ名入力・メンバー選択のため枠外クリックでは閉じない
   document.getElementById('new-group-create').addEventListener('click', createGroupRoom);
 
-  // ===== 部門間依頼・目安箱ボタン =====
+  // ===== 部門間依頼・目安箱 =====
   document.getElementById('btn-reqboard').addEventListener('click', () => openReqModal());
   document.getElementById('reqboard-modal-close').addEventListener('click', closeReqModal);
-  // reqboard-modal: 依頼・投稿フォームのため枠外クリックでは閉じない
   document.querySelectorAll('.reqboard-tab').forEach(btn => {
     btn.addEventListener('click', () => switchReqTab(btn.dataset.tab));
   });
   document.querySelectorAll('.reqboard-subtab').forEach(btn => {
     btn.addEventListener('click', () => switchReqSubTab(btn.dataset.subtab));
   });
-  // ステータス変更モーダル
   document.getElementById('req-status-cancel').addEventListener('click', () => {
     document.getElementById('req-status-modal').classList.remove('visible');
-    _pendingStatusChange = null;
+    state._pendingStatusChange = null;
   });
-  // req-status-modal: コメント入力があるため枠外クリックでは閉じない
   document.getElementById('req-status-ok').addEventListener('click', updateRequestStatus);
-  // 目安箱返信モーダル
   document.getElementById('sugg-reply-cancel').addEventListener('click', () => {
     document.getElementById('sugg-reply-modal').classList.remove('visible');
-    _pendingSuggReply = null;
+    state._pendingSuggReply = null;
   });
-  // sugg-reply-modal: 返信テキスト入力のため枠外クリックでは閉じない
   document.getElementById('sugg-reply-ok').addEventListener('click', sendSuggReply);
-  // 管理者パネル：目安箱閲覧者追加
   document.getElementById('admin-suggbox-add-btn').addEventListener('click', addSuggBoxViewer);
   document.getElementById('admin-suggbox-add-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') addSuggBoxViewer();
   });
 
-  // ===== タスクボタン =====
+  // ===== タスク =====
   document.getElementById('btn-task').addEventListener('click', openTaskModal);
   document.getElementById('task-modal-close').addEventListener('click', closeTaskModal);
-  // task-modal: タスク入力フォームのため枠外クリックでは閉じない
   document.querySelectorAll('.task-tab').forEach(btn => {
     btn.addEventListener('click', () => switchTaskTab(btn.dataset.tab));
   });
@@ -6068,12 +2222,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-notice-bell').addEventListener('click', () => {
     const board = document.getElementById('notice-board');
     if (board) board.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    if (currentUsername) markAllNoticesRead();
+    if (state.currentUsername) markAllNoticesRead();
   });
 
   // ===== プライベートセクションモーダル =====
   document.getElementById('private-section-cancel').addEventListener('click', closePrivateSectionModal);
-  // private-section-modal: セクション名・アイコン入力のため枠外クリックでは閉じない
 
   document.getElementById('private-section-icon').addEventListener('input', e => {
     const prev = document.getElementById('private-section-icon-preview');
@@ -6089,10 +2242,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>';
     try {
-      if (editingPrivateSectionId) {
-        await updatePrivateSection(editingPrivateSectionId, { label, icon, colorIndex: privateSectionColorIndex });
+      if (state.editingPrivateSectionId) {
+        await updatePrivateSection(state.editingPrivateSectionId, { label, icon, colorIndex: state.privateSectionColorIndex });
       } else {
-        await addPrivateSection({ label, icon, colorIndex: privateSectionColorIndex, order: privateCategories.length });
+        await addPrivateSection({ label, icon, colorIndex: state.privateSectionColorIndex, order: state.privateCategories.length });
       }
       closePrivateSectionModal();
       renderAllSections();
@@ -6106,18 +2259,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('private-section-delete').addEventListener('click', async () => {
-    if (!editingPrivateSectionId) return;
-    const cat = privateCategories.find(c => c.docId === editingPrivateSectionId);
+    if (!state.editingPrivateSectionId) return;
+    const cat = state.privateCategories.find(c => c.docId === state.editingPrivateSectionId);
     if (await confirmDelete(`「${cat?.label}」を削除しますか？（中のカードも全て削除されます）`)) {
-      const sectionCards = privateCards.filter(c => c.sectionId === editingPrivateSectionId);
+      const sectionCards = state.privateCards.filter(c => c.sectionId === state.editingPrivateSectionId);
       await Promise.all(sectionCards.map(c => deletePrivateCard(c.id)));
-      await deletePrivateSection(editingPrivateSectionId);
+      await deletePrivateSection(state.editingPrivateSectionId);
       closePrivateSectionModal();
       renderAllSections();
     }
   });
 
-  // コンテキストメニューを閉じるグローバルリスナー
+  // コンテキストメニュー
   document.addEventListener('click', closeContextMenu);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContextMenu(); });
 
@@ -6145,11 +2298,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('pin-cancel').addEventListener('click', closePinModal);
   document.getElementById('pin-submit').addEventListener('click', handlePinSubmit);
-  // pin-modal: PIN入力のため枠外クリックでは閉じない
 
   // ===== カード編集モーダル =====
   document.getElementById('card-cancel').addEventListener('click', closeCardModal);
-  // 枠外クリックでは閉じない（意図しない操作防止）
   document.getElementById('edit-icon').addEventListener('input', e => {
     const val = e.target.value.trim();
     updateIconPreview(val);
@@ -6169,32 +2320,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.innerHTML = '<span class="spinner"></span>';
 
     try {
-      if (editingIsPrivate) {
-        if (editingDocId) {
-          await savePrivateCard(editingDocId, { label, icon: icon || 'fa-solid fa-star', url: url || '#' });
+      if (state.editingIsPrivate) {
+        if (state.editingDocId) {
+          await savePrivateCard(state.editingDocId, { label, icon: icon || 'fa-solid fa-star', url: url || '#' });
         } else {
           await addPrivateCard({
             label,
             icon: icon || 'fa-solid fa-star',
             url: url || '#',
-            sectionId: editingPrivateSectionDocId,
-            parentId: editingParentId || null,
+            sectionId: state.editingPrivateSectionDocId,
+            parentId: state.editingParentId || null,
           });
         }
       } else {
-        const isStatic = !editingDocId || editingDocId.startsWith('init-');
+        const isStatic = !state.editingDocId || state.editingDocId.startsWith('init-');
         if (!isStatic) {
-          const card = allCards.find(c => c.id === editingDocId);
+          const card = state.allCards.find(c => c.id === state.editingDocId);
           const updateData = { label, url };
           if (!card?.isExternalTool) updateData.icon = icon;
-          await saveCard(editingDocId, updateData);
+          await saveCard(state.editingDocId, updateData);
         } else {
           await addCard({
             label,
             icon:     icon || 'fa-solid fa-star',
             url:      url  || '#',
-            category: editingCategory,
-            parentId: editingParentId || null,
+            category: state.editingCategory,
+            parentId: state.editingParentId || null,
           });
         }
       }
@@ -6209,18 +2360,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('card-delete').addEventListener('click', async () => {
-    if (editingIsPrivate) {
-      const card = privateCards.find(c => c.id === editingDocId);
+    if (state.editingIsPrivate) {
+      const card = state.privateCards.find(c => c.id === state.editingDocId);
       if (!card) return;
       if (await confirmDelete(`「${card.label}」を削除しますか？`)) {
-        await deletePrivateCard(editingDocId);
+        await deletePrivateCard(state.editingDocId);
         closeCardModal();
       }
     } else {
-      const card = allCards.find(c => c.id === editingDocId);
+      const card = state.allCards.find(c => c.id === state.editingDocId);
       if (!card) return;
       if (await confirmDelete(`「${card.label}」を削除しますか？`)) {
-        await deleteCard(editingDocId);
+        await deleteCard(state.editingDocId);
         closeCardModal();
       }
     }
@@ -6228,7 +2379,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== お知らせモーダル =====
   document.getElementById('notice-cancel').addEventListener('click', closeNoticeModal);
-  // notice-modal: お知らせ編集フォームのため枠外クリックでは閉じない
 
   document.getElementById('notice-save').addEventListener('click', async () => {
     const title = document.getElementById('notice-title').value.trim();
@@ -6241,13 +2391,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.innerHTML = '<span class="spinner"></span>';
 
     try {
-      if (editingNoticeId) {
-        await saveNotice(editingNoticeId, { title, body, priority });
-      } else {
-        await addNotice({ title, body, priority });
-      }
+      await moduleSaveNotice({ title, body, priority, updatedAt: serverTimestamp() });
       closeNoticeModal();
-      renderNotices(allNotices);
+      renderNotices(state.allNotices);
     } catch (err) {
       console.error('お知らせ保存エラー:', err);
       alert('保存に失敗しました。');
@@ -6258,18 +2404,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('notice-delete').addEventListener('click', async () => {
-    if (!editingNoticeId) return;
-    const n = allNotices.find(x => x.id === editingNoticeId);
+    if (!state.editingNoticeId) return;
+    const n = state.allNotices.find(x => x.id === state.editingNoticeId);
     if (await confirmDelete(`「${n?.title}」を削除しますか？`)) {
-      await deleteNotice(editingNoticeId);
+      await moduleDeleteNotice(state.editingNoticeId);
       closeNoticeModal();
-      renderNotices(allNotices);
+      renderNotices(state.allNotices);
     }
   });
 
   // ===== カテゴリモーダル =====
   document.getElementById('cat-cancel').addEventListener('click', closeCategoryModal);
-  // category-modal: カテゴリ名・アイコン入力のため枠外クリックでは閉じない
 
   document.getElementById('cat-icon').addEventListener('input', e => {
     updateCatIconPreview(e.target.value.trim());
@@ -6285,12 +2430,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.innerHTML = '<span class="spinner"></span>';
 
     try {
-      if (editingCategoryId) {
-        await updateCategoryInFirestore(editingCategoryId, { label, icon, colorIndex: selectedColorIndex });
+      if (state.editingCategoryId) {
+        await updateCategoryInFirestore(state.editingCategoryId, { label, icon, colorIndex: state.selectedColorIndex });
       } else {
-        const maxOrder = allCategories.length > 0 ? Math.max(...allCategories.map(c => c.order)) + 1 : 10;
+        const maxOrder = state.allCategories.length > 0 ? Math.max(...state.allCategories.map(c => c.order)) + 1 : 10;
         const newId = label.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '') + '-' + Date.now();
-        await addCategoryToFirestore({ id: newId, label, icon, colorIndex: selectedColorIndex, order: maxOrder, isExternal: false });
+        await addCategoryToFirestore({ id: newId, label, icon, colorIndex: state.selectedColorIndex, order: maxOrder, isExternal: false });
       }
       closeCategoryModal();
       renderAllSections();
@@ -6304,15 +2449,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('cat-delete').addEventListener('click', async () => {
-    if (!editingCategoryId) return;
-    const cat = allCategories.find(c => c.docId === editingCategoryId);
-    const hasCards = allCards.some(c => c.category === cat?.id);
+    if (!state.editingCategoryId) return;
+    const cat = state.allCategories.find(c => c.docId === state.editingCategoryId);
+    const hasCards = state.allCards.some(c => c.category === cat?.id);
     if (hasCards) {
       alert('このカテゴリにはカードがあります。先にカードを削除または移動してください。');
       return;
     }
     if (await confirmDelete(`「${cat?.label}」を削除しますか？`)) {
-      await deleteCategoryFromFirestore(editingCategoryId);
+      await deleteCategoryFromFirestore(state.editingCategoryId);
       closeCategoryModal();
       renderAllSections();
     }
@@ -6353,8 +2498,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // ===== モーダル開閉時に body スクロールをロック（スクロール伝播防止）=====
-  // .modal-overlay に 'visible' クラスが付くたびに全モーダルの状態を確認して body を制御
+  // ===== モーダル開閉時に body スクロールをロック =====
   const _modalScrollObserver = new MutationObserver(() => {
     const anyVisible = document.querySelector('.modal-overlay.visible') !== null;
     document.body.style.overflow = anyVisible ? 'hidden' : '';
@@ -6365,8 +2509,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== ファイル転送中のページ離脱警告 =====
   window.addEventListener('beforeunload', e => {
-    const pendingOut = _ftOutgoing.filter(s => s.status === 'pending' || s.status === 'accepted');
-    const pendingIn  = _ftIncoming.filter(s => s.status === 'pending');
+    const pendingOut = state._ftOutgoing.filter(s => s.status === 'pending' || s.status === 'accepted');
+    const pendingIn  = state._ftIncoming.filter(s => s.status === 'pending');
     if (pendingOut.length > 0 || pendingIn.length > 0) {
       e.preventDefault();
       e.returnValue = '';
