@@ -491,6 +491,7 @@ body::after {
   padding: var(--space-sm) 0;
   max-height: 420px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .svc-pick-btn {
@@ -1250,6 +1251,7 @@ body::after {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--space-lg) var(--space-xl);
   display: flex;
   flex-direction: column;
@@ -1347,6 +1349,7 @@ body::after {
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--transition-base);
+  overscroll-behavior: contain; /* 背景へのスクロール伝播防止 */
 }
 
 .modal-overlay.visible {
@@ -1362,6 +1365,7 @@ body::after {
   width: min(480px, 90vw);
   max-height: 90vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   box-shadow: var(--shadow-lg);
   transform: translateY(16px);
   transition: transform var(--transition-slow);
@@ -1716,6 +1720,7 @@ body::after {
   gap: 4px;
   max-height: 216px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--space-sm);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border-glass);
@@ -4911,6 +4916,7 @@ html.font-xl { font-size: 21px; }
 .new-dm-user-list {
   max-height: 220px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: var(--radius-md);
 }
@@ -5131,6 +5137,7 @@ html.font-xl { font-size: 21px; }
 .task-tab-content {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 12px 16px;
 }
 .task-tab-content::-webkit-scrollbar { width: 4px; }
@@ -5383,6 +5390,7 @@ html.font-xl { font-size: 21px; }
   padding: 12px 8px;
   gap: 4px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .email-sidebar-label {
   font-size: 0.68rem;
@@ -5487,6 +5495,7 @@ html.font-xl { font-size: 21px; }
 .email-main-area {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 16px 20px;
   display: flex;
   flex-direction: column;
@@ -5793,6 +5802,7 @@ html.font-xl { font-size: 21px; }
   gap: 12px;
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* ===========================
@@ -6307,6 +6317,7 @@ html.font-xl { font-size: 21px; }
   gap: 8px;
   max-height: 320px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .admin-loading { color: var(--text-secondary); font-size: 0.85rem; text-align: center; padding: 20px; }
 .admin-user-item {
@@ -6564,6 +6575,7 @@ html.font-xl { font-size: 21px; }
 .reqboard-content {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 14px 16px;
   display: flex;
   flex-direction: column;

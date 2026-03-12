@@ -191,6 +191,31 @@ assigned_tasks/{taskId}
 - タブ切り替えで表示/非表示するラッパー div に flex/min-height を付け忘れる
 - `.modal-glass` 使用なのに別途 `max-height` を付けず無限に伸びる
 
+### モーダル内スクロールの背景伝播防止（必須ルール）
+
+モーダル内でスクロールすると背景ページも一緒にスクロールしてしまう問題（スクロールチェーン）を防ぐため、以下の2段階対策が**実装済み・必ず維持すること**。
+
+#### 対策①：CSS `overscroll-behavior: contain`
+モーダル内で `overflow-y: auto` を持つすべての要素に必ず追加する。
+```css
+.xxx-scrollable-area {
+  overflow-y: auto;
+  overscroll-behavior: contain; /* ← スクロール端で親に伝播しない */
+}
+```
+適用済み対象：`.modal-glass` / `.guide-body` / `.task-tab-content` / `.reqboard-content` /
+`.email-main-area` / `.email-profile-sidebar` / `.email-tab-content` /
+`.admin-user-list` / `.new-dm-user-list` / `.service-picker-grid` / `.icon-picker`
+
+#### 対策②：JS MutationObserver による body スクロールロック
+`script.js` の DOMContentLoaded 末尾に実装済み。`.modal-overlay.visible` が存在する間は
+`document.body.style.overflow = 'hidden'` を自動適用する。
+**新しいモーダルを追加する場合も `.modal-overlay` クラスを使えば自動で適用される。**
+
+#### ❌ やってはいけないこと
+- モーダル内の `overflow-y: auto` 要素に `overscroll-behavior: contain` を付け忘れる
+- `.modal-overlay` を使わず独自のオーバーレイ構造にする（body ロックが効かなくなる）
+
 ### 日付入力フィールド（必須ルール）
 日付入力は常に「カレンダーアイコンのみ」で実装する。テキスト部分は非表示にし、アイコン色は各テーマに合わせる。
 

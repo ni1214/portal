@@ -5929,6 +5929,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // ===== モーダル開閉時に body スクロールをロック（スクロール伝播防止）=====
+  // .modal-overlay に 'visible' クラスが付くたびに全モーダルの状態を確認して body を制御
+  const _modalScrollObserver = new MutationObserver(() => {
+    const anyVisible = document.querySelector('.modal-overlay.visible') !== null;
+    document.body.style.overflow = anyVisible ? 'hidden' : '';
+  });
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    _modalScrollObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
+  });
+
   // ===== ファイル転送中のページ離脱警告 =====
   window.addEventListener('beforeunload', e => {
     const pendingOut = _ftOutgoing.filter(s => s.status === 'pending' || s.status === 'accepted');
