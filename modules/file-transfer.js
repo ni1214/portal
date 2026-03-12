@@ -356,23 +356,33 @@ export function switchFtTab(tab) {
 export function renderDrivePanel() {
   if (!state._ftPanelOpen || state._ftCurrentTab !== 'drive') return;
   const incomingEl    = document.getElementById('ft-drive-incoming-list');
-  const outgoingEl    = document.getElementById('ft-drive-outgoing-list');
   const incomingTitle = document.getElementById('ft-drive-incoming-title');
-  const outgoingTitle = document.getElementById('ft-drive-outgoing-title');
   const emptyEl       = document.getElementById('ft-drive-empty');
   const contactsEl    = document.getElementById('ft-contacts-list');
   const contactsTitle = document.getElementById('ft-contacts-title');
   if (!incomingEl) return;
 
-  // ===== 登録済み連絡先 =====
+  // ===== インラインURLウィジェットの状態を更新 =====
+  const linkInput = document.getElementById('ft-my-link-input');
+  const linkCopy  = document.getElementById('ft-my-link-copy');
+  const linkOpen  = document.getElementById('ft-my-link-open');
+  const shareBtn  = document.getElementById('ft-drive-send-btn');
+  if (linkInput && document.activeElement !== linkInput) {
+    linkInput.value = state._myDriveUrl || '';
+  }
+  const hasUrl = !!state._myDriveUrl;
+  if (linkCopy)  linkCopy.hidden   = !hasUrl;
+  if (linkOpen)  linkOpen.hidden   = !hasUrl;
+  if (shareBtn)  shareBtn.disabled = !hasUrl;
+
+  // ===== 登録済み連絡先（相手のフォルダを開く） =====
   const contacts = Object.entries(state._driveContacts)
     .sort((a, b) => (b[1].savedAt || 0) - (a[1].savedAt || 0));
   if (contactsTitle) contactsTitle.hidden = contacts.length === 0;
   if (contactsEl) {
     contactsEl.innerHTML = contacts.map(([name, info]) => {
-      const color = getUserAvatarColor(name);
+      const color   = getUserAvatarColor(name);
       const initial = name.charAt(0).toUpperCase();
-      const shortUrl = info.url.replace(/^https?:\/\/drive\.google\.com\//, '').slice(0, 30) + '…';
       return `<div class="ft-contact-item">
         <div class="ft-contact-avatar" style="background:${color}">${initial}</div>
         <div class="ft-contact-name" title="${esc(name)}">${esc(name)}</div>
@@ -385,7 +395,7 @@ export function renderDrivePanel() {
       </div>`;
     }).join('');
     contactsEl.querySelectorAll('.btn-ft-contact-send').forEach(btn => {
-      btn.addEventListener('click', () => window.open(btn.dataset.url, '_blank'));
+      btn.addEventListener('click', () => window.open(btn.dataset.url, '_blank', 'noopener,noreferrer'));
     });
     contactsEl.querySelectorAll('.btn-ft-contact-del').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -396,24 +406,24 @@ export function renderDrivePanel() {
     });
   }
 
-  // 受信（pending のみ表示）
+  // ===== 受信通知（pending のみ表示） =====
   const pending = state._driveIncoming.filter(s => s.status === 'pending');
   if (incomingTitle) incomingTitle.hidden = pending.length === 0;
   incomingEl.innerHTML = pending.map(s => {
-    const ts = s.createdAt?.seconds ? new Date(s.createdAt.seconds * 1000).toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+    const ts  = s.createdAt?.seconds ? new Date(s.createdAt.seconds * 1000).toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
     const msg = s.message ? `<div class="ft-drive-item-msg">${esc(s.message)}</div>` : '';
     return `<div class="ft-drive-item">
       <div class="ft-drive-item-header">
         <i class="fa-brands fa-google-drive ft-drive-item-icon"></i>
         <div class="ft-drive-item-meta">
-          <div class="ft-drive-item-from"><i class="fa-solid fa-arrow-right" style="font-size:0.65rem;opacity:0.5"></i> ${esc(s.from)} から</div>
+          <div class="ft-drive-item-from"><i class="fa-solid fa-arrow-right" style="font-size:0.65rem;opacity:0.5"></i> ${esc(s.from)} からリンクが届きました</div>
           <div class="ft-drive-item-time">${ts}</div>
         </div>
       </div>
       ${msg}
       <div class="ft-drive-item-actions">
-        <button class="btn-ft-drive-open" data-id="${s.id}" data-url="${esc(s.driveUrl)}">
-          <i class="fa-brands fa-google-drive"></i> Driveを開く
+        <button class="btn-ft-drive-open" data-id="${s.id}" data-url="${esc(s.driveUrl)}" data-from="${esc(s.from)}">
+          <i class="fa-solid fa-folder-open"></i> フォルダを開く
         </button>
         <button class="btn-ft-drive-dismiss" data-id="${s.id}" title="消去">
           <i class="fa-solid fa-xmark"></i>
@@ -422,80 +432,11 @@ export function renderDrivePanel() {
     </div>`;
   }).join('');
   incomingEl.querySelectorAll('.btn-ft-drive-open').forEach(btn =>
-    btn.addEventListener('click', () => openDriveShare(btn.dataset.id, btn.dataset.url)));
+    btn.addEventListener('click', () => openDriveShare(btn.dataset.id, btn.dataset.url, btn.dataset.from)));
   incomingEl.querySelectorAll('.btn-ft-drive-dismiss').forEach(btn =>
     btn.addEventListener('click', () => dismissDriveShare(btn.dataset.id)));
 
-  // 送信済み（直近10件）
-  const sent = [...state._driveOutgoing]
-    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
-    .slice(0, 10);
-  if (outgoingTitle) outgoingTitle.hidden = sent.length === 0;
-  outgoingEl.innerHTML = sent.map(s => {
-    const ts = s.createdAt?.seconds ? new Date(s.createdAt.seconds * 1000).toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
-    const statusHtml = s.status === 'viewed'
-      ? `<div class="ft-drive-status-viewed"><i class="fa-solid fa-check-double"></i> ${esc(s.to)} が確認済み</div>`
-      : `<div class="ft-drive-status-pending">→ ${esc(s.to)} 未確認</div>`;
-    return `<div class="ft-drive-item">
-      <div class="ft-drive-item-header">
-        <i class="fa-brands fa-google-drive ft-drive-item-icon"></i>
-        <div class="ft-drive-item-meta">
-          <div class="ft-drive-item-from">→ ${esc(s.to)}</div>
-          <div class="ft-drive-item-time">${ts}</div>
-        </div>
-        <button class="btn-ft-drive-dismiss" data-id="${s.id}" title="消去" style="margin-left:auto">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-      ${statusHtml}
-    </div>`;
-  }).join('');
-  outgoingEl.querySelectorAll('.btn-ft-drive-dismiss').forEach(btn =>
-    btn.addEventListener('click', () => dismissDriveShare(btn.dataset.id)));
-
-  if (emptyEl) emptyEl.hidden = (pending.length + sent.length) > 0;
-
-  // 登録済みDriveリンクがあればボタンラベルを更新
-  const settingBtn = document.getElementById('ft-my-drive-link-btn');
-  if (settingBtn) {
-    settingBtn.innerHTML = state._myDriveUrl
-      ? `<i class="fa-solid fa-check" style="color:#10b981"></i> Driveリンク登録済み（変更）`
-      : `<i class="fa-solid fa-gear"></i> 自分のDriveリンクを登録`;
-  }
-
-  // 自分のDriveリンク表示エリアを更新
-  const myDisplayEl  = document.getElementById('ft-my-drive-display');
-  const myDisplayUrl = document.getElementById('ft-my-drive-display-url');
-  const myDisplayCopy= document.getElementById('ft-my-drive-display-copy');
-  const myDisplayOpen= document.getElementById('ft-my-drive-display-open');
-  if (myDisplayEl) {
-    if (state._myDriveUrl) {
-      myDisplayEl.hidden = false;
-      if (myDisplayUrl) myDisplayUrl.textContent = state._myDriveUrl;
-      // コピーボタン（毎回付け直して重複防止）
-      if (myDisplayCopy) {
-        const newCopy = myDisplayCopy.cloneNode(true);
-        myDisplayCopy.replaceWith(newCopy);
-        newCopy.addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(state._myDriveUrl);
-            newCopy.innerHTML = '<i class="fa-solid fa-check"></i>';
-            setTimeout(() => { newCopy.innerHTML = '<i class="fa-solid fa-copy"></i>'; }, 1500);
-          } catch (_) { alert(state._myDriveUrl); }
-        });
-      }
-      // 開くボタン
-      if (myDisplayOpen) {
-        const newOpen = myDisplayOpen.cloneNode(true);
-        myDisplayOpen.replaceWith(newOpen);
-        newOpen.addEventListener('click', () => {
-          window.open(state._myDriveUrl, '_blank', 'noopener,noreferrer');
-        });
-      }
-    } else {
-      myDisplayEl.hidden = true;
-    }
-  }
+  if (emptyEl) emptyEl.hidden = (pending.length > 0 || contacts.length > 0);
 }
 
 // --- Driveを開く（既読にする） ---
@@ -512,97 +453,39 @@ export async function dismissDriveShare(id) {
   try { await deleteDoc(doc(db, 'drive_shares', id)); } catch (_) {}
 }
 
-// --- Drive送信モーダル ---
-// prefillUser / prefillUrl: 連絡先クイック送信ボタンから呼ぶとき指定
-export async function openDriveSendModal(prefillUser = null, prefillUrl = null) {
+// --- Drive共有モーダル ---
+export async function openDriveSendModal(prefillUser = null) {
   if (!state.currentUsername) { alert('ユーザーネームを設定してください'); return; }
+  if (!state._myDriveUrl) {
+    alert('先に「自分の共有フォルダリンク」を入力してください。');
+    return;
+  }
   state._ftDriveSelectedUser = prefillUser || null;
 
   // モーダルを初期化
   document.getElementById('ft-drive-user-search').value = '';
-  document.getElementById('ft-drive-message').value = '';
+  document.getElementById('ft-drive-message').value     = '';
+  document.getElementById('ft-drive-form-group').hidden = !prefillUser;
+  document.getElementById('ft-drive-confirm-btn').hidden = !prefillUser;
   document.getElementById('ft-drive-send-modal').classList.add('visible');
 
-  // === 登録済み連絡先クイック選択エリアを構築 ===
-  const contacts = Object.entries(state._driveContacts)
-    .sort((a, b) => (b[1].savedAt || 0) - (a[1].savedAt || 0));
-  const quickArea = document.getElementById('ft-drive-quick-contacts');
-  const quickList = document.getElementById('ft-drive-quick-list');
-  // 連絡先がある、または自分のDriveリンクが登録済みなら表示
-  const showQuick = contacts.length > 0 || !!state._myDriveUrl;
-  if (showQuick && quickArea && quickList) {
-    // 連絡先がなく自分のURLのみの場合は「自分のURLをURLとして使用」アイテムを追加
-    const ownItem = (state._myDriveUrl && contacts.length === 0)
-      ? `<div class="ft-drive-quick-item" data-name="" data-url="${esc(state._myDriveUrl)}" style="border-color:rgba(52,168,83,0.35)">
-          <div style="width:24px;height:24px;border-radius:50%;background:#34a853;display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;color:#fff;flex-shrink:0">自</div>
-          <div style="flex:1;min-width:0">
-            <div class="ft-drive-quick-item-name">自分のDriveリンクをURLとして使用</div>
-            <div class="ft-drive-quick-item-url">${esc(state._myDriveUrl.length > 38 ? state._myDriveUrl.slice(0, 35) + '…' : state._myDriveUrl)}</div>
-          </div>
-          <i class="fa-brands fa-google-drive" style="color:#34a853;font-size:0.9rem;flex-shrink:0"></i>
-        </div>`
-      : '';
-    quickList.innerHTML = ownItem + contacts.map(([name, info]) => {
-      const color = getUserAvatarColor(name);
-      const initial = name.charAt(0).toUpperCase();
-      const shortUrl = info.url.length > 38 ? info.url.slice(0, 35) + '…' : info.url;
-      return `<div class="ft-drive-quick-item" data-name="${esc(name)}" data-url="${esc(info.url)}">
-        <div style="width:24px;height:24px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;color:#fff;flex-shrink:0">${initial}</div>
-        <div style="flex:1;min-width:0">
-          <div class="ft-drive-quick-item-name">${esc(name)}</div>
-          <div class="ft-drive-quick-item-url">${esc(shortUrl)}</div>
-        </div>
-        <i class="fa-brands fa-google-drive" style="color:#34a853;font-size:0.9rem;flex-shrink:0"></i>
-      </div>`;
-    }).join('');
-    quickArea.hidden = false;
-    // クイック選択クリック時：フォームに自動入力して選択状態に
-    quickList.querySelectorAll('.ft-drive-quick-item').forEach(item => {
-      item.addEventListener('click', () => {
-        if (item.dataset.name) {
-          // 通常連絡先：名前＋URLをセット
-          selectDriveSendTarget(item.dataset.name, item.dataset.url);
-        } else {
-          // 自分のURL候補：URLフィールドのみセット（名前は検索から選ぶ）
-          const urlInput = document.getElementById('ft-drive-url-input');
-          if (urlInput) urlInput.value = item.dataset.url;
-        }
-      });
-    });
-  } else {
-    if (quickArea) quickArea.hidden = true;
-  }
-
-  // prefill が指定されている場合（クイック送信ボタンから）は即選択状態に
-  if (prefillUser) {
-    const url = prefillUrl || state._driveContacts[prefillUser]?.url || state._myDriveUrl;
-    selectDriveSendTarget(prefillUser, url);
-  } else {
-    document.getElementById('ft-drive-form-group').hidden = true;
-    document.getElementById('ft-drive-confirm-btn').hidden = true;
-  }
+  if (prefillUser) selectDriveSendTarget(prefillUser);
 
   await deps.loadUsersForChatPicker?.('ft-drive-user-list', 'ft-drive-user-search', name => {
-    const savedUrl = state._driveContacts[name]?.url || state._myDriveUrl;
-    selectDriveSendTarget(name, savedUrl);
+    selectDriveSendTarget(name);
   }, true);
 }
 
-// 送信先決定時の共通処理（クイック選択 or 検索どちらからでも呼ばれる）
-// url 引数は互換のため残すが使用せず、常に自分の Drive URL を入力する
-export function selectDriveSendTarget(name, _url) {
+// 送信先決定時の共通処理（ユーザー検索から呼ばれる）
+export function selectDriveSendTarget(name) {
   state._ftDriveSelectedUser = name;
-  const urlInput   = document.getElementById('ft-drive-url-input');
-  const badge      = document.getElementById('ft-drive-saved-badge');
   const formGroup  = document.getElementById('ft-drive-form-group');
   const confirmBtn = document.getElementById('ft-drive-confirm-btn');
-  // 相手がすでに自分の URL を受け取ったことがあるなら「受信済み」バッジを表示
-  const hasSaved   = !!state._driveContacts[name];
-
-  urlInput.value = state._myDriveUrl || '';  // 送るのは常に自分の Drive URL
-  if (badge)  badge.hidden = !hasSaved;
-  formGroup.hidden  = false;
-  confirmBtn.hidden = false;
+  if (formGroup)  formGroup.hidden  = false;
+  if (confirmBtn) {
+    confirmBtn.hidden     = false;
+    confirmBtn.textContent = `「${name}」に共有する`;
+  }
 }
 
 export function closeDriveSendModal() {
@@ -611,17 +494,16 @@ export function closeDriveSendModal() {
 }
 
 export async function confirmDriveSend() {
-  const url = document.getElementById('ft-drive-url-input').value.trim();
   const msg = document.getElementById('ft-drive-message').value.trim();
   if (!state._ftDriveSelectedUser) { alert('送信先を選択してください'); return; }
+  const url = state._myDriveUrl;
   if (!url) {
-    // 自分の Drive URL が未設定なら登録を促す
-    alert('自分のDriveフォルダURLを設定してください。\n「自分のDriveリンクを登録」ボタンから設定できます。');
+    alert('自分のDriveフォルダURLを設定してください。\nDrive共有タブの入力欄に貼り付けてください。');
+    closeDriveSendModal();
     return;
   }
-  if (!url.startsWith('http')) { alert('正しいURLを入力してください'); return; }
   const btn = document.getElementById('ft-drive-confirm-btn');
-  btn.disabled = true;
+  btn.disabled    = true;
   btn.textContent = '送信中…';
   try {
     await addDoc(collection(db, 'drive_shares'), {
@@ -633,10 +515,7 @@ export async function confirmDriveSend() {
       createdAt: serverTimestamp(),
       viewedAt:  null,
     });
-    // 自分のDriveリンク未登録なら今回のURLで初期設定
-    if (!state._myDriveUrl && url) saveMyDriveUrl(url);
-    // 注意: 連絡先への保存は「相手から受信したとき」に自動保存される
-    //       (startDriveListeners の onSnapshot 内で saveDriveContact を呼ぶ)
+    // 連絡先は受信側が自動保存（startDriveListeners の onSnapshot 内）
     closeDriveSendModal();
     switchFtTab('drive');
     renderDrivePanel();
@@ -644,38 +523,71 @@ export async function confirmDriveSend() {
     console.error('Drive送信エラー:', err);
     alert('送信に失敗しました');
   } finally {
-    btn.disabled = false;
-    btn.textContent = '送信する';
+    btn.disabled    = false;
+    btn.textContent = `「${state._ftDriveSelectedUser || ''}」に共有する`;
   }
 }
 
-// --- 自分のDriveリンク登録モーダル ---
-export function openMyDriveLinkModal() {
-  document.getElementById('ft-my-drive-url').value = state._myDriveUrl;
-  document.getElementById('ft-my-drive-modal').classList.add('visible');
-}
+// --- インラインDriveリンクウィジェット初期化 ---
+// Drive パネルが DOM に存在するようになってから一度だけ呼ぶ
+export function initDriveLinkWidget() {
+  const input    = document.getElementById('ft-my-link-input');
+  const copyBtn  = document.getElementById('ft-my-link-copy');
+  const openBtn  = document.getElementById('ft-my-link-open');
+  const shareBtn = document.getElementById('ft-drive-send-btn');
+  if (!input) return;
 
-export function closeMyDriveLinkModal() {
-  document.getElementById('ft-my-drive-modal').classList.remove('visible');
-}
+  // 初期値を反映
+  input.value = state._myDriveUrl || '';
+  const hasUrl = !!state._myDriveUrl;
+  if (copyBtn)  copyBtn.hidden   = !hasUrl;
+  if (openBtn)  openBtn.hidden   = !hasUrl;
+  if (shareBtn) shareBtn.disabled = !hasUrl;
 
-export async function saveMyDriveLinkFromModal() {
-  const url = document.getElementById('ft-my-drive-url').value.trim();
-  if (url && !url.startsWith('http')) { alert('正しいURLを入力してください'); return; }
-  const btn = document.getElementById('ft-my-drive-save-btn');
-  btn.disabled = true;
-  btn.textContent = '保存中…';
-  try {
+  // URL入力 → 即時ボタン状態更新 → blur / Enter で自動保存
+  let _saveTimer;
+  const doSave = async () => {
+    clearTimeout(_saveTimer);
+    const url = input.value.trim();
+    if (url === state._myDriveUrl) return;
+    if (url && !url.startsWith('http')) {
+      input.style.borderColor = 'var(--accent-pink)';
+      return;
+    }
+    input.style.borderColor = '';
     await saveMyDriveUrl(url);
-    closeMyDriveLinkModal();
-    // 登録ボタンのラベル更新
-    const settingBtn = document.getElementById('ft-my-drive-link-btn');
-    if (settingBtn) settingBtn.innerHTML = `<i class="fa-solid fa-check" style="color:#10b981"></i> Driveリンク登録済み`;
-  } catch (err) {
-    alert('保存に失敗しました');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '保存する';
+    if (copyBtn)  copyBtn.hidden   = !url;
+    if (openBtn)  openBtn.hidden   = !url;
+    if (shareBtn) shareBtn.disabled = !url;
+  };
+  input.addEventListener('input', () => {
+    clearTimeout(_saveTimer);
+    const v = input.value.trim();
+    if (shareBtn) shareBtn.disabled = !v;
+    if (copyBtn)  copyBtn.hidden    = !v;
+    if (openBtn)  openBtn.hidden    = !v;
+    input.style.borderColor = '';
+    _saveTimer = setTimeout(doSave, 900);
+  });
+  input.addEventListener('blur',  doSave);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doSave(); } });
+
+  // コピーボタン
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(state._myDriveUrl);
+        copyBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
+        setTimeout(() => { copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>'; }, 1500);
+      } catch (_) { alert(state._myDriveUrl); }
+    });
+  }
+
+  // 開くボタン
+  if (openBtn) {
+    openBtn.addEventListener('click', () => {
+      if (state._myDriveUrl) window.open(state._myDriveUrl, '_blank', 'noopener,noreferrer');
+    });
   }
 }
 

@@ -59,7 +59,7 @@ import {
   switchFtTab, renderDrivePanel,
   openDriveShare, dismissDriveShare,
   openDriveSendModal, selectDriveSendTarget, closeDriveSendModal, confirmDriveSend,
-  openMyDriveLinkModal, closeMyDriveLinkModal, saveMyDriveLinkFromModal,
+  initDriveLinkWidget,
   openFtSendModal, closeFtSendModal, confirmFtSend,
   initiateFileTransfer, acceptFtTransfer, rejectFtTransfer,
   formatFileSize as ftFormatFileSize,
@@ -2150,9 +2150,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('ft-drive-send-btn').addEventListener('click', openDriveSendModal);
   document.getElementById('ft-drive-cancel-btn').addEventListener('click', closeDriveSendModal);
   document.getElementById('ft-drive-confirm-btn').addEventListener('click', confirmDriveSend);
-  document.getElementById('ft-my-drive-link-btn').addEventListener('click', openMyDriveLinkModal);
-  document.getElementById('ft-my-drive-cancel-btn').addEventListener('click', closeMyDriveLinkModal);
-  document.getElementById('ft-my-drive-save-btn').addEventListener('click', saveMyDriveLinkFromModal);
+  // インラインDriveリンクウィジェット初期化（loadPersonalData完了後に呼ばれる）
+  initDriveLinkWidget();
 
   // ファイル送信モーダル: ファイル選択
   document.getElementById('ft-file-input').addEventListener('change', e => {

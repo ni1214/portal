@@ -4550,29 +4550,48 @@ html.font-xl { font-size: 21px; }
 .ft-how-best   { font-size: 0.74rem; color: var(--text-muted); font-style: italic; }
 
 /* ========== 自分のDriveリンク表示（パネル内） ========== */
-#ft-my-drive-display {
+/* ========== インライン Drive リンクウィジェット ========== */
+.ft-my-link-widget {
   background: rgba(52,168,83,0.06);
   border: 1px solid rgba(52,168,83,0.25);
-  border-radius: var(--radius-sm);
-  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
   margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
 }
-.ft-my-drive-display-label {
-  font-size: 0.7rem; font-weight: 700; color: #34a853;
-  margin-bottom: 5px; display: flex; align-items: center; gap: 5px;
+.ft-my-link-label {
+  font-size: 0.71rem;
+  font-weight: 700;
+  color: #34a853;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
-.ft-my-drive-display-row {
-  display: flex; align-items: center; gap: 6px;
+.ft-my-link-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
-.ft-my-drive-display-url {
-  flex: 1; font-size: 0.7rem; color: var(--text-secondary);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.ft-my-link-input {
+  flex: 1;
   min-width: 0;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.72rem;
+  padding: 5px 8px;
+  font-family: var(--font-family);
+  outline: none;
+  transition: border-color 0.15s;
 }
-.ft-my-drive-display-copy,
-.ft-my-drive-display-open {
+.ft-my-link-input::placeholder { color: var(--text-muted); }
+.ft-my-link-input:focus { border-color: rgba(52,168,83,0.6); }
+.ft-my-link-icon-btn {
   flex-shrink: 0;
-  padding: 4px 7px;
+  padding: 5px 8px;
   background: none;
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-sm);
@@ -4581,8 +4600,35 @@ html.font-xl { font-size: 21px; }
   cursor: pointer;
   transition: all 0.15s;
 }
-.ft-my-drive-display-copy:hover { background: rgba(255,255,255,0.07); color: var(--text-primary); }
-.ft-my-drive-display-open:hover { background: rgba(52,168,83,0.1); color: #34a853; border-color: rgba(52,168,83,0.35); }
+.ft-my-link-icon-btn:hover { background: rgba(255,255,255,0.07); color: var(--text-primary); }
+.ft-my-link-icon-open:hover { background: rgba(52,168,83,0.1); color: #34a853; border-color: rgba(52,168,83,0.35); }
+/* 共有ボタン */
+.btn-ft-drive-share {
+  width: 100%;
+  padding: 9px;
+  background: linear-gradient(135deg, #34a853, #1e7e34);
+  border: none;
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, filter 0.15s;
+  font-family: var(--font-family);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.btn-ft-drive-share:hover:not(:disabled) { filter: brightness(1.1); }
+.btn-ft-drive-share:disabled {
+  background: var(--bg-glass);
+  border: 1px dashed var(--border-glass);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  filter: none;
+}
+[data-theme="light"] .ft-my-link-input { background: rgba(255,255,255,0.7); }
 
 /* ========== ファイル送信モーダル ========== */
 .ft-file-drop {

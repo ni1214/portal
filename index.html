@@ -229,7 +229,7 @@
         <i class="fa-solid fa-wifi"></i> P2P転送
       </button>
       <button class="ft-tab" data-tab="drive" id="ft-tab-drive">
-        <i class="fa-brands fa-google-drive"></i> Drive転送
+        <i class="fa-brands fa-google-drive"></i> Drive共有
         <span class="ft-tab-badge" id="ft-drive-tab-badge" hidden></span>
       </button>
     </div>
@@ -267,11 +267,12 @@
         </div>
         <!-- Drive エリア -->
         <div id="ft-drive-area" hidden>
+          <!-- 説明（折りたたみ可） -->
           <div class="ft-how-it-works ft-how-drive" id="ft-drive-desc">
             <i class="fa-brands fa-google-drive ft-how-icon" style="color:#34a853"></i>
             <div class="ft-how-content">
               <div class="ft-how-header">
-                <span><b>Drive転送</b> — DriveフォルダのURLを相手に通知</span>
+                <span><b>Drive共有</b> — DriveフォルダのURLをお互いに通知</span>
                 <button class="ft-how-toggle" id="ft-drive-desc-toggle" title="説明を折りたたむ">
                   <i class="fa-solid fa-chevron-up"></i>
                 </button>
@@ -279,94 +280,60 @@
               <div class="ft-how-body" id="ft-drive-desc-body">
                 <span class="ft-how-merit">✅ ネットワーク不問・サイズ制限なし・相手がオフラインでもOK</span><br>
                 <span class="ft-how-demerit">⚠ Driveフォルダを「リンクを知っている全員が編集可」に要設定</span><br>
-                <span class="ft-how-best">→ 外出先・大容量・確実に届けたいときに向いています</span>
+                <span class="ft-how-best">→ お互いのリンクを交換して相手のフォルダを直接開けます</span>
               </div>
             </div>
           </div>
-          <!-- 自分のDriveリンク表示 -->
-          <div id="ft-my-drive-display" hidden>
-            <div class="ft-my-drive-display-label"><i class="fa-solid fa-user"></i> 自分のDriveリンク</div>
-            <div class="ft-my-drive-display-row">
-              <span class="ft-my-drive-display-url" id="ft-my-drive-display-url"></span>
-              <button class="ft-my-drive-display-copy" id="ft-my-drive-display-copy" title="URLをコピー"><i class="fa-solid fa-copy"></i></button>
-              <button class="ft-my-drive-display-open" id="ft-my-drive-display-open" title="Driveを開く"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+          <!-- 自分のDriveリンク入力＆共有ウィジェット -->
+          <div class="ft-my-link-widget">
+            <div class="ft-my-link-label">
+              <i class="fa-solid fa-user"></i> 自分の共有フォルダリンク
             </div>
-          </div>
-          <!-- 登録済み連絡先 -->
-          <div class="ft-section-title" id="ft-contacts-title" hidden>登録済み連絡先</div>
-          <div id="ft-contacts-list"></div>
-          <!-- 送受信リスト -->
-          <button class="btn-ft-new btn-ft-drive-new" id="ft-drive-send-btn">
-            <i class="fa-brands fa-google-drive"></i> 自分のDriveリンクを送る
-          </button>
-          <div class="ft-section-title" id="ft-drive-incoming-title" hidden>受信したリンク</div>
-          <div id="ft-drive-incoming-list"></div>
-          <div class="ft-section-title" id="ft-drive-outgoing-title" hidden>送信済み</div>
-          <div id="ft-drive-outgoing-list"></div>
-          <div class="ft-empty" id="ft-drive-empty">Driveリンクの受け渡しはありません</div>
-          <div class="ft-drive-my-link-row">
-            <button class="ft-drive-setting-btn" id="ft-my-drive-link-btn">
-              <i class="fa-solid fa-gear"></i> 自分のDriveリンクを登録
+            <div class="ft-my-link-row">
+              <input type="url" id="ft-my-link-input" class="ft-my-link-input" placeholder="DriveフォルダURLを貼り付け…">
+              <button class="ft-my-link-icon-btn" id="ft-my-link-copy" title="URLをコピー" hidden>
+                <i class="fa-solid fa-copy"></i>
+              </button>
+              <button class="ft-my-link-icon-btn ft-my-link-icon-open" id="ft-my-link-open" title="自分のDriveを開く" hidden>
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              </button>
+            </div>
+            <button class="btn-ft-drive-share" id="ft-drive-send-btn" disabled>
+              <i class="fa-brands fa-google-drive"></i> Driveリンクを共有する
             </button>
           </div>
+          <!-- 登録済み連絡先（相手のフォルダを開く） -->
+          <div class="ft-section-title" id="ft-contacts-title" hidden>相手のフォルダを開く</div>
+          <div id="ft-contacts-list"></div>
+          <!-- 受信したリンク -->
+          <div class="ft-section-title" id="ft-drive-incoming-title" hidden>受信したリンク</div>
+          <div id="ft-drive-incoming-list"></div>
+          <div class="ft-empty" id="ft-drive-empty">Driveリンクの受け渡しはありません</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ==================== Drive リンク送信モーダル ==================== -->
+  <!-- ==================== Drive リンク共有モーダル ==================== -->
   <div class="modal-overlay" id="ft-drive-send-modal">
     <div class="modal-glass">
-      <h3 class="modal-title"><i class="fa-brands fa-google-drive" style="color:#34a853"></i> 自分のDriveリンクを送る</h3>
+      <h3 class="modal-title"><i class="fa-brands fa-google-drive" style="color:#34a853"></i> Driveリンクを共有する</h3>
       <p class="modal-desc">自分のGoogleドライブフォルダURLを相手に通知します。相手はそこにファイルを入れることができます。</p>
-
-      <!-- 登録済み連絡先クイック選択 -->
-      <div id="ft-drive-quick-contacts" hidden>
-        <div class="ft-drive-quick-label"><i class="fa-solid fa-bookmark"></i> 相手のフォルダを開けるメンバー</div>
-        <div id="ft-drive-quick-list"></div>
-        <div class="ft-drive-quick-or">または新しく送信先を検索</div>
-      </div>
-
       <div class="form-group" style="margin-bottom:10px">
-        <label class="form-label">自分のDriveフォルダリンクを送る相手を検索</label>
+        <label class="form-label">送信先を検索</label>
         <input type="text" id="ft-drive-user-search" class="form-input" placeholder="名前で検索..." autocomplete="off" style="margin-bottom:8px">
         <div id="ft-drive-user-list" class="new-dm-user-list"></div>
       </div>
       <div id="ft-drive-form-group" hidden>
         <div class="form-group">
-          <label class="form-label">
-            自分のDriveフォルダURL <span style="color:var(--accent-pink)">*</span>
-            <span class="ft-drive-saved-badge" id="ft-drive-saved-badge" hidden><i class="fa-solid fa-check"></i> 相手のリンクを受信済み</span>
-          </label>
-          <input type="url" id="ft-drive-url-input" class="form-input" placeholder="https://drive.google.com/drive/folders/...">
-          <p class="ft-drive-url-hint"><i class="fa-solid fa-circle-info"></i> 自分のDriveフォルダを右クリック→「リンクをコピー」して貼り付け。相手はここにファイルを入れられます。</p>
-        </div>
-        <div class="form-group">
           <label class="form-label">メッセージ（任意・200文字以内）</label>
           <textarea id="ft-drive-message" class="form-input" rows="2" placeholder="例：こちらにファイルを入れてください" maxlength="200"></textarea>
         </div>
-        <p class="ft-drive-url-hint" style="margin-top:4px"><i class="fa-solid fa-arrows-left-right" style="color:var(--accent-blue)"></i> 相手もあなたにDriveリンクを送ると、お互いのフォルダを開けるようになります。</p>
+        <p class="ft-drive-url-hint"><i class="fa-solid fa-arrows-left-right" style="color:var(--accent-blue)"></i> 相手もDriveリンクを送ってくれると、お互いのフォルダを直接開けます。</p>
       </div>
       <div class="modal-actions">
         <button class="btn-modal-secondary" id="ft-drive-cancel-btn">キャンセル</button>
-        <button class="btn-modal-primary" id="ft-drive-confirm-btn" hidden>送信する</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== 自分のDriveリンク登録モーダル ==================== -->
-  <div class="modal-overlay" id="ft-my-drive-modal">
-    <div class="modal-glass">
-      <h3 class="modal-title"><i class="fa-brands fa-google-drive" style="color:#34a853"></i> 自分のDriveリンク登録</h3>
-      <p class="modal-desc">受け渡し用のGoogleドライブフォルダURLを登録しておくと、送信時に自動入力されます。</p>
-      <div class="form-group">
-        <label class="form-label">DriveフォルダURL</label>
-        <input type="url" id="ft-my-drive-url" class="form-input" placeholder="https://drive.google.com/drive/folders/...">
-        <p class="ft-drive-url-hint"><i class="fa-solid fa-circle-info"></i> Driveで受け渡し用フォルダを右クリック→「リンクをコピー」して貼り付けてください</p>
-      </div>
-      <div class="modal-actions">
-        <button class="btn-modal-secondary" id="ft-my-drive-cancel-btn">キャンセル</button>
-        <button class="btn-modal-primary" id="ft-my-drive-save-btn">保存する</button>
+        <button class="btn-modal-primary" id="ft-drive-confirm-btn" hidden>共有する</button>
       </div>
     </div>
   </div>
