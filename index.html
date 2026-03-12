@@ -229,7 +229,7 @@
         <i class="fa-solid fa-wifi"></i> P2P転送
       </button>
       <button class="ft-tab" data-tab="drive" id="ft-tab-drive">
-        <i class="fa-brands fa-google-drive"></i> 大容量(Drive)
+        <i class="fa-brands fa-google-drive"></i> Drive転送
         <span class="ft-tab-badge" id="ft-drive-tab-badge" hidden></span>
       </button>
     </div>
@@ -243,8 +243,10 @@
           <div class="ft-how-it-works">
             <i class="fa-solid fa-wifi ft-how-icon"></i>
             <div>
-              <b>P2P転送とは？</b><br>
-              ブラウザ同士で<b>直接</b>ファイルを送受信します。<b>送受信者が同時にオンライン</b>である必要があります。同一ネットワーク推奨。大きいファイルは「大容量(Drive)」タブをどうぞ。
+              <b>P2P転送</b> — ブラウザ同士で直接やり取り<br>
+              <span class="ft-how-merit">✅ サーバーを経由しない・比較的大きいファイルも可</span><br>
+              <span class="ft-how-demerit">⚠ 送受信者が同時オンライン・同一ネットワーク推奨</span><br>
+              <span class="ft-how-best">→ 今すぐ相手に直接渡したいときに向いています</span>
             </div>
           </div>
           <button class="btn-ft-new" id="ft-new-btn">
@@ -261,8 +263,19 @@
           <div class="ft-how-it-works ft-how-drive">
             <i class="fa-brands fa-google-drive ft-how-icon" style="color:#34a853"></i>
             <div>
-              <b>大容量(Drive)転送とは？</b><br>
-              Google DriveフォルダのURLを相手に通知します。<b>ネットワーク不問・サイズ制限なし</b>。事前にDriveフォルダを「共有→リンクを知っている全員が編集可」に設定してください。
+              <b>Drive転送</b> — DriveフォルダのURLを相手に通知<br>
+              <span class="ft-how-merit">✅ ネットワーク不問・サイズ制限なし・相手がオフラインでもOK</span><br>
+              <span class="ft-how-demerit">⚠ Driveフォルダを「リンクを知っている全員が編集可」に要設定</span><br>
+              <span class="ft-how-best">→ 外出先・大容量・確実に届けたいときに向いています</span>
+            </div>
+          </div>
+          <!-- 自分のDriveリンク表示 -->
+          <div id="ft-my-drive-display" hidden>
+            <div class="ft-my-drive-display-label"><i class="fa-solid fa-user"></i> 自分のDriveリンク</div>
+            <div class="ft-my-drive-display-row">
+              <span class="ft-my-drive-display-url" id="ft-my-drive-display-url"></span>
+              <button class="ft-my-drive-display-copy" id="ft-my-drive-display-copy" title="URLをコピー"><i class="fa-solid fa-copy"></i></button>
+              <button class="ft-my-drive-display-open" id="ft-my-drive-display-open" title="Driveを開く"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
             </div>
           </div>
           <!-- 登録済み連絡先 -->
