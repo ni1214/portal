@@ -1167,6 +1167,19 @@ function initChatResize() {
     const newH = Math.max(340, Math.min(window.innerHeight - 100, startH + (startY - cy)));
     panel.style.width  = newW + 'px';
     panel.style.height = newH + 'px';
+    // ft-panel がチャット横配置中なら追従させる
+    const ftPanel = document.getElementById('ft-panel');
+    if (ftPanel && ftPanel.style.left) {
+      const chatRect = panel.getBoundingClientRect();
+      const gap = 8;
+      const ftWidth = 340;
+      const leftEdge = chatRect.left - gap - ftWidth;
+      if (leftEdge >= 8) {
+        ftPanel.style.right  = 'auto';
+        ftPanel.style.left   = leftEdge + 'px';
+        ftPanel.style.bottom = (window.innerHeight - chatRect.bottom) + 'px';
+      }
+    }
   };
   const onEnd = () => {
     if (!resizing) return;
@@ -1197,6 +1210,13 @@ function closeChatPanel() {
   const panel = document.getElementById('chat-panel');
   panel.classList.remove('open');
   setTimeout(() => panel.setAttribute('hidden', ''), 280);
+  // ft-panel がチャット横に配置されていた場合は位置リセット
+  const ftPanel = document.getElementById('ft-panel');
+  if (ftPanel && (ftPanel.style.left || ftPanel.style.bottom)) {
+    ftPanel.style.left   = '';
+    ftPanel.style.right  = '';
+    ftPanel.style.bottom = '';
+  }
 }
 
 function startChatListeners(username) {
@@ -1616,6 +1636,32 @@ function openFileTransferPanel() {
   _ftPanelOpen = true;
   const panel = document.getElementById('ft-panel');
   panel.removeAttribute('hidden');
+
+  // チャットパネルが開いているときは左横に動的配置
+  const chatPanel = document.getElementById('chat-panel');
+  if (chatPanel && chatPanel.classList.contains('open')) {
+    const chatRect = chatPanel.getBoundingClientRect();
+    const gap = 8;
+    const panelWidth = 340;
+    const leftEdge = chatRect.left - gap - panelWidth;
+    if (leftEdge >= 8) {
+      // 左に十分なスペースがある → チャットパネルの左横に配置
+      panel.style.right  = 'auto';
+      panel.style.left   = leftEdge + 'px';
+      panel.style.bottom = (window.innerHeight - chatRect.bottom) + 'px';
+    } else {
+      // スペース不足時はチャットパネルの上に重ねる（フォールバック）
+      panel.style.right  = 'auto';
+      panel.style.left   = Math.max(8, chatRect.left) + 'px';
+      panel.style.bottom = (window.innerHeight - chatRect.top + gap) + 'px';
+    }
+  } else {
+    // チャットパネルが閉じている場合はデフォルト位置（CSS）
+    panel.style.left   = '';
+    panel.style.right  = '';
+    panel.style.bottom = '';
+  }
+
   setTimeout(() => panel.classList.add('open'), 10);
   renderFtPanel();
   startFtListener();
