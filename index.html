@@ -223,19 +223,93 @@
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
+    <!-- P2P / Drive タブ -->
+    <div class="ft-tabs">
+      <button class="ft-tab active" data-tab="p2p" id="ft-tab-p2p">
+        <i class="fa-solid fa-wifi"></i> P2P転送
+      </button>
+      <button class="ft-tab" data-tab="drive" id="ft-tab-drive">
+        <i class="fa-brands fa-google-drive"></i> 大容量(Drive)
+        <span class="ft-tab-badge" id="ft-drive-tab-badge" hidden></span>
+      </button>
+    </div>
     <div class="ft-panel-body">
       <div class="ft-login-required" id="ft-login-required" hidden>
         <i class="fa-solid fa-user-lock"></i> ユーザーネームを設定してください
       </div>
       <div id="ft-content">
-        <button class="btn-ft-new" id="ft-new-btn">
-          <i class="fa-solid fa-plus"></i> ファイルを送る
-        </button>
-        <div class="ft-section-title" id="ft-incoming-title" hidden>受信待ち</div>
-        <div id="ft-incoming-list"></div>
-        <div class="ft-section-title" id="ft-outgoing-title" hidden>送信中・完了</div>
-        <div id="ft-outgoing-list"></div>
-        <div class="ft-empty" id="ft-empty">転送中のファイルはありません</div>
+        <!-- P2P エリア -->
+        <div id="ft-p2p-area">
+          <button class="btn-ft-new" id="ft-new-btn">
+            <i class="fa-solid fa-plus"></i> ファイルを送る
+          </button>
+          <div class="ft-section-title" id="ft-incoming-title" hidden>受信待ち</div>
+          <div id="ft-incoming-list"></div>
+          <div class="ft-section-title" id="ft-outgoing-title" hidden>送信中・完了</div>
+          <div id="ft-outgoing-list"></div>
+          <div class="ft-empty" id="ft-empty">転送中のファイルはありません</div>
+        </div>
+        <!-- Drive エリア -->
+        <div id="ft-drive-area" hidden>
+          <button class="btn-ft-new btn-ft-drive-new" id="ft-drive-send-btn">
+            <i class="fa-brands fa-google-drive"></i> Driveリンクを送る
+          </button>
+          <div class="ft-section-title" id="ft-drive-incoming-title" hidden>受信したリンク</div>
+          <div id="ft-drive-incoming-list"></div>
+          <div class="ft-section-title" id="ft-drive-outgoing-title" hidden>送信済み</div>
+          <div id="ft-drive-outgoing-list"></div>
+          <div class="ft-empty" id="ft-drive-empty">Driveリンクの受け渡しはありません</div>
+          <div class="ft-drive-my-link-row">
+            <button class="ft-drive-setting-btn" id="ft-my-drive-link-btn">
+              <i class="fa-solid fa-gear"></i> 自分のDriveリンクを登録
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== Drive リンク送信モーダル ==================== -->
+  <div class="modal-overlay" id="ft-drive-send-modal">
+    <div class="modal-glass">
+      <h3 class="modal-title"><i class="fa-brands fa-google-drive" style="color:#34a853"></i> Driveリンクを送る</h3>
+      <p class="modal-desc">Google DriveフォルダのURLを相手に送ります。<br>ネットワーク不問・ファイルサイズ制限なし。</p>
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label">送信先</label>
+        <input type="text" id="ft-drive-user-search" class="form-input" placeholder="名前で検索..." autocomplete="off" style="margin-bottom:8px">
+        <div id="ft-drive-user-list" class="new-dm-user-list"></div>
+      </div>
+      <div id="ft-drive-form-group" hidden>
+        <div class="form-group">
+          <label class="form-label">DriveフォルダURL <span style="color:var(--accent-pink)">*</span></label>
+          <input type="url" id="ft-drive-url-input" class="form-input" placeholder="https://drive.google.com/drive/folders/...">
+          <p class="ft-drive-url-hint"><i class="fa-solid fa-circle-info"></i> Driveでフォルダを右クリック→「リンクをコピー」して貼り付けてください</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">メッセージ（任意・200文字以内）</label>
+          <textarea id="ft-drive-message" class="form-input" rows="2" placeholder="例：3月分の図面をこちらに入れてあります" maxlength="200"></textarea>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="ft-drive-cancel-btn">キャンセル</button>
+        <button class="btn-modal-primary" id="ft-drive-confirm-btn" hidden>送信する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 自分のDriveリンク登録モーダル ==================== -->
+  <div class="modal-overlay" id="ft-my-drive-modal">
+    <div class="modal-glass">
+      <h3 class="modal-title"><i class="fa-brands fa-google-drive" style="color:#34a853"></i> 自分のDriveリンク登録</h3>
+      <p class="modal-desc">受け渡し用のGoogleドライブフォルダURLを登録しておくと、送信時に自動入力されます。</p>
+      <div class="form-group">
+        <label class="form-label">DriveフォルダURL</label>
+        <input type="url" id="ft-my-drive-url" class="form-input" placeholder="https://drive.google.com/drive/folders/...">
+        <p class="ft-drive-url-hint"><i class="fa-solid fa-circle-info"></i> Driveで受け渡し用フォルダを右クリック→「リンクをコピー」して貼り付けてください</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="ft-my-drive-cancel-btn">キャンセル</button>
+        <button class="btn-modal-primary" id="ft-my-drive-save-btn">保存する</button>
       </div>
     </div>
   </div>

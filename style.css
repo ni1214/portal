@@ -4242,6 +4242,170 @@ html.font-xl { font-size: 21px; }
 .ft-item-status.done    { color: #10b981; }
 .ft-item-status.rejected { color: #9ca3af; }
 
+/* ========== ft-panel タブ ========== */
+.ft-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-glass);
+  flex-shrink: 0;
+}
+.ft-tab {
+  flex: 1;
+  padding: 8px 6px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.73rem;
+  font-weight: 600;
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  position: relative;
+  white-space: nowrap;
+}
+.ft-tab:hover { color: var(--text-primary); }
+.ft-tab.active {
+  color: #10b981;
+  border-bottom-color: #10b981;
+}
+.ft-tab-badge {
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 700;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+
+/* ========== Drive エリア ========== */
+.btn-ft-drive-new {
+  background: linear-gradient(135deg, #1a73e8, #34a853) !important;
+}
+.ft-drive-item {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.ft-drive-item:last-child { margin-bottom: 0; }
+.ft-drive-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.ft-drive-item-icon {
+  font-size: 1.1rem;
+  color: #34a853;
+  flex-shrink: 0;
+}
+.ft-drive-item-meta {
+  flex: 1;
+  min-width: 0;
+}
+.ft-drive-item-from {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ft-drive-item-time {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+.ft-drive-item-msg {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+.ft-drive-item-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.btn-ft-drive-open {
+  flex: 1;
+  padding: 6px 10px;
+  background: linear-gradient(135deg, #1a73e8, #34a853);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: opacity 0.15s;
+}
+.btn-ft-drive-open:hover { opacity: 0.85; }
+.btn-ft-drive-dismiss {
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.06);
+  color: var(--text-muted);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  font-size: 0.76rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-ft-drive-dismiss:hover { background: rgba(239,68,68,0.1); color: #ef4444; border-color: rgba(239,68,68,0.3); }
+.ft-drive-status-viewed {
+  font-size: 0.72rem;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ft-drive-status-pending {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.ft-drive-my-link-row {
+  margin-top: 10px;
+  text-align: center;
+}
+.ft-drive-setting-btn {
+  background: none;
+  border: 1px dashed var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-family);
+}
+.ft-drive-setting-btn:hover { color: var(--text-primary); border-color: var(--border-glass-hover); }
+.ft-drive-url-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 5px;
+  line-height: 1.5;
+  display: flex;
+  gap: 5px;
+  align-items: flex-start;
+}
+.ft-drive-url-hint i { color: #60a5fa; margin-top: 2px; flex-shrink: 0; }
+
 /* ========== ファイル送信モーダル ========== */
 .ft-file-drop {
   position: relative;

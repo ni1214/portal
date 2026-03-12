@@ -48,11 +48,57 @@
 | `portal/config` | 管理者PIN・Gemini APIキー・departments[]・suggestionBoxViewers[] |
 | `cross_dept_requests/` | 部門間依頼（部署→部署の課題・お願い） |
 | `suggestion_box/` | 目安箱（全員投稿可、閲覧は管理者のみ） |
+| `drive_shares/{shareId}` | Google Drive大容量ファイル受け渡し（リンク共有） |
+| `users/{name}/data/drive_link` | 個人のDriveフォルダURL登録 |
 
 ## セキュリティ
 - Firestore セキュリティルールなし（ユーザー名を知らないと個人データにアクセスできない「obscurity」方式）
 - 管理者PIN: `portal/config.pinHash`（SHA-256ハッシュ）
 - 個人PINロック: `users/{name}/data/lock_pin.hash`
+
+## Drive大容量ファイル受け渡し機能（実装済み）
+
+### 概要
+P2P転送では越えられないネットワーク障壁（企業FW・Symmetric NAT等）を回避するため、
+Google DriveのフォルダURLをポータル経由で相手に通知する仕組み。
+
+### Firestore 構造
+```
+drive_shares/{shareId}
+  - from       : 送信者ニックネーム
+  - to         : 受信者ニックネーム
+  - driveUrl   : Google DriveフォルダURL
+  - message    : 任意メッセージ（200文字以内）
+  - status     : 'pending'（未確認） | 'viewed'（開封済み）
+  - createdAt  : 作成日時
+  - viewedAt   : 開封日時
+
+users/{name}/data/drive_link
+  - url        : 自分の受け渡し用DriveフォルダURL
+  - updatedAt  : 更新日時
+```
+
+### 主要関数（script.js）
+| 関数 | 役割 |
+|---|---|
+| `loadMyDriveUrl(username)` | 自分のDriveリンクをFirestoreから読み込み |
+| `saveMyDriveUrl(url)` | 自分のDriveリンクを保存 |
+| `startDriveListeners(username)` | 受信・送信の onSnapshot を開始 |
+| `stopDriveListeners()` | リスナー停止（ユーザー切り替え時） |
+| `switchFtTab(tab)` | ft-panel のタブ切り替え（'p2p' / 'drive'） |
+| `renderDrivePanel()` | Drive タブの描画 |
+| `openDriveShare(id, url)` | リンクを開く＋既読に更新 |
+| `dismissDriveShare(id)` | Firestoreから削除 |
+| `openDriveSendModal()` | Drive送信モーダルを開く |
+| `confirmDriveSend()` | drive_shares に送信記録を作成 |
+| `openMyDriveLinkModal()` | 自分のDriveリンク登録モーダル |
+| `saveMyDriveLinkFromModal()` | モーダルから登録・保存 |
+
+### UI
+- ファイル転送パネルにタブ「P2P転送」「大容量(Drive)」を追加
+- Drive タブ内：受信リンク一覧・送信済み一覧・「Driveリンクを登録」ボタン
+- 受信者が「Driveを開く」クリック → 既読 → 送信者の送信済み欄に「確認済み ✓」表示
+- ft-badge（FABの数字）は P2P + Drive の未読合計を表示
 
 ## 次回実装予定タスク
 
