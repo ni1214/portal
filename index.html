@@ -240,13 +240,20 @@
       <div id="ft-content">
         <!-- P2P エリア -->
         <div id="ft-p2p-area">
-          <div class="ft-how-it-works">
+          <div class="ft-how-it-works" id="ft-p2p-desc">
             <i class="fa-solid fa-wifi ft-how-icon"></i>
-            <div>
-              <b>P2P転送</b> — ブラウザ同士で直接やり取り<br>
-              <span class="ft-how-merit">✅ サーバーを経由しない・比較的大きいファイルも可</span><br>
-              <span class="ft-how-demerit">⚠ 送受信者が同時オンライン・同一ネットワーク推奨</span><br>
-              <span class="ft-how-best">→ 今すぐ相手に直接渡したいときに向いています</span>
+            <div class="ft-how-content">
+              <div class="ft-how-header">
+                <span><b>P2P転送</b> — ブラウザ同士で直接やり取り</span>
+                <button class="ft-how-toggle" id="ft-p2p-desc-toggle" title="説明を折りたたむ">
+                  <i class="fa-solid fa-chevron-up"></i>
+                </button>
+              </div>
+              <div class="ft-how-body" id="ft-p2p-desc-body">
+                <span class="ft-how-merit">✅ サーバーを経由しない・比較的大きいファイルも可</span><br>
+                <span class="ft-how-demerit">⚠ 送受信者が同時オンライン・同一ネットワーク推奨</span><br>
+                <span class="ft-how-best">→ 今すぐ相手に直接渡したいときに向いています</span>
+              </div>
             </div>
           </div>
           <button class="btn-ft-new" id="ft-new-btn">
@@ -260,13 +267,20 @@
         </div>
         <!-- Drive エリア -->
         <div id="ft-drive-area" hidden>
-          <div class="ft-how-it-works ft-how-drive">
+          <div class="ft-how-it-works ft-how-drive" id="ft-drive-desc">
             <i class="fa-brands fa-google-drive ft-how-icon" style="color:#34a853"></i>
-            <div>
-              <b>Drive転送</b> — DriveフォルダのURLを相手に通知<br>
-              <span class="ft-how-merit">✅ ネットワーク不問・サイズ制限なし・相手がオフラインでもOK</span><br>
-              <span class="ft-how-demerit">⚠ Driveフォルダを「リンクを知っている全員が編集可」に要設定</span><br>
-              <span class="ft-how-best">→ 外出先・大容量・確実に届けたいときに向いています</span>
+            <div class="ft-how-content">
+              <div class="ft-how-header">
+                <span><b>Drive転送</b> — DriveフォルダのURLを相手に通知</span>
+                <button class="ft-how-toggle" id="ft-drive-desc-toggle" title="説明を折りたたむ">
+                  <i class="fa-solid fa-chevron-up"></i>
+                </button>
+              </div>
+              <div class="ft-how-body" id="ft-drive-desc-body">
+                <span class="ft-how-merit">✅ ネットワーク不問・サイズ制限なし・相手がオフラインでもOK</span><br>
+                <span class="ft-how-demerit">⚠ Driveフォルダを「リンクを知っている全員が編集可」に要設定</span><br>
+                <span class="ft-how-best">→ 外出先・大容量・確実に届けたいときに向いています</span>
+              </div>
             </div>
           </div>
           <!-- 自分のDriveリンク表示 -->

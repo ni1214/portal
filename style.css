@@ -4424,6 +4424,41 @@ html.font-xl { font-size: 21px; }
 .ft-how-icon { font-size: 1.1rem; margin-top: 1px; flex-shrink: 0; color: var(--text-muted); }
 [data-theme="light"] .ft-how-it-works { background: rgba(0,0,0,0.04); }
 
+/* 折りたたみ */
+.ft-how-content { flex: 1; min-width: 0; }
+.ft-how-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.ft-how-toggle {
+  background: none; border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 1px 3px;
+  font-size: 0.6rem;
+  transition: transform 0.2s, color 0.15s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.ft-how-toggle:hover { color: var(--text-secondary); }
+.ft-how-body {
+  overflow: hidden;
+  max-height: 80px;
+  margin-top: 4px;
+  transition: max-height 0.25s ease, margin-top 0.25s ease, opacity 0.2s;
+  opacity: 1;
+}
+.ft-how-it-works.collapsed .ft-how-body {
+  max-height: 0;
+  margin-top: 0;
+  opacity: 0;
+}
+.ft-how-it-works.collapsed .ft-how-toggle i {
+  transform: rotate(180deg);
+}
+
 /* ========== Drive 登録済み連絡先（パネル内） ========== */
 .ft-contact-item {
   display: flex;

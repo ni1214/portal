@@ -2122,6 +2122,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('chat-launch-task').addEventListener('click', openTaskModal);
   document.getElementById('chat-launch-ft').addEventListener('click', openFileTransferPanel);
 
+  // ===== 説明文折りたたみ（P2P / Drive） =====
+  ['p2p', 'drive'].forEach(type => {
+    const btn  = document.getElementById(`ft-${type}-desc-toggle`);
+    const desc = document.getElementById(`ft-${type}-desc`);
+    if (!btn || !desc) return;
+    const lsKey = `ft-${type}-desc-collapsed`;
+    if (localStorage.getItem(lsKey) === '1') desc.classList.add('collapsed');
+    btn.addEventListener('click', () => {
+      const collapsed = desc.classList.toggle('collapsed');
+      localStorage.setItem(lsKey, collapsed ? '1' : '0');
+    });
+  });
+
   // ===== ファイル転送 =====
   document.getElementById('ft-fab').addEventListener('click', () => {
     state._ftPanelOpen ? closeFileTransferPanel() : openFileTransferPanel();

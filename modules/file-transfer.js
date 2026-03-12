@@ -366,8 +366,8 @@ export function renderDrivePanel() {
       return `<div class="ft-contact-item">
         <div class="ft-contact-avatar" style="background:${color}">${initial}</div>
         <div class="ft-contact-name" title="${esc(name)}">${esc(name)}</div>
-        <button class="btn-ft-contact-send" data-name="${esc(name)}" data-url="${esc(info.url)}" title="このリンクを送る">
-          <i class="fa-brands fa-google-drive"></i> 送る
+        <button class="btn-ft-contact-send" data-name="${esc(name)}" data-url="${esc(info.url)}" title="${esc(name)}のDriveフォルダを開く">
+          <i class="fa-solid fa-folder-open"></i> 開く
         </button>
         <button class="btn-ft-contact-del" data-name="${esc(name)}" title="連絡先を削除">
           <i class="fa-solid fa-trash"></i>
@@ -375,7 +375,7 @@ export function renderDrivePanel() {
       </div>`;
     }).join('');
     contactsEl.querySelectorAll('.btn-ft-contact-send').forEach(btn => {
-      btn.addEventListener('click', () => openDriveSendModal(btn.dataset.name, btn.dataset.url));
+      btn.addEventListener('click', () => window.open(btn.dataset.url, '_blank'));
     });
     contactsEl.querySelectorAll('.btn-ft-contact-del').forEach(btn => {
       btn.addEventListener('click', async () => {
