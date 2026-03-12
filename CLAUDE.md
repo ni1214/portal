@@ -136,6 +136,61 @@ assigned_tasks/{taskId}
 
 ## UIパターン・実装規約
 
+### モーダル縦スクロール（必須ルール）
+
+モーダル内でコンテンツがあふれてスクロールが出ない問題を防ぐため、新規モーダルを追加するときは必ず以下の構造パターンに従うこと。
+
+#### パターン A：`.modal-glass` を使うシンプルなモーダル
+```html
+<div class="modal-overlay" id="xxx-modal">
+  <div class="modal-glass">
+    <!-- ヘッダー（固定） -->
+    <h3 class="modal-title">タイトル</h3>
+    <!-- コンテンツ（自動スクロール） -->
+    ...
+  </div>
+</div>
+```
+`.modal-glass` は `max-height: 90vh; overflow-y: auto` が定義済みなので追加CSS不要。
+
+#### パターン B：カスタム inner を使う複雑なモーダル（タブあり）
+```css
+/* inner: flex列 + 高さ上限 */
+.xxx-modal-inner {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;   /* ← hidden にして子に任せる */
+}
+
+/* ヘッダー・タブバーなど固定部分 */
+.xxx-modal-header,
+.xxx-tabs {
+  flex-shrink: 0;     /* ← 縮まないようにする */
+}
+
+/* コンテンツエリアのラッパー（タブ内ラッパー等） */
+#xxx-content-area {
+  flex: 1;
+  min-height: 0;      /* ← ★ これがないと flex:1 が効かない */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* スクロールする本体 */
+.xxx-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+```
+
+#### ❌ よくあるミス
+- `overflow: hidden` の親の中で `overflow-y: auto` の子を使っても、**途中に `min-height: 0` なしの flex 子孫があると高さ制限が無効化される**
+- タブ切り替えで表示/非表示するラッパー div に flex/min-height を付け忘れる
+- `.modal-glass` 使用なのに別途 `max-height` を付けず無限に伸びる
+
 ### 日付入力フィールド（必須ルール）
 日付入力は常に「カレンダーアイコンのみ」で実装する。テキスト部分は非表示にし、アイコン色は各テーマに合わせる。
 

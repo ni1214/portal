@@ -1247,6 +1247,8 @@ body::after {
 }
 
 .guide-body {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: var(--space-lg) var(--space-xl);
   display: flex;
@@ -1358,9 +1360,13 @@ body::after {
   border-radius: var(--radius-xl);
   padding: var(--space-2xl);
   width: min(480px, 90vw);
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: var(--shadow-lg);
   transform: translateY(16px);
   transition: transform var(--transition-slow);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
 }
 
 .modal-overlay.visible .modal-glass {
@@ -2396,10 +2402,9 @@ body::after {
     height: 280px;
   }
 
-  /* モーダル スクロール対応 */
+  /* モーダル スクロール対応（モバイルは少し小さく） */
   .modal-glass {
-    max-height: 88vh;
-    overflow-y: auto;
+    max-height: 85vh;
   }
 
   /* PIN ボタン大きく */
@@ -6543,6 +6548,16 @@ html.font-xl { font-size: 21px; }
   background: rgba(0,200,255,0.12);
   border-color: rgba(0,200,255,0.3);
   color: var(--accent-cyan);
+}
+
+/* エリアラッパー（flex:1 を受け取りスクロール境界を確定させる） */
+#reqboard-request-area,
+#reqboard-suggestion-area {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* コンテンツエリア */
