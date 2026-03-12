@@ -274,6 +274,16 @@ export function startDriveListeners(username) {
   if (!state._driveIncomingSub) {
     const qIn = query(collection(db, 'drive_shares'), where('to', '==', username));
     state._driveIncomingSub = onSnapshot(qIn, snap => {
+      // 受信した Drive 通知の送信者を「相手の Drive URL」で連絡先に自動保存
+      // → これにより「開く」ボタンで相手のフォルダが開けるようになる
+      snap.docChanges().forEach(change => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          if (data.from && data.driveUrl && data.from !== state.currentUsername) {
+            saveDriveContact(data.from, data.driveUrl);
+          }
+        }
+      });
       state._driveIncoming = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       updateFtBadge();
       renderDrivePanel();
@@ -579,18 +589,20 @@ export async function openDriveSendModal(prefillUser = null, prefillUrl = null) 
 }
 
 // 送信先決定時の共通処理（クイック選択 or 検索どちらからでも呼ばれる）
-export function selectDriveSendTarget(name, url) {
+// url 引数は互換のため残すが使用せず、常に自分の Drive URL を入力する
+export function selectDriveSendTarget(name, _url) {
   state._ftDriveSelectedUser = name;
-  const urlInput  = document.getElementById('ft-drive-url-input');
-  const badge     = document.getElementById('ft-drive-saved-badge');
-  const formGroup = document.getElementById('ft-drive-form-group');
+  const urlInput   = document.getElementById('ft-drive-url-input');
+  const badge      = document.getElementById('ft-drive-saved-badge');
+  const formGroup  = document.getElementById('ft-drive-form-group');
   const confirmBtn = document.getElementById('ft-drive-confirm-btn');
-  const hasSaved  = !!state._driveContacts[name];
+  // 相手がすでに自分の URL を受け取ったことがあるなら「受信済み」バッジを表示
+  const hasSaved   = !!state._driveContacts[name];
 
-  urlInput.value        = url || '';
+  urlInput.value = state._myDriveUrl || '';  // 送るのは常に自分の Drive URL
   if (badge)  badge.hidden = !hasSaved;
-  formGroup.hidden      = false;
-  confirmBtn.hidden     = false;
+  formGroup.hidden  = false;
+  confirmBtn.hidden = false;
 }
 
 export function closeDriveSendModal() {
@@ -599,11 +611,14 @@ export function closeDriveSendModal() {
 }
 
 export async function confirmDriveSend() {
-  const url      = document.getElementById('ft-drive-url-input').value.trim();
-  const msg      = document.getElementById('ft-drive-message').value.trim();
-  const doSave   = document.getElementById('ft-drive-save-contact')?.checked ?? true;
+  const url = document.getElementById('ft-drive-url-input').value.trim();
+  const msg = document.getElementById('ft-drive-message').value.trim();
   if (!state._ftDriveSelectedUser) { alert('送信先を選択してください'); return; }
-  if (!url) { document.getElementById('ft-drive-url-input').focus(); return; }
+  if (!url) {
+    // 自分の Drive URL が未設定なら登録を促す
+    alert('自分のDriveフォルダURLを設定してください。\n「自分のDriveリンクを登録」ボタンから設定できます。');
+    return;
+  }
   if (!url.startsWith('http')) { alert('正しいURLを入力してください'); return; }
   const btn = document.getElementById('ft-drive-confirm-btn');
   btn.disabled = true;
@@ -618,10 +633,10 @@ export async function confirmDriveSend() {
       createdAt: serverTimestamp(),
       viewedAt:  null,
     });
-    // チェックボックスがONなら連絡先に記憶
-    if (doSave) await saveDriveContact(state._ftDriveSelectedUser, url);
     // 自分のDriveリンク未登録なら今回のURLで初期設定
     if (!state._myDriveUrl && url) saveMyDriveUrl(url);
+    // 注意: 連絡先への保存は「相手から受信したとき」に自動保存される
+    //       (startDriveListeners の onSnapshot 内で saveDriveContact を呼ぶ)
     closeDriveSendModal();
     switchFtTab('drive');
     renderDrivePanel();
