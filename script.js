@@ -306,7 +306,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
       state._collapseSeeded     = p.collapseSeeded === true;
       state.collapsedSections   = Array.isArray(p.collapsedSections) ? p.collapsedSections : [];
       state.hiddenCards         = Array.isArray(p.hiddenCards) ? p.hiddenCards : [];
-      state.missionBannerHidden = !!p.missionBannerHidden;
+      state.missionBannerHidden = p.missionBannerHidden !== false; // 未設定なら折りたたみ
       if (p.theme)    applyTheme(p.theme, false);
       if (p.fontSize) applyFontSize(p.fontSize, false);
       if (p.lastViewedSuggestionsAt) {

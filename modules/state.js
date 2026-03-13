@@ -62,7 +62,7 @@ export const state = {
 
   // ミッションバナー
   missionText: '',         // portal/config.missionText
-  missionBannerHidden: false, // ユーザー個人の折り畳み状態
+  missionBannerHidden: true,  // ユーザー個人の折り畳み状態（デフォルト：折りたたみ）
 
   // ニックネーム・個人データ
   currentUsername: localStorage.getItem('portal-username') || null,
