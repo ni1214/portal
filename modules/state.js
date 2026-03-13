@@ -58,6 +58,7 @@ export const state = {
   // セクション折り畳み・カード非表示
   collapsedSections: [],   // 折り畳まれたセクションID配列
   hiddenCards: [],         // 非表示にしたカードID配列
+  _collapseSeeded: false,  // 初回デフォルト全折りたたみ適用済みフラグ
 
   // ミッションバナー
   missionText: '',         // portal/config.missionText
