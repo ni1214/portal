@@ -4,7 +4,7 @@ import {
   getFirestore, collection, doc,
   getDocs, getDoc, setDoc, addDoc, deleteDoc, updateDoc,
   query, where, orderBy, limit, writeBatch, serverTimestamp, onSnapshot,
-  arrayUnion, arrayRemove
+  arrayUnion, arrayRemove, deleteField
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ========== Firebase 設定 ==========
@@ -25,7 +25,7 @@ export {
   collection, doc,
   getDocs, getDoc, setDoc, addDoc, deleteDoc, updateDoc,
   query, where, orderBy, limit, writeBatch, serverTimestamp, onSnapshot,
-  arrayUnion, arrayRemove
+  arrayUnion, arrayRemove, deleteField
 };
 
 // ========== 天気設定 ==========

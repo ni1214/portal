@@ -1,7 +1,7 @@
 // ========== calendar.js — カレンダー & 個人勤怠管理 ==========
 import { state } from './state.js';
 import {
-  db, collection, doc, setDoc, deleteDoc, query, where, onSnapshot, serverTimestamp
+  db, collection, doc, setDoc, deleteDoc, getDocs, query, where, onSnapshot, serverTimestamp
 } from './config.js';
 import { esc } from './utils.js';
 
@@ -32,6 +32,12 @@ export async function saveAttendance(dateStr, data) {
       yearMonth,
       updatedAt: serverTimestamp(),
     });
+    // 公開出席への同期
+    if (data.type && data.type !== 'normal' && data.type !== null) {
+      await deps.writePublicAttendance?.(dateStr, state.currentUsername, data.type);
+    } else {
+      await deps.removePublicAttendance?.(dateStr, state.currentUsername);
+    }
   } catch (err) { console.error('勤怠保存エラー:', err); alert('保存に失敗しました'); }
 }
 
@@ -40,6 +46,8 @@ export async function deleteAttendance(dateStr) {
   try {
     await deleteDoc(attendancePath(state.currentUsername, dateStr));
     delete state.attendanceData[dateStr];
+    // 公開出席からも削除
+    await deps.removePublicAttendance?.(dateStr, state.currentUsername);
     renderCalendar();
   } catch (err) { console.error('勤怠削除エラー:', err); }
 }
@@ -52,8 +60,10 @@ function buildYearMonth(year, month) {
 export function subscribeAttendance(username) {
   if (!username) return;
   if (state._attendanceSub) { state._attendanceSub(); state._attendanceSub = null; }
-  const ym = buildYearMonth(state.calendarYear, state.calendarMonth);
-  const q  = query(
+  // 月が変わったら前月データをリセット
+  state.prevMonthAttendance = {};
+  const ym  = buildYearMonth(state.calendarYear, state.calendarMonth);
+  const q   = query(
     collection(db, 'users', username, 'attendance'),
     where('yearMonth', '==', ym)
   );
@@ -68,6 +78,64 @@ export function subscribeAttendance(username) {
 export function unsubscribeAttendance() {
   if (state._attendanceSub) { state._attendanceSub(); state._attendanceSub = null; }
   state.attendanceData = {};
+}
+
+// ===== 前月データを一回だけ取得（締め計算用） =====
+async function fetchPrevMonthAttendance() {
+  if (!state.currentUsername) return;
+  // 前月の yearMonth を計算
+  let y = state.calendarYear;
+  let m = state.calendarMonth - 1;
+  if (m < 0) { m = 11; y--; }
+  const ym = `${y}-${String(m + 1).padStart(2, '0')}`;
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'users', state.currentUsername, 'attendance'),
+            where('yearMonth', '==', ym))
+    );
+    state.prevMonthAttendance = { _fetched: true };
+    snap.docs.forEach(d => { state.prevMonthAttendance[d.id] = d.data(); });
+  } catch (err) {
+    console.warn('前月勤怠取得エラー:', err);
+    state.prevMonthAttendance = { _fetched: true };
+  }
+}
+
+// ===== 年度累計有給を取得（カレンダーモーダルを開いたとき） =====
+export async function fetchFiscalYearPaidLeave() {
+  if (!state.currentUsername) return;
+  const today = new Date();
+  // 年度は4月始まり
+  const fiscalYear  = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+  const fiscalStart = `${fiscalYear}-04`;
+  const fiscalEnd   = `${fiscalYear + 1}-03`;
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'users', state.currentUsername, 'attendance'),
+            where('yearMonth', '>=', fiscalStart),
+            where('yearMonth', '<=', fiscalEnd))
+    );
+    let total = 0;
+    snap.docs.forEach(d => {
+      const att = d.data();
+      if (att.type === '有給') total += 1;
+      if (att.type === '半休午前' || att.type === '半休午後') total += 0.5;
+    });
+    state.fiscalYearPaidLeave = total;
+    // 集計表示を更新
+    _updateFiscalDisplay();
+  } catch (err) {
+    console.warn('年度有給取得エラー:', err);
+    state.fiscalYearPaidLeave = 0;
+    _updateFiscalDisplay();
+  }
+}
+
+function _updateFiscalDisplay() {
+  const el = document.getElementById('cal-cnt-fiscal-paid');
+  if (el) el.textContent = state.fiscalYearPaidLeave % 1 === 0
+    ? `${state.fiscalYearPaidLeave}日`
+    : `${state.fiscalYearPaidLeave}日`;
 }
 
 // ===== カレンダー描画 =====
@@ -113,13 +181,32 @@ export function renderCalendar() {
     const att     = state.attendanceData[dateStr];
     const tasks   = taskMap[dateStr] || [];
 
+    // 会社カレンダー情報
+    const info = deps.getDateInfo ? deps.getDateInfo(dateStr) : { isWorkSaturday: false, isPlannedLeave: false, isHoliday: false, holidayLabel: '', events: [] };
+
     let cellCls = 'cal-cell';
-    if (isToday)  cellCls += ' cal-today';
+    if (isToday)   cellCls += ' cal-today';
     if (dow === 0) cellCls += ' cal-sun';
-    if (dow === 6) cellCls += ' cal-sat';
+    if (dow === 6 && !info.isWorkSaturday) cellCls += ' cal-sat';
+    if (info.isHoliday) cellCls += ' cal-company-holiday';
 
     // 勤怠タイプ背景色
     if (att?.type && att.type !== 'normal') cellCls += ` cal-att-${att.type === '有給' ? 'yukyu' : att.type.startsWith('半休') ? 'hankyu' : 'kekkin'}`;
+
+    // 会社カレンダーバッジ（個人カレンダーにも表示）
+    let companyBadges = '';
+    if (info.isPlannedLeave) {
+      companyBadges += `<span class="cal-company-badge planned-lv">計画付与</span>`;
+    } else if (info.isWorkSaturday) {
+      companyBadges += `<span class="cal-company-badge work-sat">出勤</span>`;
+    }
+    if (info.isHoliday) {
+      companyBadges += `<span class="cal-company-badge holiday-rng">${esc(info.holidayLabel)}</span>`;
+    }
+    info.events.forEach(ev => {
+      const color = ev.color || 'var(--accent-cyan)';
+      companyBadges += `<span class="cal-company-badge event-badge" style="background:${color}20;color:${color}">${esc(ev.label)}</span>`;
+    });
 
     // 勤怠バッジ
     let attHtml = '';
@@ -143,6 +230,7 @@ export function renderCalendar() {
     html += `<div class="${cellCls}" data-date="${dateStr}">
       <div class="cal-day-num">${d}</div>
       <div class="cal-day-content">
+        ${companyBadges}
         ${attHtml}
         ${taskHtml ? `<div class="cal-task-dots">${taskHtml}</div>` : ''}
       </div>
@@ -175,35 +263,103 @@ function buildTaskMap(year, month) {
   return map;
 }
 
-// ===== 月間サマリー更新 =====
-export function updateCalendarSummary() {
-  const data = state.attendanceData;
-  let yukyu = 0, hankyu = 0, hayade = 0, zangyo = 0;
-  Object.values(data).forEach(att => {
-    if (att.type === '有給')                   yukyu++;
+// ===== 月間サマリー更新（月計 + 締め計 + 年度累計） =====
+export async function updateCalendarSummary() {
+  const year  = state.calendarYear;
+  const month = state.calendarMonth;
+  const data  = state.attendanceData;
+
+  // --- 月計（1〜月末） ---
+  let yukyu = 0, hankyu = 0, hayadeH = 0, zangyoH = 0;
+  Object.entries(data).forEach(([dateStr, att]) => {
+    if (att.type === '有給') yukyu++;
     if (att.type === '半休午前' || att.type === '半休午後') hankyu++;
-    if (att.hayade) hayade++;
-    if (att.zangyo) zangyo++;
+    if (att.hayade) hayadeH += parseFloat(att.hayade);
+    if (att.zangyo) zangyoH += parseFloat(att.zangyo);
   });
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+  // --- 締め計（前月21〜当月20） ---
+  if (!state.prevMonthAttendance._fetched) {
+    await fetchPrevMonthAttendance();
+  }
+  let hayadeShime = 0, zangyoShime = 0;
+  // 前月の21日〜末日
+  Object.entries(state.prevMonthAttendance).forEach(([dateStr, att]) => {
+    if (dateStr === '_fetched') return;
+    const day = parseInt(dateStr.slice(8, 10), 10);
+    if (day >= 21) {
+      if (att.hayade) hayadeShime += parseFloat(att.hayade);
+      if (att.zangyo) zangyoShime += parseFloat(att.zangyo);
+    }
+  });
+  // 当月の1日〜20日
+  Object.entries(data).forEach(([dateStr, att]) => {
+    const day = parseInt(dateStr.slice(8, 10), 10);
+    if (day <= 20) {
+      if (att.hayade) hayadeShime += parseFloat(att.hayade);
+      if (att.zangyo) zangyoShime += parseFloat(att.zangyo);
+    }
+  });
+
+  // --- DOM 更新 ---
+  const fmt = v => v % 1 === 0 ? `${v}` : `${v}`;
+  const set = (id, html, isHtml = false) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (isHtml) el.innerHTML = html;
+    else el.textContent = html;
+  };
+
   set('cal-cnt-yukyu',  yukyu);
   set('cal-cnt-hankyu', hankyu);
-  set('cal-cnt-hayade', hayade);
-  set('cal-cnt-zangyo', zangyo);
+  set('cal-cnt-hayade', `${fmt(hayadeH)}h<small class="cal-shime-label">締:${fmt(hayadeShime)}h</small>`, true);
+  set('cal-cnt-zangyo', `${fmt(zangyoH)}h<small class="cal-shime-label">締:${fmt(zangyoShime)}h</small>`, true);
+
+  // 年度累計はすでに fetchFiscalYearPaidLeave() で更新されているのでそのまま表示
+  _updateFiscalDisplay();
+}
+
+// ===== タブ切替 =====
+export function switchCalTab(tab) {
+  state.calTab = tab;
+  document.getElementById('cal-tab-personal')?.classList.toggle('active', tab === 'personal');
+  document.getElementById('cal-tab-shared')?.classList.toggle('active', tab === 'shared');
+  const personalEl = document.getElementById('cal-personal-container');
+  const sharedEl   = document.getElementById('cal-shared-container');
+  if (personalEl) personalEl.style.display = tab === 'personal' ? '' : 'none';
+  if (sharedEl)   sharedEl.style.display   = tab === 'shared'   ? '' : 'none';
+  if (tab === 'shared') {
+    deps.renderSharedCalendar?.();
+  } else {
+    renderCalendar();
+  }
 }
 
 // ===== モーダル開閉 =====
-export function openCalendarModal() {
+export async function openCalendarModal() {
   if (!state.currentUsername) { alert('ユーザーネームを設定してください'); return; }
   document.getElementById('cal-modal').classList.add('visible');
+  // タブをリセット
+  state.calTab = 'personal';
+  document.getElementById('cal-tab-personal')?.classList.add('active');
+  document.getElementById('cal-tab-shared')?.classList.remove('active');
+  const personalEl = document.getElementById('cal-personal-container');
+  const sharedEl   = document.getElementById('cal-shared-container');
+  if (personalEl) personalEl.style.display = '';
+  if (sharedEl)   sharedEl.style.display   = 'none';
+  // 購読開始
   subscribeAttendance(state.currentUsername);
+  deps.subscribeCompanyCalConfig?.();
   renderCalendar();
+  // 年度累計を非同期で取得（UIをブロックしない）
+  fetchFiscalYearPaidLeave();
 }
 
 export function closeCalendarModal() {
   document.getElementById('cal-modal').classList.remove('visible');
   closeDayPanel();
   unsubscribeAttendance();
+  deps.unsubscribeCompanyCalConfig?.();
 }
 
 // ===== 前月・次月 =====
@@ -213,6 +369,8 @@ export function calPrevMonth() {
   subscribeAttendance(state.currentUsername);
   closeDayPanel();
   renderCalendar();
+  // 共有タブが開いていれば再描画
+  if (state.calTab === 'shared') deps.renderSharedCalendar?.();
 }
 
 export function calNextMonth() {
@@ -221,6 +379,7 @@ export function calNextMonth() {
   subscribeAttendance(state.currentUsername);
   closeDayPanel();
   renderCalendar();
+  if (state.calTab === 'shared') deps.renderSharedCalendar?.();
 }
 
 // ===== 日付詳細パネル =====
@@ -362,4 +521,5 @@ export function calGoToday() {
   subscribeAttendance(state.currentUsername);
   closeDayPanel();
   renderCalendar();
+  if (state.calTab === 'shared') deps.renderSharedCalendar?.();
 }

@@ -112,8 +112,19 @@ import {
   initCalendar,
   openCalendarModal, closeCalendarModal,
   calPrevMonth, calNextMonth, calGoToday,
-  closeDayPanel, saveDayAttendance, deleteAttendance
+  closeDayPanel, saveDayAttendance, deleteAttendance,
+  switchCalTab, renderCalendar
 } from './modules/calendar.js';
+
+import {
+  initCompanyCalendar,
+  subscribeCompanyCalConfig, unsubscribeCompanyCalConfig,
+  renderSharedCalendar,
+  writePublicAttendance, removePublicAttendance,
+  openCompanyCalSettings,
+  getDateInfo,
+  initCompanyCalSettingsForms
+} from './modules/company-calendar.js';
 
 
 // ========== 依存注入 ==========
@@ -153,7 +164,19 @@ Object.assign(reqDeps, {
 });
 
 initEmail({ confirmDelete });
-initCalendar({});
+
+// 会社カレンダーモジュール初期化
+initCompanyCalendar({ renderCalendar });
+
+// カレンダーモジュールに会社カレンダー関数を注入
+initCalendar({
+  writePublicAttendance,
+  removePublicAttendance,
+  renderSharedCalendar,
+  subscribeCompanyCalConfig,
+  unsubscribeCompanyCalConfig,
+  getDateInfo,
+});
 
 
 // ========== 個人TODO ==========
@@ -2260,6 +2283,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     errEl.hidden = true;
     const ok = await verifyPIN(pin);
     if (ok) {
+      state.isAdmin = true;
       document.getElementById('admin-auth-area').hidden  = true;
       document.getElementById('admin-panel-area').hidden = false;
       loadUsersForAdmin();
@@ -2530,10 +2554,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { calendarSelectedDate } = state;
     if (calendarSelectedDate) deleteAttendance(calendarSelectedDate);
   });
+  // タブ切替
+  document.getElementById('cal-tab-personal').addEventListener('click', () => switchCalTab('personal'));
+  document.getElementById('cal-tab-shared').addEventListener('click',   () => switchCalTab('shared'));
+  // 管理者設定ボタン（共有カレンダータブ内 — イベントデリゲーション）
+  document.getElementById('cal-modal').addEventListener('click', e => {
+    if (e.target.closest('#btn-company-cal-settings')) openCompanyCalSettings();
+  });
   // モーダル外クリックで閉じる
   document.getElementById('cal-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeCalendarModal();
   });
+  // 会社カレンダー設定フォーム初期化（1回限り）
+  initCompanyCalSettingsForms();
 
   // ===== タスク =====
   document.getElementById('btn-task').addEventListener('click', openTaskModal);

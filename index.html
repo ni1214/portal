@@ -1228,13 +1228,23 @@
         <button class="cal-close-btn" id="cal-close-btn" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
+      <!-- タブバー: 個人 / 共有 -->
+      <div class="cal-tab-bar">
+        <button class="cal-tab-btn active" id="cal-tab-personal"><i class="fa-solid fa-user"></i> 個人</button>
+        <button class="cal-tab-btn" id="cal-tab-shared"><i class="fa-solid fa-users"></i> 共有</button>
+      </div>
+
       <!-- 月間サマリー -->
       <div class="cal-summary">
         <span class="cal-summary-item cal-summary-yukyu"><i class="fa-solid fa-umbrella-beach"></i> 有給 <b id="cal-cnt-yukyu">0</b>日</span>
         <span class="cal-summary-item cal-summary-hankyu"><i class="fa-solid fa-clock-rotate-left"></i> 半休 <b id="cal-cnt-hankyu">0</b>日</span>
-        <span class="cal-summary-item cal-summary-hayade"><i class="fa-solid fa-sunrise"></i> 早出 <b id="cal-cnt-hayade">0</b>回</span>
-        <span class="cal-summary-item cal-summary-zangyo"><i class="fa-solid fa-moon"></i> 残業 <b id="cal-cnt-zangyo">0</b>回</span>
+        <span class="cal-summary-item cal-summary-hayade"><i class="fa-solid fa-sunrise"></i> 早出 <b id="cal-cnt-hayade">0h</b></span>
+        <span class="cal-summary-item cal-summary-zangyo"><i class="fa-solid fa-moon"></i> 残業 <b id="cal-cnt-zangyo">0h</b></span>
+        <span class="cal-summary-item cal-summary-fiscal"><i class="fa-solid fa-calendar-check"></i> 年度有給 <b id="cal-cnt-fiscal-paid">0日</b></span>
       </div>
+
+      <!-- 個人カレンダーコンテナ -->
+      <div id="cal-personal-container">
 
       <!-- カレンダーグリッド -->
       <div id="cal-grid-container" class="cal-grid-container"></div>
@@ -1306,6 +1316,60 @@
         </div>
       </div>
 
+      </div><!-- /#cal-personal-container -->
+
+      <!-- 共有カレンダーコンテナ（JS が描画） -->
+      <div id="cal-shared-container" style="display:none"></div>
+
+    </div>
+  </div>
+
+  <!-- ==================== 会社カレンダー設定モーダル（管理者専用） ==================== -->
+  <div class="modal-overlay" id="company-cal-settings-modal">
+    <div class="modal-glass" style="max-width:560px;width:min(560px,94vw);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <h3 style="margin:0;font-size:1rem;display:flex;align-items:center;gap:8px;color:var(--text-primary)"><i class="fa-solid fa-building-circle-check" style="color:var(--accent-blue)"></i> 会社カレンダー設定</h3>
+        <button class="btn-modal-secondary" id="ccs-close-btn" style="padding:4px 10px;" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+
+        <!-- 出勤土曜 -->
+        <section class="ccs-section">
+          <h4 class="ccs-section-title"><i class="fa-solid fa-calendar-day"></i> 出勤土曜の管理</h4>
+          <div class="ccs-add-row">
+            <input type="date" id="ccs-input-ws" class="form-input" style="flex:1" title="土曜日の日付を選択">
+            <button class="btn-modal-primary" id="ccs-btn-add-ws" style="white-space:nowrap">追加</button>
+          </div>
+          <div id="ccs-work-saturdays" class="ccs-list"></div>
+          <p class="ccs-hint">追加後、各行の「計画付与」ボタンで計画的付与として設定できます。</p>
+        </section>
+
+        <!-- 会社休日（期間） -->
+        <section class="ccs-section">
+          <h4 class="ccs-section-title"><i class="fa-solid fa-plane-departure"></i> 会社休日（期間）</h4>
+          <div class="ccs-add-row" style="flex-wrap:wrap;gap:6px;">
+            <input type="date" id="ccs-input-hr-start" class="form-input" style="flex:1;min-width:120px" placeholder="開始日">
+            <span style="align-self:center;color:var(--text-muted)">〜</span>
+            <input type="date" id="ccs-input-hr-end" class="form-input" style="flex:1;min-width:120px" placeholder="終了日">
+            <input type="text" id="ccs-input-hr-label" class="form-input" style="flex:2;min-width:100px" placeholder="例：GW、夏期休暇" maxlength="20">
+            <button class="btn-modal-primary" id="ccs-btn-add-hr" style="white-space:nowrap">追加</button>
+          </div>
+          <div id="ccs-holiday-ranges" class="ccs-list"></div>
+        </section>
+
+        <!-- 会社行事 -->
+        <section class="ccs-section">
+          <h4 class="ccs-section-title"><i class="fa-solid fa-star"></i> 会社行事（1日単位）</h4>
+          <div class="ccs-add-row" style="flex-wrap:wrap;gap:6px;">
+            <input type="date" id="ccs-input-ev-date" class="form-input" style="flex:1;min-width:120px">
+            <input type="text" id="ccs-input-ev-label" class="form-input" style="flex:2;min-width:100px" placeholder="行事名" maxlength="20">
+            <input type="color" id="ccs-input-ev-color" class="form-input" value="#4a9eff" style="width:44px;padding:2px;cursor:pointer">
+            <button class="btn-modal-primary" id="ccs-btn-add-ev" style="white-space:nowrap">追加</button>
+          </div>
+          <div id="ccs-events" class="ccs-list"></div>
+        </section>
+
+      </div>
     </div>
   </div>
 

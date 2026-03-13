@@ -168,6 +168,22 @@ export const state = {
   _attendanceSub:  null,
   calendarSelectedDate: null,
 
+  // 会社カレンダー（company-calendar.js）
+  companyCalConfig: null,          // company_calendar/config のデータ
+  _companyCalUnsub: null,          // onSnapshot unsubscriber
+  publicAttendance: {},            // { 'YYYY-MM': { '03': { alice:'有給', ... }, ... } }
+  _publicAttSub: null,             // onSnapshot unsubscriber for public_attendance
+
+  // カレンダーUIタブ
+  calTab: 'personal',              // 'personal' | 'shared'
+
+  // 集計用
+  prevMonthAttendance: {},         // { 'YYYY-MM-DD': {...} } 前月データ（締め計算用）
+  fiscalYearPaidLeave: 0,          // 年度累計有給消化日数（カレンダーモーダルを開いたとき更新）
+
+  // 管理者認証
+  isAdmin: false,   // 管理者PIN認証済みフラグ
+
   // PIN ロック
   lockPinHash: null,
   lockPinEnabled: false,
