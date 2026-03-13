@@ -3131,8 +3131,8 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   gap: 5px;
   padding: 6px 4px;
-  background: transparent;
-  border: 2px solid transparent;
+  background: var(--bg-glass);
+  border: 2px solid var(--border-glass);
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.18s;
@@ -3142,12 +3142,12 @@ html.font-xl { font-size: 21px; }
 
 .theme-card:hover {
   border-color: var(--border-glass-hover);
-  background: var(--bg-glass);
+  background: var(--bg-card-hover);
 }
 
 .theme-card.active {
   border-color: var(--accent-cyan);
-  background: rgba(0, 212, 170, 0.08);
+  background: rgba(57, 208, 181, 0.10);
   color: var(--text-primary);
 }
 
