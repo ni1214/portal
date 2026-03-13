@@ -2932,7 +2932,8 @@ html.font-xl { font-size: 21px; }
 [data-theme="light"] .btn-favorites-only,
 [data-theme="light"] .btn-task,
 [data-theme="light"] .btn-notice-bell,
-[data-theme="light"] .btn-email-assist {
+[data-theme="light"] .btn-email-assist,
+[data-theme="light"] .btn-calendar {
   background: rgba(26, 30, 58, 0.07);
   border-color: rgba(26, 30, 58, 0.16);
   color: rgba(26, 30, 58, 0.6);
@@ -2941,7 +2942,8 @@ html.font-xl { font-size: 21px; }
 [data-theme="light"] .btn-favorites-only:hover,
 [data-theme="light"] .btn-task:hover,
 [data-theme="light"] .btn-notice-bell:hover,
-[data-theme="light"] .btn-email-assist:hover {
+[data-theme="light"] .btn-email-assist:hover,
+[data-theme="light"] .btn-calendar:hover {
   background: rgba(26, 30, 58, 0.13);
   border-color: rgba(26, 30, 58, 0.3);
   color: rgba(26, 30, 58, 0.9);
@@ -7133,6 +7135,49 @@ html.font-xl { font-size: 21px; }
   border-color: rgba(0,200,255,0.3);
   color: var(--accent-cyan);
 }
+.btn-req-archive, .btn-req-unarchive {
+  padding: 5px 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.btn-req-archive:hover {
+  background: rgba(0,200,255,0.1);
+  border-color: rgba(0,200,255,0.3);
+  color: var(--accent-cyan);
+}
+.btn-req-unarchive:hover {
+  background: rgba(99,102,241,0.12);
+  border-color: rgba(99,102,241,0.35);
+  color: #a5b4fc;
+}
+.btn-req-delete {
+  padding: 5px 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.btn-req-delete:hover {
+  background: rgba(239,68,68,0.12);
+  border-color: rgba(239,68,68,0.35);
+  color: #f87171;
+}
 
 /* 新規投稿フォーム */
 .req-form {
@@ -7390,20 +7435,25 @@ html.font-xl { font-size: 21px; }
 
 /* ヘッダーボタン */
 .btn-calendar {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 1.15rem;
-  cursor: pointer;
-  padding: 6px 8px;
-  border-radius: var(--radius-sm);
-  transition: color 0.2s, background 0.2s;
+  position: relative;
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
 }
 .btn-calendar:hover {
-  color: var(--accent-blue);
-  background: var(--bg-glass);
+  background: rgba(99,102,241,0.15);
+  border-color: rgba(99,102,241,0.4);
+  color: #a5b4fc;
 }
 
 /* モーダル */
