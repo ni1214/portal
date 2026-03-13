@@ -127,8 +127,8 @@ export function renderCalendar() {
       if (att.type && att.type !== 'normal') {
         attHtml += `<div class="cal-att-badge cal-att-${att.type === '有給' ? 'yukyu' : att.type.startsWith('半休') ? 'hankyu' : 'kekkin'}">${att.type}</div>`;
       }
-      if (att.hayade) attHtml += `<div class="cal-att-badge cal-att-hayade">早出 ${att.hayade}</div>`;
-      if (att.zangyo) attHtml += `<div class="cal-att-badge cal-att-zangyo">残業 ${att.zangyo}</div>`;
+      if (att.hayade) attHtml += `<div class="cal-att-badge cal-att-hayade">早出 ${att.hayade}h</div>`;
+      if (att.zangyo) attHtml += `<div class="cal-att-badge cal-att-zangyo">残業 ${att.zangyo}h</div>`;
     }
 
     // タスクドット
@@ -254,11 +254,18 @@ export function openDayPanel(dateStr) {
     });
   }
 
-  // 早出・残業
+  // 早出・残業（プルダウン）
   const hayadeInput = document.getElementById('cal-hayade-time');
   const zangyoInput = document.getElementById('cal-zangyo-time');
   if (hayadeInput) hayadeInput.value = att.hayade || '';
   if (zangyoInput) zangyoInput.value = att.zangyo || '';
+
+  // 合計表示を更新
+  updateTimeTotal();
+
+  // プルダウン変更時に合計を再計算
+  if (hayadeInput) hayadeInput.onchange = updateTimeTotal;
+  if (zangyoInput) zangyoInput.onchange = updateTimeTotal;
 
   // メモ
   const noteInput = document.getElementById('cal-note');
@@ -273,6 +280,24 @@ export function openDayPanel(dateStr) {
 
   panel.hidden = false;
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ===== 早出・残業 合計表示 =====
+function updateTimeTotal() {
+  const totalEl  = document.getElementById('cal-time-total');
+  if (!totalEl) return;
+  const hayade = parseFloat(document.getElementById('cal-hayade-time')?.value) || 0;
+  const zangyo = parseFloat(document.getElementById('cal-zangyo-time')?.value) || 0;
+  const total  = hayade + zangyo;
+  if (total === 0) {
+    totalEl.hidden = true;
+    return;
+  }
+  totalEl.hidden = false;
+  const parts = [];
+  if (hayade > 0) parts.push(`早出 ${hayade}時間`);
+  if (zangyo > 0) parts.push(`残業 ${zangyo}時間`);
+  totalEl.innerHTML = `<i class="fa-solid fa-clock"></i> ${parts.join('　')}　<strong>計 ${total}時間</strong>`;
 }
 
 export function closeDayPanel() {

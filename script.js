@@ -2231,6 +2231,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('cal-prev-btn').addEventListener('click', calPrevMonth);
   document.getElementById('cal-next-btn').addEventListener('click', calNextMonth);
   document.getElementById('cal-today-btn').addEventListener('click', calGoToday);
+  document.getElementById('cal-day-close-btn').addEventListener('click', closeDayPanel);
   document.getElementById('cal-day-cancel-btn').addEventListener('click', closeDayPanel);
   document.getElementById('cal-day-save-btn').addEventListener('click', saveDayAttendance);
   document.getElementById('cal-day-delete-btn').addEventListener('click', () => {

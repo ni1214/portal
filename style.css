@@ -7716,6 +7716,28 @@ html.font-xl { font-size: 21px; }
 }
 .cal-time-input:focus { outline: none; border-color: var(--accent-blue); }
 
+/* 早出・残業合計 */
+.cal-time-total {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  background: rgba(96,165,250,0.07);
+  border: 1px solid rgba(96,165,250,0.2);
+  border-radius: var(--radius-sm);
+  padding: 5px 12px;
+  margin-bottom: 12px;
+}
+.cal-time-total strong {
+  color: var(--accent-blue);
+  font-weight: 700;
+}
+[data-theme="warm"] .cal-time-total {
+  background: rgba(255,173,96,0.07);
+  border-color: rgba(255,173,96,0.2);
+}
+
 /* メモ */
 .cal-note-input {
   width: 100%;

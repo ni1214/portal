@@ -1214,14 +1214,40 @@
         <!-- 早出・残業（横並び） -->
         <div class="cal-time-row">
           <div class="form-group" style="flex:1">
-            <label class="form-label"><i class="fa-solid fa-sun" style="color:#f59e0b"></i> 早出 開始時刻</label>
-            <input type="time" id="cal-hayade-time" class="form-input">
+            <label class="form-label"><i class="fa-solid fa-sun" style="color:#f59e0b"></i> 早出時間</label>
+            <select id="cal-hayade-time" class="form-input cal-hours-select">
+              <option value="">なし</option>
+              <option value="0.5">0.5時間（30分）</option>
+              <option value="1">1時間</option>
+              <option value="1.5">1.5時間</option>
+              <option value="2">2時間</option>
+              <option value="2.5">2.5時間</option>
+              <option value="3">3時間</option>
+              <option value="3.5">3.5時間</option>
+              <option value="4">4時間</option>
+              <option value="4.5">4.5時間</option>
+              <option value="5">5時間</option>
+            </select>
           </div>
           <div class="form-group" style="flex:1">
-            <label class="form-label"><i class="fa-solid fa-moon" style="color:#818cf8"></i> 残業 終了時刻</label>
-            <input type="time" id="cal-zangyo-time" class="form-input">
+            <label class="form-label"><i class="fa-solid fa-moon" style="color:#818cf8"></i> 残業時間</label>
+            <select id="cal-zangyo-time" class="form-input cal-hours-select">
+              <option value="">なし</option>
+              <option value="0.5">0.5時間（30分）</option>
+              <option value="1">1時間</option>
+              <option value="1.5">1.5時間</option>
+              <option value="2">2時間</option>
+              <option value="2.5">2.5時間</option>
+              <option value="3">3時間</option>
+              <option value="3.5">3.5時間</option>
+              <option value="4">4時間</option>
+              <option value="4.5">4.5時間</option>
+              <option value="5">5時間</option>
+            </select>
           </div>
         </div>
+        <!-- 合計表示 -->
+        <div id="cal-time-total" class="cal-time-total" hidden></div>
 
         <!-- メモ -->
         <div class="form-group">
