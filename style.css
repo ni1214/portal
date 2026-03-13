@@ -3120,8 +3120,8 @@ html.font-xl { font-size: 21px; }
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.18s;
-  color: var(--text-secondary);
-  font-size: 0.65rem;
+  color: var(--text-primary);
+  font-size: 0.75rem;
 }
 
 .theme-card:hover {
