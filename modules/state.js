@@ -129,11 +129,14 @@ export const state = {
   // タスク割り振り
   receivedTasks: [],
   sentTasks: [],
+  sharedTasks: [],             // 自分が sharedWith に含まれるタスク
   _receivedTasksUnsub: null,
   _sentTasksUnsub: null,
+  _sharedTasksUnsub: null,     // sharedWith クエリのリスナー
   taskModalOpen: false,
   activeTaskTab: 'received',
   newTaskAssignee: '',
+  _editingTaskId: null,        // 編集中 or 共有操作中のタスクID
 
   // 部門間依頼・目安箱
   DEFAULT_DEPARTMENTS,

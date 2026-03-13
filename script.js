@@ -79,7 +79,11 @@ import {
   startTaskListeners, updateTaskBadge,
   openTaskModal, closeTaskModal, switchTaskTab, renderTaskTabContent,
   openTaskUserPicker, submitNewTask,
-  acceptTask, completeTask, acknowledgeTask, deleteTask
+  acceptTask, completeTask, acknowledgeTask, deleteTask,
+  openTaskEditModal, closeTaskEditModal, submitTaskEdit,
+  openTaskSharePicker, closeTaskSharePicker, submitTaskShare,
+  filterShareUserList, renderSharePickerUsers,
+  acceptSharedTask, declineSharedTask
 } from './modules/tasks.js';
 
 import {
@@ -156,7 +160,19 @@ Object.assign(noticeDeps, {
 
 Object.assign(taskDeps, {
   updateLockNotifications,
-  loadUsersForChatPicker
+  loadUsersForChatPicker,
+  // 共有ピッカー用: users_list を取得して renderSharePickerUsers に渡す
+  loadUsersForSharePicker: async (alreadyShared, assignedTo, assignedBy) => {
+    try {
+      const snap = await getDocs(collection(db, 'users_list'));
+      const allUsers = snap.docs.map(d => d.id);
+      renderSharePickerUsers(allUsers, alreadyShared, assignedTo, assignedBy);
+    } catch (err) {
+      console.error('共有ピッカーのユーザー取得エラー:', err);
+      const listEl = document.getElementById('task-share-user-list');
+      if (listEl) listEl.innerHTML = '<p class="task-share-empty">読み込みに失敗しました</p>';
+    }
+  },
 });
 
 Object.assign(reqDeps, {
@@ -2579,6 +2595,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('task-user-picker-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) document.getElementById('task-user-picker-modal').classList.remove('visible');
+  });
+
+  // タスク編集モーダル
+  document.getElementById('task-edit-cancel-btn').addEventListener('click', closeTaskEditModal);
+  document.getElementById('task-edit-save-btn').addEventListener('click', submitTaskEdit);
+  document.getElementById('task-edit-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeTaskEditModal();
+  });
+
+  // タスク共有ピッカー
+  document.getElementById('task-share-cancel-btn').addEventListener('click', closeTaskSharePicker);
+  document.getElementById('task-share-confirm-btn').addEventListener('click', submitTaskShare);
+  document.getElementById('task-share-picker-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeTaskSharePicker();
+  });
+  document.getElementById('task-share-search').addEventListener('input', e => {
+    filterShareUserList(e.target.value);
   });
 
   // ===== ベル通知ボタン =====

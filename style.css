@@ -8537,3 +8537,143 @@ html.font-xl { font-size: 21px; }
   margin: 0;
   line-height: 1.5;
 }
+
+/* ===== タスク割り振り 編集・共有機能 (tasks.js) ===== */
+
+/* 編集ボタン */
+.task-action-edit {
+  background: rgba(74, 158, 255, 0.15);
+  color: var(--accent-blue);
+  border: 1px solid rgba(74, 158, 255, 0.3);
+}
+.task-action-edit:hover {
+  background: rgba(74, 158, 255, 0.28);
+  border-color: rgba(74, 158, 255, 0.55);
+}
+
+/* 共有ボタン */
+.task-action-share {
+  background: rgba(56, 189, 130, 0.15);
+  color: #38bd82;
+  border: 1px solid rgba(56, 189, 130, 0.3);
+}
+.task-action-share:hover {
+  background: rgba(56, 189, 130, 0.28);
+  border-color: rgba(56, 189, 130, 0.55);
+}
+
+/* 共有タスク（受け取ったタスクと区別）*/
+.task-item--shared {
+  border-left: 3px solid var(--accent-cyan);
+}
+
+/* 共有タスク応答ラベル */
+.task-shared-response-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+.task-shared-response-label.sh-accepted {
+  color: #4CAF50;
+  background: rgba(76, 175, 80, 0.12);
+}
+.task-shared-response-label.sh-declined {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 依頼したタスクの共有済みユーザーバッジ一覧 */
+.task-shared-with-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 2px;
+}
+.task-shared-user-badge {
+  font-size: 0.72rem;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+.task-shared-user-badge.sh-accepted {
+  background: rgba(76, 175, 80, 0.18);
+  color: #4CAF50;
+}
+.task-shared-user-badge.sh-declined {
+  background: rgba(120, 120, 120, 0.12);
+  color: var(--text-muted);
+}
+.task-shared-user-badge.sh-pending {
+  background: rgba(255, 193, 7, 0.15);
+  color: #ffc107;
+}
+
+/* 共有ピッカー */
+.task-share-user-list {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+.task-share-user-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.task-share-user-item:hover {
+  background: var(--bg-card-hover);
+}
+.task-share-user-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-blue);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.task-share-user-name {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+.task-share-loading {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+.task-share-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 12px;
+  margin: 0;
+}
+
+/* 共有済みユーザー表示エリア */
+.task-share-already {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+  min-height: 0;
+}
+.task-share-already-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+  width: 100%;
+}
+
+/* ウォームテーマ上書き */
+[data-theme="warm"] .task-action-edit {
+  background: rgba(255, 165, 50, 0.15);
+  color: var(--accent-blue);
+  border-color: rgba(255, 165, 50, 0.3);
+}
+[data-theme="warm"] .task-action-edit:hover {
+  background: rgba(255, 165, 50, 0.28);
+}

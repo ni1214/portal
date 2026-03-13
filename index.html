@@ -1393,6 +1393,10 @@
           依頼したタスク
           <span class="task-tab-badge" id="task-tab-sent-badge" hidden></span>
         </button>
+        <button class="task-tab" data-tab="shared">
+          共有されたタスク
+          <span class="task-tab-badge" id="task-tab-shared-badge" hidden></span>
+        </button>
         <button class="task-tab" data-tab="new">
           <i class="fa-solid fa-plus"></i> 新規依頼
         </button>
@@ -1487,6 +1491,43 @@
       <div id="task-user-list" class="new-dm-user-list"></div>
       <div class="modal-actions">
         <button class="btn-modal-secondary" id="task-user-picker-cancel">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== タスク編集モーダル ==================== -->
+  <div class="modal-overlay" id="task-edit-modal">
+    <div class="modal-glass" style="max-width:460px;width:min(460px,94vw);">
+      <h3 class="modal-title"><i class="fa-solid fa-pen"></i> タスクを編集</h3>
+      <div class="form-group">
+        <label class="form-label">タスク名 <span class="required-mark">*</span></label>
+        <input type="text" id="task-edit-title" class="form-input" placeholder="タスク名" maxlength="60" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">詳細（省略可）</label>
+        <textarea id="task-edit-desc" class="form-input" rows="3" placeholder="詳しい説明や注意点..."></textarea>
+      </div>
+      <div class="form-group form-group-inline">
+        <input type="date" id="task-edit-due" class="date-icon-only">
+        <label class="form-label" for="task-edit-due">期限（省略可）</label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="task-edit-cancel-btn">キャンセル</button>
+        <button class="btn-modal-primary" id="task-edit-save-btn">保存する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== タスク共有ピッカーモーダル ==================== -->
+  <div class="modal-overlay" id="task-share-picker-modal">
+    <div class="modal-glass" style="max-width:400px;width:min(400px,94vw);">
+      <h3 class="modal-title"><i class="fa-solid fa-share-nodes"></i> 共有する相手を選択</h3>
+      <input type="text" id="task-share-search" class="form-input" placeholder="名前で検索..." autocomplete="off" style="margin-bottom:8px">
+      <div id="task-share-user-list" class="task-share-user-list"></div>
+      <div id="task-share-already" class="task-share-already"></div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="task-share-cancel-btn">キャンセル</button>
+        <button class="btn-modal-primary" id="task-share-confirm-btn">共有する</button>
       </div>
     </div>
   </div>

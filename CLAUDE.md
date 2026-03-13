@@ -138,6 +138,7 @@ export function xxxFunction() { ... }
 | `portal/config` | 管理者PIN・Gemini APIキー・departments[]・suggestionBoxViewers[] |
 | `cross_dept_requests/` | 部門間依頼（部署→部署の課題・お願い） |
 | `suggestion_box/` | 目安箱（全員投稿可、閲覧は管理者のみ） |
+| `assigned_tasks/` | タスク割り振り（sharedWith/sharedResponses で共有機能あり） |
 | `users/{name}/attendance/{YYYY-MM-DD}` | 個人勤怠（完全プライベート）|
 
 ### 勤怠データフィールド（`users/{name}/attendance/{YYYY-MM-DD}`）
@@ -183,17 +184,28 @@ export function xxxFunction() { ... }
 **Firestore 設計案**
 ```
 assigned_tasks/{taskId}
-  - title          : タスク名
-  - description    : 詳細
-  - assignedBy     : 依頼者ニックネーム
-  - assignedTo     : 担当者ニックネーム
-  - status         : 'pending'（承諾待ち）| 'accepted'（進行中）| 'done'（完了）
-  - createdAt      : 作成日時
-  - acceptedAt     : 承諾日時
-  - doneAt         : 完了日時
-  - dueDate        : 期限（任意）
-  - notifiedDone   : 完了通知済みフラグ
+  - title           : タスク名
+  - description     : 詳細
+  - assignedBy      : 依頼者ニックネーム
+  - assignedTo      : 担当者ニックネーム
+  - status          : 'pending'（承諾待ち）| 'accepted'（進行中）| 'done'（完了）
+  - createdAt       : 作成日時
+  - acceptedAt      : 承諾日時
+  - doneAt          : 完了日時
+  - dueDate         : 期限（任意）
+  - notifiedDone    : 完了通知済みフラグ
+  - sharedWith      : string[]  — タスクを共有した追加ユーザー名配列（初期値: []）
+  - sharedResponses : { [username]: 'pending' | 'accepted' | 'declined' }
+                      — 共有先の各ユーザーの応答（初期値: {}）
 ```
+
+**共有機能フロー**
+- 依頼者が「依頼したタスク」タブで「共有」ボタン → 共有ピッカーでユーザーをチェックボックスで複数選択
+- updateDoc で sharedWith に追加・sharedResponses に 'pending' をセット
+- 共有された側は「共有されたタスク」タブ（3つ目のタブ）に表示される
+- 「受け取る」→ sharedResponses[username] = 'accepted'
+- 「断る」→ sharedResponses[username] = 'declined'
+- バッジカウント: 未応答（pending）の共有タスク数を加算
 
 **UI案**
 - ヘッダーにタスクアイコンボタン（未読バッジ付き）
