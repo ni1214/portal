@@ -843,35 +843,6 @@ function _seedDefaultCollapse() {
   renderAllSections(); // 折りたたんだ状態で再描画
 }
 
-// ===== アイコンドック（折りたたみ時表示） =====
-function _buildIconDock(cards, gradient) {
-  const dock = document.createElement('div');
-  dock.className = 'section-icon-dock';
-  cards.filter(c => !c.parentId).forEach((c, i) => {
-    const a = document.createElement('a');
-    a.className = 'dock-icon-btn';
-    a.style.setProperty('--dock-idx', i);
-    if (c.url === 'solar:open') {
-      a.href = '#';
-      a.dataset.solarOpen = '1';
-    } else {
-      a.href = c.url || '#';
-      if (c.url && c.url !== '#') {
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-      }
-    }
-    a.title = c.label;
-    const iconHtml = c.icon?.startsWith('svg:')
-      ? (SVG_ICONS[c.icon] || `<i class="fa-solid fa-link"></i>`)
-      : `<i class="${c.icon || 'fa-solid fa-link'}"></i>`;
-    a.innerHTML = `<span class="dock-icon-inner" style="background:${gradient}">${iconHtml}</span>`;
-    // セクション展開は行わず直接リンクへ
-    a.addEventListener('click', e => e.stopPropagation());
-    dock.appendChild(a);
-  });
-  return dock;
-}
 
 function buildSection(cat, cards) {
   const section = document.createElement('section');
@@ -908,14 +879,8 @@ function buildSection(cat, cards) {
       toggleSectionCollapse(sectionId);
     });
     const grid = section.querySelector('.external-grid');
-    const extCards = cards.filter(c => c.url !== 'solar:open');
-    grid.insertAdjacentElement('beforebegin', _buildIconDock(extCards, gradient));
     grid.appendChild(buildSolarIconWrap());
-    extCards.forEach((c, i) => {
-      const wrap = buildExternalCard(c);
-      wrap.style.setProperty('--card-idx', i + 1); // +1 for solar
-      grid.appendChild(wrap);
-    });
+    cards.filter(c => c.url !== 'solar:open').forEach(c => grid.appendChild(buildExternalCard(c)));
     if (state.isEditMode) {
       const addWrap = document.createElement('div');
       addWrap.className = 'ext-icon-wrap';
@@ -953,12 +918,7 @@ function buildSection(cat, cards) {
     `;
     const grid = section.querySelector('.card-grid');
     const privRootCards = cards.filter(c => !c.parentId);
-    grid.insertAdjacentElement('beforebegin', _buildIconDock(privRootCards, privGradient));
-    privRootCards.forEach((c, i) => {
-      const cardEl = buildCardNode(c, cards, privGradient, true);
-      cardEl.style.setProperty('--card-idx', i);
-      grid.appendChild(cardEl);
-    });
+    privRootCards.forEach(c => grid.appendChild(buildCardNode(c, cards, privGradient, true)));
     grid.appendChild(buildAddButton(null, true, cat.docId));
     section.querySelector('.btn-edit-category').addEventListener('click', () => openPrivateSectionModal(cat));
     section.querySelector('.category-header').addEventListener('click', e => {
@@ -999,13 +959,7 @@ function buildSection(cat, cards) {
     `;
     const grid = section.querySelector('.card-grid');
     const rootCards = cards.filter(c => !c.parentId);
-    // アイコンドックをグリッドの前に挿入
-    grid.insertAdjacentElement('beforebegin', _buildIconDock(rootCards, gradient));
-    rootCards.forEach((c, i) => {
-      const cardEl = buildCardNode(c, cards, gradient, false);
-      cardEl.style.setProperty('--card-idx', i);
-      grid.appendChild(cardEl);
-    });
+    rootCards.forEach(c => grid.appendChild(buildCardNode(c, cards, gradient, false)));
     if (state.isEditMode) grid.appendChild(buildAddButton(cat.id));
 
     section.querySelector('.category-header').addEventListener('click', e => {
