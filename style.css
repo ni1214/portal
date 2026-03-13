@@ -8064,3 +8064,92 @@ html.font-xl { font-size: 21px; }
   color: var(--text-muted);
   opacity: 0.7;
 }
+
+/* ===== ミッションバナー ===== */
+.mission-banner {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  margin-bottom: 16px;
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+.mission-banner:hover {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+}
+.mission-banner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  cursor: default;
+  gap: 10px;
+}
+.mission-banner-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mission-banner-icon {
+  font-size: 1rem;
+  color: var(--accent-cyan);
+}
+.mission-banner-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.03em;
+}
+.mission-banner-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: 1px solid var(--border-glass);
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform 0.25s ease, background 0.2s;
+}
+.mission-banner-toggle:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+.mission-banner-toggle i {
+  font-size: 0.7rem;
+  transition: transform 0.25s ease;
+}
+.mission-banner-toggle.collapsed i {
+  transform: rotate(180deg);
+}
+.mission-banner-body {
+  padding: 2px 18px 14px;
+  transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.25s ease;
+  max-height: 400px;
+  opacity: 1;
+  overflow: hidden;
+}
+.mission-banner-body--collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.mission-banner-text {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.75;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* ライト/ウォームテーマ対応 */
+[data-theme="light"] .mission-banner {
+  background: rgba(240,244,255,0.95);
+}
+[data-theme="warm"] .mission-banner-icon {
+  color: var(--accent-blue);
+}

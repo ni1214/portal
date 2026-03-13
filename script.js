@@ -271,8 +271,9 @@ function savePreferencesToFirestore() {
           fontSize,
           favOnly:           state.favoritesOnlyMode,
           favorites:         state.personalFavorites,
-          collapsedSections: state.collapsedSections,
-          hiddenCards:       state.hiddenCards,
+          collapsedSections:   state.collapsedSections,
+          hiddenCards:         state.hiddenCards,
+          missionBannerHidden: state.missionBannerHidden,
           updatedAt: serverTimestamp()
         },
         { merge: true }
@@ -303,6 +304,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
       state.favoritesOnlyMode   = !!p.favOnly;
       state.collapsedSections   = Array.isArray(p.collapsedSections) ? p.collapsedSections : [];
       state.hiddenCards         = Array.isArray(p.hiddenCards) ? p.hiddenCards : [];
+      state.missionBannerHidden = !!p.missionBannerHidden;
       if (p.theme)    applyTheme(p.theme, false);
       if (p.fontSize) applyFontSize(p.fontSize, false);
       if (p.lastViewedSuggestionsAt) {
@@ -324,6 +326,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     renderAllSections();
     renderFavorites();
     applyFavoritesOnlyMode();
+    renderMissionBanner();
     loadTodos(username);
     await loadReadNotices(username);
     setupNoticeObserver();
@@ -335,6 +338,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     await loadDriveContacts(username);
     startDriveListeners(username);
     await loadConfigDepartmentsAndViewers();
+    renderMissionBanner(); // ミッションテキストが読み込まれた後に再描画
     startRequestListeners(username);
     await loadLockSettings(username, lockOnSwitch);
   } catch (err) {
@@ -639,6 +643,54 @@ function getCategoryGradient(cat) {
   if (cat.isExternal) return 'linear-gradient(135deg, #6c5ce7, #a29bfe)';
   const color = CATEGORY_COLORS.find(c => c.index === cat.colorIndex);
   return color ? color.gradient : CATEGORY_COLORS[0].gradient;
+}
+
+// ===== ミッションバナー =====
+function renderMissionBanner() {
+  const banner = document.getElementById('mission-banner');
+  const textEl = document.getElementById('mission-banner-text');
+  const body   = document.getElementById('mission-banner-body');
+  const toggle = document.getElementById('mission-banner-toggle');
+  if (!banner || !textEl) return;
+
+  if (!state.missionText) {
+    banner.hidden = true;
+    return;
+  }
+
+  // 改行をHTMLに変換
+  textEl.innerHTML = esc(state.missionText).replace(/\n/g, '<br>');
+  banner.hidden = false;
+
+  const collapsed = state.missionBannerHidden;
+  body.classList.toggle('mission-banner-body--collapsed', collapsed);
+  if (toggle) {
+    toggle.classList.toggle('collapsed', collapsed);
+    toggle.title = collapsed ? '展開' : '折り畳む';
+  }
+}
+
+function toggleMissionBanner() {
+  state.missionBannerHidden = !state.missionBannerHidden;
+  renderMissionBanner();
+  savePreferencesToFirestore();
+}
+
+async function saveMissionText() {
+  const text = document.getElementById('admin-mission-input')?.value.trim() ?? '';
+  const btn  = document.getElementById('admin-mission-save-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+  try {
+    await setDoc(doc(db, 'portal', 'config'), { missionText: text }, { merge: true });
+    state.missionText = text;
+    renderMissionBanner();
+    if (btn) { btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存しました'; }
+    setTimeout(() => { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存'; } }, 1500);
+  } catch (err) {
+    console.error('ミッションテキスト保存エラー:', err);
+    alert('保存に失敗しました');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存'; }
+  }
 }
 
 function renderAllSections() {
@@ -2156,6 +2208,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('admin-panel-area').hidden = false;
       loadUsersForAdmin();
       renderAdminSuggBoxSection();
+      // ミッションテキストを入力欄に反映
+      const mInput = document.getElementById('admin-mission-input');
+      if (mInput) mInput.value = state.missionText || '';
     } else {
       errEl.hidden = false;
     }
@@ -2177,6 +2232,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('admin-panel-area').hidden = false;
     loadUsersForAdmin();
     renderAdminSuggBoxSection();
+    const mInput = document.getElementById('admin-mission-input');
+    if (mInput) mInput.value = state.missionText || '';
   });
   document.getElementById('admin-setup-cancel').addEventListener('click', closeAdminModal);
 
@@ -2381,6 +2438,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('admin-suggbox-add-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') addSuggBoxViewer();
   });
+
+  // ミッションバナー
+  document.getElementById('mission-banner-toggle').addEventListener('click', toggleMissionBanner);
+  document.getElementById('admin-mission-save-btn').addEventListener('click', saveMissionText);
 
   // ===== カレンダー =====
   document.getElementById('btn-calendar').addEventListener('click', openCalendarModal);

@@ -14,6 +14,7 @@ export async function loadConfigDepartmentsAndViewers() {
       }
       state.suggestionBoxViewers = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
       state.isSuggestionBoxViewer = state.currentUsername ? state.suggestionBoxViewers.includes(state.currentUsername) : false;
+      state.missionText = data.missionText || '';
     }
   } catch (err) { console.error('config読み込みエラー:', err); }
 }
