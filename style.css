@@ -8218,3 +8218,26 @@ html.font-xl { font-size: 21px; }
 .external-tools.expanding .external-grid {
   animation: sectionReveal 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* ===== 目安箱 アーカイブ折りたたみ ===== */
+.sugg-archived-details {
+  margin-top: 10px;
+}
+.sugg-archived-summary {
+  cursor: pointer;
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  padding: 6px 8px;
+  border-radius: 6px;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  transition: background 0.15s;
+}
+.sugg-archived-summary::-webkit-details-marker { display: none; }
+.sugg-archived-summary:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-secondary);
+}

@@ -598,31 +598,58 @@ export function _renderSuggestionPanel(container) {
 
   let listHtml = '';
   if (state.isSuggestionBoxViewer) {
-    if (state.suggestionList.length === 0) {
+    const SUGG_CAT_LABEL = { work: '業務改善', facility: '設備・環境', safety: '安全', other: 'その他' };
+    const active   = state.suggestionList.filter(s => !s.archived);
+    const archived = state.suggestionList.filter(s =>  s.archived);
+
+    const _suggItemHtml = (s, isArchived = false) => `
+      <div class="sugg-item${isArchived ? ' req-item--archived' : ''}">
+        <div class="sugg-item-header">
+          <span class="req-category-badge cat-${escHtml(s.category)}">${escHtml(SUGG_CAT_LABEL[s.category] || s.category)}</span>
+          <span class="sugg-author">${escHtml(s.isAnonymous ? '匿名' : (s.author || '匿名'))}</span>
+          <span class="req-date">${_fmtTs(s.createdAt)}</span>
+          ${isArchived ? '<span class="req-archived-badge"><i class="fa-solid fa-box-archive"></i> アーカイブ済み</span>' : ''}
+        </div>
+        <div class="sugg-item-content">${escHtml(s.content)}</div>
+        ${s.adminReply ? `
+          <div class="sugg-reply-box">
+            <span class="sugg-reply-label"><i class="fa-solid fa-reply"></i> 管理者より</span>
+            <div>${escHtml(s.adminReply)}</div>
+          </div>
+        ` : ''}
+        <div class="req-item-actions">
+          ${isArchived
+            ? `<button class="btn-req-unarchive btn-sugg-unarchive" data-id="${s.id}"><i class="fa-solid fa-rotate-left"></i> 元に戻す</button>
+               <button class="btn-req-delete btn-sugg-delete" data-id="${s.id}"><i class="fa-solid fa-trash"></i> 削除</button>`
+            : `<button class="btn-sugg-reply" data-id="${s.id}"><i class="fa-solid fa-reply"></i> 返信</button>
+               <button class="btn-req-archive btn-sugg-archive" data-id="${s.id}" title="アーカイブ"><i class="fa-solid fa-box-archive"></i> アーカイブ</button>
+               <button class="btn-req-delete btn-sugg-delete" data-id="${s.id}" title="削除"><i class="fa-solid fa-trash"></i></button>`
+          }
+        </div>
+      </div>
+    `;
+
+    if (active.length === 0 && archived.length === 0) {
       listHtml = `<div class="req-empty"><i class="fa-solid fa-box-open"></i><p>まだ投稿はありません</p></div>`;
     } else {
-      const SUGG_CAT_LABEL = { work: '業務改善', facility: '設備・環境', safety: '安全', other: 'その他' };
+      const activeHtml = active.length === 0
+        ? `<div class="req-empty" style="padding:12px 0"><i class="fa-solid fa-inbox"></i><p style="margin:0">アクティブな投稿はありません</p></div>`
+        : active.map(s => _suggItemHtml(s, false)).join('');
+
+      const archivedHtml = archived.length > 0
+        ? `<details class="sugg-archived-details">
+            <summary class="sugg-archived-summary">
+              <i class="fa-solid fa-box-archive"></i> アーカイブ済み（${archived.length}件）
+            </summary>
+            <div class="req-archive-note"><i class="fa-solid fa-circle-info"></i> アーカイブ済みの投稿です。元に戻すか完全削除できます。</div>
+            ${archived.map(s => _suggItemHtml(s, true)).join('')}
+          </details>`
+        : '';
+
       listHtml = `<div class="sugg-list-section">
         <h4 class="sugg-form-title"><i class="fa-solid fa-list"></i> 投稿一覧（管理者のみ閲覧）</h4>
-        ${state.suggestionList.map(s => `
-          <div class="sugg-item">
-            <div class="sugg-item-header">
-              <span class="req-category-badge cat-${escHtml(s.category)}">${escHtml(SUGG_CAT_LABEL[s.category] || s.category)}</span>
-              <span class="sugg-author">${escHtml(s.isAnonymous ? '匿名' : (s.author || '匿名'))}</span>
-              <span class="req-date">${_fmtTs(s.createdAt)}</span>
-            </div>
-            <div class="sugg-item-content">${escHtml(s.content)}</div>
-            ${s.adminReply ? `
-              <div class="sugg-reply-box">
-                <span class="sugg-reply-label"><i class="fa-solid fa-reply"></i> 管理者より</span>
-                <div>${escHtml(s.adminReply)}</div>
-              </div>
-            ` : ''}
-            <div class="req-item-actions">
-              <button class="btn-sugg-reply" data-id="${s.id}"><i class="fa-solid fa-reply"></i> 返信</button>
-            </div>
-          </div>
-        `).join('')}
+        ${activeHtml}
+        ${archivedHtml}
       </div>`;
     }
   }
@@ -645,5 +672,20 @@ export function _renderSuggestionPanel(container) {
   // 返信ボタン
   container.querySelectorAll('.btn-sugg-reply').forEach(btn => {
     btn.addEventListener('click', () => openSuggReplyModal(btn.dataset.id));
+  });
+
+  // アーカイブ
+  container.querySelectorAll('.btn-sugg-archive').forEach(btn => {
+    btn.addEventListener('click', () => archiveSuggestion(btn.dataset.id));
+  });
+
+  // アーカイブ解除
+  container.querySelectorAll('.btn-sugg-unarchive').forEach(btn => {
+    btn.addEventListener('click', () => unarchiveSuggestion(btn.dataset.id));
+  });
+
+  // 削除
+  container.querySelectorAll('.btn-sugg-delete').forEach(btn => {
+    btn.addEventListener('click', () => deleteSuggestion(btn.dataset.id));
   });
 }
