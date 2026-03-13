@@ -1,0 +1,5 @@
+# Claude Code ワークスペース（worktrees・メモリなど）
+.claude/
+
+# 誤作成された空リポジトリ
+potal/
