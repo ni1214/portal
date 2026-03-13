@@ -129,6 +129,45 @@ export function switchReqSubTab(subtab) {
   renderReqContent();
 }
 
+// ===== アーカイブ・削除 =====
+export async function archiveRequest(id) {
+  try {
+    await updateDoc(doc(db, 'cross_dept_requests', id), { archived: true, updatedAt: serverTimestamp() });
+  } catch (err) { console.error('アーカイブエラー:', err); alert('アーカイブに失敗しました'); }
+}
+
+export async function unarchiveRequest(id) {
+  try {
+    await updateDoc(doc(db, 'cross_dept_requests', id), { archived: false, updatedAt: serverTimestamp() });
+  } catch (err) { console.error('アーカイブ解除エラー:', err); alert('解除に失敗しました'); }
+}
+
+export async function deleteRequest(id) {
+  if (!confirm('この依頼を完全に削除しますか？この操作は取り消せません。')) return;
+  try {
+    await deleteDoc(doc(db, 'cross_dept_requests', id));
+  } catch (err) { console.error('削除エラー:', err); alert('削除に失敗しました'); }
+}
+
+export async function archiveSuggestion(id) {
+  try {
+    await updateDoc(doc(db, 'suggestion_box', id), { archived: true });
+  } catch (err) { console.error('アーカイブエラー:', err); alert('アーカイブに失敗しました'); }
+}
+
+export async function unarchiveSuggestion(id) {
+  try {
+    await updateDoc(doc(db, 'suggestion_box', id), { archived: false });
+  } catch (err) { console.error('アーカイブ解除エラー:', err); alert('解除に失敗しました'); }
+}
+
+export async function deleteSuggestion(id) {
+  if (!confirm('この投稿を完全に削除しますか？この操作は取り消せません。')) return;
+  try {
+    await deleteDoc(doc(db, 'suggestion_box', id));
+  } catch (err) { console.error('削除エラー:', err); alert('削除に失敗しました'); }
+}
+
 function _syncReqTabUI() {
   document.querySelectorAll('.reqboard-tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === state.activeReqTab);
@@ -149,9 +188,10 @@ export function renderReqContent() {
     _syncReqSubTabUI();
     const container = document.getElementById('reqboard-request-content');
     if (!container) return;
-    if (state.activeReqSubTab === 'received')   _renderReceivedRequests(container);
-    else if (state.activeReqSubTab === 'sent')  _renderSentRequests(container);
-    else if (state.activeReqSubTab === 'new')   _renderNewRequestForm(container);
+    if (state.activeReqSubTab === 'received')        _renderReceivedRequests(container);
+    else if (state.activeReqSubTab === 'sent')       _renderSentRequests(container);
+    else if (state.activeReqSubTab === 'new')        _renderNewRequestForm(container);
+    else if (state.activeReqSubTab === 'archived')   _renderArchivedRequests(container);
   } else {
     const container = document.getElementById('reqboard-suggestion-content');
     if (!container) return;
@@ -170,11 +210,12 @@ export function _renderReceivedRequests(container) {
     container.innerHTML = `<div class="req-empty"><i class="fa-solid fa-building"></i><p>まず設定から部署を登録してください</p></div>`;
     return;
   }
-  if (state.receivedRequests.length === 0) {
+  const list = state.receivedRequests.filter(r => !r.archived);
+  if (list.length === 0) {
     container.innerHTML = `<div class="req-empty"><i class="fa-solid fa-inbox"></i><p>受け取った依頼はありません</p></div>`;
     return;
   }
-  container.innerHTML = state.receivedRequests.map(r => `
+  container.innerHTML = list.map(r => `
     <div class="req-item">
       <div class="req-item-header">
         ${_reqStatusHtml(r.status)}
@@ -190,20 +231,29 @@ export function _renderReceivedRequests(container) {
       ${r.statusNote ? `<div class="req-item-sub"><span class="req-sub-label">コメント</span>${escHtml(r.statusNote)}</div>` : ''}
       <div class="req-item-actions">
         <button class="btn-req-status" data-id="${r.id}"><i class="fa-solid fa-pen-to-square"></i> ステータス変更</button>
+        <button class="btn-req-archive" data-id="${r.id}" title="アーカイブに移動"><i class="fa-solid fa-box-archive"></i> アーカイブ</button>
+        <button class="btn-req-delete" data-id="${r.id}" title="削除"><i class="fa-solid fa-trash"></i></button>
       </div>
     </div>
   `).join('');
   container.querySelectorAll('.btn-req-status').forEach(btn => {
     btn.addEventListener('click', () => openStatusModal(btn.dataset.id));
   });
+  container.querySelectorAll('.btn-req-archive').forEach(btn => {
+    btn.addEventListener('click', () => archiveRequest(btn.dataset.id));
+  });
+  container.querySelectorAll('.btn-req-delete').forEach(btn => {
+    btn.addEventListener('click', () => deleteRequest(btn.dataset.id));
+  });
 }
 
 export function _renderSentRequests(container) {
-  if (state.sentRequests.length === 0) {
+  const list = state.sentRequests.filter(r => !r.archived);
+  if (list.length === 0) {
     container.innerHTML = `<div class="req-empty"><i class="fa-solid fa-paper-plane"></i><p>投稿した依頼はありません</p></div>`;
     return;
   }
-  container.innerHTML = state.sentRequests.map(r => `
+  container.innerHTML = list.map(r => `
     <div class="req-item${r.notifyCreator ? ' req-item--notify' : ''}">
       <div class="req-item-header">
         ${_reqStatusHtml(r.status)}
@@ -216,11 +266,19 @@ export function _renderSentRequests(container) {
       ${r.statusNote ? `<div class="req-item-sub"><span class="req-sub-label">コメント</span>${escHtml(r.statusNote)}</div>` : ''}
       <div class="req-item-actions">
         <button class="btn-req-status" data-id="${r.id}"><i class="fa-solid fa-pen-to-square"></i> ステータス変更</button>
+        <button class="btn-req-archive" data-id="${r.id}" title="アーカイブに移動"><i class="fa-solid fa-box-archive"></i> アーカイブ</button>
+        <button class="btn-req-delete" data-id="${r.id}" title="削除"><i class="fa-solid fa-trash"></i></button>
       </div>
     </div>
   `).join('');
   container.querySelectorAll('.btn-req-status').forEach(btn => {
     btn.addEventListener('click', () => openStatusModal(btn.dataset.id));
+  });
+  container.querySelectorAll('.btn-req-archive').forEach(btn => {
+    btn.addEventListener('click', () => archiveRequest(btn.dataset.id));
+  });
+  container.querySelectorAll('.btn-req-delete').forEach(btn => {
+    btn.addEventListener('click', () => deleteRequest(btn.dataset.id));
   });
 }
 
@@ -260,6 +318,55 @@ export function _renderNewRequestForm(container) {
     </div>
   `;
   document.getElementById('req-submit-btn').addEventListener('click', submitRequest);
+}
+
+function _renderArchivedRequests(container) {
+  // 自分が関わるアーカイブ済み依頼をまとめて表示
+  const myDept = state.userEmailProfile ? state.userEmailProfile.department : null;
+  const archived = [
+    ...state.receivedRequests.filter(r => r.archived),
+    ...state.sentRequests.filter(r => r.archived),
+  ];
+  // 重複排除
+  const seen = new Set();
+  const list = archived.filter(r => { if (seen.has(r.id)) return false; seen.add(r.id); return true; })
+    .sort((a, b) => (b.updatedAt?.seconds ?? 0) - (a.updatedAt?.seconds ?? 0));
+
+  if (list.length === 0) {
+    container.innerHTML = `<div class="req-empty"><i class="fa-solid fa-box-archive"></i><p>アーカイブされた依頼はありません</p></div>`;
+    return;
+  }
+  container.innerHTML = `<div class="req-archive-note"><i class="fa-solid fa-circle-info"></i> アーカイブ済みの依頼です。元に戻すか完全削除できます。</div>` +
+    list.map(r => {
+      const isSent = r.createdBy === state.currentUsername;
+      return `
+        <div class="req-item req-item--archived">
+          <div class="req-item-header">
+            ${_reqStatusHtml(r.status)}
+            ${isSent
+              ? `<span class="req-dept-badge to">${escHtml(r.toDept)}</span>`
+              : `<span class="req-dept-badge from">${escHtml(r.fromDept || r.createdBy)}</span>
+                 <span class="req-arrow">→</span>
+                 <span class="req-dept-badge to">${escHtml(r.toDept)}</span>`
+            }
+            <span class="req-date">${_fmtTs(r.createdAt)}</span>
+            <span class="req-archived-badge"><i class="fa-solid fa-box-archive"></i> アーカイブ済み</span>
+          </div>
+          <div class="req-item-title">${escHtml(r.title)}</div>
+          <div class="req-item-body">${escHtml(r.content)}</div>
+          <div class="req-item-actions">
+            <button class="btn-req-unarchive" data-id="${r.id}"><i class="fa-solid fa-rotate-left"></i> 元に戻す</button>
+            <button class="btn-req-delete" data-id="${r.id}" title="完全削除"><i class="fa-solid fa-trash"></i> 削除</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  container.querySelectorAll('.btn-req-unarchive').forEach(btn => {
+    btn.addEventListener('click', () => unarchiveRequest(btn.dataset.id));
+  });
+  container.querySelectorAll('.btn-req-delete').forEach(btn => {
+    btn.addEventListener('click', () => deleteRequest(btn.dataset.id));
+  });
 }
 
 export async function submitRequest() {

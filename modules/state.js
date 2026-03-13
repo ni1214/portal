@@ -55,6 +55,10 @@ export const state = {
   favoritesOnlyMode: false,
   personalFavorites: [],
 
+  // セクション折り畳み・カード非表示
+  collapsedSections: [],   // 折り畳まれたセクションID配列
+  hiddenCards: [],         // 非表示にしたカードID配列
+
   // ニックネーム・個人データ
   currentUsername: localStorage.getItem('portal-username') || null,
   personalSectionOrder: [],

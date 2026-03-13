@@ -554,6 +554,17 @@
         </button>
       </div>
 
+      <div class="settings-section">
+        <div class="settings-section-title">
+          非表示カード管理
+          <span class="hidden-cards-count-badge" id="hidden-cards-count">0</span>
+        </div>
+        <p class="settings-hint">カードにカーソルを合わせると <i class="fa-solid fa-eye-slash"></i> が表示されます。クリックで非表示になります。</p>
+        <div id="hidden-cards-list" class="hidden-cards-list">
+          <p class="hidden-cards-empty">非表示にしたカードはありません</p>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1328,6 +1339,7 @@
           <button class="reqboard-subtab active" data-subtab="received">受け取った依頼</button>
           <button class="reqboard-subtab" data-subtab="sent">自分の依頼</button>
           <button class="reqboard-subtab" data-subtab="new"><i class="fa-solid fa-plus"></i> 新規投稿</button>
+          <button class="reqboard-subtab" data-subtab="archived"><i class="fa-solid fa-box-archive"></i> アーカイブ</button>
         </div>
         <div id="reqboard-request-content" class="reqboard-content"></div>
       </div>

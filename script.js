@@ -269,8 +269,10 @@ function savePreferencesToFirestore() {
         {
           theme,
           fontSize,
-          favOnly:   state.favoritesOnlyMode,
-          favorites: state.personalFavorites,
+          favOnly:           state.favoritesOnlyMode,
+          favorites:         state.personalFavorites,
+          collapsedSections: state.collapsedSections,
+          hiddenCards:       state.hiddenCards,
           updatedAt: serverTimestamp()
         },
         { merge: true }
@@ -297,8 +299,10 @@ async function loadPersonalData(username, lockOnSwitch = false) {
 
     if (prefSnap.exists()) {
       const p = prefSnap.data();
-      state.personalFavorites = Array.isArray(p.favorites) ? p.favorites : [];
-      state.favoritesOnlyMode = !!p.favOnly;
+      state.personalFavorites   = Array.isArray(p.favorites) ? p.favorites : [];
+      state.favoritesOnlyMode   = !!p.favOnly;
+      state.collapsedSections   = Array.isArray(p.collapsedSections) ? p.collapsedSections : [];
+      state.hiddenCards         = Array.isArray(p.hiddenCards) ? p.hiddenCards : [];
       if (p.theme)    applyTheme(p.theme, false);
       if (p.fontSize) applyFontSize(p.fontSize, false);
       if (p.lastViewedSuggestionsAt) {
@@ -676,13 +680,85 @@ function renderAllSections() {
   main.insertBefore(addWrap, noResults);
 }
 
+// ===== セクション折り畳み =====
+function toggleSectionCollapse(sectionId) {
+  const idx = state.collapsedSections.indexOf(sectionId);
+  if (idx >= 0) {
+    state.collapsedSections.splice(idx, 1);
+  } else {
+    state.collapsedSections.push(sectionId);
+  }
+  const collapsed = state.collapsedSections.includes(sectionId);
+  // DOM直接更新（再描画なし）
+  const sectionEl = document.getElementById(`section-${sectionId}`)
+    || document.getElementById(`section-priv-${sectionId.replace('priv:', '')}`);
+  if (sectionEl) {
+    sectionEl.classList.toggle('collapsed', collapsed);
+    const btn = sectionEl.querySelector('.btn-collapse-section');
+    if (btn) {
+      btn.classList.toggle('collapsed', collapsed);
+      btn.title = collapsed ? '展開' : '折り畳む';
+    }
+  }
+  savePreferencesToFirestore();
+}
+
+// ===== カード非表示 =====
+function hideCard(cardId) {
+  if (!state.currentUsername) return;
+  if (!state.hiddenCards.includes(cardId)) {
+    state.hiddenCards.push(cardId);
+    savePreferencesToFirestore();
+    renderAllSections();
+    renderFavorites();
+    _renderHiddenCardsList();
+  }
+}
+
+function unhideCard(cardId) {
+  if (!state.currentUsername) return;
+  state.hiddenCards = state.hiddenCards.filter(id => id !== cardId);
+  savePreferencesToFirestore();
+  renderAllSections();
+  renderFavorites();
+  _renderHiddenCardsList();
+}
+
+function _renderHiddenCardsList() {
+  const container = document.getElementById('hidden-cards-list');
+  if (!container) return;
+  const hiddenCount = document.getElementById('hidden-cards-count');
+  if (hiddenCount) hiddenCount.textContent = state.hiddenCards.length;
+  if (state.hiddenCards.length === 0) {
+    container.innerHTML = '<p class="hidden-cards-empty">非表示にしたカードはありません</p>';
+    return;
+  }
+  // カード名を取得して表示
+  const allCardPool = [...state.allCards, ...state.privateCards];
+  container.innerHTML = state.hiddenCards.map(id => {
+    const card = allCardPool.find(c => c.id === id);
+    const label = card ? esc(card.label) : `（ID: ${id}）`;
+    return `<div class="hidden-card-row">
+      <span class="hidden-card-label">${label}</span>
+      <button class="btn-unhide-card" data-id="${id}" title="再表示"><i class="fa-solid fa-eye"></i> 再表示</button>
+    </div>`;
+  }).join('');
+  container.querySelectorAll('.btn-unhide-card').forEach(btn => {
+    btn.addEventListener('click', () => unhideCard(btn.dataset.id));
+  });
+}
+
 function buildSection(cat, cards) {
   const section = document.createElement('section');
   const gradient = getCategoryGradient(cat);
   const sectionId = cat.isPrivate ? `priv:${cat.docId}` : cat.id;
+  // 非表示カードをフィルタリング（個人設定）
+  const visibleCards = cards.filter(c => !state.hiddenCards.includes(c.id));
+  cards = visibleCards;
+  const isCollapsed = state.collapsedSections.includes(sectionId);
 
   if (cat.isExternal) {
-    section.className = 'external-tools';
+    section.className = 'external-tools' + (isCollapsed ? ' collapsed' : '');
     section.id = `section-${cat.id}`;
     const editBtns = state.isEditMode
       ? `<button class="btn-edit-category" data-docid="${cat.docId || ''}" title="カテゴリ編集"><i class="fa-solid fa-pen"></i></button>`
@@ -692,9 +768,16 @@ function buildSection(cat, cards) {
         <div class="category-icon" style="background:${gradient}"><i class="${cat.icon}"></i></div>
         <h2 class="category-title">${esc(cat.label)}</h2>
         ${editBtns}
+        <button class="btn-collapse-section${isCollapsed ? ' collapsed' : ''}" data-section-id="${sectionId}" title="${isCollapsed ? '展開' : '折り畳む'}">
+          <i class="fa-solid fa-chevron-up"></i>
+        </button>
       </div>
       <div class="external-grid"></div>
     `;
+    section.querySelector('.btn-collapse-section').addEventListener('click', e => {
+      e.stopPropagation();
+      toggleSectionCollapse(sectionId);
+    });
     const grid = section.querySelector('.external-grid');
     grid.appendChild(buildSolarIconWrap());
     cards.filter(c => c.url !== 'solar:open').forEach(c => grid.appendChild(buildExternalCard(c)));
@@ -717,7 +800,7 @@ function buildSection(cat, cards) {
     }
 
   } else if (cat.isPrivate) {
-    section.className = 'category-section private-section';
+    section.className = 'category-section private-section' + (isCollapsed ? ' collapsed' : '');
     section.id = `section-priv-${cat.docId}`;
     const color = CATEGORY_COLORS.find(c => c.index === cat.colorIndex);
     const privGradient = color ? color.gradient : CATEGORY_COLORS[0].gradient;
@@ -727,6 +810,9 @@ function buildSection(cat, cards) {
         <h2 class="category-title">${esc(cat.label)}<span class="private-badge"><i class="fa-solid fa-lock"></i></span></h2>
         <span class="category-count">${cards.length} 件</span>
         <button class="btn-edit-category" data-docid="${cat.docId}" title="マイセクションを編集"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn-collapse-section${isCollapsed ? ' collapsed' : ''}" data-section-id="${sectionId}" title="${isCollapsed ? '展開' : '折り畳む'}">
+          <i class="fa-solid fa-chevron-up"></i>
+        </button>
       </div>
       <div class="card-grid"></div>
     `;
@@ -735,6 +821,10 @@ function buildSection(cat, cards) {
     privRootCards.forEach(c => grid.appendChild(buildCardNode(c, cards, privGradient, true)));
     grid.appendChild(buildAddButton(null, true, cat.docId));
     section.querySelector('.btn-edit-category').addEventListener('click', () => openPrivateSectionModal(cat));
+    section.querySelector('.btn-collapse-section').addEventListener('click', e => {
+      e.stopPropagation();
+      toggleSectionCollapse(sectionId);
+    });
 
     const favs = getFavorites();
     const allFaved = cards.length > 0 && cards.every(c => favs.includes(c.id));
@@ -746,7 +836,7 @@ function buildSection(cat, cards) {
     section.querySelector('.category-header').appendChild(sBtn);
 
   } else {
-    section.className = 'category-section';
+    section.className = 'category-section' + (isCollapsed ? ' collapsed' : '');
     section.id = `section-${cat.id}`;
     const editBtns = state.isEditMode
       ? `<button class="btn-edit-category" data-docid="${cat.docId || ''}" title="カテゴリ編集"><i class="fa-solid fa-pen"></i></button>`
@@ -757,6 +847,9 @@ function buildSection(cat, cards) {
         <h2 class="category-title">${esc(cat.label)}</h2>
         <span class="category-count">${cards.length} 件</span>
         ${editBtns}
+        <button class="btn-collapse-section${isCollapsed ? ' collapsed' : ''}" data-section-id="${sectionId}" title="${isCollapsed ? '展開' : '折り畳む'}">
+          <i class="fa-solid fa-chevron-up"></i>
+        </button>
       </div>
       <div class="card-grid"></div>
     `;
@@ -764,6 +857,11 @@ function buildSection(cat, cards) {
     const rootCards = cards.filter(c => !c.parentId);
     rootCards.forEach(c => grid.appendChild(buildCardNode(c, cards, gradient, false)));
     if (state.isEditMode) grid.appendChild(buildAddButton(cat.id));
+
+    section.querySelector('.btn-collapse-section').addEventListener('click', e => {
+      e.stopPropagation();
+      toggleSectionCollapse(sectionId);
+    });
 
     if (state.isEditMode) {
       const editBtn = section.querySelector('.btn-edit-category');
@@ -820,6 +918,7 @@ function buildLinkCard(card, isFav = false, gradient = '') {
   const favs = getFavorites();
   const isFavorited = favs.includes(card.id);
   const starBtn = `<button class="btn-favorite${isFavorited ? ' active' : ''}" data-id="${card.id}" title="お気に入り"><i class="fa-${isFavorited ? 'solid' : 'regular'} fa-star"></i></button>`;
+  const hideBtn = !isFav ? `<button class="btn-hide-card" data-id="${card.id}" title="このカードを非表示にする"><i class="fa-solid fa-eye-slash"></i></button>` : '';
   const noUrlBadge = hasNoUrl
     ? `<span class="no-url-badge"><i class="fa-solid fa-triangle-exclamation"></i> URL未設定</span>`
     : '';
@@ -829,6 +928,7 @@ function buildLinkCard(card, isFav = false, gradient = '') {
     <div class="card-icon" style="color: inherit">${iconHtml}</div>
     <span class="card-label">${esc(card.label)}</span>
     ${starBtn}
+    ${hideBtn}
   `;
 
   if (gradient) {
@@ -850,6 +950,14 @@ function buildLinkCard(card, isFav = false, gradient = '') {
   });
 
   if (!isFav) {
+    const hideBtnEl = a.querySelector('.btn-hide-card');
+    if (hideBtnEl) {
+      hideBtnEl.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        hideCard(card.id);
+      });
+    }
     a.addEventListener('contextmenu', e => {
       e.preventDefault();
       showContextMenu(e, card);
@@ -898,6 +1006,18 @@ function buildExternalCard(card) {
 
   a.innerHTML = `<div class="ext-icon-img">${iconHtml}</div><span class="ext-icon-label">${esc(card.label)}</span>`;
   wrap.appendChild(a);
+
+  // 非表示ボタン（ホバー時表示）
+  const hideBtn = document.createElement('button');
+  hideBtn.className = 'btn-hide-ext-card';
+  hideBtn.title = 'このアイコンを非表示にする';
+  hideBtn.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
+  hideBtn.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    hideCard(card.id);
+  });
+  wrap.appendChild(hideBtn);
 
   wrap.addEventListener('contextmenu', e => {
     e.preventDefault();
@@ -1836,6 +1956,7 @@ function openSettingsPanel() {
   const panel = document.getElementById('settings-panel');
   panel.removeAttribute('hidden');
   document.getElementById('settings-fab').classList.add('active');
+  _renderHiddenCardsList();
 }
 
 function closeSettingsPanel() {

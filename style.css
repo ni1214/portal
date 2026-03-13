@@ -7839,3 +7839,172 @@ html.font-xl { font-size: 21px; }
 [data-theme="warm"] .cal-today .cal-day-num {
   background: var(--accent-blue);
 }
+
+/* ===== セクション折り畳み・カード非表示 ===== */
+
+/* 折り畳みボタン */
+.btn-collapse-section {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border-glass);
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: transform 0.25s ease, color 0.2s, background 0.2s;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+.btn-collapse-section:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+.btn-collapse-section i {
+  font-size: 0.7rem;
+  transition: transform 0.25s ease;
+}
+.btn-collapse-section.collapsed i {
+  transform: rotate(180deg);
+}
+
+/* 折り畳まれたセクション */
+.category-section.collapsed .card-grid,
+.external-tools.collapsed .external-grid,
+.category-section.collapsed .btn-add-card {
+  display: none;
+}
+
+/* カード非表示ボタン（link-card 用） */
+.link-card {
+  position: relative;
+}
+.btn-hide-card {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: rgba(0,0,0,0.55);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  z-index: 10;
+  transition: background 0.15s, color 0.15s;
+}
+.link-card:hover .btn-hide-card {
+  display: inline-flex;
+}
+.btn-hide-card:hover {
+  background: rgba(255,80,80,0.7);
+  color: #fff;
+}
+
+/* 外部ツールアイコン用非表示ボタン */
+.ext-icon-wrap {
+  position: relative;
+}
+.btn-hide-ext-card {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: rgba(0,0,0,0.6);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  z-index: 10;
+  transition: background 0.15s, color 0.15s;
+}
+.ext-icon-wrap:hover .btn-hide-ext-card {
+  display: inline-flex;
+}
+.btn-hide-ext-card:hover {
+  background: rgba(255,80,80,0.7);
+  color: #fff;
+}
+
+/* 設定パネル：非表示カード管理 */
+.settings-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+.hidden-cards-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--accent-blue);
+  color: #fff;
+  border-radius: 9px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.hidden-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.hidden-cards-empty {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 12px 0;
+  margin: 0;
+}
+.hidden-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  gap: 8px;
+}
+.hidden-card-label {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.btn-unhide-card {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--accent-blue);
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-unhide-card:hover {
+  background: var(--bg-card-hover);
+}
