@@ -2968,7 +2968,8 @@ html.font-xl { font-size: 21px; }
 [data-theme="light"] .btn-task,
 [data-theme="light"] .btn-notice-bell,
 [data-theme="light"] .btn-email-assist,
-[data-theme="light"] .btn-calendar {
+[data-theme="light"] .btn-calendar,
+[data-theme="light"] .btn-lock-header {
   background: rgba(26, 30, 58, 0.07);
   border-color: rgba(26, 30, 58, 0.16);
   color: rgba(26, 30, 58, 0.6);
@@ -2982,6 +2983,11 @@ html.font-xl { font-size: 21px; }
   background: rgba(26, 30, 58, 0.13);
   border-color: rgba(26, 30, 58, 0.3);
   color: rgba(26, 30, 58, 0.9);
+}
+/* ロックボタンはホバー時にアンバー色を維持しつつ背景だけ補正 */
+[data-theme="light"] .btn-lock-header:hover {
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.5);
 }
 [data-theme="light"] .search-container:focus-within,
 [data-theme="light"] .search-container.has-value {
@@ -6325,8 +6331,8 @@ html.font-xl { font-size: 21px; }
   justify-content: center;
   width: 36px;
   height: 36px;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.13);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
   border-radius: 50%;
   color: var(--text-secondary);
   font-size: 0.88rem;
@@ -6335,7 +6341,7 @@ html.font-xl { font-size: 21px; }
   flex-shrink: 0;
 }
 .btn-lock-header:hover {
-  background: rgba(255,255,255,0.13);
+  background: var(--bg-card-hover);
   border-color: rgba(251,191,36,0.5);
   color: #fbbf24;
   box-shadow: 0 0 10px rgba(251,191,36,0.2);
