@@ -8677,3 +8677,74 @@ html.font-xl { font-size: 21px; }
 [data-theme="warm"] .task-action-edit:hover {
   background: rgba(255, 165, 50, 0.28);
 }
+
+/* ===== 自分のタスクウィジェット — 割り振りタスク統合 (script.js) ===== */
+
+/* 割り振りタスク行 */
+.todo-item--assigned {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  padding: 7px 10px;
+  border-radius: 6px;
+  transition: background 0.15s;
+  border-left: 3px solid var(--accent-blue);
+}
+.todo-item--assigned:hover {
+  background: var(--bg-card-hover);
+}
+
+/* ステータスバッジ（タスクモジュールのクラスを流用） */
+.todo-assigned-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* テキスト */
+.todo-text--assigned {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.88rem;
+}
+
+/* 期限（割り振りタスク用） */
+.todo-due--assigned {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: var(--bg-glass);
+  padding: 1px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+/* 依頼者名 */
+.todo-assigned-from {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+/* 区切り線 */
+.todo-divider {
+  list-style: none;
+  height: 1px;
+  background: var(--border-glass);
+  margin: 4px 2px;
+  padding: 0;
+  pointer-events: none;
+}
+
+/* ウォームテーマ上書き */
+[data-theme="warm"] .todo-item--assigned {
+  border-left-color: var(--accent-blue);
+}

@@ -125,7 +125,7 @@
       <div class="todo-header">
         <div class="todo-header-left">
           <div class="todo-icon"><i class="fa-solid fa-circle-check"></i></div>
-          <h2 class="todo-title">今日のタスク</h2>
+          <h2 class="todo-title">自分のタスク</h2>
           <span class="todo-count" id="todo-count"></span>
         </div>
         <button class="todo-toggle-btn" id="todo-toggle-btn" title="折りたたむ">
@@ -134,7 +134,10 @@
       </div>
 
       <div class="todo-body" id="todo-body">
-        <!-- タスク一覧（JSで生成） -->
+        <!-- 割り振りタスク（JSで生成） -->
+        <ul class="todo-list todo-assigned-list" id="todo-assigned-list"></ul>
+
+        <!-- 個人TODO一覧（JSで生成） -->
         <ul class="todo-list" id="todo-list"></ul>
 
         <!-- クイック追加フォーム -->

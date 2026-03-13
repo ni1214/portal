@@ -161,6 +161,7 @@ Object.assign(noticeDeps, {
 Object.assign(taskDeps, {
   updateLockNotifications,
   loadUsersForChatPicker,
+  renderTodoSection,
   // 共有ピッカー用: users_list を取得して renderSharePickerUsers に渡す
   loadUsersForSharePicker: async (alreadyShared, assignedTo, assignedBy) => {
     try {
@@ -233,10 +234,11 @@ async function deleteTodo(todoId) {
 }
 
 function renderTodoSection() {
-  const section = document.getElementById('todo-section');
-  const list    = document.getElementById('todo-list');
-  const countEl = document.getElementById('todo-count');
-  const body    = document.getElementById('todo-body');
+  const section      = document.getElementById('todo-section');
+  const list         = document.getElementById('todo-list');
+  const assignedList = document.getElementById('todo-assigned-list');
+  const countEl      = document.getElementById('todo-count');
+  const body         = document.getElementById('todo-body');
   if (!section || !list) return;
 
   if (!state.currentUsername) { section.hidden = true; return; }
@@ -251,11 +253,45 @@ function renderTodoSection() {
     toggleBtn.title = state.todoCollapsed ? '展開する' : '折りたたむ';
   }
 
+  // ===== 割り振りタスク（pending / accepted のみ）=====
+  const activeTasks = (state.receivedTasks || []).filter(t => t.status === 'pending' || t.status === 'accepted');
+  if (assignedList) {
+    assignedList.innerHTML = '';
+    activeTasks.forEach(task => {
+      const li = document.createElement('li');
+      li.className = 'todo-item todo-item--assigned';
+      const statusCls  = task.status === 'pending' ? 'task-status-pending' : 'task-status-accepted';
+      const statusText = task.status === 'pending' ? '承諾待ち' : '進行中';
+      const due = task.dueDate ? `<span class="todo-due todo-due--assigned">${esc(task.dueDate)}</span>` : '';
+      li.innerHTML = `
+        <span class="todo-assigned-badge ${statusCls}">${statusText}</span>
+        <span class="todo-text todo-text--assigned">${esc(task.title)}</span>
+        ${due}
+        <span class="todo-assigned-from">依頼: ${esc(task.assignedBy)}</span>
+      `;
+      li.title = 'クリックでタスクを開く';
+      li.addEventListener('click', () => {
+        openTaskModal();
+        setTimeout(() => switchTaskTab('received'), 50);
+      });
+      assignedList.appendChild(li);
+    });
+    if (activeTasks.length > 0) {
+      const divider = document.createElement('li');
+      divider.className = 'todo-divider';
+      assignedList.appendChild(divider);
+    }
+  }
+
+  // ===== 個人TODO =====
   const total  = state.personalTodos.length;
   const doneN  = state.personalTodos.filter(t => t.done).length;
   if (countEl) {
-    countEl.textContent = total ? `${doneN}/${total} 完了` : '';
-    countEl.className   = 'todo-count' + (doneN === total && total > 0 ? ' todo-count--all-done' : '');
+    const parts = [];
+    if (activeTasks.length) parts.push(`依頼 ${activeTasks.length} 件`);
+    if (total) parts.push(`個人 ${doneN}/${total} 完了`);
+    countEl.textContent = parts.join(' · ');
+    countEl.className   = 'todo-count' + (doneN === total && total > 0 && activeTasks.length === 0 ? ' todo-count--all-done' : '');
   }
 
   const sorted = [
@@ -264,7 +300,7 @@ function renderTodoSection() {
   ];
 
   list.innerHTML = '';
-  if (sorted.length === 0) {
+  if (sorted.length === 0 && activeTasks.length === 0) {
     list.innerHTML = '<li class="todo-empty"><i class="fa-regular fa-circle-check"></i> タスクはありません</li>';
   } else {
     sorted.forEach(todo => {

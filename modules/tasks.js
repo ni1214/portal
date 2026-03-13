@@ -16,6 +16,7 @@ export function startTaskListeners(username) {
     state.receivedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
     updateTaskBadge();
+    deps.renderTodoSection?.();   // 自分のタスクウィジェットも更新
     if (state.taskModalOpen && state.activeTaskTab === 'received') renderTaskTabContent();
   }, err => console.error('receivedTasks listener error:', err));
 
