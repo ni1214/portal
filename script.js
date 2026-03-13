@@ -1767,10 +1767,52 @@ function normalizeForSearch(s) {
   return (s || '').normalize('NFKC').toLowerCase();
 }
 
+function _getCardGradient(card) {
+  if (card.isPrivate) {
+    const sec = state.privateCategories.find(c => c.docId === card.sectionId);
+    if (sec) {
+      const color = CATEGORY_COLORS.find(c => c.index === sec.colorIndex);
+      return color ? color.gradient : CATEGORY_COLORS[0].gradient;
+    }
+    return CATEGORY_COLORS[0].gradient;
+  }
+  const cat = state.allCategories.find(c => c.id === card.category);
+  if (!cat) return CATEGORY_COLORS[0].gradient;
+  return getCategoryGradient(cat);
+}
+
+function _buildSearchBreadcrumb(card, allData) {
+  const parts = [];
+  // カテゴリ名
+  if (card.isPrivate) {
+    const sec = state.privateCategories.find(c => c.docId === card.sectionId);
+    if (sec) parts.push(`<span class="srb-cat">${esc(sec.label)}</span>`);
+  } else {
+    const cat = state.allCategories.find(c => c.id === card.category);
+    if (cat) parts.push(`<span class="srb-cat">${esc(cat.label)}</span>`);
+  }
+  // 親カード名（あれば）
+  if (card.parentId) {
+    const parent = allData.find(c => c.id === card.parentId);
+    if (parent) parts.push(`<span class="srb-parent">${esc(parent.label)}</span>`);
+  }
+  return parts.join('<i class="fa-solid fa-chevron-right srb-arrow"></i>');
+}
+
+function _clearSearchResults() {
+  const resultsSection = document.getElementById('search-results-section');
+  const noResults      = document.getElementById('no-results');
+  if (resultsSection) { resultsSection.hidden = true; resultsSection.innerHTML = ''; }
+  if (noResults) noResults.classList.remove('visible');
+  document.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap')
+    .forEach(el => el.classList.remove('search-hidden'));
+}
+
 function initSearch() {
-  const searchInput = document.getElementById('search-input');
-  const container   = searchInput.closest('.search-container');
-  const noResults   = document.getElementById('no-results');
+  const searchInput    = document.getElementById('search-input');
+  const container      = searchInput.closest('.search-container');
+  const noResults      = document.getElementById('no-results');
+  const resultsSection = document.getElementById('search-results-section');
 
   container.addEventListener('click', () => searchInput.focus());
 
@@ -1784,62 +1826,56 @@ function initSearch() {
 
   searchInput.addEventListener('input', () => {
     const raw = searchInput.value.trim();
-    const q = normalizeForSearch(raw);
+    const q   = normalizeForSearch(raw);
     container.classList.toggle('has-value', raw.length > 0);
-    let total = 0;
 
-    const directRootIds  = new Set();
-    const childOnlyRootIds = new Set();
-
-    if (q) {
-      const allData = [...(state.allCards || []), ...(state.privateCards || [])];
-      allData.forEach(card => {
-        if (!normalizeForSearch(card.label).includes(q)) return;
-        if (!card.parentId) {
-          directRootIds.add(card.id);
-        } else {
-          let cur = card;
-          while (cur && cur.parentId) {
-            cur = allData.find(c => c.id === cur.parentId) || null;
-          }
-          if (cur && !cur.parentId) {
-            if (!directRootIds.has(cur.id)) childOnlyRootIds.add(cur.id);
-          }
-        }
-      });
+    if (!q) {
+      _clearSearchResults();
+      return;
     }
 
-    document.querySelectorAll('.category-section:not(#favorites-section)').forEach(section => {
-      let visible = 0;
-      section.querySelectorAll('.link-card').forEach(cardEl => {
-        const cardId = cardEl.dataset.docId;
-        let match, isChildOnly = false;
-        if (!q) {
-          match = true;
-        } else if (directRootIds.has(cardId)) {
-          match = true;
-        } else if (childOnlyRootIds.has(cardId)) {
-          match = true;
-          isChildOnly = true;
-        } else {
-          match = false;
-        }
-        cardEl.classList.toggle('hidden', !match);
-        cardEl.classList.toggle('search-child-match', isChildOnly);
-        if (match) visible++;
-      });
-      const countEl = section.querySelector('.category-count');
-      if (countEl) countEl.textContent = `${visible} 件`;
-      section.classList.toggle('hidden', visible === 0 && !!q);
-      total += visible;
-    });
+    // 検索中はすべてのセクションを隠す
+    document.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap')
+      .forEach(el => el.classList.add('search-hidden'));
 
-    document.querySelectorAll('.external-card').forEach(card => {
-      const match = !q || normalizeForSearch(card.querySelector('.external-label')?.textContent).includes(q);
-      card.classList.toggle('hidden', !match);
-    });
+    // 全カードからマッチするものを直接探す（非表示カードは除く）
+    const allData = [...(state.allCards || []), ...(state.privateCards || [])];
+    const matches = allData.filter(card =>
+      !state.hiddenCards.includes(card.id) &&
+      normalizeForSearch(card.label).includes(q)
+    );
 
-    noResults.classList.toggle('visible', total === 0 && !!q);
+    if (matches.length === 0) {
+      resultsSection.hidden = true;
+      resultsSection.innerHTML = '';
+      noResults.classList.add('visible');
+      return;
+    }
+
+    noResults.classList.remove('visible');
+    resultsSection.hidden = false;
+    resultsSection.innerHTML = `
+      <div class="search-results-header">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <span><strong>${matches.length}</strong> 件見つかりました</span>
+      </div>
+      <div class="search-results-grid" id="search-results-grid"></div>
+    `;
+    const grid = document.getElementById('search-results-grid');
+
+    matches.forEach(card => {
+      const wrap = document.createElement('div');
+      wrap.className = 'search-result-wrap';
+
+      const crumbEl = document.createElement('div');
+      crumbEl.className = 'search-result-breadcrumb';
+      crumbEl.innerHTML = _buildSearchBreadcrumb(card, allData);
+      wrap.appendChild(crumbEl);
+
+      const cardEl = buildLinkCard(card, false, _getCardGradient(card));
+      wrap.appendChild(cardEl);
+      grid.appendChild(wrap);
+    });
   });
 }
 

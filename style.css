@@ -8008,3 +8008,59 @@ html.font-xl { font-size: 21px; }
 .btn-unhide-card:hover {
   background: var(--bg-card-hover);
 }
+
+/* ===== 検索結果ダイレクト表示 ===== */
+.search-hidden {
+  display: none !important;
+}
+.search-results-section {
+  padding: 0 4px 24px;
+}
+.search-results-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 4px 14px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.search-results-header i {
+  color: var(--accent-cyan);
+  font-size: 0.9rem;
+}
+.search-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 14px;
+}
+.search-result-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.search-result-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  padding: 0 2px;
+  line-height: 1.2;
+}
+.srb-cat {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: var(--text-secondary);
+}
+.srb-parent {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.srb-arrow {
+  font-size: 0.55rem !important;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
