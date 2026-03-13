@@ -8153,3 +8153,58 @@ html.font-xl { font-size: 21px; }
 [data-theme="warm"] .mission-banner-icon {
   color: var(--accent-blue);
 }
+
+/* ===== カード非表示確認モーダル ===== */
+.hide-card-confirm-dialog {
+  max-width: 400px;
+  width: 92%;
+  padding: 28px 24px 22px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hide-card-confirm-icon {
+  font-size: 2.2rem;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+.hide-card-confirm-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+.hide-card-confirm-name {
+  font-size: 0.95rem;
+  color: var(--accent-blue);
+  margin: 0;
+  font-weight: 600;
+  word-break: break-all;
+}
+.hide-card-confirm-steps {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  padding: 10px 14px 10px 10px;
+  text-align: left;
+  margin-top: 4px;
+}
+.hide-card-confirm-steps-label {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.hide-card-confirm-steps-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.hide-card-confirm-steps-list strong {
+  color: var(--text-primary);
+}

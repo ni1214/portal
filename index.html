@@ -1444,6 +1444,31 @@
     </div>
   </div>
 
+  <!-- カード非表示確認モーダル -->
+  <div class="modal-overlay" id="hide-card-confirm-modal">
+    <div class="modal-glass hide-card-confirm-dialog">
+      <div class="hide-card-confirm-icon">
+        <i class="fa-solid fa-eye-slash"></i>
+      </div>
+      <p class="hide-card-confirm-title">このカードを非表示にしますか？</p>
+      <p class="hide-card-confirm-name" id="hide-card-confirm-name">カード名</p>
+      <div class="hide-card-confirm-steps">
+        <p class="hide-card-confirm-steps-label"><i class="fa-solid fa-rotate-left"></i> 元に戻す手順：</p>
+        <ol class="hide-card-confirm-steps-list">
+          <li>右上の <strong>⚙ 設定</strong> ボタンを開く</li>
+          <li>「<strong>非表示カード管理</strong>」セクションを確認する</li>
+          <li>カード名の横の <strong>再表示</strong> ボタンを押す</li>
+        </ol>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="hide-card-confirm-cancel">キャンセル</button>
+        <button class="btn-modal-primary" id="hide-card-confirm-ok">
+          <i class="fa-solid fa-eye-slash"></i> 非表示にする
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Script (type="module" for Firebase ESM) -->
   <script type="module" src="script.js"></script>
 </body>

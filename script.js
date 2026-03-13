@@ -756,8 +756,28 @@ function toggleSectionCollapse(sectionId) {
 }
 
 // ===== カード非表示 =====
+let _pendingHideCardId = null;
+
 function hideCard(cardId) {
   if (!state.currentUsername) return;
+  if (state.hiddenCards.includes(cardId)) return;
+
+  // カード名を取得
+  const allCardPool = [...state.allCards, ...state.privateCards];
+  const card = allCardPool.find(c => c.id === cardId);
+  const label = card ? card.label : cardId;
+
+  // 確認モーダルを表示
+  const modal = document.getElementById('hide-card-confirm-modal');
+  const nameEl = document.getElementById('hide-card-confirm-name');
+  if (modal && nameEl) {
+    nameEl.textContent = `「${label}」`;
+    _pendingHideCardId = cardId;
+    modal.classList.add('visible');
+  }
+}
+
+function _doHideCard(cardId) {
   if (!state.hiddenCards.includes(cardId)) {
     state.hiddenCards.push(cardId);
     savePreferencesToFirestore();
@@ -2442,6 +2462,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ミッションバナー
   document.getElementById('mission-banner-toggle').addEventListener('click', toggleMissionBanner);
   document.getElementById('admin-mission-save-btn').addEventListener('click', saveMissionText);
+
+  // ===== カード非表示確認モーダル =====
+  document.getElementById('hide-card-confirm-cancel').addEventListener('click', () => {
+    document.getElementById('hide-card-confirm-modal').classList.remove('visible');
+    _pendingHideCardId = null;
+  });
+  document.getElementById('hide-card-confirm-ok').addEventListener('click', () => {
+    document.getElementById('hide-card-confirm-modal').classList.remove('visible');
+    if (_pendingHideCardId) {
+      _doHideCard(_pendingHideCardId);
+      _pendingHideCardId = null;
+    }
+  });
+  document.getElementById('hide-card-confirm-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) {
+      e.currentTarget.classList.remove('visible');
+      _pendingHideCardId = null;
+    }
+  });
 
   // ===== カレンダー =====
   document.getElementById('btn-calendar').addEventListener('click', openCalendarModal);
