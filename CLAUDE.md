@@ -75,6 +75,7 @@ export function xxxFunction() { ... }
 | tasks.js | `task-` | `task-modal` |
 | notices.js | `notice-` | `notice-list` |
 | auth.js | `auth-` / `lock-` | `lock-screen` |
+| calendar.js | `cal-` | `cal-modal` |
 | 新機能 XYZ | `xyz-` | `xyz-modal` |
 
 - プレフィックスなしの ID は禁止（他機能との衝突リスク）
@@ -137,6 +138,17 @@ export function xxxFunction() { ... }
 | `portal/config` | 管理者PIN・Gemini APIキー・departments[]・suggestionBoxViewers[] |
 | `cross_dept_requests/` | 部門間依頼（部署→部署の課題・お願い） |
 | `suggestion_box/` | 目安箱（全員投稿可、閲覧は管理者のみ） |
+| `users/{name}/attendance/{YYYY-MM-DD}` | 個人勤怠（完全プライベート）|
+
+### 勤怠データフィールド（`users/{name}/attendance/{YYYY-MM-DD}`）
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `type` | string\|null | `null`=通常 / `'有給'` / `'半休午前'` / `'半休午後'` / `'欠勤'` |
+| `hayade` | string\|null | 早出時刻（例: `"07:30"`）|
+| `zangyo` | string\|null | 残業時刻（例: `"19:00"`）|
+| `note` | string\|null | メモ |
+| `yearMonth` | string | `'YYYY-MM'`（月別クエリ用インデックス）|
+| `updatedAt` | timestamp | `serverTimestamp()` |
 
 ## セキュリティ
 - Firestore セキュリティルールなし（ユーザー名を知らないと個人データにアクセスできない「obscurity」方式）

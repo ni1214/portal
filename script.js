@@ -108,6 +108,13 @@ import {
   switchEmailTab, openEmailModal, closeEmailModal
 } from './modules/email.js';
 
+import {
+  initCalendar,
+  openCalendarModal, closeCalendarModal,
+  calPrevMonth, calNextMonth, calGoToday,
+  closeDayPanel, saveDayAttendance, deleteAttendance
+} from './modules/calendar.js';
+
 
 // ========== 依存注入 ==========
 // 各モジュールが必要とするクロスモジュール関数を注入
@@ -146,6 +153,7 @@ Object.assign(reqDeps, {
 });
 
 initEmail({ confirmDelete });
+initCalendar({});
 
 
 // ========== 個人TODO ==========
@@ -2215,6 +2223,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('admin-suggbox-add-btn').addEventListener('click', addSuggBoxViewer);
   document.getElementById('admin-suggbox-add-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') addSuggBoxViewer();
+  });
+
+  // ===== カレンダー =====
+  document.getElementById('btn-calendar').addEventListener('click', openCalendarModal);
+  document.getElementById('cal-close-btn').addEventListener('click', closeCalendarModal);
+  document.getElementById('cal-prev-btn').addEventListener('click', calPrevMonth);
+  document.getElementById('cal-next-btn').addEventListener('click', calNextMonth);
+  document.getElementById('cal-today-btn').addEventListener('click', calGoToday);
+  document.getElementById('cal-day-cancel-btn').addEventListener('click', closeDayPanel);
+  document.getElementById('cal-day-save-btn').addEventListener('click', saveDayAttendance);
+  document.getElementById('cal-day-delete-btn').addEventListener('click', () => {
+    const { calendarSelectedDate } = state;
+    if (calendarSelectedDate) deleteAttendance(calendarSelectedDate);
+  });
+  // モーダル外クリックで閉じる
+  document.getElementById('cal-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeCalendarModal();
   });
 
   // ===== タスク =====

@@ -58,6 +58,10 @@
         <i class="fa-solid fa-envelope-open-text"></i>
       </button>
 
+      <button class="btn-calendar" id="btn-calendar" title="カレンダー・勤怠管理">
+        <i class="fa-regular fa-calendar"></i>
+      </button>
+
       <button class="btn-task" id="btn-task" title="タスク管理">
         <i class="fa-solid fa-list-check"></i>
         <span class="task-badge" id="task-badge" hidden>0</span>
@@ -1165,6 +1169,77 @@
 
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ==================== カレンダー・勤怠管理モーダル ==================== -->
+  <div class="modal-overlay" id="cal-modal">
+    <div class="cal-modal-glass">
+
+      <!-- ヘッダー: ナビ + タイトル + 閉じる -->
+      <div class="cal-modal-header">
+        <button class="cal-nav-btn" id="cal-prev-btn" title="前月"><i class="fa-solid fa-chevron-left"></i></button>
+        <div class="cal-modal-title-area">
+          <h3 class="cal-modal-title" id="cal-title">2026年3月</h3>
+          <button class="cal-today-btn" id="cal-today-btn">今月</button>
+        </div>
+        <button class="cal-nav-btn" id="cal-next-btn" title="次月"><i class="fa-solid fa-chevron-right"></i></button>
+        <button class="cal-close-btn" id="cal-close-btn" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- 月間サマリー -->
+      <div class="cal-summary">
+        <span class="cal-summary-item cal-summary-yukyu"><i class="fa-solid fa-umbrella-beach"></i> 有給 <b id="cal-cnt-yukyu">0</b>日</span>
+        <span class="cal-summary-item cal-summary-hankyu"><i class="fa-solid fa-clock-rotate-left"></i> 半休 <b id="cal-cnt-hankyu">0</b>日</span>
+        <span class="cal-summary-item cal-summary-hayade"><i class="fa-solid fa-sunrise"></i> 早出 <b id="cal-cnt-hayade">0</b>回</span>
+        <span class="cal-summary-item cal-summary-zangyo"><i class="fa-solid fa-moon"></i> 残業 <b id="cal-cnt-zangyo">0</b>回</span>
+      </div>
+
+      <!-- カレンダーグリッド -->
+      <div id="cal-grid-container" class="cal-grid-container"></div>
+
+      <!-- 日付詳細パネル -->
+      <div id="cal-day-panel" class="cal-day-panel" hidden>
+        <div class="cal-day-panel-header">
+          <div class="cal-day-title" id="cal-day-title">3月13日（木）</div>
+          <button class="cal-day-close" id="cal-day-close-btn" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <!-- 勤務区分 -->
+        <div class="form-group">
+          <label class="form-label">勤務区分</label>
+          <div class="cal-type-btns" id="cal-type-btns"></div>
+        </div>
+
+        <!-- 早出・残業（横並び） -->
+        <div class="cal-time-row">
+          <div class="form-group" style="flex:1">
+            <label class="form-label"><i class="fa-solid fa-sun" style="color:#f59e0b"></i> 早出 開始時刻</label>
+            <input type="time" id="cal-hayade-time" class="form-input">
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label"><i class="fa-solid fa-moon" style="color:#818cf8"></i> 残業 終了時刻</label>
+            <input type="time" id="cal-zangyo-time" class="form-input">
+          </div>
+        </div>
+
+        <!-- メモ -->
+        <div class="form-group">
+          <label class="form-label">メモ（任意）</label>
+          <input type="text" id="cal-note" class="form-input" placeholder="例：代休申請済み" maxlength="50">
+        </div>
+
+        <!-- この日のタスク -->
+        <div id="cal-day-tasks" class="cal-day-tasks" hidden></div>
+
+        <!-- アクション -->
+        <div class="modal-actions">
+          <button class="btn-modal-secondary" id="cal-day-cancel-btn">キャンセル</button>
+          <button class="btn-modal-danger" id="cal-day-delete-btn" hidden>削除</button>
+          <button class="btn-modal-primary" id="cal-day-save-btn">保存</button>
+        </div>
+      </div>
+
     </div>
   </div>
 

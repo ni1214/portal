@@ -152,6 +152,13 @@ export const state = {
   userEmailProfile: { name: '', department: '', position: '' },
   DEFAULT_SIGNATURE_TEMPLATE: '',
 
+  // カレンダー・勤怠管理
+  calendarYear:    new Date().getFullYear(),
+  calendarMonth:   new Date().getMonth(),   // 0-indexed
+  attendanceData:  {},   // { 'YYYY-MM-DD': { type, hayade, zangyo, note } }
+  _attendanceSub:  null,
+  calendarSelectedDate: null,
+
   // PIN ロック
   lockPinHash: null,
   lockPinEnabled: false,
