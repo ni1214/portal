@@ -8377,12 +8377,17 @@ html.font-xl { font-size: 21px; }
   background: rgba(156,39,176,0.06);
 }
 
+/* 共有カレンダーコンテナ — 個人グリッドと同じパディングに揃える */
+#cal-shared-container {
+  padding: 12px 20px;
+}
+
 /* 共有カレンダーのヘッダー */
 .cal-shared-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 14px 8px;
+  padding: 0 0 8px;
 }
 .cal-shared-title {
   font-size: 0.82rem;
@@ -8429,9 +8434,9 @@ html.font-xl { font-size: 21px; }
 .cal-shared-user-badge.kekkin { background: rgba(244,67,54,0.2);  color: #ef4444; }
 [data-theme="light"] .cal-shared-user-badge.hankyu { color: #b45309; }
 
-/* 共有カレンダーのセル（少し高め） */
+/* 共有カレンダーのセル — 個人と同じ高さに揃える */
 .cal-shared-cells .cal-cell {
-  min-height: 64px;
+  min-height: 72px;
 }
 
 /* ===== 会社カレンダー設定モーダル ===== */
