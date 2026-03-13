@@ -5895,8 +5895,8 @@ html.font-xl { font-size: 21px; }
   letter-spacing: 0.04em;
 }
 .email-profile-name-input {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-sm);
   padding: 8px 10px;
   font-size: 0.85rem;
@@ -5905,10 +5905,10 @@ html.font-xl { font-size: 21px; }
   font-family: inherit;
   transition: border-color 0.15s;
 }
-.email-profile-name-input:focus { border-color: rgba(124, 92, 255, 0.5); }
+.email-profile-name-input:focus { border-color: var(--accent-purple); }
 .email-profile-prompt-area {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.09);
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-sm);
   padding: 9px 11px;
   font-size: 0.82rem;
@@ -5920,7 +5920,7 @@ html.font-xl { font-size: 21px; }
   line-height: 1.6;
   transition: border-color 0.15s;
 }
-.email-profile-prompt-area:focus { border-color: rgba(124, 92, 255, 0.45); }
+.email-profile-prompt-area:focus { border-color: var(--accent-purple); }
 .email-prompt-actions {
   display: flex;
   gap: 8px;
@@ -5955,8 +5955,8 @@ html.font-xl { font-size: 21px; }
 
 /* 受信メール */
 .email-received-area {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   font-size: 0.83rem;
@@ -5968,7 +5968,7 @@ html.font-xl { font-size: 21px; }
   line-height: 1.65;
   transition: border-color 0.15s;
 }
-.email-received-area:focus { border-color: rgba(96, 165, 250, 0.45); }
+.email-received-area:focus { border-color: var(--accent-blue); }
 .email-received-area::placeholder { color: var(--text-muted); }
 
 /* 生成ボタン */
@@ -7339,6 +7339,30 @@ html.font-xl { font-size: 21px; }
 /* ===========================
    ライトテーマ 調整
    =========================== */
+
+/* メールアシスタント ライト対応 */
+[data-theme="light"] .email-modal-inner {
+  background: rgba(241, 243, 247, 0.98);
+  border-color: rgba(31, 35, 40, 0.15);
+}
+[data-theme="light"] .email-profile-name-input,
+[data-theme="light"] .email-profile-prompt-area,
+[data-theme="light"] .email-received-area {
+  background: #ffffff;
+  border-color: rgba(31, 35, 40, 0.28);
+  color: var(--text-primary);
+}
+[data-theme="light"] .email-profile-name-input:focus,
+[data-theme="light"] .email-profile-prompt-area:focus,
+[data-theme="light"] .email-received-area:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.14);
+}
+[data-theme="light"] .email-received-area::placeholder,
+[data-theme="light"] .email-profile-prompt-area::placeholder {
+  color: var(--text-muted);
+}
+
 [data-theme="light"] .reqboard-modal-inner {
   background: rgba(240,244,255,0.98);
 }

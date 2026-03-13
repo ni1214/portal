@@ -246,7 +246,11 @@ assigned_tasks/{taskId}
 - `[data-theme="light"] .form-input` → `background: #ffffff` + `border-color: rgba(31,35,40,0.28)` （白＋くっきりボーダー）
 - `--border-glass` をライト時 `0.25` に強化
 
-**新規モーダルを作るときの注意**: `modal-glass` クラスを使えばライト対応は自動。入力欄は `.form-input` クラスを使えば自動。
+**新規モーダルを作るときの注意**:
+- `modal-glass` クラスを使えばライト対応は自動。
+- 入力欄は `.form-input` クラスを使えば自動。
+- **独自入力クラスを作る場合（例: `.email-profile-prompt-area`）は `[data-theme="light"]` オーバーライドをセットで追加すること。** 忘れると白飛びする（既発生済み）。
+- 入力欄の背景は `var(--bg-glass)` / `var(--bg-card)` を使う。`rgba(255,255,255,0.xx)` のハードコードは禁止。
 
 ### ボタンクラス対応表
 | 用途 | 正しいクラス |
