@@ -2140,7 +2140,7 @@ async function handlePinSubmit() {
 
 
 // ========== 表示設定（テーマ・文字サイズ） ==========
-const THEMES     = ['dark', 'light', 'warm'];
+const THEMES     = ['dark', 'light'];
 const FONTSIZES  = ['font-sm', 'font-md', 'font-lg', 'font-xl'];
 
 function applyTheme(theme, save = true) {

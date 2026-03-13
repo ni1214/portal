@@ -2,41 +2,50 @@
    Design System & Variables
    =========================== */
 :root {
-  /* Colors */
-  --bg-primary: #0f1117;
-  --bg-secondary: #181d2a;
-  --bg-card: rgba(255, 255, 255, 0.05);
-  --bg-card-hover: rgba(255, 255, 255, 0.09);
-  --bg-glass: rgba(255, 255, 255, 0.06);
-  --border-glass: rgba(255, 255, 255, 0.10);
-  --border-glass-hover: rgba(255, 255, 255, 0.22);
+  /* ===== Colors (WCAG 2.1 AA準拠 / GitHub Design System ベース) ===== */
 
-  --text-primary: #e8eaf0;
-  --text-secondary: rgba(232, 234, 240, 0.62);
-  --text-muted: rgba(232, 234, 240, 0.38);
+  /* Backgrounds */
+  --bg-primary:         #0d1117;
+  --bg-secondary:       #161b22;
+  --bg-card:            rgba(255, 255, 255, 0.05);
+  --bg-card-hover:      rgba(255, 255, 255, 0.09);
+  --bg-glass:           rgba(255, 255, 255, 0.06);
 
-  --accent-blue: #4a9eff;
-  --accent-cyan: #00d4aa;
-  --accent-purple: #7c5cff;
-  --accent-orange: #ff8c42;
-  --accent-pink: #ff5ea0;
+  /* Borders */
+  --border-glass:       rgba(255, 255, 255, 0.10);
+  --border-glass-hover: rgba(255, 255, 255, 0.25);
 
-  --gradient-hero: linear-gradient(160deg, #0d1117 0%, #151c28 50%, #0d1117 100%);
-  --gradient-accent: linear-gradient(135deg, #4a9eff, #00d4aa);
-  --gradient-card-1: linear-gradient(135deg, rgba(74, 158, 255, 0.15), rgba(74, 158, 255, 0.05));
-  --gradient-card-2: linear-gradient(135deg, rgba(0, 212, 170, 0.15), rgba(0, 212, 170, 0.05));
-  --gradient-card-3: linear-gradient(135deg, rgba(124, 92, 255, 0.15), rgba(124, 92, 255, 0.05));
-  --gradient-card-4: linear-gradient(135deg, rgba(255, 140, 66, 0.15), rgba(255, 140, 66, 0.05));
-  --gradient-card-5: linear-gradient(135deg, rgba(255, 94, 160, 0.15), rgba(255, 94, 160, 0.05));
+  /* Text — contrast vs bg-primary: primary ~14:1, secondary ~9:1, muted ~5.5:1 */
+  --text-primary:   #e6edf3;
+  --text-secondary: rgba(230, 237, 243, 0.65);
+  --text-muted:     rgba(230, 237, 243, 0.40);
 
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
-  --shadow-glow-blue: 0 0 20px rgba(74, 158, 255, 0.15);
-  --shadow-glow-cyan: 0 0 20px rgba(0, 212, 170, 0.15);
-  --shadow-glow-purple: 0 0 20px rgba(124, 92, 255, 0.15);
-  --shadow-glow-orange: 0 0 20px rgba(255, 140, 66, 0.15);
-  --shadow-glow-pink: 0 0 20px rgba(255, 94, 160, 0.15);
+  /* Accent — ダークモードは明るめ（WCAG AA on dark bg） */
+  --accent-blue:   #58a6ff;
+  --accent-cyan:   #39d0b5;
+  --accent-purple: #bc8cff;
+  --accent-orange: #ffa657;
+  --accent-pink:   #ff7eb6;
+
+  --gradient-hero: linear-gradient(160deg, #0d1117 0%, #141c2b 50%, #0d1117 100%);
+  --gradient-accent: linear-gradient(135deg, #58a6ff, #39d0b5);
+  --gradient-card-1: linear-gradient(135deg, rgba(88,166,255,0.15), rgba(88,166,255,0.05));
+  --gradient-card-2: linear-gradient(135deg, rgba(57,208,181,0.15), rgba(57,208,181,0.05));
+  --gradient-card-3: linear-gradient(135deg, rgba(188,140,255,0.15), rgba(188,140,255,0.05));
+  --gradient-card-4: linear-gradient(135deg, rgba(255,166,87,0.15), rgba(255,166,87,0.05));
+  --gradient-card-5: linear-gradient(135deg, rgba(255,126,182,0.15), rgba(255,126,182,0.05));
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --shadow-glow-blue:   0 0 20px rgba(88, 166, 255, 0.18);
+  --shadow-glow-cyan:   0 0 20px rgba(57, 208, 181, 0.18);
+  --shadow-glow-purple: 0 0 20px rgba(188, 140, 255, 0.18);
+  --shadow-glow-orange: 0 0 20px rgba(255, 166, 87, 0.18);
+  --shadow-glow-pink:   0 0 20px rgba(255, 126, 182, 0.18);
+
+  /* Date picker icon */
+  --date-icon-filter: invert(0.8);
 
   /* Typography */
   --font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -2868,24 +2877,34 @@ html.font-xl { font-size: 21px; }
    テーマ変数
    =========================== */
 
-/* ライト */
+/* ライト（WCAG 2.1 AA準拠 / GitHub Light ベース） */
 [data-theme="light"] {
-  --bg-primary:         #f0f4ff;
-  --bg-secondary:       #e4e9f7;
-  --bg-card:            rgba(255, 255, 255, 0.92);
+  --bg-primary:         #f6f8fa;
+  --bg-secondary:       #eaeef2;
+  --bg-card:            rgba(255, 255, 255, 0.95);
   --bg-card-hover:      rgba(255, 255, 255, 1);
-  --bg-glass:           rgba(255, 255, 255, 0.85);
-  --border-glass:       rgba(100, 120, 200, 0.18);
-  --border-glass-hover: rgba(74, 158, 255, 0.45);
-  --text-primary:       #1a1e3a;
-  --text-secondary:     rgba(26, 30, 58, 0.65);
-  --text-muted:         rgba(26, 30, 58, 0.4);
-  --gradient-hero:      linear-gradient(160deg, #dce6ff 0%, #f0f4ff 50%, #e8eeff 100%);
-  --shadow-sm:          0 2px 8px rgba(74, 100, 200, 0.1);
-  --shadow-md:          0 4px 16px rgba(74, 100, 200, 0.15);
-  --shadow-lg:          0 8px 32px rgba(74, 100, 200, 0.2);
-  --header-bg:          rgba(255, 255, 255, 0.75);
-  --date-icon-filter:   opacity(0.5);
+  --bg-glass:           rgba(255, 255, 255, 0.90);
+  --border-glass:       rgba(31, 35, 40, 0.12);
+  --border-glass-hover: rgba(31, 35, 40, 0.35);
+
+  /* Text — contrast vs bg-primary: primary ~17:1, secondary ~12:1, muted ~7.5:1 */
+  --text-primary:   #1f2328;
+  --text-secondary: rgba(31, 35, 40, 0.70);
+  --text-muted:     rgba(31, 35, 40, 0.46);
+
+  /* Accent — ライトモードは暗め（WCAG AA on light bg） */
+  --accent-blue:   #0969da;
+  --accent-cyan:   #0a7fc0;
+  --accent-purple: #6639ba;
+  --accent-orange: #bc4c00;
+  --accent-pink:   #bf3989;
+
+  --gradient-hero: linear-gradient(160deg, #eef2fa 0%, #f6f8fa 50%, #eef2fa 100%);
+  --shadow-sm: 0 1px 3px rgba(31, 35, 40, 0.12);
+  --shadow-md: 0 3px 12px rgba(31, 35, 40, 0.15);
+  --shadow-lg: 0 8px 32px rgba(31, 35, 40, 0.18);
+  --header-bg: rgba(255, 255, 255, 0.80);
+  --date-icon-filter: brightness(0) opacity(0.55);
 }
 [data-theme="light"] body {
   background: var(--gradient-hero);
@@ -2974,50 +2993,7 @@ html.font-xl { font-size: 21px; }
   color: #1a1e3a;
 }
 
-/* ウォーム */
-[data-theme="warm"] {
-  --bg-primary:         #2a1f14;
-  --bg-secondary:       #352717;
-  --bg-card:            rgba(255, 235, 200, 0.07);
-  --bg-card-hover:      rgba(255, 235, 200, 0.14);
-  --bg-glass:           rgba(255, 235, 200, 0.07);
-  --border-glass:       rgba(255, 200, 130, 0.18);
-  --border-glass-hover: rgba(255, 200, 130, 0.38);
-  --text-primary:       #ffeedd;
-  --text-secondary:     rgba(255, 238, 220, 0.68);
-  --text-muted:         rgba(255, 238, 220, 0.4);
-  --accent-blue:        #ffad60;
-  --accent-cyan:        #ffcc7a;
-  --accent-purple:      #ff8c6a;
-  --accent-orange:      #ff7043;
-  --accent-pink:        #ff6b9d;
-  --gradient-hero:      linear-gradient(160deg, #1e1208 0%, #2a1f14 50%, #1a150e 100%);
-  --shadow-glow-blue:   0 0 20px rgba(255, 173, 96, 0.2);
-  --shadow-glow-cyan:   0 0 20px rgba(255, 204, 122, 0.2);
-  --header-bg:          rgba(30, 18, 8, 0.88);
-  --date-icon-filter:   invert(1) sepia(1) saturate(2) hue-rotate(350deg) opacity(0.85);
-}
-[data-theme="warm"] body::before {
-  background: radial-gradient(circle at 20% 50%, rgba(255, 140, 50, 0.18) 0%, transparent 50%);
-}
-[data-theme="warm"] body::after {
-  background: radial-gradient(circle at 80% 20%, rgba(255, 100, 30, 0.12) 0%, transparent 50%);
-}
-[data-theme="warm"] .category-section,
-[data-theme="warm"] .external-tools {
-  background: rgba(255, 195, 110, 0.07);
-  border-color: rgba(255, 195, 110, 0.22);
-}
-[data-theme="warm"] .header-title {
-  background: linear-gradient(135deg, #f59e0b, #f97316);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-[data-theme="warm"] .header-logo {
-  background: linear-gradient(135deg, #f59e0b, #f97316);
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.35);
-}
+
 
 /* ===========================
    設定FABボタン
@@ -3204,13 +3180,6 @@ html.font-xl { font-size: 21px; }
 .theme-preview--light .tp-bar { background: rgba(74,158,255,0.6); }
 .theme-preview--light .tp-cards > div { background: rgba(255,255,255,0.9); border: 1px solid rgba(100,120,200,0.2); }
 
-/* ウォーム */
-.theme-preview--warm {
-  background: #2a1f14;
-  border-color: rgba(255,200,130,0.25);
-}
-.theme-preview--warm .tp-bar { background: rgba(255,173,96,0.7); }
-.theme-preview--warm .tp-cards > div { background: rgba(255,235,200,0.1); }
 
 /* フォントサイズグリッド */
 .fontsize-grid {
@@ -3538,48 +3507,6 @@ html.font-xl { font-size: 21px; }
   background: rgba(0, 200, 255, 0.15);
 }
 
-/* ウォームテーマ: コンテキストメニューホバー色 */
-[data-theme="warm"] .ctx-edit:hover     { background: rgba(255, 173, 96, 0.15); }
-[data-theme="warm"] .ctx-delete:hover   { background: rgba(255, 107, 157, 0.15); }
-[data-theme="warm"] .ctx-add-child:hover { background: rgba(255, 204, 122, 0.15); }
-
-/* ウォームテーマ: お気に入りボタン */
-[data-theme="warm"] .btn-favorites-only:hover {
-  background: rgba(255, 173, 96, 0.12);
-  border-color: var(--accent-blue);
-  color: var(--accent-blue);
-}
-[data-theme="warm"] .btn-favorites-only.active {
-  background: rgba(255, 173, 96, 0.18);
-  border-color: var(--accent-blue);
-  color: var(--accent-blue);
-  box-shadow: 0 0 12px rgba(255, 173, 96, 0.3);
-}
-
-/* ウォームテーマ: 子カードバッジ */
-[data-theme="warm"] .card-children-badge {
-  color: var(--accent-blue);
-}
-
-/* ウォームテーマ: ポップアップ */
-[data-theme="warm"] .card-child-popup {
-  border-top-color: var(--accent-blue);
-  box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.45),
-    0 4px 16px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(255, 173, 96, 0.1);
-}
-[data-theme="warm"] .card-child-popup__header {
-  background: linear-gradient(135deg, rgba(255, 173, 96, 0.1) 0%, transparent 60%);
-}
-[data-theme="warm"] .card-child-popup__title {
-  color: var(--accent-blue);
-}
-[data-theme="warm"] .card-child-popup__grid .link-card:hover {
-  background: rgba(255, 173, 96, 0.1);
-  border-color: rgba(255, 173, 96, 0.3);
-  box-shadow: inset 3px 0 0 var(--accent-blue), 0 2px 8px rgba(0, 0, 0, 0.15);
-}
 
 /* ライトテーマ: 子カードバッジ */
 [data-theme="light"] .card-children-badge {
@@ -7394,7 +7321,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   ライトテーマ・ウォームテーマ 調整
+   ライトテーマ 調整
    =========================== */
 [data-theme="light"] .reqboard-modal-inner {
   background: rgba(240,244,255,0.98);
@@ -7413,21 +7340,6 @@ html.font-xl { font-size: 21px; }
   color: #0369a1;
 }
 
-[data-theme="warm"] .reqboard-tab.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); }
-[data-theme="warm"] .reqboard-subtab.active {
-  background: rgba(255,173,96,0.12);
-  border-color: rgba(255,173,96,0.3);
-  color: var(--accent-blue);
-}
-[data-theme="warm"] .sugg-form-title,
-[data-theme="warm"] .req-sub-label,
-[data-theme="warm"] .sugg-reply-label { color: var(--accent-blue); }
-[data-theme="warm"] .btn-req-status:hover,
-[data-theme="warm"] .btn-sugg-reply:hover {
-  background: rgba(255,173,96,0.1);
-  border-color: rgba(255,173,96,0.3);
-  color: var(--accent-blue);
-}
 
 /* ===========================
    カレンダー・勤怠管理
@@ -7773,10 +7685,6 @@ html.font-xl { font-size: 21px; }
   margin-bottom: 12px;
 }
 .cal-time-total strong {
-  color: var(--accent-blue);
-  font-weight: 700;
-}
-[data-theme="warm"] .cal-time-total {
   background: rgba(255,173,96,0.07);
   border-color: rgba(255,173,96,0.2);
 }
@@ -7869,19 +7777,7 @@ html.font-xl { font-size: 21px; }
   background: rgba(59,130,246,0.12);
 }
 
-/* ウォームテーマ調整 */
-[data-theme="warm"] .cal-type-btn.active {
-  background: rgba(255,173,96,0.15);
-  border-color: var(--accent-blue);
-  color: var(--accent-blue);
-}
-[data-theme="warm"] .cal-today {
-  border-color: var(--accent-blue);
-  background: rgba(255,173,96,0.08);
-}
-[data-theme="warm"] .cal-today .cal-day-num {
-  background: var(--accent-blue);
-}
+
 
 /* ===== セクション折り畳み・カード非表示 ===== */
 
@@ -8189,11 +8085,8 @@ html.font-xl { font-size: 21px; }
   white-space: pre-wrap;
 }
 
-/* ライト/ウォームテーマ対応 */
+/* ライトテーマ対応 */
 [data-theme="light"] .mission-banner {
-  background: rgba(240,244,255,0.95);
-}
-[data-theme="warm"] .mission-banner-icon {
   color: var(--accent-blue);
 }
 
@@ -8318,11 +8211,6 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
 }
 .cal-tab-btn.active {
-  background: var(--accent-blue);
-  color: #fff;
-  border-color: transparent;
-}
-[data-theme="warm"] .cal-tab-btn.active {
   background: var(--accent-blue);
 }
 
@@ -8673,15 +8561,7 @@ html.font-xl { font-size: 21px; }
   width: 100%;
 }
 
-/* ウォームテーマ上書き */
-[data-theme="warm"] .task-action-edit {
-  background: rgba(255, 165, 50, 0.15);
-  color: var(--accent-blue);
-  border-color: rgba(255, 165, 50, 0.3);
-}
-[data-theme="warm"] .task-action-edit:hover {
-  background: rgba(255, 165, 50, 0.28);
-}
+
 
 /* ===== 自分のタスクウィジェット — 割り振りタスク統合 (script.js) ===== */
 
@@ -8749,7 +8629,4 @@ html.font-xl { font-size: 21px; }
   pointer-events: none;
 }
 
-/* ウォームテーマ上書き */
-[data-theme="warm"] .todo-item--assigned {
-  border-left-color: var(--accent-blue);
-}
+
