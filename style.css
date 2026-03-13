@@ -7883,8 +7883,8 @@ html.font-xl { font-size: 21px; }
 }
 .btn-hide-card {
   position: absolute;
-  top: 5px;
-  right: 5px;
+  bottom: 6px;
+  right: 6px;
   display: none;
   align-items: center;
   justify-content: center;
