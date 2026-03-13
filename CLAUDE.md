@@ -236,6 +236,17 @@ assigned_tasks/{taskId}
 - `background: rgba(16, 20, 50, 0.95)` のようなハードコード色（特にダーク専用の値）
 - `border: 1px solid rgba(255, 255, 255, 0.06)` のような白透明ボーダー → ライトテーマで不可視
 - **存在しないボタンクラスを使う**（例：`.btn-secondary` は未定義 → `.btn-modal-secondary` を使うこと）
+- **ライトモードで `--bg-glass` をそのまま入力欄に使うと白飛びする** → `.form-input` はライト時 `background: #ffffff` + `border-color: rgba(31,35,40,0.28)` が定義済み（CSS変数のみで十分。追加上書き不要）
+
+### ⚠️ ライトモード入力欄の白飛び防止（既発生バグ・再発防止）
+**背景**: `--bg-glass: rgba(255,255,255,0.90)` と `--border-glass: rgba(31,35,40,0.12)` は白背景モーダル上では視認不能。
+
+**対策として以下を style.css に定義済み**:
+- `[data-theme="light"] .modal-glass` → `background: rgba(241,243,247,0.98)` （薄いグレー背景）
+- `[data-theme="light"] .form-input` → `background: #ffffff` + `border-color: rgba(31,35,40,0.28)` （白＋くっきりボーダー）
+- `--border-glass` をライト時 `0.25` に強化
+
+**新規モーダルを作るときの注意**: `modal-glass` クラスを使えばライト対応は自動。入力欄は `.form-input` クラスを使えば自動。
 
 ### ボタンクラス対応表
 | 用途 | 正しいクラス |

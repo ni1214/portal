@@ -2884,8 +2884,8 @@ html.font-xl { font-size: 21px; }
   --bg-card:            rgba(255, 255, 255, 0.95);
   --bg-card-hover:      rgba(255, 255, 255, 1);
   --bg-glass:           rgba(255, 255, 255, 0.90);
-  --border-glass:       rgba(31, 35, 40, 0.12);
-  --border-glass-hover: rgba(31, 35, 40, 0.35);
+  --border-glass:       rgba(31, 35, 40, 0.25);   /* 0.12→0.25: 入力欄・カードの境界を視認可能に */
+  --border-glass-hover: rgba(31, 35, 40, 0.45);
 
   /* Text — contrast vs bg-primary: primary ~17:1, secondary ~12:1, muted ~7.5:1 */
   --text-primary:   #1f2328;
@@ -2936,8 +2936,24 @@ html.font-xl { font-size: 21px; }
   box-shadow: 0 2px 14px rgba(74, 100, 200, 0.07);
 }
 [data-theme="light"] .modal-glass {
-  background: rgba(240, 244, 255, 0.97);
-  border-color: rgba(100, 120, 200, 0.2);
+  background: rgba(241, 243, 247, 0.98); /* 薄いグレー: 白入力欄との差を作る */
+  border-color: rgba(31, 35, 40, 0.15);
+}
+/* ライトモード: 入力欄を白+くっきりボーダーで背景と区別 */
+[data-theme="light"] .form-input {
+  background: #ffffff;
+  border-color: rgba(31, 35, 40, 0.28);
+  color: var(--text-primary);
+}
+[data-theme="light"] .form-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.14);
+}
+[data-theme="light"] .form-input::placeholder {
+  color: var(--text-muted);
+}
+[data-theme="light"] select.form-input {
+  background: #ffffff;
 }
 [data-theme="light"] .footer {
   color: rgba(26, 30, 58, 0.45);
@@ -3105,8 +3121,8 @@ html.font-xl { font-size: 21px; }
 /* テーマグリッド */
 .theme-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
 }
 
 .theme-card {
@@ -7762,7 +7778,7 @@ html.font-xl { font-size: 21px; }
 
 /* ライトテーマ調整 */
 [data-theme="light"] .cal-modal-glass {
-  background: rgba(240,244,255,0.98);
+  background: rgba(241, 243, 247, 0.98); /* modal-glass と統一 */
 }
 [data-theme="light"] .cal-cell {
   background: rgba(255,255,255,0.7);
