@@ -92,20 +92,23 @@ export function openFileTransferPanel() {
     const panelWidth = 340;
     const leftEdge = chatRect.left - gap - panelWidth;
     if (leftEdge >= 8) {
-      // 左に十分なスペースがある → チャットパネルの左横に配置
+      // 左に十分なスペースがある → チャットパネルの左横に配置（top基準）
       panel.style.right  = 'auto';
       panel.style.left   = leftEdge + 'px';
-      panel.style.bottom = (window.innerHeight - chatRect.bottom) + 'px';
+      panel.style.top    = chatRect.top + 'px';
+      panel.style.bottom = '';
     } else {
-      // スペース不足時はチャットパネルの上に重ねる（フォールバック）
+      // スペース不足時はチャットパネルの下に配置（フォールバック）
       panel.style.right  = 'auto';
       panel.style.left   = Math.max(8, chatRect.left) + 'px';
-      panel.style.bottom = (window.innerHeight - chatRect.top + gap) + 'px';
+      panel.style.top    = (chatRect.bottom + gap) + 'px';
+      panel.style.bottom = '';
     }
   } else {
     // チャットパネルが閉じている場合はデフォルト位置（CSS）
     panel.style.left   = '';
     panel.style.right  = '';
+    panel.style.top    = '';
     panel.style.bottom = '';
   }
 
@@ -121,6 +124,25 @@ export function closeFileTransferPanel() {
   const panel = document.getElementById('ft-panel');
   panel.classList.remove('open');
   setTimeout(() => panel.setAttribute('hidden', ''), 200);
+}
+
+// ===== チャット内ファイル転送ボタンの状態更新 =====
+export function updateChatFtButton() {
+  const btn = document.getElementById('chat-launch-ft');
+  if (!btn) return;
+  const active = state._ftOutgoing.filter(s => s.status === 'pending' || s.status === 'accepted');
+  if (active.length === 0) {
+    btn.innerHTML = '<i class="fa-solid fa-file-arrow-up"></i> ファイル転送';
+    btn.style.color = '';
+  } else {
+    const sending  = active.filter(s => s.status === 'accepted').length;
+    const waiting  = active.filter(s => s.status === 'pending').length;
+    let label = '';
+    if (sending > 0) label = `転送中 ${sending}件`;
+    else              label = `待機中 ${waiting}件`;
+    btn.innerHTML = `<i class="fa-solid fa-file-arrow-up fa-beat"></i> ${label}`;
+    btn.style.color = 'var(--accent-blue)';
+  }
 }
 
 export function updateFtBadge() {
@@ -231,6 +253,7 @@ export function renderFtPanel() {
   }
 
   if (emptyEl) emptyEl.hidden = (pending.length + active.length) > 0;
+  updateChatFtButton();
 }
 
 export function startFtListener() {
@@ -593,7 +616,7 @@ export function initDriveLinkWidget() {
 
 // ===== ファイル送信モーダル =====
 
-export async function openFtSendModal() {
+export async function openFtSendModal(prefillUser = null) {
   if (!state.currentUsername) { alert('ユーザーネームを設定してください'); return; }
   state._ftSelectedUser = null;
   state._ftSelectedFile = null;
@@ -608,6 +631,13 @@ export async function openFtSendModal() {
     document.getElementById('ft-target-label').textContent = `送信先：${name}`;
     document.getElementById('ft-file-group').hidden = false;
   }, true);
+  // チャット相手を事前選択
+  if (prefillUser) {
+    state._ftSelectedUser = prefillUser;
+    document.getElementById('ft-target-label').textContent = `送信先：${prefillUser}`;
+    document.getElementById('ft-user-search').value = prefillUser;
+    document.getElementById('ft-file-group').hidden = false;
+  }
 }
 
 export function closeFtSendModal() {
@@ -689,6 +719,7 @@ export async function initiateFileTransfer(file, recipientUsername) {
 function _updateOutgoing(sessionId, status) {
   const item = state._ftOutgoing.find(o => o.sessionId === sessionId);
   if (item) item.status = status;
+  updateChatFtButton();
 }
 
 export async function acceptFtTransfer(sessionId) {

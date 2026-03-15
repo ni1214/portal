@@ -4669,8 +4669,8 @@ html.font-xl { font-size: 21px; }
    =========================== */
 .chat-panel {
   position: fixed;
-  bottom: calc(var(--space-xl) + 48px + 12px);
-  right: calc(var(--space-xl) + (48px + 12px) * 2);
+  top: 64px;
+  right: 16px;
   width: 620px;
   height: 520px;
   min-width: 460px;
@@ -4685,19 +4685,19 @@ html.font-xl { font-size: 21px; }
   flex-direction: row;
   z-index: 300;
   opacity: 0;
-  transform: translateY(16px) scale(0.97);
+  transform: translateY(-16px) scale(0.97);
   transition: opacity 0.25s ease, transform 0.25s ease;
   pointer-events: none;
   overflow: hidden;
 }
-/* リサイズハンドル（左上コーナー） */
+/* リサイズハンドル（左下コーナー） */
 .chat-resize-handle {
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: 0;
   width: 24px;
   height: 24px;
-  cursor: nw-resize;
+  cursor: sw-resize;
   z-index: 10;
   opacity: 0.35;
   transition: opacity 0.15s;
@@ -4706,13 +4706,13 @@ html.font-xl { font-size: 21px; }
 .chat-resize-handle::after {
   content: '';
   position: absolute;
-  top: 5px;
+  bottom: 5px;
   left: 5px;
   width: 10px;
   height: 10px;
-  border-top: 2px solid var(--text-secondary);
+  border-bottom: 2px solid var(--text-secondary);
   border-left: 2px solid var(--text-secondary);
-  border-radius: 3px 0 0 0;
+  border-radius: 0 0 0 3px;
 }
 .chat-panel.open {
   opacity: 1;
@@ -9531,12 +9531,6 @@ html.font-xl { font-size: 21px; }
    =========================== */
 @media (min-width: 769px) {
   .ft-panel {
-    left: calc(var(--sidebar-width) + 16px) !important;
-    right: auto !important;
-    bottom: 24px !important;
-  }
-
-  .chat-panel {
     left: calc(var(--sidebar-width) + 16px) !important;
     right: auto !important;
     bottom: 24px !important;

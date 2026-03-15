@@ -24,13 +24,14 @@ export function initChatResize() {
     resizing = true;
     startX = cx; startY = cy;
     startW = panel.offsetWidth; startH = panel.offsetHeight;
-    document.body.style.cursor = 'nw-resize';
+    document.body.style.cursor = 'sw-resize';
     document.body.style.userSelect = 'none';
   };
   const onMove = (cx, cy) => {
     if (!resizing) return;
+    // 左下ハンドル: 幅は左に伸びる、高さは下に伸びる
     const newW = Math.max(460, Math.min(window.innerWidth  - 40, startW + (startX - cx)));
-    const newH = Math.max(340, Math.min(window.innerHeight - 100, startH + (startY - cy)));
+    const newH = Math.max(340, Math.min(window.innerHeight - 100, startH + (cy - startY)));
     panel.style.width  = newW + 'px';
     panel.style.height = newH + 'px';
     // ft-panel がチャット横配置中なら追従させる
@@ -41,9 +42,10 @@ export function initChatResize() {
       const ftWidth = 340;
       const leftEdge = chatRect.left - gap - ftWidth;
       if (leftEdge >= 8) {
-        ftPanel.style.right  = 'auto';
-        ftPanel.style.left   = leftEdge + 'px';
-        ftPanel.style.bottom = (window.innerHeight - chatRect.bottom) + 'px';
+        ftPanel.style.right = 'auto';
+        ftPanel.style.left  = leftEdge + 'px';
+        ftPanel.style.top   = chatRect.top + 'px';
+        ftPanel.style.bottom = '';
       }
     }
   };

@@ -62,6 +62,7 @@ import {
   initDriveLinkWidget,
   openFtSendModal, closeFtSendModal, confirmFtSend,
   initiateFileTransfer, acceptFtTransfer, rejectFtTransfer,
+  updateChatFtButton,
   formatFileSize as ftFormatFileSize,
   getFileIcon as ftGetFileIcon
 } from './modules/file-transfer.js';
@@ -2517,7 +2518,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== チャット内ショートカット =====
   document.getElementById('chat-launch-task').addEventListener('click', openTaskModal);
-  document.getElementById('chat-launch-ft').addEventListener('click', openFileTransferPanel);
+  document.getElementById('chat-launch-ft').addEventListener('click', () => {
+    // DMの場合は相手を自動選択してFT送信モーダルを開く
+    if (state.currentRoomType === 'dm' && state.currentRoomId) {
+      const partner = state.currentRoomId.split('_').find(u => u !== state.currentUsername);
+      if (partner) {
+        openFileTransferPanel();
+        openFtSendModal(partner);
+        return;
+      }
+    }
+    openFileTransferPanel();
+  });
 
   // ===== 説明文折りたたみ（P2P / Drive） =====
   ['p2p', 'drive'].forEach(type => {
