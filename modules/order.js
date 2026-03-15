@@ -12,15 +12,174 @@ let _suppliers = [];   // order_suppliers
 let _items = [];       // order_items
 let _historyOffset = 0; // 履歴期間オフセット（0=今期）
 let _gasUrl = '';
-let _orderType = 'factory'; // 現在選択中の発注区分
+let _orderType = 'factory';    // 工場在庫 / 現場向け
+let _materialFilter = 'all';   // すべて / steel / stainless
+
+// ===== カタログシードデータ =====
+// materialType: 'steel'=スチール, 'stainless'=ステンレス
+// availableLengths: 選択可能な定尺長さ
+const CATALOG_SEED = [
+  // ─── アングル（等辺山形鋼）───
+  ...[
+    ['3×20×20',['5.5m']],['3×25×25',['5.5m']],['3×30×30',['5.5m']],['5×30×30',['5.5m']],
+    ['3×40×40',['5.5m']],['5×40×40',['5.5m']],
+    ['4×50×50',['5.5m','6m','7m','8m','9m','10m','11m','12m']],
+    ['6×50×50',['5.5m','6m','7m','8m','9m','10m','11m','12m']],
+    ['6×65×65',['5.5m','6m','7m','8m','9m','10m','11m','12m']],
+    ['8×65×65',['5.5m']],
+    ['6×75×75',['5.5m','6m','7m','8m','9m','10m','11m','12m']],
+    ['9×75×75',['5.5m','6m','7m','8m','9m','10m','11m','12m']],
+    ['7×90×90',['5.5m','6m','7m','8m','9m','10m','11m','12m']],
+    ['10×90×90',['5.5m','6m','7m','8m','9m','10m','11m','12m']],
+    ['7×100×100',['5.5m','6m','7m','8m','9m','10m','11m','12m']],
+    ['10×100×100',['5.5m','6m','7m','8m','9m','10m','11m','12m']],
+  ].map(([spec,lengths],i)=>({itemCategory:'アングル',spec,availableLengths:lengths,sortOrder:100+i})),
+
+  // ─── 丸鋼（SR235）───
+  ...[
+    ['φ6',['5.5m']],['φ9',['5.5m','6m']],['φ13',['5.5m','6m']],
+    ['φ16',['5.5m','6m']],['φ19',['5.5m','6m']],['φ22',['5.5m','6m']],
+    ['φ25',['5.5m','6m']],['φ28',['5.5m']],['φ32',['5.5m']],
+  ].map(([spec,lengths],i)=>({itemCategory:'丸鋼',spec,availableLengths:lengths,sortOrder:200+i})),
+
+  // ─── 平鋼（FB） ───
+  ...[
+    // t=3
+    ['3×13',['5.5m']],['3×16',['5.5m']],['3×19',['5.5m']],['3×22',['5.5m']],['3×25',['5.5m']],
+    ['3×32',['5.5m']],['3×38',['5.5m']],['3×44',['5.5m']],['3×50',['5.5m']],
+    ['3×65',['5.5m']],['3×75',['5.5m']],['3×90',['5.5m']],['3×100',['5.5m']],
+    ['3×125',['5.5m']],['3×150',['5.5m']],
+    // t=4.5
+    ['4.5×13',['5.5m']],['4.5×16',['5.5m']],['4.5×19',['5.5m']],['4.5×22',['5.5m']],
+    ['4.5×25',['5.5m']],['4.5×32',['5.5m']],['4.5×38',['5.5m']],['4.5×44',['5.5m']],
+    ['4.5×50',['5.5m','6m']],['4.5×65',['5.5m']],['4.5×75',['5.5m']],['4.5×90',['5.5m']],
+    ['4.5×100',['5.5m']],['4.5×125',['5.5m']],['4.5×150',['5.5m']],
+    // t=6
+    ['6×13',['5.5m']],['6×16',['5.5m']],['6×19',['5.5m']],['6×22',['5.5m']],['6×25',['5.5m']],
+    ['6×32',['5.5m']],['6×38',['5.5m']],['6×44',['5.5m']],
+    ['6×50',['5.5m','6m']],['6×60',['6m']],['6×65',['5.5m','6m']],['6×70',['6m']],
+    ['6×75',['5.5m','6m']],['6×80',['6m']],['6×90',['5.5m','6m']],
+    ['6×100',['5.5m']],['6×125',['5.5m']],['6×150',['5.5m','6m']],
+    // t=9
+    ['9×16',['5.5m']],['9×19',['5.5m']],['9×22',['5.5m']],['9×25',['5.5m']],
+    ['9×32',['5.5m']],['9×38',['5.5m']],['9×44',['5.5m']],
+    ['9×50',['5.5m','6m']],['9×60',['6m']],['9×65',['5.5m','6m']],['9×70',['6m']],
+    ['9×75',['5.5m','6m']],['9×80',['6m']],['9×90',['5.5m','6m']],
+    ['9×100',['5.5m','6m']],['9×110',['6m']],['9×125',['5.5m','6m']],['9×150',['5.5m','6m']],
+    // t=12
+    ['12×25',['5.5m']],['12×32',['5.5m']],['12×38',['5.5m']],['12×44',['5.5m']],
+    ['12×50',['5.5m']],['12×60',['6m']],['12×65',['5.5m']],['12×70',['6m']],
+    ['12×75',['5.5m','6m']],['12×80',['6m']],['12×90',['5.5m']],['12×100',['5.5m','6m']],
+    ['12×110',['6m']],['12×125',['5.5m','6m']],['12×150',['5.5m','6m']],
+    // t=16
+    ['16×25',['5.5m']],['16×32',['5.5m']],['16×38',['5.5m']],['16×44',['5.5m']],
+    ['16×50',['5.5m']],['16×65',['5.5m']],['16×70',['6m']],['16×75',['5.5m','6m']],
+    ['16×80',['6m']],['16×90',['5.5m']],['16×100',['5.5m']],['16×110',['6m']],
+    ['16×125',['5.5m']],['16×150',['5.5m']],
+    // t=19
+    ['19×25',['5.5m']],['19×32',['5.5m']],['19×44',['5.5m']],['19×50',['5.5m']],
+    ['19×65',['5.5m','6m']],['19×70',['6m']],['19×75',['5.5m']],['19×90',['5.5m']],
+    ['19×100',['5.5m']],['19×110',['6m']],['19×125',['5.5m']],['19×150',['5.5m']],
+    // t=22
+    ['22×38',['5.5m']],['22×44',['5.5m']],['22×50',['5.5m']],['22×65',['5.5m']],
+    ['22×75',['5.5m']],['22×90',['5.5m']],['22×100',['5.5m']],['22×125',['5.5m']],['22×150',['5.5m']],
+    // t=25
+    ['25×32',['5.5m']],['25×38',['5.5m']],['25×50',['5.5m']],['25×65',['5.5m']],
+    ['25×75',['5.5m']],['25×90',['5.5m']],['25×100',['5.5m']],['25×125',['5.5m']],['25×150',['5.5m']],
+    // t=28
+    ['28×50',['5.5m']],['28×65',['5.5m']],['28×75',['5.5m']],['28×90',['5.5m']],['28×150',['5.5m']],
+    // t=32
+    ['32×50',['5.5m']],['32×65',['5.5m']],['32×75',['5.5m']],['32×90',['5.5m']],
+    ['32×100',['5.5m']],['32×125',['5.5m']],['32×150',['5.5m']],
+    // t=36
+    ['36×50',['5.5m']],['36×100',['5.5m']],['36×125',['5.5m']],['36×150',['5.5m']],
+  ].map(([spec,lengths],i)=>({itemCategory:'平鋼',spec,availableLengths:lengths,sortOrder:300+i})),
+
+  // ─── 平鋼（広幅）─── 全て 6m
+  ...[
+    '6×165','6×170','6×175','6×180','6×200','6×250','6×300',
+    '9×160','9×165','9×170','9×175','9×180','9×190','9×200','9×250','9×300','9×350','9×400',
+    '12×165','12×170','12×175','12×180','12×190','12×200','12×250','12×300','12×350','12×400',
+    '16×180','16×200','16×250','16×300','16×350','16×400',
+    '19×200','19×250','19×300','19×350','19×400',
+    '22×200','22×250','22×300','22×400',
+    '25×200','25×250','25×300','28×200','32×200','32×300',
+  ].map((spec,i)=>({itemCategory:'平鋼（広幅）',spec,availableLengths:['6m'],sortOrder:400+i})),
+
+  // ─── 角パイプ（一般構造用・正方形）───
+  ...[
+    ['1.6×50×50',['6m']],['2.3×50×50',['6m','8m']],['3.2×50×50',['6m','8m']],['4.5×50×50',['6m']],
+    ['1.6×60×60',['6m']],['2.3×60×60',['6m','8m']],['3.2×60×60',['6m','8m']],
+    ['2.3×75×75',['6m','8m']],['3.2×75×75',['6m','8m']],
+    ['2.3×80×80',['6m']],['3.2×80×80',['6m']],['3.2×90×90',['6m']],
+    ['2.3×100×100',['6m','8m','10m']],['3.2×100×100',['6m','8m','10m']],
+    ['4.5×100×100',['6m','8m','10m']],['6.0×100×100',['6m','8m','10m']],['9.0×100×100',['6m','8m']],
+    ['3.2×125×125',['6m','8m']],['4.5×125×125',['6m','8m']],['6.0×125×125',['6m','8m','10m']],['9.0×125×125',['6m','8m']],
+    ['4.5×150×150',['6m','8m','10m']],['6.0×150×150',['6m','8m','10m']],
+    ['6.0×175×175',['6m','8m','10m']],['9.0×175×175',['6m','8m','10m']],
+  ].map(([spec,lengths],i)=>({itemCategory:'角パイプ',spec,availableLengths:lengths,sortOrder:500+i})),
+
+  // ─── 角パイプ（一般構造用・長方形）───
+  ...[
+    ['1.6×60×30',['6m']],['2.3×75×45',['6m','8m']],['3.2×75×45',['6m']],
+    ['2.3×100×50',['6m','8m']],['3.2×100×50',['6m','8m']],['4.5×100×50',['6m']],
+    ['2.3×125×75',['6m','8m']],['3.2×125×75',['6m','8m']],['4.5×125×75',['6m']],['6.0×125×75',['6m']],
+    ['3.2×150×75',['6m','8m']],['4.5×150×75',['6m','8m']],
+    ['3.2×150×100',['6m','8m']],['4.5×150×100',['6m','8m']],['6.0×150×100',['6m','8m']],
+    ['4.5×200×100',['6m','8m']],['6.0×200×100',['6m','8m']],['9.0×200×100',['6m','8m','10m']],
+    ['4.5×200×150',['6m']],['6.0×200×150',['6m','8m']],
+  ].map(([spec,lengths],i)=>({itemCategory:'角パイプ（長方形）',spec,availableLengths:lengths,sortOrder:550+i})),
+
+  // ─── 小径角管（正方形）───
+  ...[
+    ['1.2×11×11',['6m']],['1.6×13×13',['5.5m']],['1.2×14×14',['5.5m','6m']],
+    ['1.2×16×16',['5.5m']],['1.6×16×16',['5.5m']],
+    ['1.2×19×19',['5.5m']],['1.6×19×19',['5.5m']],['1.6×21×21',['5.5m']],
+    ['1.6×24×24',['5.5m']],['1.2×25×25',['5.5m']],['1.6×28×28',['5.5m']],
+    ['1.6×31×31R',['5.5m']],['1.6×32×32',['5.5m']],['1.6×38×38',['5.5m']],
+    ['1.6×40×40R',['5.5m']],['2.0×40×40',['6m']],['1.6×45×45',['5.5m']],
+  ].map(([spec,lengths],i)=>({itemCategory:'小径角管',spec,availableLengths:lengths,sortOrder:580+i})),
+
+  // ─── 鋼管・丸パイプ（STK）───
+  ...[
+    ['(15A) 1.9×21.7',['5.5m']],['(20A) 1.9×27.2',['5.5m']],['(20A) 2.3×27.2',['5.5m']],
+    ['(25A) 1.6×34.0',['5.5m']],['(25A) 1.9×34.0',['5.5m']],['(25A) 2.3×34.0',['5.5m']],
+    ['(32A) 2.3×42.7',['5.5m']],['(40A) 2.3×48.6',['5.5m']],['(40A) 3.2×48.6',['6m']],
+    ['(50A) 2.3×60.5',['5.5m']],['(50A) 2.8×60.5',['5.5m']],['(50A) 3.2×60.5',['6m']],
+    ['(65A) 2.8×76.3',['5.5m']],['(65A) 3.2×76.3',['6m']],
+    ['(80A) 2.8×89.1',['5.5m']],['(80A) 3.2×89.1',['6m']],
+    ['(90A) 3.2×101.6',['5.5m']],['(100A) 3.5×114.3',['5.5m']],
+    ['(125A) 3.5×139.8',['5.5m']],['(150A) 3.7×165.2',['5.5m']],['(150A) 4.5×165.2',['6m']],
+    ['(200A) 4.5×216.3',['5.5m']],['(250A) 5.8×267.4',['6m']],
+  ].map(([spec,lengths],i)=>({itemCategory:'鋼管（STK）',spec,availableLengths:lengths,sortOrder:600+i})),
+
+  // ─── SGP（配管用炭素鋼管）───
+  ...[
+    '6A(1/8)','8A(1/4)','10A(3/8)','15A(1/2)','20A(3/4)',
+    '25A(1)','32A(1.1/4)','40A(1.1/2)','50A(2)','65A(2.1/2)',
+    '80A(3)','90A(3.1/2)','100A(4)','125A(5)','150A(6)',
+    '175A(7)','200A(8)','225A(9)','250A(10)','300A(12)',
+    '350A(14)','400A(16)','450A(18)','500A(20)',
+  ].map((spec,i)=>({itemCategory:'鋼管（SGP）',spec,availableLengths:['5.5m'],sortOrder:650+i})),
+
+  // ─── 丸パイプ（STKM）───
+  ...[
+    ['1.0×12.7',['5.5m']],['1.2×12.7',['5.5m']],['1.2×15.9',['5.5m']],['1.6×15.9',['5.5m']],
+    ['1.2×19.1',['5.5m']],['1.6×19.1',['5.5m']],['1.2×22.2',['5.5m']],['1.6×22.2',['5.5m']],
+    ['1.2×23.0',['5.5m']],['1.2×25.4',['5.5m']],['1.6×25.4',['5.5m']],
+    ['1.2×28.6',['5.5m']],['1.6×28.6',['5.5m']],['2.8×28.6',['5.5m']],
+    ['1.2×31.8',['5.5m']],['1.6×31.8',['5.5m']],
+    ['1.2×38.1',['5.5m']],['1.6×38.1',['5.5m']],['1.6×50.8',['5.5m']],
+  ].map(([spec,lengths],i)=>({itemCategory:'丸パイプ（STKM）',spec,availableLengths:lengths,sortOrder:700+i})),
+];
 
 // ===== Firestore 初期データ投入 =====
 async function seedInitialData() {
   try {
+    // 発注先の初期化
     const suppSnap = await getDocs(collection(db, 'order_suppliers'));
-    let suppId;
     if (suppSnap.empty) {
-      const suppRef = await addDoc(collection(db, 'order_suppliers'), {
+      await addDoc(collection(db, 'order_suppliers'), {
         name: '土屋鋼材株式会社',
         email: 'info@tsuchiyakouzai.com',
         tel: '027-346-4700',
@@ -28,24 +187,32 @@ async function seedInitialData() {
         active: true,
         createdAt: serverTimestamp()
       });
-      suppId = suppRef.id;
-    } else {
-      suppId = suppSnap.docs[0].id;
     }
 
-    const itemSnap = await getDocs(collection(db, 'order_items'));
-    if (itemSnap.empty) {
-      await addDoc(collection(db, 'order_items'), {
-        name: 'FB（ミガキ）',
-        spec: '６x30　L＝4m',
-        unit: '本',
-        defaultQty: 1,
-        supplierId: suppId,
-        sortOrder: 1,
-        orderType: 'factory',
-        active: true
-      });
-    }
+    // バージョン確認（v1以上なら品目シードはスキップ）
+    const configSnap = await getDoc(doc(db, 'portal', 'config'));
+    const seedVer = configSnap.exists() ? (configSnap.data().orderItemsSeedVersion || 0) : 0;
+    if (seedVer >= 1) return;
+
+    // カタログ品目を一括追加
+    const suppSnap2 = await getDocs(collection(db, 'order_suppliers'));
+    const suppId = suppSnap2.docs[0]?.id || '';
+    const batch = CATALOG_SEED.map(item => addDoc(collection(db, 'order_items'), {
+      itemCategory: item.itemCategory,
+      name: item.itemCategory,
+      spec: item.spec,
+      materialType: 'steel',
+      availableLengths: item.availableLengths,
+      unit: '本',
+      defaultQty: 1,
+      supplierId: suppId,
+      sortOrder: item.sortOrder,
+      orderType: 'both',
+      active: true
+    }));
+    await Promise.all(batch);
+    await setDoc(doc(db, 'portal', 'config'), { orderItemsSeedVersion: 1 }, { merge: true });
+    console.log(`order: ${CATALOG_SEED.length}件の品目をシードしました`);
   } catch (err) {
     console.error('order: seedInitialData error', err);
   }
@@ -132,8 +299,9 @@ function buildEmailContent(orderData) {
 
   const itemLines = orderData.items.map((item, i) => {
     const no = String(i + 1).padStart(2, ' ');
-    const label = `${item.name}　${item.spec}`;
-    return `${no}    ${label}      ${item.qty}${item.unit}`;
+    const lengthStr = item.length ? `　L=${item.length}` : '';
+    const label = `${item.category}　${item.spec}${lengthStr}`;
+    return `${no}    ${label}      ${item.qty}本`;
   }).join('\n');
 
   const noteText = (orderData.note || '').trim() || 'なし';
@@ -273,27 +441,72 @@ function switchOrderType(type) {
   renderOrderItemList();
 }
 
+function switchMaterialFilter(type) {
+  _materialFilter = type;
+  document.querySelectorAll('#ord-material-tabs .ord-material-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.type === type);
+  });
+  renderOrderItemList();
+}
+
 function renderOrderItemList() {
   const listEl = document.getElementById('ord-item-list');
   if (!listEl) return;
+
   const filtered = _items.filter(it =>
     it.active !== false &&
-    (it.orderType === _orderType || it.orderType === 'both' || !it.orderType)
+    (it.orderType === _orderType || it.orderType === 'both' || !it.orderType) &&
+    (_materialFilter === 'all' || (it.materialType || 'steel') === _materialFilter)
   );
+
   if (filtered.length === 0) {
-    listEl.innerHTML = `<p class="ord-empty">この区分の鋼材が登録されていません<br><small>⚙設定 → 鋼材マスタで追加できます</small></p>`;
+    listEl.innerHTML = `<p class="ord-empty">この条件の鋼材が登録されていません<br><small>⚙設定 → 鋼材マスタで追加できます</small></p>`;
     return;
   }
-  listEl.innerHTML = filtered.map(item => `
-    <div class="ord-item-row" data-id="${esc(item.id)}">
-      <input type="checkbox" class="ord-item-check" id="ord-chk-${esc(item.id)}" checked>
-      <label for="ord-chk-${esc(item.id)}" class="ord-item-label">
-        <span class="ord-item-name">${esc(item.name)}</span>
-        <span class="ord-item-spec">${esc(item.spec)}</span>
-      </label>
-      <span class="ord-item-unit">${esc(item.unit)}</span>
-      <input type="number" class="ord-qty-input form-input" value="${item.defaultQty || 1}" min="1" step="1">
+
+  // 品種別グループ化
+  const grouped = {};
+  filtered.forEach(item => {
+    const cat = item.itemCategory || item.name || '鋼材';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(item);
+  });
+
+  listEl.innerHTML = Object.entries(grouped).map(([cat, items]) => `
+    <div class="ord-cat-group">
+      <div class="ord-cat-header" data-cat="${esc(cat)}">
+        <i class="fa-solid fa-chevron-down ord-cat-chevron"></i>
+        <span class="ord-cat-name">${esc(cat)}</span>
+        <span class="ord-cat-count">${items.length}種</span>
+      </div>
+      <div class="ord-cat-items">
+        ${items.map(item => {
+          const lengths = item.availableLengths || [];
+          const lengthHtml = lengths.length > 1
+            ? `<select class="ord-length-select form-input">${lengths.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('')}</select>`
+            : `<span class="ord-item-fixed-length">${esc(lengths[0] || '')}</span>`;
+          return `
+            <div class="ord-item-row" data-id="${esc(item.id)}">
+              <input type="checkbox" class="ord-item-check" id="ord-chk-${esc(item.id)}">
+              <label for="ord-chk-${esc(item.id)}" class="ord-item-label">
+                <span class="ord-item-spec">${esc(item.spec)}</span>
+              </label>
+              ${lengthHtml}
+              <input type="number" class="ord-qty-input form-input" value="${item.defaultQty || 1}" min="1" step="1">
+            </div>`;
+        }).join('')}
+      </div>
     </div>`).join('');
+
+  // カテゴリ折りたたみイベント
+  listEl.querySelectorAll('.ord-cat-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const itemsEl = header.nextElementSibling;
+      const chevron = header.querySelector('.ord-cat-chevron');
+      const collapsed = itemsEl.classList.toggle('collapsed');
+      chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
+    });
+  });
 }
 
 // ===== 発注モーダル =====
@@ -311,7 +524,11 @@ export async function openOrderModal() {
       : '<option value="">（発注先が登録されていません）</option>';
   }
 
-  // 区分を工場在庫にリセット
+  // 区分・素材フィルタをリセット
+  _materialFilter = 'all';
+  document.querySelectorAll('#ord-material-tabs .ord-material-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.type === 'all');
+  });
   switchOrderType('factory');
 
   const siteNameEl = document.getElementById('ord-site-name');
@@ -347,13 +564,15 @@ function collectOrderData() {
       const item = _items.find(it => it.id === row.dataset.id);
       if (!item) return;
       const qty = parseInt(row.querySelector('.ord-qty-input').value, 10) || 1;
-      selectedItems.push({ itemId: row.dataset.id, name: item.name, spec: item.spec, unit: item.unit, qty });
+      const lengthEl = row.querySelector('.ord-length-select') || row.querySelector('.ord-item-fixed-length');
+      const length = lengthEl ? (lengthEl.value || lengthEl.textContent || '') : '';
+      const category = item.itemCategory || item.name || '';
+      selectedItems.push({ itemId: row.dataset.id, category, spec: item.spec, unit: '本', qty, length });
     } else {
       const name = row.querySelector('.ord-custom-name')?.value.trim();
       const spec = row.querySelector('.ord-custom-spec')?.value.trim() || '';
-      const unit = row.querySelector('.ord-custom-unit')?.value.trim() || '';
       const qty  = parseInt(row.querySelector('.ord-qty-input')?.value, 10) || 1;
-      if (name) selectedItems.push({ itemId: null, name, spec, unit, qty });
+      if (name) selectedItems.push({ itemId: null, category: name, spec, unit: '本', qty, length: '' });
     }
   });
 
@@ -617,17 +836,29 @@ function renderAdminItems() {
     listEl.innerHTML = '<p class="ord-empty">登録なし</p>';
     return;
   }
-  const typeMap = { factory: '工場在庫', site: '現場向け', both: '両方' };
-  listEl.innerHTML = visibleItems.map(item => `
-    <div class="ord-admin-row" data-id="${esc(item.id)}">
-      <span class="ord-admin-item-info">
-        <strong>${esc(item.name)}</strong>　${esc(item.spec)}　単位:${esc(item.unit)}　デフォルト:${item.defaultQty}
-        <span class="ord-type-badge ord-type-badge--${esc(item.orderType || 'factory')}">${typeMap[item.orderType] || '工場在庫'}</span>
-      </span>
-      <div class="ord-admin-actions">
-        <button class="btn-modal-secondary ord-admin-edit-item" data-id="${esc(item.id)}">編集</button>
-        <button class="btn-modal-danger ord-admin-del-item" data-id="${esc(item.id)}">削除</button>
-      </div>
+  const matMap = { steel: 'S', stainless: 'SUS' };
+  // カテゴリ別グループ表示
+  const grouped = {};
+  visibleItems.forEach(it => {
+    const cat = it.itemCategory || it.name || '鋼材';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(it);
+  });
+  listEl.innerHTML = Object.entries(grouped).map(([cat, items]) => `
+    <div class="ord-admin-cat-group">
+      <div class="ord-admin-cat-header">${esc(cat)} <span class="ord-category-count">${items.length}件</span></div>
+      ${items.map(item => `
+        <div class="ord-admin-row" data-id="${esc(item.id)}">
+          <span class="ord-admin-item-info">
+            <strong>${esc(item.spec)}</strong>
+            <span class="ord-mat-badge">${matMap[item.materialType || 'steel'] || 'S'}</span>
+            <span class="ord-lengths-tag">${(item.availableLengths || []).join(' / ')}</span>
+          </span>
+          <div class="ord-admin-actions">
+            <button class="btn-modal-secondary ord-admin-edit-item" data-id="${esc(item.id)}">編集</button>
+            <button class="btn-modal-danger ord-admin-del-item" data-id="${esc(item.id)}">削除</button>
+          </div>
+        </div>`).join('')}
     </div>`).join('');
 }
 
@@ -717,6 +948,12 @@ function bindOrderEvents() {
     if (e.target === document.getElementById('ord-preview-modal')) closePreviewModal();
   });
 
+  // 素材フィルタ
+  document.getElementById('ord-material-tabs')?.addEventListener('click', e => {
+    const btn = e.target.closest('.ord-material-tab');
+    if (btn) switchMaterialFilter(btn.dataset.type);
+  });
+
   // 発注区分トグル
   document.getElementById('ord-type-factory')?.addEventListener('click', () => switchOrderType('factory'));
   document.getElementById('ord-type-site')?.addEventListener('click', () => switchOrderType('site'));
@@ -771,20 +1008,23 @@ function bindOrderEvents() {
 
   // 鋼材マスタ: 追加
   document.getElementById('ord-item-add-btn')?.addEventListener('click', async () => {
-    const name    = document.getElementById('ord-item-add-name')?.value.trim();
-    const spec    = document.getElementById('ord-item-add-spec')?.value.trim() || '';
-    const unit    = document.getElementById('ord-item-add-unit')?.value.trim();
-    const qty     = parseInt(document.getElementById('ord-item-add-qty')?.value, 10) || 1;
-    const ordType = document.getElementById('ord-item-add-type')?.value || 'factory';
-    const suppId  = _suppliers[0]?.id || '';
-    if (!name || !unit) { alert('品名と単位は必須です。'); return; }
-    await addOrUpdateItem(null, { name, spec, unit, defaultQty: qty, orderType: ordType, supplierId: suppId, sortOrder: _items.length + 1 });
-    ['ord-item-add-name', 'ord-item-add-spec', 'ord-item-add-unit'].forEach(id => {
+    const category = document.getElementById('ord-item-add-category')?.value.trim();
+    const spec     = document.getElementById('ord-item-add-spec')?.value.trim() || '';
+    const material = document.getElementById('ord-item-add-material')?.value || 'steel';
+    const rawLen   = document.getElementById('ord-item-add-lengths')?.value.trim() || '';
+    const lengths  = rawLen ? rawLen.split(/[,、\s]+/).map(s => s.trim()).filter(Boolean) : ['6m'];
+    const ordType  = document.getElementById('ord-item-add-type')?.value || 'both';
+    const suppId   = _suppliers[0]?.id || '';
+    if (!category || !spec) { alert('品種とサイズは必須です。'); return; }
+    await addOrUpdateItem(null, {
+      itemCategory: category, name: category, spec, materialType: material,
+      availableLengths: lengths, unit: '本', defaultQty: 1,
+      orderType: ordType, supplierId: suppId, sortOrder: _items.length + 1
+    });
+    ['ord-item-add-category','ord-item-add-spec','ord-item-add-lengths'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
-    const qtyEl = document.getElementById('ord-item-add-qty');
-    if (qtyEl) qtyEl.value = '1';
   });
 
   // 鋼材マスタ: 編集・削除（委譲）
@@ -797,18 +1037,24 @@ function bindOrderEvents() {
       const id = editBtn.dataset.id;
       const item = _items.find(it => it.id === id);
       if (!item) return;
-      const newName = prompt('品名:', item.name);
-      if (newName === null) return;
-      const newSpec = prompt('規格:', item.spec || '');
+      const newCat = prompt('品種:', item.itemCategory || item.name);
+      if (newCat === null) return;
+      const newSpec = prompt('サイズ:', item.spec || '');
       if (newSpec === null) return;
-      const newUnit = prompt('単位:', item.unit);
-      if (newUnit === null) return;
-      const newQty  = prompt('デフォルト数量:', String(item.defaultQty || 1));
-      if (newQty === null) return;
-      const newType = prompt('区分 (factory=工場在庫 / site=現場向け / both=両方):', item.orderType || 'factory');
+      const newMat = prompt('素材 (steel=スチール / stainless=ステンレス):', item.materialType || 'steel');
+      if (newMat === null) return;
+      const newLengths = prompt('定尺（カンマ区切り）:', (item.availableLengths || []).join(','));
+      if (newLengths === null) return;
+      const lengths = newLengths.split(/[,、\s]+/).map(s => s.trim()).filter(Boolean);
+      const newType = prompt('区分 (factory=工場在庫 / site=現場向け / both=両方):', item.orderType || 'both');
       if (newType === null) return;
-      const validType = ['factory', 'site', 'both'].includes(newType) ? newType : 'factory';
-      await addOrUpdateItem(id, { name: newName, spec: newSpec, unit: newUnit, defaultQty: parseInt(newQty, 10) || 1, orderType: validType });
+      const validType = ['factory', 'site', 'both'].includes(newType) ? newType : 'both';
+      const validMat = ['steel', 'stainless'].includes(newMat) ? newMat : 'steel';
+      await addOrUpdateItem(id, {
+        itemCategory: newCat, name: newCat, spec: newSpec,
+        materialType: validMat, availableLengths: lengths,
+        unit: '本', orderType: validType
+      });
     }
   });
 

@@ -1807,7 +1807,14 @@
 
       <!-- 鋼材チェックリスト -->
       <div class="form-group">
-        <label class="form-label">発注品目</label>
+        <div class="ord-item-list-header">
+          <label class="form-label">発注品目</label>
+          <div class="ord-material-tabs" id="ord-material-tabs">
+            <button class="ord-material-tab active" data-type="all">すべて</button>
+            <button class="ord-material-tab" data-type="steel">スチール</button>
+            <button class="ord-material-tab" data-type="stainless">ステンレス</button>
+          </div>
+        </div>
         <div id="ord-item-list" class="ord-item-list"></div>
         <button class="ord-add-custom-btn" id="ord-add-custom-btn">
           <i class="fa-solid fa-plus"></i> この発注に品目を追加
@@ -1898,14 +1905,17 @@
           <div class="ord-admin-add-form">
             <h4 class="ord-admin-add-title">新規追加</h4>
             <div class="ord-admin-form-row">
-              <input type="text" id="ord-item-add-name" class="form-input" placeholder="品名 (例: FB（ミガキ）)">
-              <input type="text" id="ord-item-add-spec" class="form-input" placeholder="規格 (例: ６x30　L＝4m)">
-              <input type="text" id="ord-item-add-unit" class="form-input ord-unit-input" placeholder="単位">
-              <input type="number" id="ord-item-add-qty" class="form-input ord-qty-input" value="1" min="1">
-              <select id="ord-item-add-type" class="form-input ord-type-select">
+              <input type="text" id="ord-item-add-category" class="form-input" placeholder="品種 (例: 平鋼, アングル)" style="min-width:120px">
+              <input type="text" id="ord-item-add-spec" class="form-input" placeholder="サイズ (例: 6×30)">
+              <select id="ord-item-add-material" class="form-input" style="min-width:110px">
+                <option value="steel">スチール</option>
+                <option value="stainless">ステンレス</option>
+              </select>
+              <input type="text" id="ord-item-add-lengths" class="form-input" placeholder="定尺 (例: 5.5m,6m)" style="min-width:130px">
+              <select id="ord-item-add-type" class="form-input" style="min-width:100px">
+                <option value="both">工場・現場</option>
                 <option value="factory">工場在庫</option>
                 <option value="site">現場向け</option>
-                <option value="both">両方</option>
               </select>
               <button class="btn-modal-primary" id="ord-item-add-btn">追加</button>
             </div>
