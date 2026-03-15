@@ -489,19 +489,9 @@ async function renderHistory() {
 export async function openOrderAdminModal() {
   const modal = document.getElementById('ord-admin-modal');
   if (!modal) return;
-
-  const authArea = document.getElementById('ord-admin-auth-area');
-  const panelArea = document.getElementById('ord-admin-panel-area');
-  if (authArea) authArea.hidden = false;
-  if (panelArea) panelArea.hidden = true;
-
-  const pinInput = document.getElementById('ord-admin-pin-input');
-  if (pinInput) pinInput.value = '';
-  const errEl = document.getElementById('ord-admin-auth-error');
-  if (errEl) errEl.hidden = true;
-
+  await loadMasters();
+  switchOrderAdminTab('items');
   modal.classList.add('visible');
-  if (pinInput) setTimeout(() => pinInput.focus(), 100);
 }
 
 export function closeOrderAdminModal() {
@@ -511,10 +501,6 @@ export function closeOrderAdminModal() {
 
 async function openOrderAdminPanel() {
   await loadMasters();
-  const authArea = document.getElementById('ord-admin-auth-area');
-  const panelArea = document.getElementById('ord-admin-panel-area');
-  if (authArea) authArea.hidden = true;
-  if (panelArea) panelArea.hidden = false;
   switchOrderAdminTab('items');
 }
 
@@ -669,26 +655,8 @@ function bindOrderEvents() {
 
   // 管理モーダル
   document.getElementById('ord-admin-close')?.addEventListener('click', closeOrderAdminModal);
-  document.getElementById('ord-admin-cancel')?.addEventListener('click', closeOrderAdminModal);
   document.getElementById('ord-admin-modal')?.addEventListener('click', e => {
     if (e.target === document.getElementById('ord-admin-modal')) closeOrderAdminModal();
-  });
-
-  // 管理者PIN認証
-  document.getElementById('ord-admin-auth-btn')?.addEventListener('click', async () => {
-    const pin = document.getElementById('ord-admin-pin-input')?.value || '';
-    const errEl = document.getElementById('ord-admin-auth-error');
-    if (errEl) errEl.hidden = true;
-    const { verifyPIN } = await import('./auth.js');
-    const ok = await verifyPIN(pin);
-    if (ok) {
-      await openOrderAdminPanel();
-    } else {
-      if (errEl) { errEl.textContent = 'PINが正しくありません'; errEl.hidden = false; }
-    }
-  });
-  document.getElementById('ord-admin-pin-input')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('ord-admin-auth-btn')?.click();
   });
 
   // タブ切替
