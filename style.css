@@ -2610,6 +2610,7 @@ select.todo-due-select {
 .main.favorites-only .category-section:not(#favorites-section),
 .main.favorites-only .external-tools,
 .main.favorites-only .btn-add-category-wrap,
+.main.favorites-only #notice-board,
 .main.favorites-only #weather-widget {
   display: none !important;
 }
