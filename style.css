@@ -10182,6 +10182,19 @@ html.font-xl { font-size: 21px; }
 [data-theme="light"] .ord-type-badge--site    { color: #15803d; }
 [data-theme="light"] .ord-type-badge--both    { color: #c2410c; }
 
+/* メール送信バッジ */
+.ord-email-badge {
+  font-size: 0.72rem;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ord-email-badge--sent   { color: var(--accent-cyan);   background: rgba(57,208,181,0.12); }
+.ord-email-badge--unsent { color: var(--accent-orange);  background: rgba(255,166,87,0.12); }
+[data-theme="light"] .ord-email-badge--sent   { color: #0a7fc0; background: rgba(10,127,192,0.10); }
+[data-theme="light"] .ord-email-badge--unsent { color: #bc4c00; background: rgba(188,76,0,0.10); }
+
 /* 現場名 */
 .ord-history-site {
   font-size: 0.82rem;

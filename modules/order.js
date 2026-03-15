@@ -1201,12 +1201,16 @@ async function renderHistory() {
         const isFactory = !o.orderType || o.orderType === 'factory';
         const typeLabel = isFactory ? '工場在庫' : (o.siteName || '現場名発注');
         const typeCls   = isFactory ? 'ord-type-badge--factory' : 'ord-type-badge--site';
+        const emailBadge = o.emailSent
+          ? `<span class="ord-email-badge ord-email-badge--sent"><i class="fa-solid fa-envelope-circle-check"></i> 送信済み</span>`
+          : `<span class="ord-email-badge ord-email-badge--unsent"><i class="fa-solid fa-envelope"></i> 未送信</span>`;
         return `
           <div class="ord-history-item" data-id="${esc(o.id)}" role="button" tabindex="0" title="クリックで詳細を見る">
             <div class="ord-history-header">
               <span class="ord-history-date">${fmtDatetime(o.orderedAt)}</span>
               <span class="ord-type-badge ${typeCls}">${esc(typeLabel)}</span>
               <span class="ord-history-by">${esc(o.orderedBy)}</span>
+              ${emailBadge}
             </div>
             <div class="ord-history-items">${esc(itemsSummary)}</div>
             ${o.note ? `<div class="ord-history-note">備考: ${esc(o.note)}</div>` : ''}
@@ -1259,6 +1263,7 @@ function openOrderDetailModal(orderId) {
         <tr><th>発注番号</th><td>${orderNo}</td></tr>
         <tr><th>発注者</th><td>${esc(order.orderedBy || '')}（日建フレメックス株式会社 生産管理課）</td></tr>
         <tr><th>発注区分</th><td>${typeLabel}</td></tr>
+        <tr><th>メール送信</th><td>${order.emailSent ? `<span style="color:var(--accent-cyan)"><i class="fa-solid fa-envelope-circle-check"></i> 送信済み</span>` : `<span style="color:var(--accent-orange)"><i class="fa-solid fa-envelope"></i> 未送信（メール未送信）</span>`}</td></tr>
       </table>
       <div class="ord-detail-section">【発注先】</div>
       <div class="ord-detail-supplier">
