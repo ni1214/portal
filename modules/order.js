@@ -393,23 +393,58 @@ async function seedInitialData() {
 
     // ── V3: 工場在庫 固定7品目 ──
     if (seedVer < 3) {
-      await Promise.all(CATALOG_SEED_V3.map(item => addDoc(collection(db, 'order_items'), {
-        itemCategory: item.itemCategory,
-        name: item.itemCategory,
-        spec: item.spec,
-        materialType: item.materialType,
-        availableLengths: item.availableLengths,
-        unit: '本',
-        defaultQty: 1,
-        sortOrder: item.sortOrder,
-        orderType: 'factory',
-        active: true
-      })));
+      // 既にfactory品目が存在する場合はスキップ（並行起動による多重シード防止）
+      const existingFactory = await getDocs(
+        query(collection(db, 'order_items'), where('orderType', '==', 'factory'))
+      );
+      if (existingFactory.empty) {
+        await Promise.all(CATALOG_SEED_V3.map(item => addDoc(collection(db, 'order_items'), {
+          itemCategory: item.itemCategory,
+          name: item.itemCategory,
+          spec: item.spec,
+          materialType: item.materialType,
+          availableLengths: item.availableLengths,
+          unit: '本',
+          defaultQty: 1,
+          sortOrder: item.sortOrder,
+          orderType: 'factory',
+          active: true
+        })));
+        console.log(`order: ${CATALOG_SEED_V3.length}件のV3工場在庫品目をシードしました`);
+      }
       await setDoc(doc(db, 'portal', 'config'), { orderItemsSeedVersion: 3 }, { merge: true });
-      console.log(`order: ${CATALOG_SEED_V3.length}件のV3工場在庫品目をシードしました`);
     }
   } catch (err) {
     console.error('order: seedInitialData error', err);
+  }
+}
+
+// ===== 工場在庫品目の重複削除（多重シード対策） =====
+async function cleanupFactoryDuplicates() {
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'order_items'), where('orderType', '==', 'factory'))
+    );
+    const items = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+    const seen = new Map();
+    const toDelete = [];
+    items.forEach(it => {
+      const key = `${it.itemCategory}__${it.spec}`;
+      if (seen.has(key)) {
+        toDelete.push(it.id);
+      } else {
+        seen.set(key, it.id);
+      }
+    });
+
+    if (toDelete.length > 0) {
+      await Promise.all(toDelete.map(id => deleteDoc(doc(db, 'order_items', id))));
+      console.log(`order: ${toDelete.length}件の重複工場在庫品目を削除しました`);
+    }
+  } catch (err) {
+    console.error('order: cleanupFactoryDuplicates error', err);
   }
 }
 
@@ -435,6 +470,7 @@ async function loadMasters() {
 export async function initOrder(d) {
   // d は deps（将来の拡張用）
   await seedInitialData();
+  await cleanupFactoryDuplicates();
   await loadMasters();
   bindOrderEvents();
 }
