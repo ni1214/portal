@@ -11,6 +11,80 @@ export function initCompanyCalendar(d) { deps = d; }
 
 const DOW_LABELS = ['日','月','火','水','木','金','土'];
 
+// ===== 日本国民の祝日計算 =====
+const _jpHolidayCache = {};
+
+export function getJpNationalHolidays(year) {
+  if (_jpHolidayCache[year]) return _jpHolidayCache[year];
+
+  const h = {};
+  const pad = n => String(n).padStart(2, '0');
+  const key = (m, d) => `${year}-${pad(m)}-${pad(d)}`;
+
+  // n番目の曜日(dow: 0=日,1=月...)を返す
+  const nthWeekday = (m, nth, dow) => {
+    const firstDow = new Date(year, m - 1, 1).getDay();
+    return 1 + ((dow - firstDow + 7) % 7) + (nth - 1) * 7;
+  };
+
+  // 春分・秋分の日計算（1980〜2099）
+  const shunbunDay = Math.floor(20.8431 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+  const shubunDay  = Math.floor(23.2488 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+
+  // ── 固定祝日 ──
+  h[key(1, 1)]  = '元旦';
+  h[key(2, 11)] = '建国記念の日';
+  if (year >= 2020) h[key(2, 23)] = '天皇誕生日';
+  h[key(3, shunbunDay)] = '春分の日';
+  h[key(4, 29)] = '昭和の日';
+  h[key(5, 3)]  = '憲法記念日';
+  h[key(5, 4)]  = 'みどりの日';
+  h[key(5, 5)]  = 'こどもの日';
+  if (year >= 2016) h[key(8, 11)] = '山の日';
+  h[key(9, shubunDay)] = '秋分の日';
+  h[key(11, 3)]  = '文化の日';
+  h[key(11, 23)] = '勤労感謝の日';
+  if (year >= 1989 && year <= 2018) h[key(12, 23)] = '天皇誕生日';
+
+  // ── ハッピーマンデー ──
+  h[key(1, nthWeekday(1, 2, 1))]  = '成人の日';
+  h[key(7, nthWeekday(7, 3, 1))]  = '海の日';
+  h[key(9, nthWeekday(9, 3, 1))]  = '敬老の日';
+  h[key(10, nthWeekday(10, 2, 1))] = 'スポーツの日';
+
+  // ── 国民の休日（祝日に挟まれた平日） ──
+  for (let m = 1; m <= 12; m++) {
+    const lastD = new Date(year, m, 0).getDate();
+    for (let d = 2; d < lastD; d++) {
+      const prev = key(m, d - 1);
+      const cur  = key(m, d);
+      const next = key(m, d + 1);
+      const dow  = new Date(year, m - 1, d).getDay();
+      if (h[prev] && h[next] && !h[cur] && dow !== 0 && dow !== 6) {
+        h[cur] = '国民の休日';
+      }
+    }
+  }
+
+  // ── 振替休日（日曜の祝日 → 翌以降の最初の非祝日平日） ──
+  const snapshot = { ...h };
+  Object.keys(snapshot).forEach(dateStr => {
+    const d = new Date(dateStr);
+    if (d.getDay() !== 0) return; // 日曜日の祝日のみ
+    let sub = new Date(d);
+    sub.setDate(sub.getDate() + 1);
+    while (sub.getDay() === 0 || h[sub.toISOString().slice(0, 10)]) {
+      sub.setDate(sub.getDate() + 1);
+    }
+    if (sub.getFullYear() === year) {
+      h[sub.toISOString().slice(0, 10)] = '振替休日';
+    }
+  });
+
+  _jpHolidayCache[year] = h;
+  return h;
+}
+
 // ===== Firestore パス =====
 const companyCalRef = () => doc(db, 'company_calendar', 'config');
 const publicAttRef = (ym) => doc(db, 'public_attendance', ym);
@@ -83,7 +157,7 @@ export async function fetchPublicAttendance(ym) {
 // ===== 日付情報の判定ユーティリティ =====
 export function getDateInfo(dateStr) {
   const cfg = state.companyCalConfig;
-  if (!cfg) return { isWorkSaturday: false, isPlannedLeave: false, isHoliday: false, holidayLabel: '', events: [] };
+  if (!cfg) return { isWorkSaturday: false, isPlannedLeave: false, isHoliday: false, holidayLabel: '', events: [], jpHolidayName: '' };
 
   const isWorkSaturday = (cfg.workSaturdays || []).includes(dateStr);
   const isPlannedLeave = (cfg.plannedLeaveSaturdays || []).includes(dateStr);
@@ -100,7 +174,12 @@ export function getDateInfo(dateStr) {
 
   const events = (cfg.events || []).filter(e => e.date === dateStr);
 
-  return { isWorkSaturday, isPlannedLeave, isHoliday, holidayLabel, events };
+  // 日本の祝祭日
+  const year = parseInt(dateStr.slice(0, 4), 10);
+  const jpHolidays = getJpNationalHolidays(year);
+  const jpHolidayName = jpHolidays[dateStr] || '';
+
+  return { isWorkSaturday, isPlannedLeave, isHoliday, holidayLabel, events, jpHolidayName };
 }
 
 // ===== 共有カレンダー描画 =====
@@ -153,9 +232,13 @@ export async function renderSharedCalendar() {
     if (isToday)   cellCls += ' cal-today';
     if (dow === 0) cellCls += ' cal-sun';
     if (dow === 6 && !info.isWorkSaturday) cellCls += ' cal-sat';
+    if (info.jpHolidayName && dow !== 0) cellCls += ' cal-jp-holiday'; // 祝祭日（日曜以外）
     if (info.isHoliday) cellCls += ' cal-company-holiday';
 
     let companyBadges = '';
+    if (info.jpHolidayName) {
+      companyBadges += `<span class="cal-company-badge jp-holiday-badge" title="${esc(info.jpHolidayName)}">${esc(info.jpHolidayName)}</span>`;
+    }
     if (info.isPlannedLeave) {
       companyBadges += `<span class="cal-company-badge planned-lv" title="計画的付与">計画付与</span>`;
     } else if (info.isWorkSaturday) {
@@ -302,6 +385,7 @@ function _renderAnnualGrid() {
       let cls = 'ccs-mini-day';
       if (dow === 0) cls += ' ccs-sun';
       if (dow === 6) cls += ' ccs-sat-day';
+      if (info.jpHolidayName && dow !== 0) cls += ' ccs-jp-holiday'; // 日曜以外の祝祭日は赤
       if (info.isWorkSaturday && info.isPlannedLeave) cls += ' ccs-day-planned';
       else if (info.isWorkSaturday) cls += ' ccs-day-worksat';
       if (info.isHoliday) cls += ' ccs-day-holiday';
@@ -314,6 +398,7 @@ function _renderAnnualGrid() {
 
       // ツールチップ
       let title = dateStr;
+      if (info.jpHolidayName) title += ` ★${info.jpHolidayName}`;
       if (info.isWorkSaturday) title += info.isPlannedLeave ? ' [計画付与]' : ' [出勤土曜]';
       if (info.isHoliday) title += ` [${info.holidayLabel}]`;
       info.events.forEach(ev => { title += ` [${ev.label}]`; });

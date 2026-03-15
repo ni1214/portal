@@ -8586,6 +8586,31 @@ html.font-xl { font-size: 21px; }
   background: rgba(156,39,176,0.06);
 }
 
+/* 日本の祝祭日セル（共有カレンダー） */
+.cal-cell.cal-jp-holiday {
+  background: rgba(248,113,113,0.07);
+}
+.cal-cell.cal-jp-holiday .cal-day-num {
+  color: #f87171;
+}
+[data-theme="light"] .cal-cell.cal-jp-holiday {
+  background: rgba(239,68,68,0.06);
+}
+[data-theme="light"] .cal-cell.cal-jp-holiday .cal-day-num {
+  color: #dc2626;
+}
+
+/* 祝祭日バッジ（共有カレンダー） */
+.cal-company-badge.jp-holiday-badge {
+  background: rgba(248,113,113,0.15);
+  color: #fca5a5;
+  font-weight: 600;
+}
+[data-theme="light"] .cal-company-badge.jp-holiday-badge {
+  background: rgba(239,68,68,0.10);
+  color: #dc2626;
+}
+
 /* 共有カレンダーコンテナ — 個人グリッドと同じパディングに揃える */
 #cal-shared-container {
   padding: 12px 20px;
@@ -8920,7 +8945,14 @@ html.font-xl { font-size: 21px; }
   margin: 1px auto 0;
 }
 
+/* 日本祝祭日（年間グリッド） */
+.ccs-mini-day.ccs-jp-holiday {
+  color: #f87171 !important;
+  font-weight: 700;
+}
+
 /* ライトモード調整 */
+[data-theme="light"] .ccs-mini-day.ccs-jp-holiday { color: #dc2626 !important; }
 [data-theme="light"] .ccs-day-worksat { background: rgba(9,105,218,0.14) !important; color: #0969da !important; }
 [data-theme="light"] .ccs-day-planned { background: rgba(26,127,55,0.14) !important; color: #1a7f37 !important; }
 [data-theme="light"] .ccs-day-holiday { background: rgba(188,76,0,0.14) !important; color: #bc4c00 !important; }
