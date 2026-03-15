@@ -1,23 +1,21 @@
 /**
  * bottom-nav.js
- * スマホ用ボトムナビ・その他ドロワー・個人ドロワーのイベント管理
+ * スマホ用ボトムナビ・その他ドロワーのイベント管理
+ * （個人ドロワーは廃止 → その他ドロワーに統合済み）
  */
 
 export function initBottomNav() {
   // ボトムナビ各ボタン
-  const bnavHome     = document.getElementById('bnav-home');
-  const bnavChat     = document.getElementById('bnav-chat');
-  const bnavNotice   = document.getElementById('bnav-notice');
-  const bnavPersonal = document.getElementById('bnav-personal');
-  const bnavMore     = document.getElementById('bnav-more');
+  const bnavHome   = document.getElementById('bnav-home');
+  const bnavTask   = document.getElementById('bnav-task');
+  const bnavChat   = document.getElementById('bnav-chat');
+  const bnavNotice = document.getElementById('bnav-notice');
+  const bnavMore   = document.getElementById('bnav-more');
 
   // ドロワー
-  const moreDrawer          = document.getElementById('more-drawer');
-  const moreDrawerBackdrop  = document.getElementById('more-drawer-backdrop');
-  const moreDrawerClose     = document.getElementById('more-drawer-close');
-  const personalDrawer      = document.getElementById('personal-drawer');
-  const personalDrawerBackdrop = document.getElementById('personal-drawer-backdrop');
-  const personalDrawerClose = document.getElementById('personal-drawer-close');
+  const moreDrawer         = document.getElementById('more-drawer');
+  const moreDrawerBackdrop = document.getElementById('more-drawer-backdrop');
+  const moreDrawerClose    = document.getElementById('more-drawer-close');
 
   // ボトムナビが存在しない場合はスキップ
   if (!bnavHome) return;
@@ -28,6 +26,15 @@ export function initBottomNav() {
     setActive(bnavHome);
   });
 
+  // ---- タスク ----
+  if (bnavTask) {
+    bnavTask.addEventListener('click', () => {
+      const taskBtn = document.getElementById('btn-task');
+      if (taskBtn) taskBtn.click();
+      setActive(bnavTask);
+    });
+  }
+
   // ---- チャット ----
   bnavChat.addEventListener('click', () => {
     const chatFab = document.getElementById('chat-fab');
@@ -35,26 +42,21 @@ export function initBottomNav() {
     setActive(bnavChat);
   });
 
-  // ---- お知らせ ----
+  // ---- お知らせ（スクロール表示） ----
   bnavNotice.addEventListener('click', () => {
-    const noticeBell = document.getElementById('btn-notice-bell');
-    if (noticeBell) noticeBell.click();
-    setActive(bnavNotice);
-  });
-
-  // ---- 個人 ----
-  bnavPersonal.addEventListener('click', () => {
     closeMoreDrawer();
-    if (personalDrawer) {
-      personalDrawer.hidden = false;
-      document.body.style.overflow = 'hidden';
+    // お知らせボードにスムーズスクロール
+    const noticeBoard = document.getElementById('notice-board');
+    if (noticeBoard) {
+      noticeBoard.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    setActive(bnavPersonal);
+    setActive(bnavNotice);
+    // アクティブ表示は一時的（スクロール後に解除）
+    setTimeout(() => clearActive(bnavNotice), 1500);
   });
 
   // ---- その他 ----
   bnavMore.addEventListener('click', () => {
-    closePersonalDrawer();
     if (moreDrawer) {
       moreDrawer.hidden = false;
       document.body.style.overflow = 'hidden';
@@ -70,14 +72,6 @@ export function initBottomNav() {
     moreDrawerBackdrop.addEventListener('click', closeMoreDrawer);
   }
 
-  // ---- 個人ドロワー 閉じる ----
-  if (personalDrawerClose) {
-    personalDrawerClose.addEventListener('click', closePersonalDrawer);
-  }
-  if (personalDrawerBackdrop) {
-    personalDrawerBackdrop.addEventListener('click', closePersonalDrawer);
-  }
-
   // ---- その他ドロワーのアイテムクリック ----
   document.querySelectorAll('.more-drawer-item[data-target]').forEach(item => {
     item.addEventListener('click', () => {
@@ -91,19 +85,7 @@ export function initBottomNav() {
     });
   });
 
-  // ---- 個人ドロワーのアイテムクリック ----
-  document.querySelectorAll('.personal-drawer-item[data-target]').forEach(item => {
-    item.addEventListener('click', () => {
-      const targetId = item.dataset.target;
-      const target = document.getElementById(targetId);
-      if (target) {
-        closePersonalDrawer();
-        setTimeout(() => target.click(), 50);
-      }
-    });
-  });
-
-  // ---- バッジ同期（チャット・お知らせ） ----
+  // ---- バッジ同期（チャット・お知らせ・タスク） ----
   syncBadges();
 
   function closeMoreDrawer() {
@@ -112,14 +94,6 @@ export function initBottomNav() {
       document.body.style.overflow = '';
     }
     clearActive(bnavMore);
-  }
-
-  function closePersonalDrawer() {
-    if (personalDrawer) {
-      personalDrawer.hidden = true;
-      document.body.style.overflow = '';
-    }
-    clearActive(bnavPersonal);
   }
 
   function setActive(btn) {
@@ -142,10 +116,8 @@ function syncBadges() {
   const bnavChatBadge = document.getElementById('bnav-chat-badge');
   if (chatBadgeSrc && bnavChatBadge) {
     const syncChat = () => {
-      const hidden = chatBadgeSrc.hidden;
-      const count  = chatBadgeSrc.textContent;
-      bnavChatBadge.hidden = hidden;
-      bnavChatBadge.textContent = count;
+      bnavChatBadge.hidden = chatBadgeSrc.hidden;
+      bnavChatBadge.textContent = chatBadgeSrc.textContent;
     };
     syncChat();
     new MutationObserver(syncChat).observe(chatBadgeSrc, { attributes: true, childList: true, characterData: true, subtree: true });
@@ -163,19 +135,19 @@ function syncBadges() {
     new MutationObserver(syncNotice).observe(noticeBadgeSrc, { attributes: true, childList: true, characterData: true, subtree: true });
   }
 
-  // タスクバッジ同期（ドロワー内）
-  const taskBadgeSrc = document.getElementById('task-badge');
-  const mdrTaskBadge = document.getElementById('mdr-task-badge');
-  const pdrTaskBadge = document.getElementById('pdr-task-badge');
+  // タスクバッジ同期（ボトムナビ + ドロワー内）
+  const taskBadgeSrc  = document.getElementById('task-badge');
+  const bnavTaskBadge = document.getElementById('bnav-task-badge');
+  const mdrTaskBadge  = document.getElementById('mdr-task-badge');
   if (taskBadgeSrc) {
     const syncTask = () => {
+      if (bnavTaskBadge) {
+        bnavTaskBadge.hidden = taskBadgeSrc.hidden;
+        bnavTaskBadge.textContent = taskBadgeSrc.textContent;
+      }
       if (mdrTaskBadge) {
         mdrTaskBadge.hidden = taskBadgeSrc.hidden;
         mdrTaskBadge.textContent = taskBadgeSrc.textContent;
-      }
-      if (pdrTaskBadge) {
-        pdrTaskBadge.hidden = taskBadgeSrc.hidden;
-        pdrTaskBadge.textContent = taskBadgeSrc.textContent;
       }
     };
     syncTask();
@@ -195,7 +167,7 @@ function syncBadges() {
   }
 
   // ロックボタン表示状態の同期（スマホその他ドロワーの「ロック」）
-  const lockBtnSrc = document.getElementById('btn-lock-header');
+  const lockBtnSrc  = document.getElementById('btn-lock-header');
   const mdrLockItem = document.querySelector('.mdr-lock-item');
   if (lockBtnSrc && mdrLockItem) {
     const syncLock = () => {

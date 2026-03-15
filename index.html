@@ -59,6 +59,9 @@
           <i class="fa-regular fa-clock"></i>
           <span id="header-clock"></span>
         </div>
+        <button class="header-help-btn" id="header-help-btn" title="使い方ガイド">
+          <i class="fa-solid fa-circle-question"></i>
+        </button>
         <button class="btn-user" id="btn-user" title="ユーザー設定">
           <div class="user-avatar" id="user-avatar"><i class="fa-solid fa-user"></i></div>
           <div class="user-info">
@@ -93,9 +96,9 @@
         <span class="sidebar-item-label">タスク管理</span>
       </button>
 
-      <button class="sidebar-item" id="btn-favorites-only" title="お気に入りのみ表示">
+      <button class="sidebar-item" id="btn-favorites-only" title="お気に入り登録済みのカードだけを表示します">
         <span class="sidebar-item-icon"><i class="fa-regular fa-star"></i></span>
-        <span class="sidebar-item-label">お気に入り</span>
+        <span class="sidebar-item-label">お気に入りのみ</span>
       </button>
     </div>
 
@@ -111,17 +114,17 @@
         <span class="sidebar-item-label">お知らせ</span>
       </button>
 
-      <button class="sidebar-item" id="btn-reqboard" title="部門間依頼・目安箱">
+      <button class="sidebar-item" id="btn-reqboard" title="他部署への依頼・目安箱">
         <span class="sidebar-item-icon">
           <i class="fa-solid fa-clipboard-list"></i>
           <span class="req-badge" id="req-badge" hidden>0</span>
         </span>
-        <span class="sidebar-item-label">部門間依頼</span>
+        <span class="sidebar-item-label">部署間の依頼</span>
       </button>
 
-      <button class="sidebar-item" id="btn-email-assist" title="メール返信アシスタント（AI）">
+      <button class="sidebar-item" id="btn-email-assist" title="AIがメール返信文の下書きを作成します">
         <span class="sidebar-item-icon"><i class="fa-solid fa-envelope-open-text"></i></span>
-        <span class="sidebar-item-label">メールAI</span>
+        <span class="sidebar-item-label">メール返信AI</span>
       </button>
 
       <button class="sidebar-item chat-fab" id="chat-fab" title="チャット">
@@ -190,6 +193,7 @@
         <span>個人スペース</span>
       </div>
       <p class="area-header-desc">あなただけに表示されます。タスク・お気に入り・マイセクションはほかのユーザーには見えません。</p>
+      <p class="area-header-desc area-header-hint" id="area-personal-hint" hidden><i class="fa-solid fa-triangle-exclamation" style="color:var(--accent-orange)"></i> ユーザーネームを設定するとこのエリアのすべての機能が使えます。上の「<strong>名前を設定してください</strong>」をタップしてください。</p>
     </div>
 
     <!-- ==================== 個人TODOパネル ==================== -->
@@ -245,7 +249,7 @@
         <i class="fa-solid fa-users"></i>
         <span>全社共有スペース</span>
       </div>
-      <p class="area-header-desc">全社員に共有されます。お知らせ・リンク集・各部門の資料などをここで確認・管理できます。</p>
+      <p class="area-header-desc">全社員に共有されます。お知らせ・リンク集・各部門の資料などをここで確認・管理できます。天気・太陽光データはクイックリンク内の <i class="fa-solid fa-solar-panel" style="color:var(--accent-orange)"></i> アイコンから確認できます。</p>
     </div>
 
     <!-- お知らせボード（JS が制御） -->
@@ -648,7 +652,7 @@
   <div class="modal-overlay" id="username-modal">
     <div class="modal-glass">
       <h3 class="modal-title" id="username-modal-title"><i class="fa-solid fa-user-circle"></i> ユーザーネームを設定</h3>
-      <p class="modal-desc" id="username-modal-desc">あなただけの名前を入力してください。<br>お気に入り・テーマ・マイセクションがこの名前に紐づいて保存されます。</p>
+      <p class="modal-desc" id="username-modal-desc">あなただけの名前（ID）を入力してください。<br><strong>タスク管理・お気に入り・個人メモ・テーマ設定</strong>がこの名前に紐づいて保存されます。<br><small style="color:var(--text-muted)">同じ名前を別の端末で入力すれば設定が引き継がれます。</small></p>
       <div class="form-group">
         <label class="form-label">ユーザーネーム</label>
         <input type="text" id="username-input" class="form-input" placeholder="例：田中" maxlength="20" autocomplete="off">
@@ -663,7 +667,7 @@
         <button class="btn-reclaim" id="username-reclaim" hidden>これは私のアカウント →</button>
       </div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="username-skip">スキップ</button>
+        <button class="btn-modal-secondary" id="username-skip" title="スキップするとタスク・個人メモなどが使えません">後で設定する</button>
         <button class="btn-modal-primary" id="username-submit">
           <i class="fa-solid fa-spinner fa-spin" id="username-submit-spinner" hidden></i>
           <span id="username-submit-text">設定して始める</span>
@@ -850,20 +854,21 @@
         <div class="guide-section">
           <h4 class="guide-section-title"><span class="guide-icon">🖱️</span> 基本操作</h4>
           <ul class="guide-list">
-            <li>カードをクリックすると、登録されたページが<strong>新しいタブ</strong>で開きます。</li>
-            <li>カードを<strong>右クリック</strong>すると「編集」「削除」メニューが表示されます。</li>
+            <li>カードをクリック（スマホはタップ）すると、登録されたページが<strong>新しいタブ</strong>で開きます。</li>
+            <li><strong>PC：</strong>カードを<strong>右クリック</strong>すると「編集」「削除」メニューが表示されます。</li>
+            <li><strong>スマホ：</strong>カードを<strong>長押し</strong>すると「編集」「削除」メニューが表示されます。</li>
             <li>画面上部の<strong>検索バー</strong>にキーワードを入力すると、カード名でリアルタイム検索できます。</li>
-            <li>URL が未設定のカードは<strong>オレンジの破線枠＋「URL未設定」バッジ</strong>で表示されます。</li>
+            <li>オレンジの破線枠＋「URL未設定」バッジのカードは、まだリンク先が登録されていません。右クリック（長押し）→「編集」でURLを設定できます。</li>
           </ul>
         </div>
 
         <div class="guide-section">
           <h4 class="guide-section-title"><span class="guide-icon">⭐</span> お気に入り</h4>
           <ul class="guide-list">
-            <li>カードにカーソルを合わせると右上に<strong>☆ボタン</strong>が現れます。クリックでお気に入り登録/解除。</li>
+            <li><strong>PC：</strong>カードにカーソルを合わせると右上に<strong>☆ボタン</strong>が現れます。クリックでお気に入り登録/解除。</li>
+            <li><strong>スマホ：</strong>カードを長押し → 「お気に入り登録/解除」を選択します。</li>
             <li>カテゴリ名の右端にある<strong>☆ボタン</strong>でそのセクション全体をまとめてお気に入り登録/解除できます。</li>
-            <li>ヘッダーの<strong>「お気に入りのみ」ボタン</strong>をクリックすると、お気に入り登録済みのカードだけを表示します。もう一度クリックで全表示に戻ります。</li>
-            <li>お気に入りの情報はこのブラウザにのみ保存されます（他の端末には同期されません）。</li>
+            <li>サイドバー（PCは左端）の<strong>「お気に入りのみ」</strong>をクリックすると、登録済みのカードだけを表示します。もう一度クリックで全表示に戻ります。</li>
           </ul>
         </div>
 
@@ -969,9 +974,12 @@
       </span>
       <span>お知らせ</span>
     </button>
-    <button class="bottom-nav-item" id="bnav-personal">
-      <i class="fa-solid fa-user"></i>
-      <span>個人</span>
+    <button class="bottom-nav-item" id="bnav-task">
+      <span class="bnav-icon-wrap">
+        <i class="fa-solid fa-list-check"></i>
+        <span id="bnav-task-badge" class="bnav-badge" hidden></span>
+      </span>
+      <span>タスク</span>
     </button>
     <button class="bottom-nav-item" id="bnav-more">
       <i class="fa-solid fa-ellipsis"></i>
@@ -988,35 +996,32 @@
         <button class="more-drawer-close" id="more-drawer-close"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="more-drawer-grid">
+        <button class="more-drawer-item" data-target="btn-user">
+          <i class="fa-solid fa-user-circle"></i>
+          <span>ユーザー設定</span>
+        </button>
         <button class="more-drawer-item" data-target="btn-calendar">
           <i class="fa-regular fa-calendar"></i>
           <span>カレンダー</span>
         </button>
-        <button class="more-drawer-item" data-target="btn-task">
-          <span class="mdr-icon-wrap">
-            <i class="fa-solid fa-list-check"></i>
-            <span id="mdr-task-badge" class="mdr-badge" hidden></span>
-          </span>
-          <span>タスク</span>
+        <button class="more-drawer-item" data-target="btn-favorites-only">
+          <i class="fa-regular fa-star"></i>
+          <span>お気に入りのみ</span>
         </button>
         <button class="more-drawer-item" data-target="btn-reqboard">
           <span class="mdr-icon-wrap">
             <i class="fa-solid fa-clipboard-list"></i>
             <span id="mdr-req-badge" class="mdr-badge" hidden></span>
           </span>
-          <span>部門間依頼</span>
+          <span>部署間の依頼</span>
         </button>
         <button class="more-drawer-item" data-target="btn-email-assist">
           <i class="fa-solid fa-envelope-open-text"></i>
-          <span>メールAI</span>
+          <span>メール返信AI</span>
         </button>
         <button class="more-drawer-item" data-target="ft-fab">
           <i class="fa-solid fa-file-arrow-up"></i>
           <span>ファイル転送</span>
-        </button>
-        <button class="more-drawer-item" data-target="btn-favorites-only">
-          <i class="fa-regular fa-star"></i>
-          <span>お気に入り</span>
         </button>
         <button class="more-drawer-item" data-target="settings-fab">
           <i class="fa-solid fa-gear"></i>
@@ -1029,38 +1034,6 @@
         <button class="more-drawer-item mdr-lock-item" data-target="btn-lock-header" hidden>
           <i class="fa-solid fa-lock"></i>
           <span>ロック</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== 個人ドロワー（スマホ用）==================== -->
-  <div class="personal-drawer" id="personal-drawer" hidden>
-    <div class="personal-drawer-backdrop" id="personal-drawer-backdrop"></div>
-    <div class="personal-drawer-panel">
-      <div class="personal-drawer-header">
-        <span>個人メニュー</span>
-        <button class="personal-drawer-close" id="personal-drawer-close"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="personal-drawer-list">
-        <button class="personal-drawer-item" data-target="btn-user">
-          <i class="fa-solid fa-user-circle"></i>
-          <span>ユーザー設定</span>
-        </button>
-        <button class="personal-drawer-item" data-target="btn-calendar">
-          <i class="fa-regular fa-calendar"></i>
-          <span>カレンダー・勤怠</span>
-        </button>
-        <button class="personal-drawer-item" data-target="btn-task">
-          <span class="mdr-icon-wrap">
-            <i class="fa-solid fa-list-check"></i>
-            <span id="pdr-task-badge" class="mdr-badge" hidden></span>
-          </span>
-          <span>タスク管理</span>
-        </button>
-        <button class="personal-drawer-item" data-target="btn-favorites-only">
-          <i class="fa-regular fa-star"></i>
-          <span>お気に入り</span>
         </button>
       </div>
     </div>

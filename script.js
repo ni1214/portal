@@ -1903,11 +1903,11 @@ function applyFavoritesOnlyMode() {
     if (labelEl) { labelEl.textContent = 'すべて表示'; }
   } else {
     btn.classList.remove('active');
-    btn.title = 'お気に入りのみ表示';
+    btn.title = 'お気に入り登録済みのカードだけを表示します';
     const iconEl = btn.querySelector('.sidebar-item-icon i') || btn.querySelector('i');
     const labelEl = btn.querySelector('.sidebar-item-label') || btn.querySelector('.btn-fav-label');
     if (iconEl) { iconEl.className = 'fa-regular fa-star'; }
-    if (labelEl) { labelEl.textContent = 'お気に入り'; }
+    if (labelEl) { labelEl.textContent = 'お気に入りのみ'; }
   }
   renderFavorites();
 }
@@ -2238,6 +2238,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('help-fab').addEventListener('click', () => {
     document.getElementById('guide-modal').classList.add('visible');
   });
+  // ヘッダーのヘルプボタン（PCスマホ共通）
+  document.getElementById('header-help-btn').addEventListener('click', () => {
+    document.getElementById('guide-modal').classList.add('visible');
+  });
   document.getElementById('guide-close').addEventListener('click', () => {
     document.getElementById('guide-modal').classList.remove('visible');
   });
@@ -2284,7 +2288,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const name = document.getElementById('username-input').value.trim();
     if (name) await applyUsername(name);
   });
-  document.getElementById('username-skip').addEventListener('click', closeUsernameModal);
+  document.getElementById('username-skip').addEventListener('click', () => {
+    closeUsernameModal();
+    // スキップ後：ユーザーネーム未設定バナーを表示
+    if (!state.currentUsername) {
+      const hint = document.getElementById('area-personal-hint');
+      if (hint) hint.hidden = false;
+    }
+  });
 
   // ===== ロックボタン =====
   document.getElementById('btn-lock-header').addEventListener('click', lockPortal);

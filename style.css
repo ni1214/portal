@@ -9380,4 +9380,76 @@ html.font-xl { font-size: 21px; }
   color: var(--accent-blue);
 }
 
+/* ===== ヘッダーヘルプボタン（PCスマホ共通） ===== */
+.header-help-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1.15rem;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.header-help-btn:hover {
+  color: var(--accent-blue);
+  background: var(--bg-glass);
+}
+[data-theme="light"] .header-help-btn {
+  color: rgba(31,35,40,0.55);
+}
+[data-theme="light"] .header-help-btn:hover {
+  color: var(--accent-blue);
+  background: rgba(31,35,40,0.06);
+}
+@media (max-width: 768px) {
+  .header-help-btn { width: 30px; height: 30px; font-size: 1rem; }
+}
+
+/* ===== 個人スペース未設定バナー ===== */
+.area-header-hint {
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: rgba(255, 166, 87, 0.10);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+[data-theme="light"] .area-header-hint {
+  background: rgba(188, 76, 0, 0.07);
+}
+
+/* ===== セクションドラッグハンドル タッチターゲット改善（スマホ） ===== */
+@media (max-width: 768px) {
+  .section-drag-handle {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+}
+
+/* ===== bnav-task バッジ ===== */
+#bnav-task-badge {
+  position: absolute;
+  top: -3px;
+  right: -5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: var(--accent-orange);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
 
