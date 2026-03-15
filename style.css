@@ -10226,12 +10226,25 @@ html.font-xl { font-size: 21px; }
 
 /* モーダル本体サイズ */
 .ord-modal-inner {
-  width: min(680px, 95vw);
+  width: min(760px, 95vw);
   max-height: 90vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* 発注モーダルのアクションボタン: 4ボタン1行維持 */
+.ord-modal-inner .modal-actions {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.ord-modal-inner .modal-actions .btn-modal-primary,
+.ord-modal-inner .modal-actions .btn-modal-secondary {
+  padding: 7px 16px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* 発注先表示 */
