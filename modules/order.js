@@ -12,7 +12,7 @@ let _suppliers = [];   // order_suppliers
 let _items = [];       // order_items
 let _historyOffset = 0; // 履歴期間オフセット（0=今期）
 let _gasUrl = '';
-let _orderType = 'factory';    // 工場在庫 / 現場向け
+let _orderType = 'factory';    // 工場在庫 / 現場名発注
 let _materialFilter = 'all';   // すべて / steel / stainless
 let _categoryFilter = 'all';   // カテゴリ絞り込み
 let _searchQuery = '';          // 検索文字列
@@ -317,6 +317,17 @@ const CATALOG_SEED_V2 = [
   ].map(([spec,lengths],i)=>({itemCategory:'丸棒（SUS）',spec,availableLengths:lengths,materialType:'stainless',sortOrder:1500+i})),
 ];
 
+// ===== 工場在庫 固定品目（V3） =====
+const CATALOG_SEED_V3 = [
+  { itemCategory: '平鋼(クロ)',     spec: '6×44',      materialType: 'steel', availableLengths: ['5.5m'], sortOrder: 2000, defaultQty: 1 },
+  { itemCategory: '磨き平鋼',       spec: '6×44',      materialType: 'steel', availableLengths: ['4m'],   sortOrder: 2001, defaultQty: 1 },
+  { itemCategory: '磨き丸鋼',       spec: 'φ9',        materialType: 'steel', availableLengths: ['4m'],   sortOrder: 2002, defaultQty: 1 },
+  { itemCategory: 'アングル(クロ)', spec: '3×30×30',   materialType: 'steel', availableLengths: ['5.5m'], sortOrder: 2003, defaultQty: 1 },
+  { itemCategory: '丸パイプ',       spec: '2.3×48.6φ', materialType: 'steel', availableLengths: ['5.5m'], sortOrder: 2004, defaultQty: 1 },
+  { itemCategory: '角パイプ',       spec: '1.6×26×50', materialType: 'steel', availableLengths: ['5.5m'], sortOrder: 2005, defaultQty: 1 },
+  { itemCategory: '磨き四角鋼',     spec: '16×16',     materialType: 'steel', availableLengths: ['4m'],   sortOrder: 2006, defaultQty: 1 },
+];
+
 // ===== Firestore 初期データ投入 =====
 async function seedInitialData() {
   try {
@@ -378,6 +389,24 @@ async function seedInitialData() {
       })));
       await setDoc(doc(db, 'portal', 'config'), { orderItemsSeedVersion: 2 }, { merge: true });
       console.log(`order: ${CATALOG_SEED_V2.length}件のV2品目をシードしました`);
+    }
+
+    // ── V3: 工場在庫 固定7品目 ──
+    if (seedVer < 3) {
+      await Promise.all(CATALOG_SEED_V3.map(item => addDoc(collection(db, 'order_items'), {
+        itemCategory: item.itemCategory,
+        name: item.itemCategory,
+        spec: item.spec,
+        materialType: item.materialType,
+        availableLengths: item.availableLengths,
+        unit: '本',
+        defaultQty: 1,
+        sortOrder: item.sortOrder,
+        orderType: 'factory',
+        active: true
+      })));
+      await setDoc(doc(db, 'portal', 'config'), { orderItemsSeedVersion: 3 }, { merge: true });
+      console.log(`order: ${CATALOG_SEED_V3.length}件のV3工場在庫品目をシードしました`);
     }
   } catch (err) {
     console.error('order: seedInitialData error', err);
@@ -457,7 +486,7 @@ function buildEmailContent(orderData) {
   const pad = n => String(n).padStart(2, '0');
   const dateStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日（${wd}）${pad(now.getHours())}時${pad(now.getMinutes())}分`;
 
-  const typeLabel = orderData.orderType === 'site' ? '現場向け' : '工場在庫';
+  const typeLabel = orderData.orderType === 'site' ? '現場名発注' : '工場在庫';
   const siteInfo  = orderData.orderType === 'site' && orderData.siteName
     ? `現場名　：${orderData.siteName}\n` : '';
 
@@ -504,7 +533,7 @@ ${noteText}
 生産管理課
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
-  return { subject, body, toEmail: supplier.email || orderData.supplierEmail };
+  return { subject, body, toEmail: supplier.email || orderData.supplierEmail, ccEmail: 'takabayashi@framex.co.jp' };
 }
 
 // ===== メール送信 =====
@@ -514,14 +543,14 @@ async function sendOrderEmail(orderData, orderId) {
     return false;
   }
 
-  const { subject, body, toEmail } = buildEmailContent(orderData);
+  const { subject, body, toEmail, ccEmail } = buildEmailContent(orderData);
 
   try {
     await fetch(_gasUrl, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: toEmail, subject, body })
+      body: JSON.stringify({ to: toEmail, cc: ccEmail, subject, body })
     });
 
     if (orderId) {
@@ -571,7 +600,7 @@ function printOrder(orderData) {
         <tr><th>発注日時</th><td>${dateStr}</td></tr>
         <tr><th>発注番号</th><td>${orderNo}</td></tr>
         <tr><th>発注者</th><td>${esc(orderData.orderedBy)}（日建フレメックス株式会社 生産管理課）</td></tr>
-        <tr><th>発注区分</th><td>${orderData.orderType === 'site' ? '現場向け' : '工場在庫'}${orderData.siteName ? `　現場名：${esc(orderData.siteName)}` : ''}</td></tr>
+        <tr><th>発注区分</th><td>${orderData.orderType === 'site' ? '現場名発注' : '工場在庫'}${orderData.siteName ? `　現場名：${esc(orderData.siteName)}` : ''}</td></tr>
       </table>
       <div class="ord-print-section-title">【発注先】</div>
       <div class="ord-print-supplier">
@@ -716,7 +745,13 @@ function renderOrderItemList() {
   // ── フィルタ適用 ──
   let filtered = _items.filter(it => {
     if (it.active === false) return false;
-    if (it.orderType && it.orderType !== 'both' && it.orderType !== _orderType) return false;
+    // 工場在庫タブ: orderType='factory' の専用品目のみ表示
+    // 現場名発注タブ: factory専用品目は除外（both / site / 未設定を表示）
+    if (_orderType === 'factory') {
+      if (it.orderType !== 'factory') return false;
+    } else {
+      if (it.orderType === 'factory') return false;
+    }
     if (_materialFilter !== 'all' && (it.materialType || 'steel') !== _materialFilter) return false;
     if (_categoryFilter !== 'all' && (it.itemCategory || '') !== _categoryFilter) return false;
     if (q && !`${it.itemCategory || ''} ${it.spec || ''}`.toLowerCase().includes(q)) return false;
@@ -726,15 +761,16 @@ function renderOrderItemList() {
 
   // ── スペシャルセクション（検索・カテゴリ絞り・選択済みモード中は非表示）──
   const showSpecial = !q && _categoryFilter === 'all' && !_showSelectedOnly;
+  const _matchesOrderTab = it => _orderType === 'factory' ? it.orderType === 'factory' : it.orderType !== 'factory';
   const pinnedItems = showSpecial
     ? _pins.map(id => _items.find(it => it.id === id)).filter(Boolean)
-        .filter(it => it.active !== false &&
+        .filter(it => it.active !== false && _matchesOrderTab(it) &&
           (_materialFilter === 'all' || (it.materialType || 'steel') === _materialFilter))
     : [];
   const pinnedIds = new Set(pinnedItems.map(it => it.id));
   const recentItems = showSpecial
     ? _recent.map(id => _items.find(it => it.id === id)).filter(Boolean)
-        .filter(it => it.active !== false && !pinnedIds.has(it.id) &&
+        .filter(it => it.active !== false && !pinnedIds.has(it.id) && _matchesOrderTab(it) &&
           (_materialFilter === 'all' || (it.materialType || 'steel') === _materialFilter))
     : [];
   const specialIds = new Set([...pinnedIds, ...recentItems.map(it => it.id)]);
@@ -1120,7 +1156,7 @@ async function renderHistory() {
         }).join('、');
         // 工場在庫 or 現場名を表示
         const isFactory = !o.orderType || o.orderType === 'factory';
-        const typeLabel = isFactory ? '工場在庫' : (o.siteName || '現場向け');
+        const typeLabel = isFactory ? '工場在庫' : (o.siteName || '現場名発注');
         const typeCls   = isFactory ? 'ord-type-badge--factory' : 'ord-type-badge--site';
         return `
           <div class="ord-history-item" data-id="${esc(o.id)}" role="button" tabindex="0" title="クリックで詳細を見る">
@@ -1163,7 +1199,7 @@ function openOrderDetailModal(orderId) {
   const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${pad(now.getHours())}:${pad(now.getMinutes())}`;
   const orderNo = `ORD-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${orderId.slice(-4).toUpperCase()}`;
   const supplier = _suppliers.find(s => s.id === order.supplierId) || { name: order.supplierName || '', address: '', tel: '' };
-  const typeLabel = (!order.orderType || order.orderType === 'factory') ? '工場在庫' : (order.siteName || '現場向け');
+  const typeLabel = (!order.orderType || order.orderType === 'factory') ? '工場在庫' : (order.siteName || '現場名発注');
   const noteText = (order.note || '').trim() || '（なし）';
   const itemRows = (order.items || []).map((item, i) => {
     const nm = item.category || item.name || '';
@@ -1500,7 +1536,7 @@ function bindOrderEvents() {
       const newLengths = prompt('定尺（カンマ区切り）:', (item.availableLengths || []).join(','));
       if (newLengths === null) return;
       const lengths = newLengths.split(/[,、\s]+/).map(s => s.trim()).filter(Boolean);
-      const newType = prompt('区分 (factory=工場在庫 / site=現場向け / both=両方):', item.orderType || 'both');
+      const newType = prompt('区分 (factory=工場在庫 / site=現場名発注 / both=両方):', item.orderType || 'both');
       if (newType === null) return;
       const validType = ['factory', 'site', 'both'].includes(newType) ? newType : 'both';
       const validMat = ['steel', 'stainless'].includes(newMat) ? newMat : 'steel';

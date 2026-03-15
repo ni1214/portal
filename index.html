@@ -1789,11 +1789,11 @@
           <i class="fa-solid fa-warehouse"></i> 工場在庫
         </button>
         <button class="ord-type-btn" id="ord-type-site" data-type="site">
-          <i class="fa-solid fa-helmet-safety"></i> 現場向け
+          <i class="fa-solid fa-helmet-safety"></i> 現場名発注
         </button>
       </div>
 
-      <!-- 現場名（現場向けのみ表示） -->
+      <!-- 現場名（現場名発注のみ表示） -->
       <div class="form-group" id="ord-site-name-group" hidden>
         <label class="form-label" for="ord-site-name">現場名 <span class="required-mark">*</span></label>
         <input type="text" id="ord-site-name" class="form-input" placeholder="例：〇〇マンション新築工事" maxlength="60" autocomplete="off">
@@ -1947,7 +1947,7 @@
               <select id="ord-item-add-type" class="form-input" style="min-width:100px">
                 <option value="both">工場・現場</option>
                 <option value="factory">工場在庫</option>
-                <option value="site">現場向け</option>
+                <option value="site">現場名発注</option>
               </select>
               <button class="btn-modal-primary" id="ord-item-add-btn">追加</button>
             </div>
