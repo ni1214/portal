@@ -12,6 +12,7 @@ let _suppliers = [];   // order_suppliers
 let _items = [];       // order_items
 let _historyOffset = 0; // 履歴期間オフセット（0=今期）
 let _gasUrl = '';
+let _orderType = 'factory'; // 現在選択中の発注区分
 
 // ===== Firestore 初期データ投入 =====
 async function seedInitialData() {
@@ -41,6 +42,7 @@ async function seedInitialData() {
         defaultQty: 1,
         supplierId: suppId,
         sortOrder: 1,
+        orderType: 'factory',
         active: true
       });
     }
@@ -127,7 +129,11 @@ async function sendOrderEmail(orderData, orderId) {
   const pad = n => String(n).padStart(2, '0');
   const dateStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日（${wd}）${pad(now.getHours())}時${pad(now.getMinutes())}分`;
 
-  const subject = `【鋼材発注】${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 - 日建フレメックス株式会社 生産管理課`;
+  const typeLabel = orderData.orderType === 'site' ? '現場向け' : '工場在庫';
+  const siteInfo  = orderData.orderType === 'site' && orderData.siteName
+    ? `現場名　：${orderData.siteName}\n` : '';
+
+  const subject = `【鋼材発注・${typeLabel}】${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 - 日建フレメックス株式会社 生産管理課`;
 
   const itemLines = orderData.items.map((item, i) => {
     const no = String(i + 1).padStart(2, ' ');
@@ -148,7 +154,8 @@ async function sendOrderEmail(orderData, orderId) {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 発注日時：${dateStr}
 発注担当：${orderData.orderedBy}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+発注区分：${typeLabel}
+${siteInfo}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 【発注明細】
 No.  品名・規格                    単位  数量
@@ -222,6 +229,7 @@ function printOrder(orderData) {
         <tr><th>発注日時</th><td>${dateStr}</td></tr>
         <tr><th>発注番号</th><td>${orderNo}</td></tr>
         <tr><th>発注者</th><td>${esc(orderData.orderedBy)}（日建フレメックス株式会社 生産管理課）</td></tr>
+        <tr><th>発注区分</th><td>${orderData.orderType === 'site' ? '現場向け' : '工場在庫'}${orderData.siteName ? `　現場名：${esc(orderData.siteName)}` : ''}</td></tr>
       </table>
       <div class="ord-print-section-title">【発注先】</div>
       <div class="ord-print-supplier">
@@ -247,6 +255,40 @@ function printOrder(orderData) {
   area.innerHTML = '';
 }
 
+// ===== 発注区分切替 =====
+function switchOrderType(type) {
+  _orderType = type;
+  ['factory', 'site'].forEach(t => {
+    document.getElementById(`ord-type-${t}`)?.classList.toggle('active', t === type);
+  });
+  const siteGroup = document.getElementById('ord-site-name-group');
+  if (siteGroup) siteGroup.hidden = (type !== 'site');
+  renderOrderItemList();
+}
+
+function renderOrderItemList() {
+  const listEl = document.getElementById('ord-item-list');
+  if (!listEl) return;
+  const filtered = _items.filter(it =>
+    it.active !== false &&
+    (it.orderType === _orderType || it.orderType === 'both' || !it.orderType)
+  );
+  if (filtered.length === 0) {
+    listEl.innerHTML = `<p class="ord-empty">この区分の鋼材が登録されていません<br><small>⚙設定 → 鋼材マスタで追加できます</small></p>`;
+    return;
+  }
+  listEl.innerHTML = filtered.map(item => `
+    <div class="ord-item-row" data-id="${esc(item.id)}">
+      <input type="checkbox" class="ord-item-check" id="ord-chk-${esc(item.id)}" checked>
+      <label for="ord-chk-${esc(item.id)}" class="ord-item-label">
+        <span class="ord-item-name">${esc(item.name)}</span>
+        <span class="ord-item-spec">${esc(item.spec)}</span>
+      </label>
+      <span class="ord-item-unit">${esc(item.unit)}</span>
+      <input type="number" class="ord-qty-input form-input" value="${item.defaultQty || 1}" min="1" step="1">
+    </div>`).join('');
+}
+
 // ===== 発注モーダル =====
 export async function openOrderModal() {
   await loadMasters();
@@ -260,24 +302,11 @@ export async function openOrderModal() {
   const suppEmailEl = document.getElementById('ord-supplier-email');
   if (suppEmailEl) suppEmailEl.textContent = supplier.email;
 
-  const listEl = document.getElementById('ord-item-list');
-  if (listEl) {
-    const activeItems = _items.filter(it => it.active !== false);
-    if (activeItems.length === 0) {
-      listEl.innerHTML = '<p class="ord-empty">鋼材マスタが登録されていません</p>';
-    } else {
-      listEl.innerHTML = activeItems.map(item => `
-        <div class="ord-item-row" data-id="${esc(item.id)}">
-          <input type="checkbox" class="ord-item-check" id="ord-chk-${esc(item.id)}" checked>
-          <label for="ord-chk-${esc(item.id)}" class="ord-item-label">
-            <span class="ord-item-name">${esc(item.name)}</span>
-            <span class="ord-item-spec">${esc(item.spec)}</span>
-          </label>
-          <span class="ord-item-unit">${esc(item.unit)}</span>
-          <input type="number" class="ord-qty-input form-input" value="${item.defaultQty || 1}" min="1" step="1">
-        </div>`).join('');
-    }
-  }
+  // 区分を工場在庫にリセット
+  switchOrderType('factory');
+
+  const siteNameEl = document.getElementById('ord-site-name');
+  if (siteNameEl) siteNameEl.value = '';
 
   const noteEl = document.getElementById('ord-note');
   if (noteEl) noteEl.value = '';
@@ -293,22 +322,34 @@ export function closeOrderModal() {
 async function submitOrder(sendEmail) {
   const username = state.currentUsername || '未設定';
 
+  // 現場向けの場合は現場名必須
+  const siteName = (document.getElementById('ord-site-name')?.value || '').trim();
+  if (_orderType === 'site' && !siteName) {
+    alert('現場名を入力してください。');
+    document.getElementById('ord-site-name')?.focus();
+    return;
+  }
+
   const rows = document.querySelectorAll('#ord-item-list .ord-item-row');
   const selectedItems = [];
   rows.forEach(row => {
     const chk = row.querySelector('.ord-item-check');
     if (!chk || !chk.checked) return;
-    const id = row.dataset.id;
-    const item = _items.find(it => it.id === id);
-    if (!item) return;
-    const qty = parseInt(row.querySelector('.ord-qty-input').value, 10) || 1;
-    selectedItems.push({
-      itemId: id,
-      name: item.name,
-      spec: item.spec,
-      unit: item.unit,
-      qty
-    });
+
+    if (row.dataset.id) {
+      // マスタ品目
+      const item = _items.find(it => it.id === row.dataset.id);
+      if (!item) return;
+      const qty = parseInt(row.querySelector('.ord-qty-input').value, 10) || 1;
+      selectedItems.push({ itemId: row.dataset.id, name: item.name, spec: item.spec, unit: item.unit, qty });
+    } else {
+      // カスタム品目（この発注のみ）
+      const name = row.querySelector('.ord-custom-name')?.value.trim();
+      const spec = row.querySelector('.ord-custom-spec')?.value.trim() || '';
+      const unit = row.querySelector('.ord-custom-unit')?.value.trim() || '';
+      const qty  = parseInt(row.querySelector('.ord-qty-input')?.value, 10) || 1;
+      if (name) selectedItems.push({ itemId: null, name, spec, unit, qty });
+    }
   });
 
   if (selectedItems.length === 0) {
@@ -326,6 +367,8 @@ async function submitOrder(sendEmail) {
     supplierId: supplier.id,
     supplierName: supplier.name,
     supplierEmail: supplier.email,
+    orderType: _orderType,
+    siteName: _orderType === 'site' ? siteName : null,
     items: selectedItems,
     orderedBy: username,
     note,
@@ -415,15 +458,21 @@ async function renderHistory() {
     }
 
     listEl.innerHTML = orders.map(o => {
-      const itemsSummary = o.items.map(it => `${it.name} ${it.spec} ${it.qty}${it.unit}`).join('、');
+      const itemsSummary = o.items.map(it => `${it.name}${it.spec ? ' '+it.spec : ''} ${it.qty}${it.unit}`).join('、');
       const sentBadge = o.emailSent
         ? '<span class="ord-badge-sent">✅ 送信済み</span>'
         : '<span class="ord-badge-pending">⏳ 未送信</span>';
+      const typeLabel = o.orderType === 'site' ? '現場向け' : '工場在庫';
+      const typeCls   = o.orderType === 'site' ? 'ord-type-badge--site' : 'ord-type-badge--factory';
+      const siteLabel = o.orderType === 'site' && o.siteName
+        ? `<span class="ord-history-site"><i class="fa-solid fa-helmet-safety"></i> ${esc(o.siteName)}</span>` : '';
       return `
         <div class="ord-history-item">
           <div class="ord-history-header">
             <span class="ord-history-date">${fmtDatetime(o.orderedAt)}</span>
-            <span class="ord-history-by">発注者: ${esc(o.orderedBy)}</span>
+            <span class="ord-type-badge ${typeCls}">${typeLabel}</span>
+            ${siteLabel}
+            <span class="ord-history-by">発注: ${esc(o.orderedBy)}</span>
             ${sentBadge}
           </div>
           <div class="ord-history-items">${esc(itemsSummary)}</div>
@@ -490,10 +539,12 @@ function renderAdminItems() {
     listEl.innerHTML = '<p class="ord-empty">登録なし</p>';
     return;
   }
+  const typeMap = { factory: '工場在庫', site: '現場向け', both: '両方' };
   listEl.innerHTML = visibleItems.map(item => `
     <div class="ord-admin-row" data-id="${esc(item.id)}">
       <span class="ord-admin-item-info">
         <strong>${esc(item.name)}</strong>　${esc(item.spec)}　単位:${esc(item.unit)}　デフォルト:${item.defaultQty}
+        <span class="ord-type-badge ord-type-badge--${esc(item.orderType || 'factory')}">${typeMap[item.orderType] || '工場在庫'}</span>
       </span>
       <div class="ord-admin-actions">
         <button class="btn-modal-secondary ord-admin-edit-item" data-id="${esc(item.id)}">編集</button>
@@ -576,6 +627,31 @@ function bindOrderEvents() {
     if (e.target === document.getElementById('ord-modal')) closeOrderModal();
   });
 
+  // 発注区分トグル
+  document.getElementById('ord-type-factory')?.addEventListener('click', () => switchOrderType('factory'));
+  document.getElementById('ord-type-site')?.addEventListener('click', () => switchOrderType('site'));
+
+  // この発注に品目追加
+  document.getElementById('ord-add-custom-btn')?.addEventListener('click', () => {
+    const listEl = document.getElementById('ord-item-list');
+    if (!listEl) return;
+    const row = document.createElement('div');
+    row.className = 'ord-item-row ord-item-row--custom';
+    row.innerHTML = `
+      <input type="checkbox" class="ord-item-check" checked>
+      <div class="ord-custom-inputs">
+        <input type="text" class="form-input ord-custom-name" placeholder="品名" maxlength="40">
+        <input type="text" class="form-input ord-custom-spec" placeholder="規格" maxlength="40">
+        <input type="text" class="form-input ord-custom-unit" placeholder="単位" maxlength="10" style="width:60px">
+      </div>
+      <input type="number" class="ord-qty-input form-input" value="1" min="1" step="1">
+      <button class="ord-custom-del-btn" title="削除"><i class="fa-solid fa-xmark"></i></button>
+    `;
+    row.querySelector('.ord-custom-del-btn').addEventListener('click', () => row.remove());
+    listEl.appendChild(row);
+    row.querySelector('.ord-custom-name').focus();
+  });
+
   // 履歴モーダル
   document.getElementById('ord-history-close')?.addEventListener('click', closeOrderHistoryModal);
   document.getElementById('ord-history-cancel')?.addEventListener('click', closeOrderHistoryModal);
@@ -622,13 +698,14 @@ function bindOrderEvents() {
 
   // 鋼材マスタ: 追加
   document.getElementById('ord-item-add-btn')?.addEventListener('click', async () => {
-    const name = document.getElementById('ord-item-add-name')?.value.trim();
-    const spec = document.getElementById('ord-item-add-spec')?.value.trim() || '';
-    const unit = document.getElementById('ord-item-add-unit')?.value.trim();
-    const qty  = parseInt(document.getElementById('ord-item-add-qty')?.value, 10) || 1;
-    const suppId = _suppliers[0]?.id || '';
+    const name    = document.getElementById('ord-item-add-name')?.value.trim();
+    const spec    = document.getElementById('ord-item-add-spec')?.value.trim() || '';
+    const unit    = document.getElementById('ord-item-add-unit')?.value.trim();
+    const qty     = parseInt(document.getElementById('ord-item-add-qty')?.value, 10) || 1;
+    const ordType = document.getElementById('ord-item-add-type')?.value || 'factory';
+    const suppId  = _suppliers[0]?.id || '';
     if (!name || !unit) { alert('品名と単位は必須です。'); return; }
-    await addOrUpdateItem(null, { name, spec, unit, defaultQty: qty, supplierId: suppId, sortOrder: _items.length + 1 });
+    await addOrUpdateItem(null, { name, spec, unit, defaultQty: qty, orderType: ordType, supplierId: suppId, sortOrder: _items.length + 1 });
     ['ord-item-add-name', 'ord-item-add-spec', 'ord-item-add-unit'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
@@ -655,7 +732,10 @@ function bindOrderEvents() {
       if (newUnit === null) return;
       const newQty  = prompt('デフォルト数量:', String(item.defaultQty || 1));
       if (newQty === null) return;
-      await addOrUpdateItem(id, { name: newName, spec: newSpec, unit: newUnit, defaultQty: parseInt(newQty, 10) || 1 });
+      const newType = prompt('区分 (factory=工場在庫 / site=現場向け / both=両方):', item.orderType || 'factory');
+      if (newType === null) return;
+      const validType = ['factory', 'site', 'both'].includes(newType) ? newType : 'factory';
+      await addOrUpdateItem(id, { name: newName, spec: newSpec, unit: newUnit, defaultQty: parseInt(newQty, 10) || 1, orderType: validType });
     }
   });
 

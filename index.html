@@ -1783,6 +1783,22 @@
         </div>
       </div>
 
+      <!-- 発注区分トグル -->
+      <div class="ord-type-toggle">
+        <button class="ord-type-btn active" id="ord-type-factory" data-type="factory">
+          <i class="fa-solid fa-warehouse"></i> 工場在庫
+        </button>
+        <button class="ord-type-btn" id="ord-type-site" data-type="site">
+          <i class="fa-solid fa-helmet-safety"></i> 現場向け
+        </button>
+      </div>
+
+      <!-- 現場名（現場向けのみ表示） -->
+      <div class="form-group" id="ord-site-name-group" hidden>
+        <label class="form-label" for="ord-site-name">現場名 <span class="required-mark">*</span></label>
+        <input type="text" id="ord-site-name" class="form-input" placeholder="例：〇〇マンション新築工事" maxlength="60" autocomplete="off">
+      </div>
+
       <!-- 発注先 -->
       <div class="ord-supplier-info">
         <div class="ord-supplier-label">発注先</div>
@@ -1794,6 +1810,9 @@
       <div class="form-group">
         <label class="form-label">発注品目</label>
         <div id="ord-item-list" class="ord-item-list"></div>
+        <button class="ord-add-custom-btn" id="ord-add-custom-btn">
+          <i class="fa-solid fa-plus"></i> この発注に品目を追加
+        </button>
       </div>
 
       <!-- 備考 -->
@@ -1873,6 +1892,11 @@
               <input type="text" id="ord-item-add-spec" class="form-input" placeholder="規格 (例: ６x30　L＝4m)">
               <input type="text" id="ord-item-add-unit" class="form-input ord-unit-input" placeholder="単位">
               <input type="number" id="ord-item-add-qty" class="form-input ord-qty-input" value="1" min="1">
+              <select id="ord-item-add-type" class="form-input ord-type-select">
+                <option value="factory">工場在庫</option>
+                <option value="site">現場向け</option>
+                <option value="both">両方</option>
+              </select>
               <button class="btn-modal-primary" id="ord-item-add-btn">追加</button>
             </div>
           </div>
