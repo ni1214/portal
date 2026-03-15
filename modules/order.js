@@ -317,15 +317,16 @@ const CATALOG_SEED_V2 = [
   ].map(([spec,lengths],i)=>({itemCategory:'丸棒（SUS）',spec,availableLengths:lengths,materialType:'stainless',sortOrder:1500+i})),
 ];
 
-// ===== 工場在庫 固定品目（V3） =====
-const CATALOG_SEED_V3 = [
-  { itemCategory: '平鋼(クロ)',     spec: '6×44',      materialType: 'steel', availableLengths: ['5.5m'], sortOrder: 2000, defaultQty: 1 },
-  { itemCategory: '磨き平鋼',       spec: '6×44',      materialType: 'steel', availableLengths: ['4m'],   sortOrder: 2001, defaultQty: 1 },
-  { itemCategory: '磨き丸鋼',       spec: 'φ9',        materialType: 'steel', availableLengths: ['4m'],   sortOrder: 2002, defaultQty: 1 },
-  { itemCategory: 'アングル(クロ)', spec: '3×30×30',   materialType: 'steel', availableLengths: ['5.5m'], sortOrder: 2003, defaultQty: 1 },
-  { itemCategory: '丸パイプ',       spec: '2.3×48.6φ', materialType: 'steel', availableLengths: ['5.5m'], sortOrder: 2004, defaultQty: 1 },
-  { itemCategory: '角パイプ',       spec: '1.6×26×50', materialType: 'steel', availableLengths: ['5.5m'], sortOrder: 2005, defaultQty: 1 },
-  { itemCategory: '磨き四角鋼',     spec: '16×16',     materialType: 'steel', availableLengths: ['4m'],   sortOrder: 2006, defaultQty: 1 },
+// ===== 工場在庫 固定品目（V4） =====
+const CATALOG_SEED_V4 = [
+  { itemCategory: '丸パイプ',       spec: '1.6×19.1φ', materialType: 'steel', availableLengths: ['5.5m'], sortOrder: 2000, defaultQty: 10 },
+  { itemCategory: '丸パイプ',       spec: '1.6×25.4φ', materialType: 'steel', availableLengths: ['5.5m'], sortOrder: 2001, defaultQty: 10 },
+  { itemCategory: '丸鋼(クロ)',     spec: 'φ6',        materialType: 'steel', availableLengths: ['5.5m'], sortOrder: 2002, defaultQty: 50 },
+  { itemCategory: '異形丸鋼',       spec: 'D10',        materialType: 'steel', availableLengths: ['6m'],   sortOrder: 2003, defaultQty: 60 },
+  { itemCategory: '平鋼(クロ)',     spec: '6×90',       materialType: 'steel', availableLengths: ['5.5m'], sortOrder: 2004, defaultQty: 4  },
+  { itemCategory: '平鋼(クロ)',     spec: '4.5×38',     materialType: 'steel', availableLengths: ['5.5m'], sortOrder: 2005, defaultQty: 15 },
+  { itemCategory: 'アングル(クロ)', spec: '3×30×30',   materialType: 'steel', availableLengths: ['5.5m'], sortOrder: 2006, defaultQty: 1  },
+  { itemCategory: '磨き丸鋼',       spec: 'φ8',        materialType: 'steel', availableLengths: ['4m'],   sortOrder: 2007, defaultQty: 30 },
 ];
 
 // ===== Firestore 初期データ投入 =====
@@ -391,28 +392,34 @@ async function seedInitialData() {
       console.log(`order: ${CATALOG_SEED_V2.length}件のV2品目をシードしました`);
     }
 
-    // ── V3: 工場在庫 固定7品目 ──
+    // ── V3: 旧工場在庫（廃止 → V4へ移行） ──
     if (seedVer < 3) {
-      // 既にfactory品目が存在する場合はスキップ（並行起動による多重シード防止）
-      const existingFactory = await getDocs(
+      await setDoc(doc(db, 'portal', 'config'), { orderItemsSeedVersion: 3 }, { merge: true });
+    }
+
+    // ── V4: 工場在庫 固定8品目（品目・数量を正式版に更新） ──
+    if (seedVer < 4) {
+      // 既存のfactory品目をすべて削除してから新規追加
+      const oldFactory = await getDocs(
         query(collection(db, 'order_items'), where('orderType', '==', 'factory'))
       );
-      if (existingFactory.empty) {
-        await Promise.all(CATALOG_SEED_V3.map(item => addDoc(collection(db, 'order_items'), {
-          itemCategory: item.itemCategory,
-          name: item.itemCategory,
-          spec: item.spec,
-          materialType: item.materialType,
-          availableLengths: item.availableLengths,
-          unit: '本',
-          defaultQty: 1,
-          sortOrder: item.sortOrder,
-          orderType: 'factory',
-          active: true
-        })));
-        console.log(`order: ${CATALOG_SEED_V3.length}件のV3工場在庫品目をシードしました`);
+      if (!oldFactory.empty) {
+        await Promise.all(oldFactory.docs.map(d => deleteDoc(doc(db, 'order_items', d.id))));
       }
-      await setDoc(doc(db, 'portal', 'config'), { orderItemsSeedVersion: 3 }, { merge: true });
+      await Promise.all(CATALOG_SEED_V4.map(item => addDoc(collection(db, 'order_items'), {
+        itemCategory: item.itemCategory,
+        name: item.itemCategory,
+        spec: item.spec,
+        materialType: item.materialType,
+        availableLengths: item.availableLengths,
+        unit: '本',
+        defaultQty: item.defaultQty,
+        sortOrder: item.sortOrder,
+        orderType: 'factory',
+        active: true
+      })));
+      await setDoc(doc(db, 'portal', 'config'), { orderItemsSeedVersion: 4 }, { merge: true });
+      console.log(`order: ${CATALOG_SEED_V4.length}件のV4工場在庫品目をシードしました`);
     }
   } catch (err) {
     console.error('order: seedInitialData error', err);
