@@ -239,7 +239,10 @@ function _renderRoomList(type) {
   }
 
   if (!filtered.length) {
-    listEl.innerHTML = `<div class="chat-room-empty">${type === 'dm' ? 'まだDMがありません' : 'まだグループがありません'}</div>`;
+    listEl.innerHTML = `<div class="chat-room-empty">${type === 'dm'
+      ? '上の「＋ 新規DM」ボタンから<br>話しかけてみましょう'
+      : '上の「＋ グループ作成」ボタンから<br>グループを作りましょう'
+    }</div>`;
     return;
   }
 
