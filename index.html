@@ -222,11 +222,7 @@
               </button>
               <div class="todo-add-row" id="todo-add-row" hidden>
                 <input type="text" id="todo-input" class="todo-input" placeholder="タスクを入力..." maxlength="100" autocomplete="off">
-                <select id="todo-due-select" class="todo-due-select">
-                  <option value="">期限なし</option>
-                  <option value="今日">今日</option>
-                  <option value="明日">明日</option>
-                </select>
+                <input type="date" id="todo-due-select" class="date-icon-only" title="期限日を選択（空欄=期限なし）">
                 <button class="todo-add-btn" id="todo-add-btn">
                   <i class="fa-solid fa-check"></i>
                 </button>

@@ -314,9 +314,18 @@ function renderTodoSection() {
       li.className = 'todo-item' + (todo.done ? ' todo-item--done' : '');
       li.dataset.id = todo.id;
 
-      const dueBadge = todo.dueDate
-        ? `<span class="todo-due todo-due--${todo.dueDate === '今日' ? 'today' : 'tomorrow'}">${esc(todo.dueDate)}</span>`
-        : '';
+      let dueBadge = '';
+      if (todo.dueDate) {
+        const today    = new Date(); today.setHours(0,0,0,0);
+        const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+        const due      = new Date(todo.dueDate + 'T00:00:00');
+        let label, cls;
+        if (due.getTime() === today.getTime())    { label = '今日';  cls = 'today'; }
+        else if (due.getTime() === tomorrow.getTime()) { label = '明日'; cls = 'tomorrow'; }
+        else if (due < today) { label = `${due.getMonth()+1}/${due.getDate()}`; cls = 'overdue'; }
+        else                  { label = `${due.getMonth()+1}/${due.getDate()}`; cls = 'future'; }
+        dueBadge = `<span class="todo-due todo-due--${cls}">${label}</span>`;
+      }
 
       li.innerHTML = `
         <button class="todo-check" title="${todo.done ? '未完了に戻す' : '完了にする'}">

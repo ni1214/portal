@@ -3720,6 +3720,16 @@ html.font-xl { font-size: 21px; }
   color: #f59e0b;
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
+.todo-due--overdue {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+.todo-due--future {
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-glass);
+}
 
 /* 削除ボタン */
 .todo-delete-btn {
@@ -3785,18 +3795,8 @@ html.font-xl { font-size: 21px; }
 }
 .todo-input::placeholder { color: var(--text-muted); }
 
-.todo-due-select {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-glass);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 0.82rem;
-  padding: 7px 8px;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.todo-due-select:focus { outline: none; border-color: var(--accent-blue); }
+/* todo date picker */
+#todo-due-select.date-icon-only { flex-shrink: 0; }
 
 .todo-add-btn {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
