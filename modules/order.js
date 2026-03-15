@@ -573,10 +573,11 @@ ${noteText}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 日建フレメックス株式会社
-生産管理課
+生産管理課　髙林
+E-mail：takabayashi@framex.co.jp
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
-  return { subject, body, toEmail: supplier.email || orderData.supplierEmail, ccEmail: 'takabayashi@framex.co.jp' };
+  return { subject, body, toEmail: supplier.email || orderData.supplierEmail, replyTo: NOTIFY_EMAIL };
 }
 
 // ===== メール送信 =====
@@ -588,15 +589,15 @@ async function sendOrderEmail(orderData, orderId) {
     return false;
   }
 
-  const { subject, body, toEmail } = buildEmailContent(orderData);
+  const { subject, body, toEmail, replyTo } = buildEmailContent(orderData);
 
   try {
-    // 発注先へ送信
+    // 発注先へ送信（replyTo を設定することで返信先を担当者メールに）
     await fetch(_gasUrl, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: toEmail, subject, body })
+      body: JSON.stringify({ to: toEmail, subject, body, replyTo })
     });
 
     // 担当者（髙林）へも同内容を送信（誰が発注したかわかるよう控えとして）
