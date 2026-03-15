@@ -2527,6 +2527,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== 鋼材発注 =====
   document.getElementById('btn-order-launch').addEventListener('click', openOrderModal);
+  document.getElementById('ord-open-admin-btn').addEventListener('click', () => {
+    document.getElementById('ord-modal').classList.remove('visible');
+    openOrderAdminModal();
+  });
 
   // ===== メールアシスタント =====
   document.getElementById('btn-email-assist').addEventListener('click', openEmailModal);
