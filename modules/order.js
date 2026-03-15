@@ -138,7 +138,7 @@ async function sendOrderEmail(orderData, orderId) {
   const itemLines = orderData.items.map((item, i) => {
     const no = String(i + 1).padStart(2, ' ');
     const label = `${item.name}　${item.spec}`;
-    return `${no}    ${label}      ${item.unit}     ${item.qty}`;
+    return `${no}    ${label}      ${item.qty}${item.unit}`;
   }).join('\n');
 
   const noteText = (orderData.note || '').trim() || 'なし';
@@ -158,7 +158,7 @@ async function sendOrderEmail(orderData, orderId) {
 ${siteInfo}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 【発注明細】
-No.  品名・規格                    単位  数量
+No.  品名・規格                    数量
 ────────────────────────────────────────
 ${itemLines}
 ────────────────────────────────────────
@@ -214,8 +214,7 @@ function printOrder(orderData) {
     <tr>
       <td>${i + 1}</td>
       <td>${esc(item.name)}　${esc(item.spec)}</td>
-      <td>${esc(item.unit)}</td>
-      <td class="ord-print-qty">${item.qty}</td>
+      <td class="ord-print-qty">${item.qty}${esc(item.unit)}</td>
     </tr>`).join('');
 
   const noteText = (orderData.note || '').trim() || '（なし）';
@@ -240,7 +239,7 @@ function printOrder(orderData) {
       <div class="ord-print-section-title">【発注明細】</div>
       <table class="ord-print-items">
         <thead>
-          <tr><th>No.</th><th>品名・規格</th><th>単位</th><th>数量</th></tr>
+          <tr><th>No.</th><th>品名・規格</th><th>数量</th></tr>
         </thead>
         <tbody>${itemRows}</tbody>
       </table>
