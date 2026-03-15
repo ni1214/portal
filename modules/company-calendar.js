@@ -4,6 +4,7 @@ import {
   db, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteField
 } from './config.js';
 import { esc } from './utils.js';
+import { verifyPIN } from './auth.js';
 
 let deps = {};
 export function initCompanyCalendar(d) { deps = d; }
@@ -13,6 +14,11 @@ const DOW_LABELS = ['日','月','火','水','木','金','土'];
 // ===== Firestore パス =====
 const companyCalRef = () => doc(db, 'company_calendar', 'config');
 const publicAttRef = (ym) => doc(db, 'public_attendance', ym);
+
+// ===== 年間カレンダーモーダル内部状態 =====
+let _ccsMode      = 'ws';       // 'ws' | 'holiday' | 'event'
+let _ccsFiscalYear = null;      // 現在表示中の年度開始年（4月）
+let _pendingHolidayStart = null; // 会社休日モードで1回目クリックした日付
 
 // ===== 会社カレンダー設定の購読 =====
 export function subscribeCompanyCalConfig() {
@@ -27,6 +33,9 @@ export function subscribeCompanyCalConfig() {
     // 再描画
     if (typeof deps.renderCalendar === 'function') deps.renderCalendar();
     if (state.calTab === 'shared') renderSharedCalendar();
+    // 設定モーダルが開いていれば更新
+    const body = document.getElementById('ccs-body');
+    if (body && !body.hidden) _renderAnnualGrid();
   }, err => {
     console.warn('会社カレンダー読み込みエラー:', err);
     state.companyCalConfig = { workSaturdays: [], plannedLeaveSaturdays: [], holidayRanges: [], events: [] };
@@ -40,8 +49,8 @@ export function unsubscribeCompanyCalConfig() {
 // ===== 公開出席への書き込み =====
 export async function writePublicAttendance(dateStr, username, type) {
   if (!dateStr || !username || !type) return;
-  const ym  = dateStr.slice(0, 7);   // 'YYYY-MM'
-  const day = dateStr.slice(8, 10);  // '03'
+  const ym  = dateStr.slice(0, 7);
+  const day = dateStr.slice(8, 10);
   try {
     await setDoc(publicAttRef(ym), {
       [day]: { [username]: type }
@@ -54,13 +63,10 @@ export async function removePublicAttendance(dateStr, username) {
   const ym  = dateStr.slice(0, 7);
   const day = dateStr.slice(8, 10);
   try {
-    // フィールドパスを使って該当ユーザーのエントリだけ削除
     await updateDoc(publicAttRef(ym), {
       [`${day}.${username}`]: deleteField()
     });
-  } catch (_) {
-    // ドキュメント自体が存在しない場合は無視
-  }
+  } catch (_) {}
 }
 
 // ===== 公開出席の月単位取得 =====
@@ -75,15 +81,13 @@ export async function fetchPublicAttendance(ym) {
 }
 
 // ===== 日付情報の判定ユーティリティ =====
-// returns: { isWorkSaturday, isPlannedLeave, isHoliday, holidayLabel, events[] }
 export function getDateInfo(dateStr) {
   const cfg = state.companyCalConfig;
   if (!cfg) return { isWorkSaturday: false, isPlannedLeave: false, isHoliday: false, holidayLabel: '', events: [] };
 
-  const isWorkSaturday    = (cfg.workSaturdays || []).includes(dateStr);
-  const isPlannedLeave    = (cfg.plannedLeaveSaturdays || []).includes(dateStr);
+  const isWorkSaturday = (cfg.workSaturdays || []).includes(dateStr);
+  const isPlannedLeave = (cfg.plannedLeaveSaturdays || []).includes(dateStr);
 
-  // 休日範囲チェック
   let isHoliday   = false;
   let holidayLabel = '';
   for (const range of (cfg.holidayRanges || [])) {
@@ -94,7 +98,6 @@ export function getDateInfo(dateStr) {
     }
   }
 
-  // 会社行事チェック
   const events = (cfg.events || []).filter(e => e.date === dateStr);
 
   return { isWorkSaturday, isPlannedLeave, isHoliday, holidayLabel, events };
@@ -110,7 +113,6 @@ export async function renderSharedCalendar() {
   const ym    = `${year}-${String(month + 1).padStart(2, '0')}`;
   const today = new Date();
 
-  // 公開出席データを取得
   if (!state.publicAttendance[ym]) {
     await fetchPublicAttendance(ym);
   }
@@ -120,19 +122,18 @@ export async function renderSharedCalendar() {
   const lastDate  = new Date(year, month + 1, 0).getDate();
   const startDow  = firstDay.getDay();
 
+  // 設定ボタンは常に表示（クリック時にPINゲートを出す）
   let html = `<div class="cal-shared-header">
     <span class="cal-shared-title"><i class="fa-solid fa-users"></i> 共有カレンダー</span>
-    ${state.isAdmin ? `<button class="btn-company-cal-settings" id="btn-company-cal-settings" title="会社カレンダー設定"><i class="fa-solid fa-gear"></i> 設定</button>` : ''}
+    <button class="btn-company-cal-settings" id="btn-company-cal-settings" title="会社カレンダー設定"><i class="fa-solid fa-gear"></i> 設定</button>
   </div>`;
 
-  // 曜日ヘッダー
   html += '<div class="cal-dow-row">';
   DOW_LABELS.forEach((d, i) => {
     html += `<div class="cal-dow-cell${i === 0 ? ' cal-sun-label' : i === 6 ? ' cal-sat-label' : ''}">${d}</div>`;
   });
   html += '</div>';
 
-  // グリッド
   html += '<div class="cal-cells cal-shared-cells">';
 
   for (let i = 0; i < startDow; i++) {
@@ -145,17 +146,15 @@ export async function renderSharedCalendar() {
     const isToday = (year === today.getFullYear() && month === today.getMonth() && d === today.getDate());
     const info    = getDateInfo(dateStr);
 
-    // 曜日名
     const dayKey  = String(d).padStart(2, '0');
-    const dayAtt  = pubAtt[dayKey] || {};   // { alice: '有給', bob: '半休午前' }
+    const dayAtt  = pubAtt[dayKey] || {};
 
     let cellCls = 'cal-cell cal-shared-cell';
     if (isToday)   cellCls += ' cal-today';
     if (dow === 0) cellCls += ' cal-sun';
-    if (dow === 6 && !info.isWorkSaturday) cellCls += ' cal-sat';   // 休日土曜
+    if (dow === 6 && !info.isWorkSaturday) cellCls += ' cal-sat';
     if (info.isHoliday) cellCls += ' cal-company-holiday';
 
-    // 会社情報バッジ
     let companyBadges = '';
     if (info.isPlannedLeave) {
       companyBadges += `<span class="cal-company-badge planned-lv" title="計画的付与">計画付与</span>`;
@@ -170,7 +169,6 @@ export async function renderSharedCalendar() {
       companyBadges += `<span class="cal-company-badge event-badge" style="background:${color}20;color:${color}" title="${esc(ev.label)}">${esc(ev.label)}</span>`;
     });
 
-    // 休暇者バッジ
     let userBadges = '';
     Object.entries(dayAtt).forEach(([username, type]) => {
       let cls = '';
@@ -194,188 +192,306 @@ export async function renderSharedCalendar() {
   el.innerHTML = html;
 }
 
-// ===== 管理者設定モーダルを開く =====
+// ===== 設定モーダルを開く（PIN認証ゲートを表示） =====
 export function openCompanyCalSettings() {
   const modal = document.getElementById('company-cal-settings-modal');
   if (!modal) return;
-  _renderSettingsModal();
+
+  // 初期化
+  _pendingHolidayStart = null;
+  const pinGate = document.getElementById('ccs-pin-gate');
+  const body    = document.getElementById('ccs-body');
+  const pinInput = document.getElementById('ccs-pin-input');
+  const pinError = document.getElementById('ccs-pin-error');
+
+  // 既に管理者認証済みならそのまま本体を表示
+  if (state.isAdmin) {
+    if (pinGate) pinGate.hidden = true;
+    if (body) body.hidden = false;
+    _initFiscalYear();
+    _renderAnnualGrid();
+  } else {
+    if (pinGate) pinGate.hidden = false;
+    if (body) body.hidden = true;
+    if (pinInput) { pinInput.value = ''; setTimeout(() => pinInput.focus(), 100); }
+    if (pinError) pinError.hidden = true;
+  }
+
   modal.classList.add('visible');
 }
 
 export function closeCompanyCalSettings() {
   const modal = document.getElementById('company-cal-settings-modal');
   if (modal) modal.classList.remove('visible');
+  _pendingHolidayStart = null;
+  _updateModeHint();
 }
 
-// ===== 設定モーダルの描画 =====
-function _renderSettingsModal() {
+// ===== 現在の年度を初期設定 =====
+function _initFiscalYear() {
+  if (_ccsFiscalYear !== null) return;
+  const now = new Date();
+  // 4月以降は今年度、3月以前は前年度
+  _ccsFiscalYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
+// ===== 年度ラベル更新 =====
+function _updateFyLabel() {
+  const el = document.getElementById('ccs-fy-label');
+  if (el) {
+    const wareki = _ccsFiscalYear - 2018; // 令和元年=2019
+    el.textContent = `${_ccsFiscalYear}年度（令和${wareki}年度）`;
+  }
+}
+
+// ===== モードヒント更新 =====
+function _updateModeHint() {
+  const el = document.getElementById('ccs-mode-hint');
+  if (!el) return;
+  if (_ccsMode === 'ws') {
+    el.innerHTML = '<i class="fa-solid fa-hand-pointer"></i> 土曜日をクリックで出勤日を登録/解除。登録済みをもう一度クリックで計画付与に切り替え。';
+  } else if (_ccsMode === 'holiday') {
+    if (_pendingHolidayStart) {
+      el.innerHTML = `<i class="fa-solid fa-calendar-check" style="color:#fb923c"></i> 開始日: <b>${_pendingHolidayStart}</b> ─ 次に終了日をクリックしてください（同じ日でも可）`;
+    } else {
+      el.innerHTML = '<i class="fa-solid fa-hand-pointer"></i> 開始日をクリック → 終了日をクリック → ラベルを入力して登録。';
+    }
+  } else if (_ccsMode === 'event') {
+    el.innerHTML = '<i class="fa-solid fa-hand-pointer"></i> 行事を追加したい日をクリックしてください。';
+  }
+}
+
+// ===== 年間グリッド描画 =====
+function _renderAnnualGrid() {
+  const grid = document.getElementById('ccs-annual-grid');
+  if (!grid) return;
+
+  _updateFyLabel();
+  _updateModeHint();
+
   const cfg = state.companyCalConfig || { workSaturdays: [], plannedLeaveSaturdays: [], holidayRanges: [], events: [] };
+  const fy  = _ccsFiscalYear; // 4月スタート年
 
-  // 出勤土曜リスト
-  const wsEl = document.getElementById('ccs-work-saturdays');
-  if (wsEl) {
-    const sorted = [...(cfg.workSaturdays || [])].sort();
-    wsEl.innerHTML = sorted.length === 0
-      ? '<p class="ccs-empty">登録なし</p>'
-      : sorted.map(d => `
-        <div class="ccs-list-item">
-          <span>${d}${(cfg.plannedLeaveSaturdays || []).includes(d) ? ' <span class="ccs-planned-tag">計画付与</span>' : ''}</span>
-          <div class="ccs-item-actions">
-            <button class="btn-ccs-toggle-planned" data-date="${d}" title="${(cfg.plannedLeaveSaturdays || []).includes(d) ? '計画付与を外す' : '計画付与にする'}">${(cfg.plannedLeaveSaturdays || []).includes(d) ? '✓計画付与' : '計画付与'}</button>
-            <button class="btn-ccs-remove-ws" data-date="${d}" title="削除"><i class="fa-solid fa-trash"></i></button>
-          </div>
-        </div>`).join('');
+  let html = '';
+  for (let mi = 0; mi < 12; mi++) {
+    const monthIdx = (3 + mi) % 12; // 0=Jan ... 3=Apr
+    const year     = mi < 9 ? fy : fy + 1; // Apr〜Dec: fy, Jan〜Mar: fy+1
+    const ym       = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
+    const firstDay = new Date(year, monthIdx, 1);
+    const lastDate = new Date(year, monthIdx + 1, 0).getDate();
+    const startDow = firstDay.getDay();
+    const monthName = `${year}年${monthIdx + 1}月`;
 
-    // イベント
-    wsEl.querySelectorAll('.btn-ccs-remove-ws').forEach(btn => {
-      btn.addEventListener('click', () => _removeWorkSaturday(btn.dataset.date));
+    html += `<div class="ccs-mini-cal">
+      <div class="ccs-mini-cal-title">${monthName}</div>
+      <div class="ccs-mini-dow-row">`;
+    DOW_LABELS.forEach((d, i) => {
+      html += `<div class="ccs-mini-dow${i===0?' ccs-sun':i===6?' ccs-sat':''}">${d}</div>`;
     });
-    wsEl.querySelectorAll('.btn-ccs-toggle-planned').forEach(btn => {
-      btn.addEventListener('click', () => _togglePlannedLeave(btn.dataset.date));
-    });
+    html += '</div><div class="ccs-mini-days">';
+
+    for (let i = 0; i < startDow; i++) {
+      html += '<div class="ccs-mini-day ccs-mini-empty"></div>';
+    }
+
+    for (let d = 1; d <= lastDate; d++) {
+      const dateStr = `${year}-${String(monthIdx + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const dow     = new Date(year, monthIdx, d).getDay();
+      const info    = getDateInfo(dateStr);
+
+      let cls = 'ccs-mini-day';
+      if (dow === 0) cls += ' ccs-sun';
+      if (dow === 6) cls += ' ccs-sat-day';
+      if (info.isWorkSaturday && info.isPlannedLeave) cls += ' ccs-day-planned';
+      else if (info.isWorkSaturday) cls += ' ccs-day-worksat';
+      if (info.isHoliday) cls += ' ccs-day-holiday';
+      if (info.events.length) cls += ' ccs-day-event';
+      if (dateStr === _pendingHolidayStart) cls += ' ccs-day-pending';
+
+      // クリック可否
+      const isClickable = _isDayClickable(dow, info);
+      if (isClickable) cls += ' ccs-day-clickable';
+
+      // ツールチップ
+      let title = dateStr;
+      if (info.isWorkSaturday) title += info.isPlannedLeave ? ' [計画付与]' : ' [出勤土曜]';
+      if (info.isHoliday) title += ` [${info.holidayLabel}]`;
+      info.events.forEach(ev => { title += ` [${ev.label}]`; });
+
+      // 行事の色ドット
+      let dotHtml = '';
+      if (info.events.length) {
+        const color = info.events[0].color || '#a78bfa';
+        dotHtml = `<span class="ccs-event-dot" style="background:${color}"></span>`;
+      }
+
+      html += `<div class="${cls}" data-date="${dateStr}" title="${title}">${d}${dotHtml}</div>`;
+    }
+
+    html += '</div></div>';
   }
 
-  // 会社休日リスト
-  const hrEl = document.getElementById('ccs-holiday-ranges');
-  if (hrEl) {
-    const ranges = cfg.holidayRanges || [];
-    hrEl.innerHTML = ranges.length === 0
-      ? '<p class="ccs-empty">登録なし</p>'
-      : ranges.map((r, i) => `
-        <div class="ccs-list-item">
-          <span>${r.start} 〜 ${r.end}　<b>${esc(r.label)}</b></span>
-          <button class="btn-ccs-remove-hr" data-index="${i}" title="削除"><i class="fa-solid fa-trash"></i></button>
-        </div>`).join('');
-    hrEl.querySelectorAll('.btn-ccs-remove-hr').forEach(btn => {
-      btn.addEventListener('click', () => _removeHolidayRange(parseInt(btn.dataset.index)));
-    });
-  }
+  grid.innerHTML = html;
 
-  // 会社行事リスト
-  const evEl = document.getElementById('ccs-events');
-  if (evEl) {
-    const events = cfg.events || [];
-    evEl.innerHTML = events.length === 0
-      ? '<p class="ccs-empty">登録なし</p>'
-      : events.map((ev, i) => `
-        <div class="ccs-list-item">
-          <span style="color:${ev.color || 'inherit'}">● ${ev.date}　${esc(ev.label)}</span>
-          <button class="btn-ccs-remove-ev" data-index="${i}" title="削除"><i class="fa-solid fa-trash"></i></button>
-        </div>`).join('');
-    evEl.querySelectorAll('.btn-ccs-remove-ev').forEach(btn => {
-      btn.addEventListener('click', () => _removeEvent(parseInt(btn.dataset.index)));
-    });
+  // クリックイベント
+  grid.querySelectorAll('.ccs-day-clickable').forEach(cell => {
+    cell.addEventListener('click', () => _onDayClick(cell.dataset.date));
+  });
+}
+
+// ===== クリック可否判定 =====
+function _isDayClickable(dow, info) {
+  if (_ccsMode === 'ws') {
+    return dow === 6; // 土曜のみ
+  }
+  if (_ccsMode === 'holiday') {
+    return true; // すべての日
+  }
+  if (_ccsMode === 'event') {
+    return true; // すべての日
+  }
+  return false;
+}
+
+// ===== 日付クリック処理 =====
+async function _onDayClick(dateStr) {
+  if (_ccsMode === 'ws') {
+    await _toggleWorkSaturday(dateStr);
+  } else if (_ccsMode === 'holiday') {
+    await _handleHolidayClick(dateStr);
+  } else if (_ccsMode === 'event') {
+    await _handleEventClick(dateStr);
   }
 }
 
-// ===== 出勤土曜を追加 =====
-async function _addWorkSaturday(dateStr) {
-  if (!dateStr) return;
-  // 土曜日かチェック
-  const d = new Date(dateStr + 'T00:00:00');
-  if (d.getDay() !== 6) { alert('土曜日の日付を選択してください'); return; }
-
+// ===== 出勤土曜トグル =====
+async function _toggleWorkSaturday(dateStr) {
   const cfg = state.companyCalConfig || {};
-  const ws  = [...new Set([...(cfg.workSaturdays || []), dateStr])].sort();
-  await setDoc(companyCalRef(), { workSaturdays: ws }, { merge: true });
-}
-
-// ===== 出勤土曜を削除 =====
-async function _removeWorkSaturday(dateStr) {
-  const cfg = state.companyCalConfig || {};
-  const ws  = (cfg.workSaturdays || []).filter(d => d !== dateStr);
-  const pl  = (cfg.plannedLeaveSaturdays || []).filter(d => d !== dateStr);
-  await setDoc(companyCalRef(), { workSaturdays: ws, plannedLeaveSaturdays: pl }, { merge: true });
-}
-
-// ===== 計画的付与トグル =====
-async function _togglePlannedLeave(dateStr) {
-  const cfg = state.companyCalConfig || {};
+  const ws  = cfg.workSaturdays || [];
   const pl  = cfg.plannedLeaveSaturdays || [];
-  const newPl = pl.includes(dateStr)
-    ? pl.filter(d => d !== dateStr)
-    : [...pl, dateStr].sort();
-  await setDoc(companyCalRef(), { plannedLeaveSaturdays: newPl }, { merge: true });
+
+  if (pl.includes(dateStr)) {
+    // 計画付与 → 削除
+    const newWs = ws.filter(d => d !== dateStr);
+    const newPl = pl.filter(d => d !== dateStr);
+    await setDoc(companyCalRef(), { workSaturdays: newWs, plannedLeaveSaturdays: newPl }, { merge: true });
+  } else if (ws.includes(dateStr)) {
+    // 出勤土曜 → 計画付与に昇格
+    const newPl = [...pl, dateStr].sort();
+    await setDoc(companyCalRef(), { plannedLeaveSaturdays: newPl }, { merge: true });
+  } else {
+    // 未登録 → 出勤土曜に追加
+    const newWs = [...new Set([...ws, dateStr])].sort();
+    await setDoc(companyCalRef(), { workSaturdays: newWs }, { merge: true });
+  }
 }
 
-// ===== 会社休日範囲を追加 =====
-async function _addHolidayRange(start, end, label) {
-  if (!start || !end || !label) { alert('開始日・終了日・ラベルを入力してください'); return; }
-  if (start > end) { alert('開始日は終了日より前にしてください'); return; }
+// ===== 会社休日クリック処理 =====
+async function _handleHolidayClick(dateStr) {
+  if (!_pendingHolidayStart) {
+    // 1回目: 開始日を選択
+    _pendingHolidayStart = dateStr;
+    _updateModeHint();
+    _renderAnnualGrid();
+    return;
+  }
+
+  // 2回目: 終了日が決まったのでラベル入力
+  const start = _pendingHolidayStart <= dateStr ? _pendingHolidayStart : dateStr;
+  const end   = _pendingHolidayStart <= dateStr ? dateStr : _pendingHolidayStart;
+  _pendingHolidayStart = null;
+
+  const label = prompt(`${start}〜${end} の休日ラベルを入力してください\n（例：GW、夏期休暇）`);
+  if (!label || !label.trim()) {
+    _updateModeHint();
+    _renderAnnualGrid();
+    return;
+  }
+
   const cfg    = state.companyCalConfig || {};
-  const ranges = [...(cfg.holidayRanges || []), { start, end, label }];
+  const ranges = [...(cfg.holidayRanges || []), { start, end, label: label.trim() }];
   await setDoc(companyCalRef(), { holidayRanges: ranges }, { merge: true });
 }
 
-// ===== 会社休日範囲を削除 =====
-async function _removeHolidayRange(index) {
-  const cfg    = state.companyCalConfig || {};
-  const ranges = [...(cfg.holidayRanges || [])];
-  ranges.splice(index, 1);
-  await setDoc(companyCalRef(), { holidayRanges: ranges }, { merge: true });
-}
+// ===== 行事クリック処理 =====
+async function _handleEventClick(dateStr) {
+  const label = prompt(`${dateStr} の行事名を入力してください`);
+  if (!label || !label.trim()) return;
 
-// ===== 会社行事を追加 =====
-async function _addEvent(date, label, color) {
-  if (!date || !label) { alert('日付とラベルを入力してください'); return; }
+  const color = _showColorPicker(label.trim());
+  // color は同期的に返せないので、ここでは prompt で簡易的に色を選ぶ
+  // 実際には後続の実装でカラーピッカーUIに置き換え可能
   const cfg    = state.companyCalConfig || {};
-  const events = [...(cfg.events || []), { date, label, color: color || '#4a9eff' }];
+  const events = [...(cfg.events || []), { date: dateStr, label: label.trim(), color: color || '#a78bfa' }];
   await setDoc(companyCalRef(), { events }, { merge: true });
 }
 
-// ===== 会社行事を削除 =====
-async function _removeEvent(index) {
-  const cfg    = state.companyCalConfig || {};
-  const events = [...(cfg.events || [])];
-  events.splice(index, 1);
-  await setDoc(companyCalRef(), { events }, { merge: true });
+// ===== 簡易カラー選択（prompt fallback） =====
+function _showColorPicker(label) {
+  // inline color picker を表示する代わりに、選択肢から選ばせる
+  const colors = ['#a78bfa（紫）','#60a5fa（青）','#34d399（緑）','#fb923c（オレンジ）','#f87171（赤）','#fbbf24（黄）'];
+  const choice = prompt(`「${label}」の色を選んでください:\n${colors.map((c,i)=>`${i+1}: ${c}`).join('\n')}\n番号を入力（省略可）`);
+  const idx = parseInt(choice) - 1;
+  const hexMap = ['#a78bfa','#60a5fa','#34d399','#fb923c','#f87171','#fbbf24'];
+  return hexMap[idx] || '#a78bfa';
 }
 
 // ===== 設定モーダルのフォームイベント初期化（script.js から一度だけ呼ぶ） =====
 export function initCompanyCalSettingsForms() {
-  // 出勤土曜追加
-  const addWsBtn = document.getElementById('ccs-btn-add-ws');
-  if (addWsBtn) {
-    addWsBtn.addEventListener('click', async () => {
-      const val = document.getElementById('ccs-input-ws')?.value;
-      await _addWorkSaturday(val);
-      if (document.getElementById('ccs-input-ws')) document.getElementById('ccs-input-ws').value = '';
-    });
+  // PIN認証
+  const pinSubmit = document.getElementById('ccs-pin-submit');
+  const pinInput  = document.getElementById('ccs-pin-input');
+  if (pinSubmit && pinInput) {
+    const doAuth = async () => {
+      const pin = pinInput.value.trim();
+      if (!pin) return;
+      pinSubmit.disabled = true;
+      pinSubmit.textContent = '確認中…';
+      const ok = await verifyPIN(pin);
+      pinSubmit.disabled = false;
+      pinSubmit.textContent = '認証';
+      const errEl = document.getElementById('ccs-pin-error');
+      if (ok) {
+        state.isAdmin = true;
+        document.getElementById('ccs-pin-gate').hidden = true;
+        const body = document.getElementById('ccs-body');
+        body.hidden = false;
+        _initFiscalYear();
+        _renderAnnualGrid();
+        if (errEl) errEl.hidden = true;
+      } else {
+        if (errEl) { errEl.hidden = false; errEl.textContent = 'PINが違います'; }
+        pinInput.value = '';
+        pinInput.focus();
+      }
+    };
+    pinSubmit.addEventListener('click', doAuth);
+    pinInput.addEventListener('keydown', e => { if (e.key === 'Enter') doAuth(); });
   }
 
-  // 会社休日範囲追加
-  const addHrBtn = document.getElementById('ccs-btn-add-hr');
-  if (addHrBtn) {
-    addHrBtn.addEventListener('click', async () => {
-      const start = document.getElementById('ccs-input-hr-start')?.value;
-      const end   = document.getElementById('ccs-input-hr-end')?.value;
-      const label = document.getElementById('ccs-input-hr-label')?.value.trim();
-      await _addHolidayRange(start, end, label);
-      ['ccs-input-hr-start','ccs-input-hr-end','ccs-input-hr-label'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-      });
-    });
-  }
+  // 年度ナビ
+  document.getElementById('ccs-prev-fy')?.addEventListener('click', () => {
+    _ccsFiscalYear--;
+    _renderAnnualGrid();
+  });
+  document.getElementById('ccs-next-fy')?.addEventListener('click', () => {
+    _ccsFiscalYear++;
+    _renderAnnualGrid();
+  });
 
-  // 会社行事追加
-  const addEvBtn = document.getElementById('ccs-btn-add-ev');
-  if (addEvBtn) {
-    addEvBtn.addEventListener('click', async () => {
-      const date  = document.getElementById('ccs-input-ev-date')?.value;
-      const label = document.getElementById('ccs-input-ev-label')?.value.trim();
-      const color = document.getElementById('ccs-input-ev-color')?.value;
-      await _addEvent(date, label, color);
-      ['ccs-input-ev-date','ccs-input-ev-label'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-      });
-    });
-  }
+  // モード切替
+  document.getElementById('ccs-mode-tabs')?.addEventListener('click', e => {
+    const btn = e.target.closest('.ccs-mode-btn');
+    if (!btn) return;
+    _ccsMode = btn.dataset.mode;
+    _pendingHolidayStart = null;
+    document.querySelectorAll('#ccs-mode-tabs .ccs-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    _renderAnnualGrid();
+  });
 
   // 閉じるボタン
-  const closeBtn = document.getElementById('ccs-close-btn');
-  if (closeBtn) closeBtn.addEventListener('click', closeCompanyCalSettings);
+  document.getElementById('ccs-close-btn')?.addEventListener('click', closeCompanyCalSettings);
 
   // モーダル外クリックで閉じる
   const modal = document.getElementById('company-cal-settings-modal');

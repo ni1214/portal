@@ -1470,51 +1470,55 @@
     </div>
   </div>
 
-  <!-- ==================== 会社カレンダー設定モーダル（管理者専用） ==================== -->
+  <!-- ==================== 会社カレンダー設定モーダル ==================== -->
   <div class="modal-overlay" id="company-cal-settings-modal">
-    <div class="modal-glass" style="max-width:560px;width:min(560px,94vw);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-        <h3 style="margin:0;font-size:1rem;display:flex;align-items:center;gap:8px;color:var(--text-primary)"><i class="fa-solid fa-building-circle-check" style="color:var(--accent-blue)"></i> 会社カレンダー設定</h3>
+    <div class="modal-glass ccs-modal-outer">
+      <!-- ヘッダー -->
+      <div class="ccs-modal-header">
+        <h3 class="ccs-modal-title"><i class="fa-solid fa-building-circle-check" style="color:var(--accent-blue)"></i> 会社カレンダー設定</h3>
         <button class="btn-modal-secondary" id="ccs-close-btn" style="padding:4px 10px;" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div style="display:flex;flex-direction:column;gap:16px;">
 
-        <!-- 出勤土曜 -->
-        <section class="ccs-section">
-          <h4 class="ccs-section-title"><i class="fa-solid fa-calendar-day"></i> 出勤土曜の管理</h4>
-          <div class="ccs-add-row">
-            <input type="date" id="ccs-input-ws" class="form-input" style="flex:1" title="土曜日の日付を選択">
-            <button class="btn-modal-primary" id="ccs-btn-add-ws" style="white-space:nowrap">追加</button>
+      <!-- PIN認証ゲート -->
+      <div id="ccs-pin-gate" class="ccs-pin-gate">
+        <i class="fa-solid fa-lock" style="font-size:2rem;color:var(--accent-blue);margin-bottom:12px;"></i>
+        <p style="color:var(--text-secondary);margin-bottom:16px;font-size:0.9rem;">管理PINを入力してください</p>
+        <div class="ccs-pin-row">
+          <input type="password" id="ccs-pin-input" class="form-input" placeholder="管理PIN" maxlength="20" autocomplete="current-password">
+          <button class="btn-modal-primary" id="ccs-pin-submit">認証</button>
+        </div>
+        <p id="ccs-pin-error" class="ccs-pin-error" hidden>PINが違います</p>
+      </div>
+
+      <!-- 設定本体（PIN認証後に表示） -->
+      <div id="ccs-body" class="ccs-body" hidden>
+        <!-- ツールバー: 年度選択 & モード選択 -->
+        <div class="ccs-toolbar">
+          <div class="ccs-year-nav">
+            <button class="ccs-year-btn" id="ccs-prev-fy"><i class="fa-solid fa-chevron-left"></i></button>
+            <span id="ccs-fy-label" class="ccs-fy-label"></span>
+            <button class="ccs-year-btn" id="ccs-next-fy"><i class="fa-solid fa-chevron-right"></i></button>
           </div>
-          <div id="ccs-work-saturdays" class="ccs-list"></div>
-          <p class="ccs-hint">追加後、各行の「計画付与」ボタンで計画的付与として設定できます。</p>
-        </section>
-
-        <!-- 会社休日（期間） -->
-        <section class="ccs-section">
-          <h4 class="ccs-section-title"><i class="fa-solid fa-plane-departure"></i> 会社休日（期間）</h4>
-          <div class="ccs-add-row" style="flex-wrap:wrap;gap:6px;">
-            <input type="date" id="ccs-input-hr-start" class="form-input" style="flex:1;min-width:120px" placeholder="開始日">
-            <span style="align-self:center;color:var(--text-muted)">〜</span>
-            <input type="date" id="ccs-input-hr-end" class="form-input" style="flex:1;min-width:120px" placeholder="終了日">
-            <input type="text" id="ccs-input-hr-label" class="form-input" style="flex:2;min-width:100px" placeholder="例：GW、夏期休暇" maxlength="20">
-            <button class="btn-modal-primary" id="ccs-btn-add-hr" style="white-space:nowrap">追加</button>
+          <div class="ccs-mode-tabs" id="ccs-mode-tabs">
+            <button class="ccs-mode-btn active" data-mode="ws"><span class="ccs-mode-dot" style="background:#60a5fa"></span>出勤土曜</button>
+            <button class="ccs-mode-btn" data-mode="holiday"><span class="ccs-mode-dot" style="background:#fb923c"></span>会社休日</button>
+            <button class="ccs-mode-btn" data-mode="event"><span class="ccs-mode-dot" style="background:#a78bfa"></span>行事</button>
           </div>
-          <div id="ccs-holiday-ranges" class="ccs-list"></div>
-        </section>
+        </div>
 
-        <!-- 会社行事 -->
-        <section class="ccs-section">
-          <h4 class="ccs-section-title"><i class="fa-solid fa-star"></i> 会社行事（1日単位）</h4>
-          <div class="ccs-add-row" style="flex-wrap:wrap;gap:6px;">
-            <input type="date" id="ccs-input-ev-date" class="form-input" style="flex:1;min-width:120px">
-            <input type="text" id="ccs-input-ev-label" class="form-input" style="flex:2;min-width:100px" placeholder="行事名" maxlength="20">
-            <input type="color" id="ccs-input-ev-color" class="form-input" value="#4a9eff" style="width:44px;padding:2px;cursor:pointer">
-            <button class="btn-modal-primary" id="ccs-btn-add-ev" style="white-space:nowrap">追加</button>
-          </div>
-          <div id="ccs-events" class="ccs-list"></div>
-        </section>
+        <!-- モード説明 -->
+        <div id="ccs-mode-hint" class="ccs-mode-hint"></div>
 
+        <!-- 凡例 -->
+        <div class="ccs-legend">
+          <span class="ccs-legend-item"><span class="ccs-legend-dot" style="background:#60a5fa"></span>出勤土曜</span>
+          <span class="ccs-legend-item"><span class="ccs-legend-dot" style="background:#34d399"></span>計画付与</span>
+          <span class="ccs-legend-item"><span class="ccs-legend-dot" style="background:#fb923c"></span>会社休日</span>
+          <span class="ccs-legend-item"><span class="ccs-legend-dot" style="background:#a78bfa"></span>行事</span>
+        </div>
+
+        <!-- 年間12ヶ月グリッド -->
+        <div class="ccs-annual-grid" id="ccs-annual-grid"></div>
       </div>
     </div>
   </div>
