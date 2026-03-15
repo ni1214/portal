@@ -8692,7 +8692,7 @@ html.font-xl { font-size: 21px; }
    =========================== */
 .app-layout {
   display: flex;
-  min-height: calc(100vh - var(--header-height));
+  min-height: 0;
 }
 
 /* ===========================
