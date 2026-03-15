@@ -10383,14 +10383,41 @@ html.font-xl { font-size: 21px; }
   max-height: 400px;
   overflow-y: auto;
 }
+/* 業者グループ */
+.ord-history-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ord-history-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  padding: 6px 4px 4px;
+  border-bottom: 1px solid var(--border-glass);
+  margin-bottom: 2px;
+}
+.ord-history-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-glass);
+  border-radius: 10px;
+  padding: 1px 8px;
+}
+
 .ord-history-item {
   background: var(--bg-card);
   border: 1px solid var(--border-glass);
   border-radius: 8px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
+  margin-left: 12px;
 }
 .ord-history-header {
   display: flex;

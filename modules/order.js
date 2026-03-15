@@ -476,26 +476,40 @@ async function renderHistory() {
       return;
     }
 
-    listEl.innerHTML = orders.map(o => {
-      const itemsSummary = o.items.map(it => `${it.name}${it.spec ? ' '+it.spec : ''} ${it.qty}${it.unit}`).join('、');
-      const sentBadge = o.emailSent
-        ? '<span class="ord-badge-sent">✅ 送信済み</span>'
-        : '<span class="ord-badge-pending">⏳ 未送信</span>';
-      const typeLabel = o.orderType === 'site' ? '現場向け' : '工場在庫';
-      const typeCls   = o.orderType === 'site' ? 'ord-type-badge--site' : 'ord-type-badge--factory';
-      const siteLabel = o.orderType === 'site' && o.siteName
-        ? `<span class="ord-history-site"><i class="fa-solid fa-helmet-safety"></i> ${esc(o.siteName)}</span>` : '';
+    // 発注業者ごとにグループ化
+    const grouped = {};
+    orders.forEach(o => {
+      const key = o.supplierName || '不明';
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(o);
+    });
+
+    listEl.innerHTML = Object.entries(grouped).map(([supplierName, supplierOrders]) => {
+      const rows = supplierOrders.map(o => {
+        const itemsSummary = o.items.map(it => `${it.name}${it.spec ? ' ' + it.spec : ''} ${it.qty}${it.unit}`).join('、');
+        // 工場在庫 or 現場名を表示
+        const isFactory = !o.orderType || o.orderType === 'factory';
+        const typeLabel = isFactory ? '工場在庫' : (o.siteName || '現場向け');
+        const typeCls   = isFactory ? 'ord-type-badge--factory' : 'ord-type-badge--site';
+        return `
+          <div class="ord-history-item">
+            <div class="ord-history-header">
+              <span class="ord-history-date">${fmtDatetime(o.orderedAt)}</span>
+              <span class="ord-type-badge ${typeCls}">${esc(typeLabel)}</span>
+              <span class="ord-history-by">${esc(o.orderedBy)}</span>
+            </div>
+            <div class="ord-history-items">${esc(itemsSummary)}</div>
+            ${o.note ? `<div class="ord-history-note">備考: ${esc(o.note)}</div>` : ''}
+          </div>`;
+      }).join('');
+
       return `
-        <div class="ord-history-item">
-          <div class="ord-history-header">
-            <span class="ord-history-date">${fmtDatetime(o.orderedAt)}</span>
-            <span class="ord-type-badge ${typeCls}">${typeLabel}</span>
-            ${siteLabel}
-            <span class="ord-history-by">発注: ${esc(o.orderedBy)}</span>
-            ${sentBadge}
+        <div class="ord-history-group">
+          <div class="ord-history-group-header">
+            <i class="fa-solid fa-building"></i> ${esc(supplierName)}
+            <span class="ord-history-count">${supplierOrders.length}件</span>
           </div>
-          <div class="ord-history-items">${esc(itemsSummary)}</div>
-          ${o.note ? `<div class="ord-history-note">備考: ${esc(o.note)}</div>` : ''}
+          ${rows}
         </div>`;
     }).join('');
   } catch (err) {
@@ -662,10 +676,11 @@ function bindOrderEvents() {
   });
 
   // 履歴モーダル
-  document.getElementById('ord-history-close')?.addEventListener('click', closeOrderHistoryModal);
-  document.getElementById('ord-history-cancel')?.addEventListener('click', closeOrderHistoryModal);
+  const backToOrder = () => { closeOrderHistoryModal(); openOrderModal(); };
+  document.getElementById('ord-history-close')?.addEventListener('click', backToOrder);
+  document.getElementById('ord-history-cancel')?.addEventListener('click', backToOrder);
   document.getElementById('ord-history-modal')?.addEventListener('click', e => {
-    if (e.target === document.getElementById('ord-history-modal')) closeOrderHistoryModal();
+    if (e.target === document.getElementById('ord-history-modal')) backToOrder();
   });
   document.getElementById('ord-period-prev')?.addEventListener('click', async () => {
     _historyOffset--;
