@@ -216,16 +216,24 @@
           <div class="todo-body" id="todo-body">
             <ul class="todo-list todo-assigned-list" id="todo-assigned-list"></ul>
             <ul class="todo-list" id="todo-list"></ul>
-            <div class="todo-add-row">
-              <input type="text" id="todo-input" class="todo-input" placeholder="新しいタスクを入力..." maxlength="100" autocomplete="off">
-              <select id="todo-due-select" class="todo-due-select">
-                <option value="">期限なし</option>
-                <option value="今日">今日</option>
-                <option value="明日">明日</option>
-              </select>
-              <button class="todo-add-btn" id="todo-add-btn">
+            <div class="todo-add-area" id="todo-add-area">
+              <button class="todo-open-btn" id="todo-open-btn">
                 <i class="fa-solid fa-plus"></i> 追加
               </button>
+              <div class="todo-add-row" id="todo-add-row" hidden>
+                <input type="text" id="todo-input" class="todo-input" placeholder="タスクを入力..." maxlength="100" autocomplete="off">
+                <select id="todo-due-select" class="todo-due-select">
+                  <option value="">期限なし</option>
+                  <option value="今日">今日</option>
+                  <option value="明日">明日</option>
+                </select>
+                <button class="todo-add-btn" id="todo-add-btn">
+                  <i class="fa-solid fa-check"></i>
+                </button>
+                <button class="todo-cancel-btn" id="todo-cancel-btn">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
             </div>
           </div>
         </section>

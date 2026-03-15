@@ -2472,19 +2472,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderTodoSection();
   });
 
+  // ＋追加ボタン → 入力行を展開
+  document.getElementById('todo-open-btn').addEventListener('click', () => {
+    const row = document.getElementById('todo-add-row');
+    const openBtn = document.getElementById('todo-open-btn');
+    row.hidden = false;
+    openBtn.hidden = true;
+    document.getElementById('todo-input').focus();
+  });
+
+  // キャンセルボタン → 入力行を閉じる
+  function closeTodoRow() {
+    const row = document.getElementById('todo-add-row');
+    const openBtn = document.getElementById('todo-open-btn');
+    row.hidden = true;
+    openBtn.hidden = false;
+    document.getElementById('todo-input').value = '';
+    document.getElementById('todo-due-select').value = '';
+  }
+  document.getElementById('todo-cancel-btn').addEventListener('click', closeTodoRow);
+
   document.getElementById('todo-add-btn').addEventListener('click', async () => {
     const input  = document.getElementById('todo-input');
     const due    = document.getElementById('todo-due-select');
     const text   = input.value.trim();
     if (!text) { input.focus(); return; }
     await addTodo(text, due.value);
-    input.value = '';
-    due.value   = '';
-    input.focus();
+    closeTodoRow();
   });
 
   document.getElementById('todo-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('todo-add-btn').click();
+    if (e.key === 'Escape') closeTodoRow();
   });
 
   // ===== メールアシスタント =====
