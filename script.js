@@ -1999,7 +1999,7 @@ function _clearSearchResults() {
   const noResults      = document.getElementById('no-results');
   if (resultsSection) { resultsSection.hidden = true; resultsSection.innerHTML = ''; }
   if (noResults) noResults.classList.remove('visible');
-  document.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap')
+  document.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap, .area-header')
     .forEach(el => el.classList.remove('search-hidden'));
 }
 
@@ -2029,8 +2029,8 @@ function initSearch() {
       return;
     }
 
-    // 検索中はすべてのセクションを隠す
-    document.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap')
+    // 検索中はすべてのセクションとエリアヘッダーを隠す
+    document.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap, .area-header')
       .forEach(el => el.classList.add('search-hidden'));
 
     // 全カードからマッチするものを直接探す（非表示カードは除く）
