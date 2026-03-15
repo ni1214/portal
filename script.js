@@ -780,41 +780,60 @@ async function saveMissionText() {
 
 function renderAllSections() {
   closeChildPopup();
-  const main = document.querySelector('.main');
-  const noResults = document.getElementById('no-results');
-  main.querySelectorAll('.category-section:not(#favorites-section), .external-tools, .btn-add-category-wrap').forEach(el => el.remove());
+  const personalBody = document.getElementById('personal-space-body');
+  const sharedBody   = document.getElementById('shared-space-body');
 
-  const publicSorted = [...state.allCategories].sort((a, b) => a.order - b.order);
+  // 既存の動的セクション・ボタンを削除
+  personalBody.querySelectorAll('.category-section:not(#favorites-section), .external-tools, .btn-add-category-wrap').forEach(el => el.remove());
+  sharedBody.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap').forEach(el => el.remove());
+
+  const publicSorted  = [...state.allCategories].sort((a, b) => a.order - b.order);
   const privateSorted = [...state.privateCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
-  const allCats = [...publicSorted, ...privateSorted];
-  const sorted = state.personalSectionOrder.length ? applyPersonalOrder(allCats) : allCats;
 
-  sorted.forEach(cat => {
-    let catCards;
-    if (cat.isPrivate) {
-      catCards = state.privateCards.filter(c => c.sectionId === cat.docId).sort((a, b) => (a.order || 0) - (b.order || 0));
-    } else {
-      catCards = state.allCards.filter(c => c.category === cat.id).sort((a, b) => a.order - b.order);
-    }
-    main.insertBefore(buildSection(cat, catCards), noResults);
+  // personalSectionOrder を適用しつつ公開/個人で振り分け
+  let orderedPublic  = publicSorted;
+  let orderedPrivate = privateSorted;
+  if (state.personalSectionOrder.length) {
+    const orderedAll = applyPersonalOrder([...publicSorted, ...privateSorted]);
+    orderedPublic  = orderedAll.filter(c => !c.isPrivate);
+    orderedPrivate = orderedAll.filter(c =>  c.isPrivate);
+  }
+
+  // マイセクション → 個人スペースへ
+  orderedPrivate.forEach(cat => {
+    const catCards = state.privateCards.filter(c => c.sectionId === cat.docId).sort((a, b) => (a.order || 0) - (b.order || 0));
+    personalBody.appendChild(buildSection(cat, catCards));
   });
 
-  const addWrap = document.createElement('div');
-  addWrap.className = 'btn-add-category-wrap';
-  let btnsHtml = `
+  // 公開カテゴリ → 全社共有スペースへ
+  orderedPublic.forEach(cat => {
+    const catCards = state.allCards.filter(c => c.category === cat.id).sort((a, b) => a.order - b.order);
+    sharedBody.appendChild(buildSection(cat, catCards));
+  });
+
+  // 「カテゴリを追加」→ 共有スペース末尾
+  const sharedAddWrap = document.createElement('div');
+  sharedAddWrap.className = 'btn-add-category-wrap';
+  sharedAddWrap.innerHTML = `
     <div class="add-btn-group">
       <button class="btn-add-category"><i class="fa-solid fa-plus"></i> カテゴリを追加</button>
       <p class="add-btn-desc"><i class="fa-solid fa-users"></i> 全社員に共有されます</p>
     </div>`;
-  if (state.currentUsername) btnsHtml += `
-    <div class="add-btn-group">
-      <button class="btn-add-private-section"><i class="fa-solid fa-lock"></i> マイセクションを追加</button>
-      <p class="add-btn-desc add-btn-desc--private"><i class="fa-solid fa-user-secret"></i> 自分だけに表示されます</p>
-    </div>`;
-  addWrap.innerHTML = btnsHtml;
-  addWrap.querySelector('.btn-add-category').addEventListener('click', () => openCategoryModal(null));
-  if (state.currentUsername) addWrap.querySelector('.btn-add-private-section').addEventListener('click', () => openPrivateSectionModal(null));
-  main.insertBefore(addWrap, noResults);
+  sharedAddWrap.querySelector('.btn-add-category').addEventListener('click', () => openCategoryModal(null));
+  sharedBody.appendChild(sharedAddWrap);
+
+  // 「マイセクションを追加」→ 個人スペース末尾
+  if (state.currentUsername) {
+    const privateAddWrap = document.createElement('div');
+    privateAddWrap.className = 'btn-add-category-wrap';
+    privateAddWrap.innerHTML = `
+      <div class="add-btn-group">
+        <button class="btn-add-private-section"><i class="fa-solid fa-lock"></i> マイセクションを追加</button>
+        <p class="add-btn-desc add-btn-desc--private"><i class="fa-solid fa-user-secret"></i> 自分だけに表示されます</p>
+      </div>`;
+    privateAddWrap.querySelector('.btn-add-private-section').addEventListener('click', () => openPrivateSectionModal(null));
+    personalBody.appendChild(privateAddWrap);
+  }
 }
 
 // ===== セクション折り畳み =====

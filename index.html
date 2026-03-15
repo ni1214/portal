@@ -186,77 +186,80 @@
       </div>
     </div>
 
-    <!-- ==================== 個人エリアヘッダー ==================== -->
-    <div class="area-header area-personal" id="area-personal-header">
-      <div class="area-header-title">
-        <i class="fa-solid fa-user-circle"></i>
-        <span>個人スペース</span>
-      </div>
-      <p class="area-header-desc">あなただけに表示されます。タスク・お気に入り・マイセクションはほかのユーザーには見えません。</p>
-      <p class="area-header-desc area-header-hint" id="area-personal-hint" hidden><i class="fa-solid fa-triangle-exclamation" style="color:var(--accent-orange)"></i> ユーザーネームを設定するとこのエリアのすべての機能が使えます。上の「<strong>名前を設定してください</strong>」をタップしてください。</p>
-    </div>
-
-    <!-- ==================== 個人TODOパネル ==================== -->
-    <section id="todo-section" class="todo-section" hidden>
-      <div class="todo-header">
-        <div class="todo-header-left">
-          <div class="todo-icon"><i class="fa-solid fa-circle-check"></i></div>
-          <h2 class="todo-title">自分のタスク</h2>
-          <span class="todo-count" id="todo-count"></span>
-        </div>
-        <button class="todo-toggle-btn" id="todo-toggle-btn" title="折りたたむ">
-          <i class="fa-solid fa-chevron-up"></i>
-        </button>
-      </div>
-
-      <div class="todo-body" id="todo-body">
-        <!-- 割り振りタスク（JSで生成） -->
-        <ul class="todo-list todo-assigned-list" id="todo-assigned-list"></ul>
-
-        <!-- 個人TODO一覧（JSで生成） -->
-        <ul class="todo-list" id="todo-list"></ul>
-
-        <!-- クイック追加フォーム -->
-        <div class="todo-add-row">
-          <input type="text" id="todo-input" class="todo-input" placeholder="新しいタスクを入力..." maxlength="100" autocomplete="off">
-          <select id="todo-due-select" class="todo-due-select">
-            <option value="">期限なし</option>
-            <option value="今日">今日</option>
-            <option value="明日">明日</option>
-          </select>
-          <button class="todo-add-btn" id="todo-add-btn">
-            <i class="fa-solid fa-plus"></i> 追加
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- お気に入りセクション（JS が制御） -->
-    <section id="favorites-section" class="favorites-section category-section" hidden>
-      <div class="category-header">
-        <div class="category-icon" style="background: linear-gradient(135deg, #ffcc00, #dd9900)">
-          <i class="fa-solid fa-star"></i>
-        </div>
-        <h2 class="category-title">お気に入り</h2>
-        <span class="category-count" id="favorites-count">0 件</span>
-      </div>
-      <div class="card-grid" id="favorites-grid"></div>
-    </section>
-
-    <!-- ==================== 全社共有エリアヘッダー ==================== -->
-    <div class="area-header area-shared" id="area-shared-header">
-      <div class="area-header-title">
-        <i class="fa-solid fa-users"></i>
-        <span>全社共有スペース</span>
-      </div>
-      <p class="area-header-desc">全社員に共有されます。お知らせ・リンク集・各部門の資料などをここで確認・管理できます。天気・太陽光データはクイックリンク内の <i class="fa-solid fa-solar-panel" style="color:var(--accent-orange)"></i> アイコンから確認できます。</p>
-    </div>
-
-    <!-- お知らせボード（JS が制御） -->
+    <!-- ==================== お知らせボード（全スペースの上） ==================== -->
     <section id="notice-board" class="notice-board"></section>
 
-    <!-- 天気ウィジェット（通常は非表示、太陽光カードで展開） -->
-    <section id="weather-widget" class="weather-widget" hidden>
+    <!-- ==================== 個人スペース wrapper ==================== -->
+    <div class="space-wrapper space-personal" id="space-personal">
+      <div class="area-header area-personal" id="area-personal-header">
+        <div class="area-header-title">
+          <i class="fa-solid fa-user-circle"></i>
+          <span>個人スペース</span>
+        </div>
+        <p class="area-header-desc">あなただけに表示されます。タスク・お気に入り・マイセクションはほかのユーザーには見えません。</p>
+        <p class="area-header-desc area-header-hint" id="area-personal-hint" hidden><i class="fa-solid fa-triangle-exclamation" style="color:var(--accent-orange)"></i> ユーザーネームを設定するとこのエリアのすべての機能が使えます。上の「<strong>名前を設定してください</strong>」をタップしてください。</p>
+      </div>
+      <div class="space-body" id="personal-space-body">
+
+        <!-- 個人TODOパネル -->
+        <section id="todo-section" class="todo-section" hidden>
+          <div class="todo-header">
+            <div class="todo-header-left">
+              <div class="todo-icon"><i class="fa-solid fa-circle-check"></i></div>
+              <h2 class="todo-title">自分のタスク</h2>
+              <span class="todo-count" id="todo-count"></span>
+            </div>
+            <button class="todo-toggle-btn" id="todo-toggle-btn" title="折りたたむ">
+              <i class="fa-solid fa-chevron-up"></i>
+            </button>
+          </div>
+          <div class="todo-body" id="todo-body">
+            <ul class="todo-list todo-assigned-list" id="todo-assigned-list"></ul>
+            <ul class="todo-list" id="todo-list"></ul>
+            <div class="todo-add-row">
+              <input type="text" id="todo-input" class="todo-input" placeholder="新しいタスクを入力..." maxlength="100" autocomplete="off">
+              <select id="todo-due-select" class="todo-due-select">
+                <option value="">期限なし</option>
+                <option value="今日">今日</option>
+                <option value="明日">明日</option>
+              </select>
+              <button class="todo-add-btn" id="todo-add-btn">
+                <i class="fa-solid fa-plus"></i> 追加
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- お気に入りセクション（JS が制御） -->
+        <section id="favorites-section" class="favorites-section category-section" hidden>
+          <div class="category-header">
+            <div class="category-icon" style="background: linear-gradient(135deg, #ffcc00, #dd9900)">
+              <i class="fa-solid fa-star"></i>
+            </div>
+            <h2 class="category-title">お気に入り</h2>
+            <span class="category-count" id="favorites-count">0 件</span>
+          </div>
+          <div class="card-grid" id="favorites-grid"></div>
+        </section>
+
+        <!-- マイセクション（JS が動的挿入） -->
+
+      </div><!-- /personal-space-body -->
+    </div><!-- /space-personal -->
+
+    <!-- ==================== 全社共有スペース wrapper ==================== -->
+    <div class="space-wrapper space-shared" id="space-shared">
+      <div class="area-header area-shared" id="area-shared-header">
+        <div class="area-header-title">
+          <i class="fa-solid fa-users"></i>
+          <span>全社共有スペース</span>
+        </div>
+        <p class="area-header-desc">全社員に共有されます。お知らせ・リンク集・各部門の資料などをここで確認・管理できます。天気・太陽光データはクイックリンク内の <i class="fa-solid fa-solar-panel" style="color:var(--accent-orange)"></i> アイコンから確認できます。</p>
+      </div>
+      <div class="space-body" id="shared-space-body">
+
+        <!-- 天気ウィジェット（通常は非表示、太陽光カードで展開） -->
+        <section id="weather-widget" class="weather-widget" hidden>
       <div class="weather-section-header">
         <div class="weather-title-area">
           <i class="fa-solid fa-cloud-sun weather-section-icon"></i>
@@ -293,7 +296,10 @@
       </div>
     </section>
 
-    <!-- カードは script.js が動的に挿入します -->
+        <!-- 公開セクション（JS が動的挿入） -->
+
+      </div><!-- /shared-space-body -->
+    </div><!-- /space-shared -->
 
     <!-- 検索結果（直接表示） -->
     <div id="search-results-section" class="search-results-section" hidden></div>

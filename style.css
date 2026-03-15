@@ -9339,26 +9339,57 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   エリアヘッダー（個人 / 全社共有）
+   スペース wrapper（個人 / 全社共有）
    =========================== */
+.space-wrapper {
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-xl);
+  overflow: hidden;
+}
+.space-personal {
+  border-top: 3px solid var(--accent-purple);
+}
+.space-shared {
+  border-top: 3px solid var(--accent-blue);
+}
+.space-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* space-body 直下のセクションは margin-bottom を 0 に（gap で制御） */
+.space-body > .category-section,
+.space-body > .todo-section,
+.space-body > .favorites-section,
+.space-body > .external-tools {
+  margin-bottom: 0;
+}
+/* 追加ボタンエリアも margin なし */
+.space-body > .btn-add-category-wrap {
+  margin: 4px 0 0;
+}
+
+/* エリアヘッダー（個人 / 全社共有） */
 .area-header {
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 10px 14px 10px 16px;
-  margin: 16px 0 8px;
-  border-left: 3px solid transparent;
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
-  background: var(--bg-glass);
-  border-top: 1px solid var(--border-glass);
-  border-right: 1px solid var(--border-glass);
+  margin: 0;
+  border-left: none;
+  border-radius: 0;
+  background: var(--bg-secondary);
+  border-top: none;
+  border-right: none;
   border-bottom: 1px solid var(--border-glass);
 }
 .area-personal {
-  border-left-color: var(--accent-purple);
+  /* 上部ボーダーは space-personal で管理 */
 }
 .area-shared {
-  border-left-color: var(--accent-blue);
+  /* 上部ボーダーは space-shared で管理 */
 }
 .area-header-title {
   display: flex;
@@ -9379,8 +9410,14 @@ html.font-xl { font-size: 21px; }
   padding-left: 22px; /* アイコン幅分インデント */
 }
 
-/* お気に入りのみ表示モード時は個人ヘッダーのみ表示、共有は非表示 */
-.main.favorites-only #area-shared-header { display: none; }
+/* モバイル: wrapper のパディングを詰める */
+@media (max-width: 768px) {
+  .space-body { padding: 8px; gap: 8px; }
+  .space-wrapper { margin-bottom: 12px; }
+}
+
+/* お気に入りのみ表示モード時は共有スペース全体を非表示 */
+.main.favorites-only #space-shared { display: none; }
 
 /* ===========================
    App Layout Wrapper
