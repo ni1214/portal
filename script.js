@@ -2662,20 +2662,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     filterShareUserList(e.target.value);
   });
 
-  // ===== ベル通知ボタン（お知らせパネル開閉） =====
+  // ===== ベル通知ボタン（お知らせ追加モーダルを開く） =====
   document.getElementById('btn-notice-bell').addEventListener('click', () => {
-    const panel = document.getElementById('notice-panel');
-    if (!panel) return;
-    if (panel.hidden) {
-      panel.hidden = false;
-      if (state.currentUsername) markAllNoticesRead();
-    } else {
-      panel.hidden = true;
-    }
-  });
-  document.getElementById('notice-panel-close').addEventListener('click', () => {
-    const panel = document.getElementById('notice-panel');
-    if (panel) panel.hidden = true;
+    openNoticeModal(null);
   });
 
   // ===== プライベートセクションモーダル =====
