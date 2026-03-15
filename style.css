@@ -8773,6 +8773,50 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
+   エリアヘッダー（個人 / 全社共有）
+   =========================== */
+.area-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px 10px 16px;
+  margin: 16px 0 8px;
+  border-left: 3px solid transparent;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: var(--bg-glass);
+  border-top: 1px solid var(--border-glass);
+  border-right: 1px solid var(--border-glass);
+  border-bottom: 1px solid var(--border-glass);
+}
+.area-personal {
+  border-left-color: var(--accent-purple);
+}
+.area-shared {
+  border-left-color: var(--accent-blue);
+}
+.area-header-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+.area-personal .area-header-title i { color: var(--accent-purple); }
+.area-shared   .area-header-title i { color: var(--accent-blue); }
+.area-header-desc {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  padding-left: 22px; /* アイコン幅分インデント */
+}
+
+/* お気に入りのみ表示モード時は個人ヘッダーのみ表示、共有は非表示 */
+.main.favorites-only #area-shared-header { display: none; }
+
+/* ===========================
    App Layout Wrapper
    =========================== */
 .app-layout {
