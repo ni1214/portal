@@ -1213,149 +1213,179 @@
     </div>
   </div>
 
-  <!-- ==================== メール返信アシスタント モーダル ==================== -->
+  <!-- ==================== メールアシスタント モーダル ==================== -->
   <div class="modal-overlay" id="email-modal">
     <div class="email-modal-inner">
 
       <div class="email-modal-header">
-        <span><i class="fa-solid fa-envelope-open-text"></i> メール返信アシスタント</span>
+        <span><i class="fa-solid fa-envelope-open-text"></i> メールアシスタント</span>
         <button class="email-modal-close" id="email-modal-close" title="閉じる">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
-      <div class="email-modal-body">
+      <!-- タブバー -->
+      <div class="email-tabs">
+        <button class="email-tab active" data-tab="compose">
+          <i class="fa-solid fa-pen-to-square"></i> メール作成
+        </button>
+        <button class="email-tab" data-tab="profile">
+          <i class="fa-solid fa-id-card"></i> プロフィール・署名
+        </button>
+      </div>
 
-        <!-- 左サイドバー：パターン一覧 -->
-        <div class="email-profile-sidebar">
-          <div class="email-sidebar-label">返信パターン</div>
-          <div class="email-profile-list" id="email-profile-list"></div>
-          <button class="email-profile-add-btn" id="email-profile-add">
-            <i class="fa-solid fa-plus"></i> パターンを追加
-          </button>
+      <!-- ===== タブ1：メール作成 ===== -->
+      <div class="email-tab-content" id="email-tab-compose">
+
+        <!-- ステップ1：新規/返信選択 -->
+        <div class="email-type-select" id="email-type-select">
+          <p class="email-type-lead">何をしますか？</p>
+          <div class="email-type-btns">
+            <button class="email-type-btn" id="email-type-new" data-type="new">
+              <i class="fa-solid fa-envelope"></i>
+              <span>新規メール</span>
+              <small>一から作成する</small>
+            </button>
+            <button class="email-type-btn" id="email-type-reply" data-type="reply">
+              <i class="fa-solid fa-reply"></i>
+              <span>返信メール</span>
+              <small>受信メールに返信する</small>
+            </button>
+          </div>
         </div>
 
-        <!-- 右エリア：タブ付きメイン -->
-        <div class="email-main-area">
+        <!-- ステップ2：作成フォーム（選択後表示） -->
+        <div class="email-compose-form" id="email-compose-form" hidden>
 
-          <!-- タブバー -->
-          <div class="email-tabs">
-            <button class="email-tab active" data-tab="compose">
-              <i class="fa-solid fa-pen-to-square"></i> 返信を作成
-            </button>
-            <button class="email-tab" data-tab="profile">
-              <i class="fa-solid fa-id-card"></i> プロフィール・署名
-            </button>
-          </div>
+          <button class="email-back-btn" id="email-back-btn">
+            <i class="fa-solid fa-arrow-left"></i> 選択に戻る
+          </button>
 
-          <!-- ===== タブ1：返信作成 ===== -->
-          <div class="email-tab-content" id="email-tab-compose">
-
-            <!-- プロンプト編集 -->
-            <details class="email-prompt-details" id="email-prompt-details">
-              <summary class="email-prompt-summary">
-                <span id="email-selected-profile-name">パターン名</span>
-                <span class="email-prompt-edit-hint"><i class="fa-solid fa-pen"></i> カスタマイズ</span>
-              </summary>
-              <div class="email-prompt-editor">
-                <label class="email-label">パターン名</label>
-                <input type="text" id="email-profile-name" class="email-profile-name-input" placeholder="例：ゼネコン（お客様）" maxlength="30">
-                <label class="email-label">AIへの指示（プロンプト）</label>
-                <textarea id="email-profile-prompt" class="email-profile-prompt-area" rows="8" placeholder="AIにどんな文体・注意点で書いてほしいか入力してください..."></textarea>
-                <div class="email-prompt-actions">
-                  <button class="btn-save-profile" id="email-profile-save">
-                    <i class="fa-solid fa-floppy-disk"></i> 保存
-                  </button>
-                  <button class="btn-danger-sm" id="email-profile-delete" style="display:none">
-                    <i class="fa-solid fa-trash-can"></i> このパターンを削除
-                  </button>
-                </div>
-              </div>
-            </details>
-
-            <!-- 受信メール -->
-            <label class="email-label">受信したメールを貼り付け</label>
-            <textarea id="email-received" class="email-received-area" rows="7" placeholder="返信したいメールをここにそのまま貼り付けてください..."></textarea>
-
-            <!-- 生成ボタン -->
-            <button class="btn-generate" id="email-generate">
-              <i class="fa-solid fa-wand-magic-sparkles"></i> 返信を生成する
-            </button>
-
-            <!-- 出力エリア -->
-            <div class="email-output-area" id="email-output-area" hidden>
-              <div class="email-output-header">
-                <span><i class="fa-solid fa-file-lines"></i> 生成された返信</span>
-                <div class="email-output-header-btns">
-                  <button class="btn-reset-output" id="btn-reset-output">
-                    <i class="fa-solid fa-rotate-left"></i> リセット
-                  </button>
-                  <button class="btn-copy-output" id="btn-copy-output">
-                    <i class="fa-solid fa-copy"></i> コピー
-                  </button>
-                </div>
-              </div>
-              <div class="email-output" id="email-output"></div>
-            </div>
-
-            <!-- APIキー設定（未設定時のみ表示） -->
-            <div class="email-api-key-area" id="email-api-key-area" hidden>
-              <div class="email-api-key-label">
-                <i class="fa-solid fa-key"></i> Gemini APIキーを設定してください
-                <span class="email-api-key-hint">（設定は全員に共有されます）</span>
-              </div>
-              <div class="email-api-key-row">
-                <input type="password" id="email-api-key-input" class="email-api-key-input" placeholder="AIzaSy..." autocomplete="off">
-                <button class="btn-save-apikey" id="email-api-key-save">設定する</button>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- ===== タブ2：プロフィール・署名設定 ===== -->
-          <div class="email-tab-content" id="email-tab-profile" hidden>
-
-            <div class="ep-section-title"><i class="fa-solid fa-user"></i> 個人情報（メールの書き出しに使用）</div>
-            <div class="ep-form-grid">
-              <div class="ep-form-row">
-                <label class="ep-label">正式名前 <span class="ep-required">*</span></label>
-                <input type="text" id="ep-real-name" class="ep-input" placeholder="例：山田 太郎" maxlength="30">
-              </div>
-              <div class="ep-form-row">
-                <label class="ep-label">所属・部署</label>
-                <input type="text" id="ep-department" class="ep-input" placeholder="例：生産管理課" maxlength="50">
-              </div>
-              <div class="ep-form-row">
-                <label class="ep-label">メールアドレス</label>
-                <input type="email" id="ep-email" class="ep-input" placeholder="例：yamada@nikken-fr.co.jp" maxlength="80">
-              </div>
-              <div class="ep-form-row">
-                <label class="ep-label">電話番号</label>
-                <input type="text" id="ep-phone" class="ep-input" placeholder="例：03-XXXX-XXXX" maxlength="30">
-              </div>
-            </div>
-
-            <div class="ep-section-title" style="margin-top:16px">
-              <i class="fa-solid fa-signature"></i> 署名テンプレート
-              <span class="ep-hint">プレースホルダー：{realName} {department} {email} {phone}</span>
-            </div>
-            <textarea id="ep-signature" class="ep-signature-area" rows="7" placeholder="署名テンプレートを入力..."></textarea>
-            <div class="ep-signature-preview-label">プレビュー：</div>
-            <div class="ep-signature-preview" id="ep-signature-preview"></div>
-
-            <div class="ep-actions">
-              <button class="btn-save-profile" id="ep-save">
-                <i class="fa-solid fa-floppy-disk"></i> 保存する
-              </button>
-              <button class="btn-reset-sig" id="ep-reset-sig">
-                <i class="fa-solid fa-rotate-left"></i> 署名をデフォルトに戻す
+          <!-- 相手情報 -->
+          <div class="email-form-section">
+            <label class="email-label"><i class="fa-solid fa-user-tie"></i> 相手</label>
+            <div class="email-contact-row">
+              <select class="form-input email-contact-select" id="email-contact-select">
+                <option value="">相手を選択（または新規追加）...</option>
+              </select>
+              <button class="email-contact-add-btn" id="email-contact-add-btn" title="新しい連絡先を追加">
+                <i class="fa-solid fa-plus"></i>
               </button>
             </div>
+            <!-- 新規追加フォーム -->
+            <div class="email-new-contact" id="email-new-contact" hidden>
+              <input type="text" id="email-contact-company" class="form-input" placeholder="会社名（例：山田建設株式会社）" maxlength="60">
+              <input type="text" id="email-contact-person" class="form-input" placeholder="担当者名（例：山田 太郎様）" maxlength="40">
+              <div class="email-contact-actions">
+                <button class="btn-modal-primary" id="email-contact-save-btn" style="font-size:0.8rem;padding:5px 12px;">
+                  <i class="fa-solid fa-floppy-disk"></i> 保存して選択
+                </button>
+                <button class="btn-modal-secondary" id="email-contact-cancel-btn" style="font-size:0.8rem;padding:5px 12px;">キャンセル</button>
+              </div>
+            </div>
+          </div>
 
+          <!-- 受信メール（返信モード時のみ表示） -->
+          <div class="email-form-section" id="email-section-received" hidden>
+            <label class="email-label"><i class="fa-solid fa-inbox"></i> 受信したメール（貼り付け）</label>
+            <textarea id="email-received" class="email-received-area" rows="5" placeholder="返信したいメールをここにそのまま貼り付けてください..."></textarea>
+          </div>
+
+          <!-- 伝えたいこと -->
+          <div class="email-form-section">
+            <label class="email-label" id="email-content-label"><i class="fa-solid fa-comment-dots"></i> 伝えたいこと</label>
+            <textarea id="email-content" class="email-content-area" rows="4" placeholder="箇条書きや簡単なメモで大丈夫です。AIが整えます..."></textarea>
+          </div>
+
+          <!-- 文体選択 -->
+          <div class="email-form-section">
+            <label class="email-label"><i class="fa-solid fa-sliders"></i> 文体</label>
+            <div class="email-tone-btns" id="email-tone-btns">
+              <button class="email-tone-btn active" data-tone="business">ビジネス</button>
+              <button class="email-tone-btn" data-tone="polite">丁寧</button>
+              <button class="email-tone-btn" data-tone="internal">社内</button>
+              <button class="email-tone-btn" data-tone="strict">厳格</button>
+            </div>
+          </div>
+
+          <!-- 生成ボタン -->
+          <button class="btn-generate" id="email-generate">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> メールを生成する
+          </button>
+
+          <!-- 出力エリア -->
+          <div class="email-output-area" id="email-output-area" hidden>
+            <div class="email-output-header">
+              <span><i class="fa-solid fa-file-lines"></i> 生成されたメール</span>
+              <div class="email-output-header-btns">
+                <button class="btn-reset-output" id="btn-reset-output">
+                  <i class="fa-solid fa-rotate-left"></i> リセット
+                </button>
+                <button class="btn-copy-output" id="btn-copy-output">
+                  <i class="fa-solid fa-copy"></i> コピー
+                </button>
+              </div>
+            </div>
+            <div class="email-output" id="email-output"></div>
+          </div>
+
+          <!-- APIキー設定（未設定時のみ表示） -->
+          <div class="email-api-key-area" id="email-api-key-area" hidden>
+            <div class="email-api-key-label">
+              <i class="fa-solid fa-key"></i> Gemini APIキーを設定してください
+              <span class="email-api-key-hint">（設定は全員に共有されます）</span>
+            </div>
+            <div class="email-api-key-row">
+              <input type="password" id="email-api-key-input" class="email-api-key-input" placeholder="AIzaSy..." autocomplete="off">
+              <button class="btn-save-apikey" id="email-api-key-save">設定する</button>
+            </div>
           </div>
 
         </div>
       </div>
+
+      <!-- ===== タブ2：プロフィール・署名設定 ===== -->
+      <div class="email-tab-content" id="email-tab-profile" hidden>
+
+        <div class="ep-section-title"><i class="fa-solid fa-user"></i> 個人情報（メールの書き出しに使用）</div>
+        <div class="ep-form-grid">
+          <div class="ep-form-row">
+            <label class="ep-label">正式名前 <span class="ep-required">*</span></label>
+            <input type="text" id="ep-real-name" class="ep-input" placeholder="例：山田 太郎" maxlength="30">
+          </div>
+          <div class="ep-form-row">
+            <label class="ep-label">所属・部署</label>
+            <input type="text" id="ep-department" class="ep-input" placeholder="例：生産管理課" maxlength="50">
+          </div>
+          <div class="ep-form-row">
+            <label class="ep-label">メールアドレス</label>
+            <input type="email" id="ep-email" class="ep-input" placeholder="例：yamada@nikken-fr.co.jp" maxlength="80">
+          </div>
+          <div class="ep-form-row">
+            <label class="ep-label">電話番号</label>
+            <input type="text" id="ep-phone" class="ep-input" placeholder="例：03-XXXX-XXXX" maxlength="30">
+          </div>
+        </div>
+
+        <div class="ep-section-title" style="margin-top:16px">
+          <i class="fa-solid fa-signature"></i> 署名テンプレート
+          <span class="ep-hint">プレースホルダー：{realName} {department} {email} {phone}</span>
+        </div>
+        <textarea id="ep-signature" class="ep-signature-area" rows="7" placeholder="署名テンプレートを入力..."></textarea>
+        <div class="ep-signature-preview-label">プレビュー：</div>
+        <div class="ep-signature-preview" id="ep-signature-preview"></div>
+
+        <div class="ep-actions">
+          <button class="btn-save-profile" id="ep-save">
+            <i class="fa-solid fa-floppy-disk"></i> 保存する
+          </button>
+          <button class="btn-reset-sig" id="ep-reset-sig">
+            <i class="fa-solid fa-rotate-left"></i> 署名をデフォルトに戻す
+          </button>
+        </div>
+
+      </div>
+
     </div>
   </div>
 

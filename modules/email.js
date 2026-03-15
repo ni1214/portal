@@ -1,4 +1,4 @@
-// ========== メール返信アシスタント ==========
+// ========== メールアシスタント ==========
 import {
   db, doc, getDoc, getDocs, setDoc, deleteDoc,
   collection, query, orderBy, serverTimestamp
@@ -9,24 +9,13 @@ import { esc } from './utils.js';
 let deps = {};
 export function initEmail(d) { deps = d; }
 
-const DEFAULT_EMAIL_PROFILES = [
-  {
-    id: 'internal', name: '社内向け',
-    prompt: '社内の同僚へのメールです。敬語は使いますが堅すぎず、簡潔で分かりやすい文体で返信を作成してください。要点は箇条書きにしても構いません。件名・宛名・署名は含めないでください。'
-  },
-  {
-    id: 'drawing', name: '作図業者',
-    prompt: '外部の作図業者へのメールです。発注者として丁寧かつ明確に、作業内容・納期・注意点を具体的に伝える文体で返信を作成してください。件名・宛名・署名は含めないでください。'
-  },
-  {
-    id: 'subcontractor', name: '下請け業者',
-    prompt: '下請け業者（協力会社）へのメールです。発注者として丁寧に、工程・品質・安全に関する指示や依頼を明確に伝える文体で返信を作成してください。件名・宛名・署名は含めないでください。'
-  },
-  {
-    id: 'client', name: 'ゼネコン（お客様）',
-    prompt: '元請けゼネコン・お客様へのメールです。最上級の敬語を使い、丁寧かつ誠実な文体で返信を作成してください。懸念事項には真摯に対応する姿勢を示してください。件名・宛名・署名は含めないでください。'
-  }
-];
+// ===== 文体定義 =====
+const TONE_PROMPTS = {
+  business: '標準的なビジネスメールの文体で作成してください。適度な敬語を使い、要件を明確に伝えてください。',
+  polite:   '最上級の敬語を使い、非常に丁寧な文体で作成してください。お客様や目上の方への文体です。',
+  internal: '社内向けの文体で作成してください。敬語は使いますが簡潔に、要点は箇条書きにしても構いません。',
+  strict:   '事実を簡潔かつ明確に伝える文体で作成してください。感情を排除し、業務的な内容を端的にまとめてください。',
+};
 
 const DEFAULT_SIGNATURE_TEMPLATE =
 `━━━━━━━━━━━━━━━━━━━━━━
@@ -36,219 +25,221 @@ TEL：{phone}
 E-mail：{email}
 ━━━━━━━━━━━━━━━━━━━━━━`;
 
-let emailProfiles = [];
-let selectedEmailProfileId = 'internal';
-let geminiApiKey = null;
+// ===== モジュール内状態 =====
+let geminiApiKey    = null;
 let emailModalLoaded = false;
 let userEmailProfile = { realName: '', department: '', email: '', phone: '', signatureTemplate: '' };
+let emailContacts   = [];       // [{ id, companyName, personName }]
+let emailMode       = null;     // 'new' | 'reply'
+let selectedTone    = 'business';
+let selectedContactId = null;
 
+// ===== 初期データ読み込み =====
 export async function loadEmailData() {
   try {
     const snap = await getDoc(doc(db, 'portal', 'config'));
     geminiApiKey = snap.data()?.geminiApiKey || null;
   } catch (_) {}
 
-  let userProfiles = [];
   if (state.currentUsername) {
-    try {
-      const snap = await getDocs(
-        query(collection(db, 'users', state.currentUsername, 'email_profiles'), orderBy('createdAt', 'asc'))
-      );
-      userProfiles = snap.docs.map(d => ({ id: d.id, isCustom: true, ...d.data() }));
-    } catch (_) {}
-  }
-
-  const mergedDefaults = DEFAULT_EMAIL_PROFILES.map(p => {
-    const override = userProfiles.find(u => u.id === p.id);
-    return override ? { ...p, ...override, isDefault: true } : { ...p, isDefault: true };
-  });
-  const onlyCustom = userProfiles.filter(u => !DEFAULT_EMAIL_PROFILES.find(d => d.id === u.id));
-  emailProfiles = [...mergedDefaults, ...onlyCustom];
-
-  if (state.currentUsername) {
+    await loadEmailContacts();
     try {
       const profSnap = await getDoc(doc(db, 'users', state.currentUsername, 'data', 'email_profile'));
-      if (profSnap.exists()) {
-        userEmailProfile = { ...userEmailProfile, ...profSnap.data() };
-      }
+      if (profSnap.exists()) userEmailProfile = { ...userEmailProfile, ...profSnap.data() };
     } catch (_) {}
   }
 
   updateApiKeyUI();
-  renderEmailProfileList();
-  selectEmailProfile(selectedEmailProfileId);
+  renderContactSelect();
   renderProfileTab();
   emailModalLoaded = true;
 }
 
+// ===== 連絡先読み込み =====
+async function loadEmailContacts() {
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'users', state.currentUsername, 'email_contacts'), orderBy('createdAt', 'asc'))
+    );
+    emailContacts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (_) {
+    emailContacts = [];
+  }
+}
+
+// ===== 連絡先セレクト描画 =====
+function renderContactSelect() {
+  const sel = document.getElementById('email-contact-select');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">相手を選択（または新規追加）...</option>';
+  emailContacts.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = `${c.companyName}　${c.personName}`;
+    sel.appendChild(opt);
+  });
+  if (current && emailContacts.find(c => c.id === current)) sel.value = current;
+}
+
+// ===== 連絡先保存 =====
+export async function saveNewContact() {
+  if (!state.currentUsername) { alert('ユーザーネームを設定してください'); return; }
+  const company = document.getElementById('email-contact-company')?.value.trim();
+  const person  = document.getElementById('email-contact-person')?.value.trim();
+  if (!company && !person) { alert('会社名または担当者名を入力してください'); return; }
+
+  const id = `contact_${Date.now()}`;
+  try {
+    await setDoc(doc(db, 'users', state.currentUsername, 'email_contacts', id), {
+      companyName: company || '',
+      personName:  person  || '',
+      createdAt:   serverTimestamp(),
+    });
+    emailContacts.push({ id, companyName: company || '', personName: person || '' });
+    renderContactSelect();
+    document.getElementById('email-contact-select').value = id;
+    selectedContactId = id;
+
+    // フォームを閉じる
+    document.getElementById('email-new-contact').hidden = true;
+    document.getElementById('email-contact-company').value = '';
+    document.getElementById('email-contact-person').value  = '';
+  } catch (err) {
+    console.error('連絡先保存エラー:', err);
+    alert('保存に失敗しました');
+  }
+}
+
+// ===== APIキーUI更新 =====
 function updateApiKeyUI() {
   const area = document.getElementById('email-api-key-area');
   if (!area) return;
   area.hidden = !!geminiApiKey;
 }
 
-export function renderEmailProfileList() {
-  const list = document.getElementById('email-profile-list');
-  if (!list) return;
-  list.innerHTML = '';
-  emailProfiles.forEach(p => {
-    const wrap = document.createElement('div');
-    wrap.className = 'email-profile-list-item';
+// ===== モード設定（新規/返信） =====
+export function setEmailMode(mode) {
+  emailMode = mode;
+  const form       = document.getElementById('email-compose-form');
+  const typeSelect = document.getElementById('email-type-select');
+  const recvSection = document.getElementById('email-section-received');
+  const contentLabel = document.getElementById('email-content-label');
+  const generateBtn  = document.getElementById('email-generate');
 
-    const btn = document.createElement('button');
-    btn.className = `email-profile-item${p.id === selectedEmailProfileId ? ' active' : ''}`;
-    btn.dataset.id = p.id;
-    btn.innerHTML = `<span>${esc(p.name)}</span>${p.isDefault ? '' : '<span class="email-custom-tag">カスタム</span>'}`;
-    btn.addEventListener('click', () => selectEmailProfile(p.id));
-    wrap.appendChild(btn);
+  typeSelect.hidden = true;
+  form.hidden = false;
 
-    if (!p.isDefault) {
-      const renameBtn = document.createElement('button');
-      renameBtn.className = 'email-profile-rename-btn';
-      renameBtn.title = '名前を変更';
-      renameBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>';
-      renameBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        selectEmailProfile(p.id);
-        document.getElementById('email-prompt-details').open = true;
-        setTimeout(() => {
-          const nameInput = document.getElementById('email-profile-name');
-          nameInput.select();
-          nameInput.focus();
-        }, 50);
-      });
-      wrap.appendChild(renameBtn);
-    }
-    list.appendChild(wrap);
+  if (mode === 'reply') {
+    recvSection.hidden = false;
+    if (contentLabel) contentLabel.innerHTML = '<i class="fa-solid fa-comment-dots"></i> 追加で伝えたいこと（省略可）';
+    if (generateBtn) generateBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 返信メールを生成する';
+  } else {
+    recvSection.hidden = true;
+    if (contentLabel) contentLabel.innerHTML = '<i class="fa-solid fa-comment-dots"></i> 伝えたいこと';
+    if (generateBtn) generateBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> メールを生成する';
+  }
+
+  // 出力エリアをリセット
+  document.getElementById('email-output-area').hidden = true;
+  document.getElementById('email-output').textContent = '';
+}
+
+// ===== 選択に戻る =====
+export function resetEmailMode() {
+  emailMode = null;
+  document.getElementById('email-compose-form').hidden = true;
+  document.getElementById('email-type-select').hidden = false;
+  document.getElementById('email-output-area').hidden = true;
+  document.getElementById('email-output').textContent = '';
+  document.getElementById('email-new-contact').hidden = true;
+}
+
+// ===== 文体選択 =====
+export function selectTone(tone) {
+  selectedTone = tone;
+  document.querySelectorAll('.email-tone-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tone === tone);
   });
 }
 
-export function selectEmailProfile(id) {
-  const profile = emailProfiles.find(p => p.id === id);
-  if (!profile) return;
-  selectedEmailProfileId = id;
-  document.querySelectorAll('.email-profile-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.id === id);
-  });
-  document.getElementById('email-selected-profile-name').textContent = profile.name;
-  document.getElementById('email-profile-name').value = profile.name;
-  document.getElementById('email-profile-prompt').value = profile.prompt;
-  const delBtn = document.getElementById('email-profile-delete');
-  delBtn.style.display = profile.isDefault ? 'none' : 'inline-flex';
-}
-
-export async function saveEmailProfile() {
-  if (!state.currentUsername) { alert('ユーザーネームを設定してください'); return; }
-  const name   = document.getElementById('email-profile-name').value.trim();
-  const prompt = document.getElementById('email-profile-prompt').value.trim();
-  if (!name || !prompt) return;
-  try {
-    await setDoc(
-      doc(db, 'users', state.currentUsername, 'email_profiles', selectedEmailProfileId),
-      { name, prompt, updatedAt: serverTimestamp() }, { merge: true }
-    );
-    const idx = emailProfiles.findIndex(p => p.id === selectedEmailProfileId);
-    if (idx !== -1) { emailProfiles[idx].name = name; emailProfiles[idx].prompt = prompt; }
-    document.getElementById('email-selected-profile-name').textContent = name;
-    renderEmailProfileList();
-    const btn = document.getElementById('email-profile-save');
-    const orig = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存しました';
-    setTimeout(() => { btn.innerHTML = orig; }, 1500);
-  } catch (err) { console.error('プロファイル保存エラー:', err); }
-}
-
-export async function addEmailProfile() {
-  if (!state.currentUsername) { alert('ユーザーネームを設定してください'); return; }
-  const id = `custom_${Date.now()}`;
-  const newProfile = { id, name: '新しいパターン', prompt: '丁寧な文体でメールの返信を作成してください。件名・宛名・署名は含めないでください。', isCustom: true };
-  try {
-    await setDoc(
-      doc(db, 'users', state.currentUsername, 'email_profiles', id),
-      { name: newProfile.name, prompt: newProfile.prompt, createdAt: serverTimestamp() }
-    );
-    emailProfiles.push(newProfile);
-    renderEmailProfileList();
-    selectEmailProfile(id);
-    document.getElementById('email-prompt-details').open = true;
-    setTimeout(() => {
-      const nameInput = document.getElementById('email-profile-name');
-      nameInput.select();
-      nameInput.focus();
-    }, 50);
-  } catch (err) { console.error('プロファイル追加エラー:', err); }
-}
-
-export async function deleteEmailProfile() {
-  const profile = emailProfiles.find(p => p.id === selectedEmailProfileId);
-  if (!profile || profile.isDefault) return;
-  const ok = await deps.confirmDelete?.(`「${profile.name}」を削除しますか？`);
-  if (!ok) return;
-  try {
-    await deleteDoc(doc(db, 'users', state.currentUsername, 'email_profiles', selectedEmailProfileId));
-    emailProfiles = emailProfiles.filter(p => p.id !== selectedEmailProfileId);
-    selectedEmailProfileId = emailProfiles[0]?.id || 'internal';
-    renderEmailProfileList();
-    selectEmailProfile(selectedEmailProfileId);
-  } catch (err) { console.error('プロファイル削除エラー:', err); }
-}
-
-export async function saveGeminiApiKey() {
-  const key = document.getElementById('email-api-key-input').value.trim();
-  if (!key) return;
-  try {
-    await setDoc(doc(db, 'portal', 'config'), { geminiApiKey: key }, { merge: true });
-    geminiApiKey = key;
-    document.getElementById('email-api-key-input').value = '';
-    updateApiKeyUI();
-  } catch (err) { console.error('APIキー保存エラー:', err); }
-}
-
-function fillSignature(template) {
-  return template
-    .replace(/\{realName\}/g,   userEmailProfile.realName   || '（名前未設定）')
-    .replace(/\{department\}/g, userEmailProfile.department  || '（所属未設定）')
-    .replace(/\{email\}/g,      userEmailProfile.email        || '（メール未設定）')
-    .replace(/\{phone\}/g,      userEmailProfile.phone        || '（電話未設定）');
-}
-
-export async function generateEmailReply() {
+// ===== メール生成 =====
+export async function generateEmail() {
   if (!geminiApiKey) {
     document.getElementById('email-api-key-area').hidden = false;
     document.getElementById('email-api-key-input').focus();
     return;
   }
-  const received = document.getElementById('email-received').value.trim();
-  if (!received) { document.getElementById('email-received').focus(); return; }
-  const profile = emailProfiles.find(p => p.id === selectedEmailProfileId);
-  if (!profile) return;
 
-  const btn = document.getElementById('email-generate');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中...';
-  const outputArea = document.getElementById('email-output-area');
-  outputArea.hidden = true;
+  const content = document.getElementById('email-content')?.value.trim();
+  if (!content && emailMode === 'new') {
+    document.getElementById('email-content')?.focus();
+    return;
+  }
 
-  const senderName = userEmailProfile.realName ? `日建フレメックスの${userEmailProfile.realName}` : '日建フレメックスの担当者';
+  const received = emailMode === 'reply' ? document.getElementById('email-received')?.value.trim() : '';
+  if (emailMode === 'reply' && !received) {
+    document.getElementById('email-received')?.focus();
+    return;
+  }
+
+  // 相手情報
+  const contactId = document.getElementById('email-contact-select')?.value;
+  const contact   = emailContacts.find(c => c.id === contactId);
+  const toName    = contact ? `${contact.companyName}　${contact.personName}`.trim() : '（相手未選択）';
+
+  const senderName  = userEmailProfile.realName ? `日建フレメックスの${userEmailProfile.realName}` : '日建フレメックスの担当者';
   const sigTemplate = userEmailProfile.signatureTemplate || DEFAULT_SIGNATURE_TEMPLATE;
   const filledSig   = fillSignature(sigTemplate);
+  const tonePrompt  = TONE_PROMPTS[selectedTone] || TONE_PROMPTS.business;
 
-  const fullPrompt = `あなたは日本の建設会社「日建フレメックス」の社員（${senderName}）です。以下の受信メールに対する返信文を作成してください。
+  let fullPrompt = '';
+  if (emailMode === 'new') {
+    fullPrompt = `あなたは日本の建設会社「日建フレメックス」の社員（${senderName}）です。
+以下の条件でビジネスメールを作成してください。
 
-【返信パターン：${profile.name}】
-${profile.prompt}
+【宛先】${toName}
+【文体指示】${tonePrompt}
+【伝えたいこと】
+${content}
 
 【必須ルール】
-- 返信文の書き出しは必ず「${senderName}です。」から始めてください
-- 件名・宛名は含めないでください
-- 返信本文の最後に、以下の署名をそのまま追加してください（改変不可）：
+- 件名（Subject:）を1行目に書いてください
+- 宛名（例：〇〇株式会社 〇〇様）を2行目に書いてください
+- 書き出しは「お世話になっております。${senderName}です。」から始めてください
+- メール本文の最後に以下の署名をそのまま追加してください（改変不可）：
+
+${filledSig}
+
+メール全文：`;
+  } else {
+    fullPrompt = `あなたは日本の建設会社「日建フレメックス」の社員（${senderName}）です。
+以下の受信メールに対する返信文を作成してください。
+
+【返信相手】${toName}
+【文体指示】${tonePrompt}
+${content ? `【追加で伝えたいこと】\n${content}` : ''}
+
+【必須ルール】
+- 件名（Subject: Re: ○○）を1行目に書いてください
+- 宛名（例：〇〇株式会社 〇〇様）を2行目に書いてください
+- 書き出しは「お世話になっております。${senderName}です。」から始めてください
+- 受信メールの内容に沿って、つじつまが合う返信を作成してください
+- メール本文の最後に以下の署名をそのまま追加してください（改変不可）：
 
 ${filledSig}
 
 【受信したメール】
 ${received}
 
-返信文：`;
+返信全文：`;
+  }
+
+  const btn = document.getElementById('email-generate');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中...';
+  const outputArea = document.getElementById('email-output-area');
+  outputArea.hidden = true;
 
   try {
     const res = await fetch(
@@ -258,7 +249,7 @@ ${received}
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: fullPrompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+          generationConfig: { temperature: 0.7, maxOutputTokens: 1200 }
         })
       }
     );
@@ -277,10 +268,13 @@ ${received}
     console.error('Gemini APIエラー:', err);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 返信を生成する';
+    btn.innerHTML = emailMode === 'reply'
+      ? '<i class="fa-solid fa-wand-magic-sparkles"></i> 返信メールを生成する'
+      : '<i class="fa-solid fa-wand-magic-sparkles"></i> メールを生成する';
   }
 }
 
+// ===== コピー =====
 export function copyEmailOutput() {
   const text = document.getElementById('email-output').textContent;
   navigator.clipboard.writeText(text).then(() => {
@@ -291,11 +285,34 @@ export function copyEmailOutput() {
   });
 }
 
+// ===== リセット =====
 export function resetEmailOutput() {
   document.getElementById('email-output-area').hidden = true;
   document.getElementById('email-output').textContent = '';
 }
 
+// ===== Gemini APIキー保存 =====
+export async function saveGeminiApiKey() {
+  const key = document.getElementById('email-api-key-input').value.trim();
+  if (!key) return;
+  try {
+    await setDoc(doc(db, 'portal', 'config'), { geminiApiKey: key }, { merge: true });
+    geminiApiKey = key;
+    document.getElementById('email-api-key-input').value = '';
+    updateApiKeyUI();
+  } catch (err) { console.error('APIキー保存エラー:', err); }
+}
+
+// ===== 署名補完 =====
+function fillSignature(template) {
+  return template
+    .replace(/\{realName\}/g,   userEmailProfile.realName   || '（名前未設定）')
+    .replace(/\{department\}/g, userEmailProfile.department  || '（所属未設定）')
+    .replace(/\{email\}/g,      userEmailProfile.email        || '（メール未設定）')
+    .replace(/\{phone\}/g,      userEmailProfile.phone        || '（電話未設定）');
+}
+
+// ===== プロフィールタブ描画 =====
 function renderProfileTab() {
   document.getElementById('ep-real-name').value   = userEmailProfile.realName   || '';
   document.getElementById('ep-department').value  = userEmailProfile.department  || '';
@@ -338,6 +355,7 @@ export function resetSignatureTemplate() {
   updateSignaturePreview(DEFAULT_SIGNATURE_TEMPLATE);
 }
 
+// ===== タブ切替 =====
 export function switchEmailTab(tabId) {
   document.querySelectorAll('.email-tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tabId);
@@ -347,6 +365,7 @@ export function switchEmailTab(tabId) {
   });
 }
 
+// ===== モーダル開閉 =====
 export function openEmailModal() {
   document.getElementById('email-modal').classList.add('visible');
   if (!emailModalLoaded) loadEmailData();

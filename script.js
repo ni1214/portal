@@ -104,10 +104,10 @@ import {
 
 import {
   initEmail,
-  loadEmailData, renderEmailProfileList, selectEmailProfile,
-  saveEmailProfile, addEmailProfile, deleteEmailProfile,
-  saveGeminiApiKey,
-  generateEmailReply, copyEmailOutput, resetEmailOutput,
+  loadEmailData,
+  saveGeminiApiKey, saveNewContact,
+  generateEmail, copyEmailOutput, resetEmailOutput,
+  setEmailMode, resetEmailMode, selectTone,
   saveUserEmailProfile, resetSignatureTemplate, updateSignaturePreview,
   switchEmailTab, openEmailModal, closeEmailModal
 } from './modules/email.js';
@@ -2467,19 +2467,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Enter') document.getElementById('todo-add-btn').click();
   });
 
-  // ===== メール返信アシスタント =====
+  // ===== メールアシスタント =====
   document.getElementById('btn-email-assist').addEventListener('click', openEmailModal);
   document.getElementById('email-modal-close').addEventListener('click', closeEmailModal);
-  document.getElementById('email-profile-save').addEventListener('click', saveEmailProfile);
-  document.getElementById('email-profile-delete').addEventListener('click', deleteEmailProfile);
-  document.getElementById('email-profile-add').addEventListener('click', addEmailProfile);
-  document.getElementById('email-generate').addEventListener('click', generateEmailReply);
+  // 新規/返信選択
+  document.getElementById('email-type-new').addEventListener('click', () => setEmailMode('new'));
+  document.getElementById('email-type-reply').addEventListener('click', () => setEmailMode('reply'));
+  document.getElementById('email-back-btn').addEventListener('click', resetEmailMode);
+  // 連絡先
+  document.getElementById('email-contact-add-btn').addEventListener('click', () => {
+    const newContact = document.getElementById('email-new-contact');
+    newContact.hidden = !newContact.hidden;
+  });
+  document.getElementById('email-contact-save-btn').addEventListener('click', saveNewContact);
+  document.getElementById('email-contact-cancel-btn').addEventListener('click', () => {
+    document.getElementById('email-new-contact').hidden = true;
+  });
+  // 文体選択
+  document.getElementById('email-tone-btns').addEventListener('click', e => {
+    const btn = e.target.closest('.email-tone-btn');
+    if (btn) selectTone(btn.dataset.tone);
+  });
+  // 生成・コピー・リセット
+  document.getElementById('email-generate').addEventListener('click', generateEmail);
   document.getElementById('btn-copy-output').addEventListener('click', copyEmailOutput);
   document.getElementById('btn-reset-output').addEventListener('click', resetEmailOutput);
   document.getElementById('email-api-key-save').addEventListener('click', saveGeminiApiKey);
+  // タブ
   document.querySelectorAll('.email-tab').forEach(btn => {
     btn.addEventListener('click', () => switchEmailTab(btn.dataset.tab));
   });
+  // プロフィール
   document.getElementById('ep-save').addEventListener('click', saveUserEmailProfile);
   document.getElementById('ep-reset-sig').addEventListener('click', resetSignatureTemplate);
   document.getElementById('ep-signature').addEventListener('input', e => updateSignaturePreview(e.target.value));

@@ -5798,8 +5798,8 @@ html.font-xl { font-size: 21px; }
   background: var(--bg-secondary);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl);
-  width: min(1290px, 96vw);
-  max-height: 94vh;
+  width: min(680px, 96vw);
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -6258,6 +6258,204 @@ html.font-xl { font-size: 21px; }
   flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
+  padding: 14px 18px;
+}
+.email-tab-content::-webkit-scrollbar { width: 4px; }
+.email-tab-content::-webkit-scrollbar-track { background: transparent; }
+.email-tab-content::-webkit-scrollbar-thumb { background: var(--border-glass); border-radius: 2px; }
+
+/* ===========================
+   メール作成 新UI
+   =========================== */
+
+/* 新規/返信選択 */
+.email-type-select {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 36px 16px;
+  flex: 1;
+}
+.email-type-lead {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+.email-type-btns {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.email-type-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 32px;
+  border: 2px solid var(--border-glass);
+  border-radius: 16px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.18s;
+  min-width: 140px;
+}
+.email-type-btn i { font-size: 1.8rem; color: var(--accent-purple); }
+.email-type-btn span { font-size: 0.95rem; font-weight: 700; color: var(--text-primary); }
+.email-type-btn small { font-size: 0.72rem; color: var(--text-muted); }
+.email-type-btn:hover {
+  border-color: var(--accent-purple);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(167,139,250,0.15);
+}
+
+/* 戻るボタン */
+.email-back-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: color 0.15s;
+  width: fit-content;
+}
+.email-back-btn:hover { color: var(--text-primary); }
+
+/* フォームセクション */
+.email-compose-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.email-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.email-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* 連絡先行 */
+.email-contact-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.email-contact-select { flex: 1; }
+.email-contact-add-btn {
+  background: none;
+  border: 1px solid var(--border-glass);
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.email-contact-add-btn:hover {
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+}
+
+/* 新規連絡先フォーム */
+.email-new-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+}
+.email-contact-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* 伝えたいこと・受信メール入力 */
+.email-content-area {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  padding: 10px 12px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.6;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.email-content-area:focus {
+  outline: none;
+  border-color: var(--accent-purple);
+}
+.email-content-area::placeholder { color: var(--text-muted); }
+
+/* 文体ボタン */
+.email-tone-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.email-tone-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border-glass);
+  border-radius: 20px;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.email-tone-btn:hover {
+  border-color: var(--border-glass-hover);
+  color: var(--text-primary);
+}
+.email-tone-btn.active {
+  background: rgba(167,139,250,0.15);
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+}
+
+/* ライトモード */
+[data-theme="light"] .email-type-btn:hover {
+  box-shadow: 0 6px 20px rgba(102,57,186,0.12);
+}
+[data-theme="light"] .email-content-area {
+  background: #ffffff;
+  border-color: rgba(31,35,40,0.28);
+}
+[data-theme="light"] .email-content-area:focus {
+  border-color: #6639ba;
+}
+[data-theme="light"] .email-tone-btn.active {
+  background: rgba(102,57,186,0.10);
+  border-color: #6639ba;
+  color: #6639ba;
 }
 
 /* ===========================
