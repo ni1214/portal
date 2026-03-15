@@ -10192,6 +10192,38 @@ html.font-xl { font-size: 21px; }
 /* 管理画面の区分selectサイズ */
 .ord-type-select { flex-shrink: 0; min-width: 90px; }
 
+/* モーダルヘッダー（共通） */
+.ord-modal-inner .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ord-modal-inner .modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ord-modal-inner .modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+.ord-modal-inner .modal-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
+}
+
 /* モーダル本体サイズ */
 .ord-modal-inner {
   width: min(680px, 95vw);

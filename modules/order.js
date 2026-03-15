@@ -763,6 +763,28 @@ function bindOrderEvents() {
     }
   });
 
+  // 発注先: 追加
+  document.getElementById('ord-supp-add-btn')?.addEventListener('click', async () => {
+    const name  = document.getElementById('ord-supp-add-name')?.value.trim();
+    const email = document.getElementById('ord-supp-add-email')?.value.trim();
+    const tel   = document.getElementById('ord-supp-add-tel')?.value.trim() || '';
+    const addr  = document.getElementById('ord-supp-add-addr')?.value.trim() || '';
+    if (!name || !email) { alert('会社名とメールアドレスは必須です。'); return; }
+    try {
+      await addDoc(collection(db, 'order_suppliers'), {
+        name, email, tel, address: addr, active: true, createdAt: serverTimestamp()
+      });
+      await loadMasters();
+      renderAdminSuppliers();
+      ['ord-supp-add-name','ord-supp-add-email','ord-supp-add-tel','ord-supp-add-addr'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+    } catch (err) {
+      alert('保存に失敗しました: ' + err.message);
+    }
+  });
+
   // GAS URL保存
   document.getElementById('ord-gas-save-btn')?.addEventListener('click', saveGasUrl);
 }
