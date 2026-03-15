@@ -196,7 +196,7 @@
           <i class="fa-solid fa-user-circle"></i>
           <span>個人スペース</span>
         </div>
-        <p class="area-header-desc">あなただけに表示されます。タスク・お気に入り・マイセクションはほかのユーザーには見えません。</p>
+        <p class="area-header-desc">あなただけに表示されます。タスク・お気に入り・マイカテゴリはほかのユーザーには見えません。</p>
         <p class="area-header-desc area-header-hint" id="area-personal-hint" hidden><i class="fa-solid fa-triangle-exclamation" style="color:var(--accent-orange)"></i> ユーザーネームを設定するとこのエリアのすべての機能が使えます。上の「<strong>名前を設定してください</strong>」をタップしてください。</p>
       </div>
       <div class="space-body" id="personal-space-body">
@@ -242,7 +242,7 @@
           <div class="card-grid" id="favorites-grid"></div>
         </section>
 
-        <!-- マイセクション（JS が動的挿入） -->
+        <!-- マイカテゴリ（JS が動的挿入） -->
 
       </div><!-- /personal-space-body -->
     </div><!-- /space-personal -->
@@ -687,10 +687,10 @@
     </div>
   </div>
 
-  <!-- ==================== マイセクション編集モーダル ==================== -->
+  <!-- ==================== マイカテゴリ編集モーダル ==================== -->
   <div class="modal-overlay" id="private-section-modal">
     <div class="modal-glass">
-      <h3 class="modal-title" id="private-section-modal-title"><i class="fa-solid fa-lock"></i> マイセクションを追加</h3>
+      <h3 class="modal-title" id="private-section-modal-title"><i class="fa-solid fa-lock"></i> マイカテゴリを追加</h3>
       <div class="form-group">
         <label class="form-label">セクション名</label>
         <input type="text" id="private-section-label" class="form-input" placeholder="例：マイリンク">
@@ -916,11 +916,11 @@
         </div>
 
         <div class="guide-section guide-section--admin">
-          <h4 class="guide-section-title"><span class="guide-icon">🔒</span> マイセクション（個人専用）</h4>
+          <h4 class="guide-section-title"><span class="guide-icon">🔒</span> マイカテゴリ（個人専用）</h4>
           <ul class="guide-list">
-            <li>ユーザーネームを設定すると、ページ下部に<strong>「＋ マイセクションを追加」</strong>ボタンが表示されます。</li>
-            <li>マイセクションは<strong>自分だけに表示</strong>され、他のユーザーには一切見えません。</li>
-            <li>マイセクション内のカードは<strong>右クリックで編集・削除</strong>できます。</li>
+            <li>ユーザーネームを設定すると、ページ下部に<strong>「＋ マイカテゴリを追加」</strong>ボタンが表示されます。</li>
+            <li>マイカテゴリは<strong>自分だけに表示</strong>され、他のユーザーには一切見えません。</li>
+            <li>マイカテゴリ内のカードは<strong>右クリックで編集・削除</strong>できます。</li>
             <li>セクション名横の<strong>鉛筆ボタン</strong>でセクション自体を編集・削除できます。</li>
             <li>データはFirestoreに保存されるため、<strong>リロードしても消えません</strong>。</li>
           </ul>
@@ -931,7 +931,7 @@
           <ul class="guide-list">
             <li>初回アクセス時にユーザーネーム設定ダイアログが表示されます。</li>
             <li>ヘッダー右の<strong>「👤 名前」ボタン</strong>をクリックするといつでも変更できます。</li>
-            <li>同じユーザーネームを別のPCで入力すれば、セクション順序やマイセクションを引き継げます。</li>
+            <li>同じユーザーネームを別のPCで入力すれば、セクション順序やマイカテゴリを引き継げます。</li>
           </ul>
         </div>
 

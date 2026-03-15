@@ -575,8 +575,8 @@ function openPrivateSectionModal(cat) {
   state.editingPrivateSectionId = cat?.docId || null;
   state.privateSectionColorIndex = cat?.colorIndex || 1;
   document.getElementById('private-section-modal-title').innerHTML = cat
-    ? '<i class="fa-solid fa-lock"></i> マイセクションを編集'
-    : '<i class="fa-solid fa-lock"></i> マイセクションを追加';
+    ? '<i class="fa-solid fa-lock"></i> マイカテゴリを編集'
+    : '<i class="fa-solid fa-lock"></i> マイカテゴリを追加';
   document.getElementById('private-section-label').value = cat?.label || '';
   document.getElementById('private-section-icon').value = cat?.icon || 'fa-solid fa-star';
   document.getElementById('private-section-delete').style.display = cat ? 'inline-flex' : 'none';
@@ -799,7 +799,7 @@ function renderAllSections() {
     orderedPrivate = orderedAll.filter(c =>  c.isPrivate);
   }
 
-  // マイセクション → 個人スペースへ
+  // マイカテゴリ → 個人スペースへ
   orderedPrivate.forEach(cat => {
     const catCards = state.privateCards.filter(c => c.sectionId === cat.docId).sort((a, b) => (a.order || 0) - (b.order || 0));
     personalBody.appendChild(buildSection(cat, catCards));
@@ -822,13 +822,13 @@ function renderAllSections() {
   sharedAddWrap.querySelector('.btn-add-category').addEventListener('click', () => openCategoryModal(null));
   sharedBody.appendChild(sharedAddWrap);
 
-  // 「マイセクションを追加」→ 個人スペース末尾
+  // 「マイカテゴリを追加」→ 個人スペース末尾
   if (state.currentUsername) {
     const privateAddWrap = document.createElement('div');
     privateAddWrap.className = 'btn-add-category-wrap';
     privateAddWrap.innerHTML = `
       <div class="add-btn-group">
-        <button class="btn-add-private-section"><i class="fa-solid fa-lock"></i> マイセクションを追加</button>
+        <button class="btn-add-private-section"><i class="fa-solid fa-lock"></i> マイカテゴリを追加</button>
         <p class="add-btn-desc add-btn-desc--private"><i class="fa-solid fa-user-secret"></i> 自分だけに表示されます</p>
       </div>`;
     privateAddWrap.querySelector('.btn-add-private-section').addEventListener('click', () => openPrivateSectionModal(null));
@@ -1009,7 +1009,7 @@ function buildSection(cat, cards) {
         <div class="category-icon" style="background:${privGradient}"><i class="${cat.icon || 'fa-solid fa-star'}"></i></div>
         <h2 class="category-title">${esc(cat.label)}<span class="private-badge"><i class="fa-solid fa-lock"></i></span></h2>
         <span class="category-count">${cards.length} 件</span>
-        <button class="btn-edit-category" data-docid="${cat.docId}" title="マイセクションを編集"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn-edit-category" data-docid="${cat.docId}" title="マイカテゴリを編集"><i class="fa-solid fa-pen"></i></button>
         <button class="btn-collapse-section${isCollapsed ? ' collapsed' : ''}" data-section-id="${sectionId}" title="${isCollapsed ? '展開' : '折り畳む'}">
           <i class="fa-solid fa-chevron-up"></i>
         </button>
@@ -2754,7 +2754,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       closePrivateSectionModal();
       renderAllSections();
     } catch (err) {
-      console.error('マイセクション保存エラー:', err);
+      console.error('マイカテゴリ保存エラー:', err);
       alert('保存に失敗しました。');
     } finally {
       btn.disabled = false;

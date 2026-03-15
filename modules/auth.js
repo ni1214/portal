@@ -145,14 +145,14 @@ export function showUsernameModal(isEdit = false) {
     document.getElementById('username-modal-title').innerHTML =
       '<i class="fa-solid fa-user-circle"></i> ユーザーネームを変更';
     document.getElementById('username-modal-desc').innerHTML =
-      '新しいユーザーネームを入力してください。<br>チャット・タスク・マイセクションなどのデータはすべて引き継がれます。';
+      '新しいユーザーネームを入力してください。<br>チャット・タスク・マイカテゴリなどのデータはすべて引き継がれます。';
     document.getElementById('username-submit-text').textContent = '変更する';
     document.getElementById('username-skip').textContent = 'キャンセル';
   } else {
     document.getElementById('username-modal-title').innerHTML =
       '<i class="fa-solid fa-user-circle"></i> ユーザーネームを設定';
     document.getElementById('username-modal-desc').innerHTML =
-      'あなただけの名前を入力してください。<br>お気に入り・テーマ・マイセクションがこの名前に紐づいて保存されます。';
+      'あなただけの名前を入力してください。<br>お気に入り・テーマ・マイカテゴリがこの名前に紐づいて保存されます。';
     document.getElementById('username-submit-text').textContent = '設定して始める';
     document.getElementById('username-skip').textContent = 'スキップ';
   }
