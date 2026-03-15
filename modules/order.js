@@ -580,20 +580,35 @@ ${noteText}
 }
 
 // ===== メール送信 =====
+const NOTIFY_EMAIL = 'takabayashi@framex.co.jp';
+
 async function sendOrderEmail(orderData, orderId) {
   if (!_gasUrl) {
     alert('GAS URLが設定されていません。管理者に設定を依頼してください。');
     return false;
   }
 
-  const { subject, body, toEmail, ccEmail } = buildEmailContent(orderData);
+  const { subject, body, toEmail } = buildEmailContent(orderData);
 
   try {
+    // 発注先へ送信
     await fetch(_gasUrl, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: toEmail, cc: ccEmail, subject, body })
+      body: JSON.stringify({ to: toEmail, subject, body })
+    });
+
+    // 担当者（髙林）へも同内容を送信（誰が発注したかわかるよう控えとして）
+    await fetch(_gasUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: NOTIFY_EMAIL,
+        subject: `【控え】${subject}`,
+        body: `※ これは発注控えです。発注者：${orderData.orderedBy}\n\n${body}`
+      })
     });
 
     if (orderId) {
