@@ -1106,7 +1106,6 @@ function buildLinkCard(card, isFav = false, gradient = '') {
   const favs = getFavorites();
   const isFavorited = favs.includes(card.id);
   const starBtn = `<button class="btn-favorite${isFavorited ? ' active' : ''}" data-id="${card.id}" title="お気に入り"><i class="fa-${isFavorited ? 'solid' : 'regular'} fa-star"></i></button>`;
-  const hideBtn = !isFav ? `<button class="btn-hide-card" data-id="${card.id}" title="このカードを非表示にする"><i class="fa-solid fa-eye-slash"></i></button>` : '';
   const noUrlBadge = hasNoUrl
     ? `<span class="no-url-badge"><i class="fa-solid fa-triangle-exclamation"></i> URL未設定</span>`
     : '';
@@ -1116,7 +1115,6 @@ function buildLinkCard(card, isFav = false, gradient = '') {
     <div class="card-icon" style="color: inherit">${iconHtml}</div>
     <span class="card-label">${esc(card.label)}</span>
     ${starBtn}
-    ${hideBtn}
   `;
 
   if (gradient) {
@@ -1138,14 +1136,6 @@ function buildLinkCard(card, isFav = false, gradient = '') {
   });
 
   if (!isFav) {
-    const hideBtnEl = a.querySelector('.btn-hide-card');
-    if (hideBtnEl) {
-      hideBtnEl.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        hideCard(card.id);
-      });
-    }
     a.addEventListener('contextmenu', e => {
       e.preventDefault();
       showContextMenu(e, card);
@@ -1845,9 +1835,13 @@ function showContextMenu(e, card) {
   const y = Math.min(e.clientY, window.innerHeight - 90);
   menu.style.left = x + 'px';
   menu.style.top = y + 'px';
+  const hideItemHtml = !card.isPrivate
+    ? `<button class="ctx-item ctx-hide"><i class="fa-solid fa-eye-slash"></i> 非表示にする</button>`
+    : '';
   menu.innerHTML = `
     <button class="ctx-item ctx-edit"><i class="fa-solid fa-pen"></i> 編集</button>
     <button class="ctx-item ctx-add-child"><i class="fa-solid fa-sitemap"></i> 子カードを追加</button>
+    ${hideItemHtml}
     <button class="ctx-item ctx-delete"><i class="fa-solid fa-trash"></i> 削除</button>
   `;
   menu.querySelector('.ctx-edit').addEventListener('click', e => {
@@ -1868,6 +1862,14 @@ function showContextMenu(e, card) {
       openCardModal(null, card.category, false, null, card.id);
     }
   });
+  const ctxHide = menu.querySelector('.ctx-hide');
+  if (ctxHide) {
+    ctxHide.addEventListener('click', e => {
+      e.stopPropagation();
+      closeContextMenu();
+      hideCard(card.id);
+    });
+  }
   menu.querySelector('.ctx-delete').addEventListener('click', async e => {
     e.stopPropagation();
     closeContextMenu();

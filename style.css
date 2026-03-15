@@ -2567,6 +2567,7 @@ select.todo-due-select {
 }
 
 .ctx-edit:hover  { background: rgba(74, 158, 255, 0.15); color: var(--accent-blue); }
+.ctx-hide:hover  { background: rgba(255, 166, 87, 0.15); color: var(--accent-orange); }
 .ctx-delete:hover { background: rgba(255, 94, 160, 0.15); color: var(--accent-pink); }
 
 /* ===========================
@@ -5334,39 +5335,106 @@ html.font-xl { font-size: 21px; }
 }
 .group-chip-rm:hover { color: #ef4444; }
 
-/* モバイル対応 */
-@media (max-width: 680px) {
+/* ===========================
+   スマホ Bottom Sheet（共通）
+   =========================== */
+@media (max-width: 768px) {
+  /* ---- ft-panel ---- */
+  .ft-panel {
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 60px !important;
+    width: 100% !important;
+    max-height: 78dvh !important;
+    border-radius: 20px 20px 0 0 !important;
+    transform: translateY(calc(100% + 60px)) !important;
+    transition: transform 0.32s cubic-bezier(0.32,0.72,0,1), opacity 0.2s !important;
+  }
+  .ft-panel.open {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  .ft-panel::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: var(--border-glass-hover);
+    border-radius: 2px;
+    margin: 10px auto 4px;
+    flex-shrink: 0;
+  }
+
+  /* ---- chat-panel ---- */
   .chat-panel {
-    width: calc(100vw - 16px);
-    right: 8px;
-    left: 8px;
-    /* ボトムナビ(48px)+余白 の上に表示 */
-    bottom: calc(48px + 8px);
-    /* dvhで正確な画面高さを取得。非対応ブラウザはvhフォールバック */
-    height: calc(100vh - 48px - 64px - 16px);
-    height: calc(100dvh - 48px - 64px - 16px);
-    max-height: 75vh;
-    flex-direction: column;
-    min-height: 0;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 60px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: calc(85dvh - 60px) !important;
+    max-height: 85dvh !important;
+    border-radius: 20px 20px 0 0 !important;
+    flex-direction: column !important;
+    transform: translateY(calc(100% + 60px)) !important;
+    transition: transform 0.32s cubic-bezier(0.32,0.72,0,1), opacity 0.2s !important;
+  }
+  .chat-panel.open {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+    pointer-events: all !important;
+  }
+  .chat-panel::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: var(--border-glass-hover);
+    border-radius: 2px;
+    margin: 10px auto 2px;
+    flex-shrink: 0;
   }
   .chat-sidebar {
-    width: 100%;
-    height: auto;
-    max-height: 210px;
-    flex-shrink: 0;
-    border-right: none;
-    border-bottom: 1px solid rgba(255,255,255,0.07);
-    overflow-y: auto;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 190px !important;
+    flex-shrink: 0 !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-glass) !important;
+    overflow-y: auto !important;
   }
-  .chat-sidebar-header { display: none; }
-  /* スマホではサイドバータブを常に表示 */
-  .chat-sidebar-tabs { flex-shrink: 0; }
-  .chat-fab {
-    right: calc(var(--space-xl) + (48px + 12px) * 2);
+  .chat-sidebar-header { display: none !important; }
+  .chat-sidebar-tabs { flex-shrink: 0 !important; }
+  .chat-resize-handle { display: none !important; }
+
+  /* ---- settings-panel ---- */
+  .settings-panel {
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 60px !important;
+    width: 100% !important;
+    max-height: 80dvh !important;
+    overflow-y: auto !important;
+    border-radius: 20px 20px 0 0 !important;
+    animation: panel-in-sheet 0.32s cubic-bezier(0.32,0.72,0,1) !important;
+    transform-origin: bottom center !important;
   }
-  .ft-fab {
-    right: calc(var(--space-xl) + (48px + 12px) * 3);
+  .settings-panel::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: var(--border-glass-hover);
+    border-radius: 2px;
+    margin: 10px auto 4px;
   }
+}
+
+@keyframes panel-in-sheet {
+  from { transform: translateY(100%); opacity: 0.5; }
+  to   { transform: translateY(0);    opacity: 1; }
 }
 
 /* ===========================
@@ -7885,31 +7953,7 @@ html.font-xl { font-size: 21px; }
 .link-card {
   position: relative;
 }
-.btn-hide-card {
-  position: absolute;
-  bottom: 6px;
-  right: 6px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  background: rgba(0,0,0,0.55);
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: 0.65rem;
-  z-index: 10;
-  transition: background 0.15s, color 0.15s;
-}
-.link-card:hover .btn-hide-card {
-  display: inline-flex;
-}
-.btn-hide-card:hover {
-  background: rgba(255,80,80,0.7);
-  color: #fff;
-}
+/* .btn-hide-card は廃止 → 右クリック/長押しメニューの「非表示にする」に統合 */
 
 /* 外部ツールアイコン用非表示ボタン */
 .ext-icon-wrap {
