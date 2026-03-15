@@ -606,6 +606,10 @@ function bindOrderEvents() {
   // 発注モーダル
   document.getElementById('ord-modal-close')?.addEventListener('click', closeOrderModal);
   document.getElementById('ord-btn-cancel')?.addEventListener('click', closeOrderModal);
+  document.getElementById('ord-btn-history')?.addEventListener('click', () => {
+    closeOrderModal();
+    openOrderHistoryModal();
+  });
   document.getElementById('ord-btn-email')?.addEventListener('click', () => submitOrder(true));
   document.getElementById('ord-btn-print')?.addEventListener('click', () => submitOrder(false));
   document.getElementById('ord-modal')?.addEventListener('click', e => {
