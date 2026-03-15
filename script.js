@@ -133,6 +133,13 @@ import {
 
 import { initBottomNav } from './modules/bottom-nav.js';
 
+import {
+  initOrder,
+  openOrderModal, closeOrderModal,
+  openOrderHistoryModal, closeOrderHistoryModal,
+  openOrderAdminModal, closeOrderAdminModal
+} from './modules/order.js';
+
 
 // ========== 依存注入 ==========
 // 各モジュールが必要とするクロスモジュール関数を注入
@@ -184,6 +191,9 @@ Object.assign(reqDeps, {
 });
 
 initEmail({ confirmDelete });
+
+// 鋼材発注モジュール初期化
+initOrder({});
 
 // ボトムナビ初期化（スマホ用）
 initBottomNav();
@@ -2514,6 +2524,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Enter') document.getElementById('todo-add-btn').click();
     if (e.key === 'Escape') closeTodoRow();
   });
+
+  // ===== 鋼材発注 =====
+  document.getElementById('btn-order-launch').addEventListener('click', openOrderModal);
 
   // ===== メールアシスタント =====
   document.getElementById('btn-email-assist').addEventListener('click', openEmailModal);

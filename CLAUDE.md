@@ -140,6 +140,9 @@ export function xxxFunction() { ... }
 | `suggestion_box/` | 目安箱（全員投稿可、閲覧は管理者のみ） |
 | `assigned_tasks/` | タスク割り振り（sharedWith/sharedResponses で共有機能あり） |
 | `users/{name}/attendance/{YYYY-MM-DD}` | 個人勤怠（完全プライベート）|
+| `order_suppliers/` | 発注先マスタ |
+| `order_items/` | 鋼材マスタ（品名・規格・単位・デフォルト数量） |
+| `orders/` | 発注履歴（明細・送信状態・20日締め管理） |
 
 ### 勤怠データフィールド（`users/{name}/attendance/{YYYY-MM-DD}`）
 | フィールド | 型 | 説明 |

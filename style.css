@@ -10086,3 +10086,393 @@ html.font-xl { font-size: 21px; }
   line-height: 1;
 }
 
+
+/* ===== 鋼材発注 (order.js) ===== */
+
+/* モーダル本体サイズ */
+.ord-modal-inner {
+  width: min(680px, 95vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 発注先表示 */
+.ord-supplier-info {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ord-supplier-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  min-width: 48px;
+}
+.ord-supplier-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.ord-supplier-email {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* 鋼材チェックリスト */
+.ord-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.ord-item-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 6px;
+  padding: 8px 12px;
+  transition: border-color 0.15s;
+}
+.ord-item-row:hover {
+  border-color: var(--border-glass-hover);
+}
+.ord-item-check {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent-blue);
+}
+.ord-item-label {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  cursor: pointer;
+}
+.ord-item-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.ord-item-spec {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.ord-item-unit {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  min-width: 24px;
+}
+
+/* 数量入力 */
+.ord-qty-input {
+  width: 64px !important;
+  text-align: right;
+  flex-shrink: 0;
+  padding: 4px 8px !important;
+  font-size: 0.9rem;
+}
+
+/* 備考エリア */
+.ord-note-textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+/* バッジ */
+.ord-badge-sent {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.ord-badge-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+}
+
+/* 空・ローディング */
+.ord-empty,
+.ord-loading {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 24px;
+  font-size: 0.9rem;
+}
+
+/* 履歴モーダル: 期間ナビ */
+.ord-period-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+.ord-period-btn {
+  padding: 4px 10px !important;
+}
+.ord-period-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  min-width: 200px;
+  text-align: center;
+}
+
+/* 履歴一覧 */
+.ord-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+.ord-history-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ord-history-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ord-history-date {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.ord-history-by {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.ord-history-items {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.ord-history-note {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* 管理モーダル */
+.ord-admin-auth-desc {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+.ord-admin-auth-error {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 6px;
+}
+.ord-admin-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-glass);
+  margin-bottom: 16px;
+}
+.ord-admin-tab {
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ord-admin-tab:hover {
+  color: var(--text-primary);
+}
+.ord-admin-tab.active {
+  color: var(--accent-blue);
+  border-bottom-color: var(--accent-blue);
+  font-weight: 500;
+}
+.ord-admin-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ord-admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.ord-admin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 6px;
+  padding: 8px 12px;
+  flex-wrap: wrap;
+}
+.ord-admin-item-info {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  flex: 1;
+}
+.ord-admin-item-info strong {
+  color: var(--text-primary);
+}
+.ord-admin-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.ord-admin-add-form {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  padding: 12px;
+}
+.ord-admin-add-title {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+.ord-admin-form-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.ord-admin-form-row .form-input {
+  flex: 1;
+  min-width: 100px;
+}
+.ord-unit-input {
+  max-width: 80px !important;
+  flex: none !important;
+}
+.ord-admin-footer {
+  margin-top: 8px;
+}
+
+/* GAS設定 */
+.ord-gas-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ライトモード対応 */
+[data-theme="light"] .ord-badge-sent {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+/* ===== 印刷スタイル ===== */
+@media print {
+  body > *:not(#ord-print-area) {
+    display: none !important;
+  }
+  #ord-print-area {
+    display: block !important;
+  }
+  .ord-print-doc {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 11pt;
+    color: #000;
+    max-width: 180mm;
+    margin: 0 auto;
+    padding: 10mm;
+  }
+  .ord-print-title {
+    text-align: center;
+    font-size: 18pt;
+    font-weight: bold;
+    margin-bottom: 12mm;
+    border-bottom: 2px solid #000;
+    padding-bottom: 4mm;
+  }
+  .ord-print-meta {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8mm;
+  }
+  .ord-print-meta th {
+    width: 28mm;
+    text-align: left;
+    padding: 2mm 3mm;
+    color: #444;
+  }
+  .ord-print-meta td {
+    padding: 2mm 3mm;
+  }
+  .ord-print-section-title {
+    font-weight: bold;
+    margin: 6mm 0 2mm;
+    border-left: 3px solid #000;
+    padding-left: 3mm;
+  }
+  .ord-print-supplier {
+    margin-bottom: 6mm;
+    padding-left: 4mm;
+    line-height: 1.8;
+  }
+  .ord-print-items {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 6mm;
+  }
+  .ord-print-items th,
+  .ord-print-items td {
+    border: 1px solid #999;
+    padding: 2mm 3mm;
+    text-align: left;
+  }
+  .ord-print-items th {
+    background: #f0f0f0;
+    font-weight: bold;
+  }
+  .ord-print-qty {
+    text-align: right;
+  }
+  .ord-print-note {
+    padding-left: 4mm;
+    margin-bottom: 10mm;
+    line-height: 1.6;
+  }
+  .ord-print-footer {
+    margin-top: 10mm;
+    text-align: right;
+    font-weight: bold;
+    border-top: 1px solid #999;
+    padding-top: 4mm;
+  }
+}

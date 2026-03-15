@@ -127,6 +127,11 @@
         <span class="sidebar-item-label">メール生成AI</span>
       </button>
 
+      <button class="sidebar-item" id="btn-order-launch" title="鋼材発注">
+        <span class="sidebar-item-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+        <span class="sidebar-item-label">鋼材発注</span>
+      </button>
+
       <button class="sidebar-item chat-fab" id="chat-fab" title="チャット">
         <span class="sidebar-item-icon">
           <i class="fa-solid fa-comments"></i>
@@ -1029,6 +1034,10 @@
           <i class="fa-solid fa-envelope-open-text"></i>
           <span>メール生成AI</span>
         </button>
+        <button class="more-drawer-item" data-target="btn-order-launch">
+          <i class="fa-solid fa-boxes-stacked"></i>
+          <span>鋼材発注</span>
+        </button>
         <button class="more-drawer-item" data-target="ft-fab">
           <i class="fa-solid fa-file-arrow-up"></i>
           <span>ファイル転送</span>
@@ -1762,6 +1771,136 @@
       </div>
     </div>
   </div>
+
+  <!-- ===== 鋼材発注モーダル ===== -->
+  <div class="modal-overlay" id="ord-modal">
+    <div class="modal-glass ord-modal-inner">
+      <div class="modal-header">
+        <h2 class="modal-title"><i class="fa-solid fa-boxes-stacked"></i> 鋼材発注</h2>
+        <button class="modal-close" id="ord-modal-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- 発注先 -->
+      <div class="ord-supplier-info">
+        <div class="ord-supplier-label">発注先</div>
+        <div class="ord-supplier-name" id="ord-supplier-name">土屋鋼材株式会社</div>
+        <div class="ord-supplier-email" id="ord-supplier-email">info@tsuchiyakouzai.com</div>
+      </div>
+
+      <!-- 鋼材チェックリスト -->
+      <div class="form-group">
+        <label class="form-label">発注品目</label>
+        <div id="ord-item-list" class="ord-item-list"></div>
+      </div>
+
+      <!-- 備考 -->
+      <div class="form-group">
+        <label class="form-label" for="ord-note">備考（省略可）</label>
+        <textarea id="ord-note" class="form-input ord-note-textarea" placeholder="特記事項があれば入力してください" rows="3"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="ord-btn-cancel">キャンセル</button>
+        <button class="btn-modal-secondary" id="ord-btn-print"><i class="fa-solid fa-print"></i> 印刷/PDF</button>
+        <button class="btn-modal-primary" id="ord-btn-email"><i class="fa-solid fa-envelope"></i> メール送信</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 発注履歴モーダル ===== -->
+  <div class="modal-overlay" id="ord-history-modal">
+    <div class="modal-glass ord-modal-inner">
+      <div class="modal-header">
+        <h2 class="modal-title"><i class="fa-solid fa-clock-rotate-left"></i> 発注履歴</h2>
+        <button class="modal-close" id="ord-history-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- 期間ナビゲーション -->
+      <div class="ord-period-nav">
+        <button class="btn-modal-secondary ord-period-btn" id="ord-period-prev"><i class="fa-solid fa-chevron-left"></i></button>
+        <span class="ord-period-label" id="ord-period-label">読み込み中...</span>
+        <button class="btn-modal-secondary ord-period-btn" id="ord-period-next"><i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+
+      <div id="ord-history-list" class="ord-history-list"></div>
+
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="ord-history-cancel">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 発注管理モーダル（管理者用） ===== -->
+  <div class="modal-overlay" id="ord-admin-modal">
+    <div class="modal-glass ord-modal-inner">
+      <div class="modal-header">
+        <h2 class="modal-title"><i class="fa-solid fa-screwdriver-wrench"></i> 発注管理</h2>
+        <button class="modal-close" id="ord-admin-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- PIN認証エリア -->
+      <div id="ord-admin-auth-area">
+        <p class="ord-admin-auth-desc">管理者PINを入力してください</p>
+        <div class="form-group">
+          <input type="password" id="ord-admin-pin-input" class="form-input" placeholder="管理者PIN" maxlength="6" inputmode="numeric">
+        </div>
+        <p id="ord-admin-auth-error" class="ord-admin-auth-error" hidden>PINが正しくありません</p>
+        <div class="modal-actions">
+          <button class="btn-modal-secondary" id="ord-admin-cancel">キャンセル</button>
+          <button class="btn-modal-primary" id="ord-admin-auth-btn">認証</button>
+        </div>
+      </div>
+
+      <!-- 管理パネル -->
+      <div id="ord-admin-panel-area" hidden>
+        <!-- タブ -->
+        <div class="ord-admin-tabs">
+          <button class="ord-admin-tab active" id="ord-admin-tab-items">鋼材マスタ</button>
+          <button class="ord-admin-tab" id="ord-admin-tab-suppliers">発注先</button>
+          <button class="ord-admin-tab" id="ord-admin-tab-gas">GAS設定</button>
+        </div>
+
+        <!-- 鋼材マスタ -->
+        <div id="ord-admin-panel-items" class="ord-admin-panel">
+          <div id="ord-admin-items-list" class="ord-admin-list"></div>
+          <div class="ord-admin-add-form">
+            <h4 class="ord-admin-add-title">新規追加</h4>
+            <div class="ord-admin-form-row">
+              <input type="text" id="ord-item-add-name" class="form-input" placeholder="品名 (例: FB（ミガキ）)">
+              <input type="text" id="ord-item-add-spec" class="form-input" placeholder="規格 (例: ６x30　L＝4m)">
+              <input type="text" id="ord-item-add-unit" class="form-input ord-unit-input" placeholder="単位">
+              <input type="number" id="ord-item-add-qty" class="form-input ord-qty-input" value="1" min="1">
+              <button class="btn-modal-primary" id="ord-item-add-btn">追加</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 発注先 -->
+        <div id="ord-admin-panel-suppliers" class="ord-admin-panel" hidden>
+          <div id="ord-admin-suppliers-list" class="ord-admin-list"></div>
+        </div>
+
+        <!-- GAS設定 -->
+        <div id="ord-admin-panel-gas" class="ord-admin-panel" hidden>
+          <p class="ord-gas-desc">GAS WebアプリのURLを入力してください。このURLにPOSTリクエストでメールが送信されます。</p>
+          <div class="form-group">
+            <label class="form-label" for="ord-gas-url-input">GAS Webアプリ URL</label>
+            <input type="url" id="ord-gas-url-input" class="form-input" placeholder="https://script.google.com/macros/s/...">
+          </div>
+          <div class="modal-actions">
+            <button class="btn-modal-primary" id="ord-gas-save-btn">保存</button>
+          </div>
+        </div>
+
+        <div class="modal-actions ord-admin-footer">
+          <button class="btn-modal-secondary" id="ord-admin-cancel-footer" onclick="document.getElementById('ord-admin-modal').classList.remove('visible')">閉じる</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 印刷エリア（画面上は非表示・印刷時のみ表示） ===== -->
+  <div id="ord-print-area" hidden></div>
 
   <!-- Script (type="module" for Firebase ESM) -->
   <script type="module" src="script.js"></script>
