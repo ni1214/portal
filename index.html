@@ -1815,6 +1815,21 @@
             <button class="ord-material-tab" data-type="stainless">ステンレス</button>
           </div>
         </div>
+        <!-- 検索バー -->
+        <div class="ord-search-bar-wrap">
+          <i class="fa-solid fa-magnifying-glass ord-search-icon"></i>
+          <input type="text" id="ord-search-input" class="form-input ord-search-input" placeholder="品種・サイズで検索（例：アングル、25×25）" autocomplete="off">
+          <button class="ord-search-clear" id="ord-search-clear" hidden><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <!-- カテゴリタブ（動的生成） -->
+        <div id="ord-cat-tabs" class="ord-cat-filter-tabs"></div>
+        <!-- 選択済みのみ表示 -->
+        <div class="ord-filter-row">
+          <label class="ord-selected-toggle">
+            <input type="checkbox" id="ord-show-selected">
+            <span>選択済みのみ表示</span>
+          </label>
+        </div>
         <div id="ord-item-list" class="ord-item-list"></div>
         <button class="ord-add-custom-btn" id="ord-add-custom-btn">
           <i class="fa-solid fa-plus"></i> この発注に品目を追加

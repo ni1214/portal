@@ -10788,3 +10788,156 @@ html.font-xl { font-size: 21px; }
     padding-top: 4mm;
   }
 }
+
+/* ===== 発注モーダル — 検索・カテゴリタブ・選択済みトグル・ピン・仕上げ ===== */
+
+/* 検索バー */
+.ord-search-bar-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.ord-search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  pointer-events: none;
+}
+.ord-search-input {
+  width: 100%;
+  padding-left: 30px !important;
+  padding-right: 32px !important;
+  font-size: 0.85rem;
+}
+.ord-search-clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background 0.15s;
+}
+.ord-search-clear:hover { color: var(--text-primary); background: var(--bg-card-hover); }
+
+/* カテゴリフィルタタブ（横スクロール） */
+.ord-cat-filter-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 4px 0;
+  margin-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.ord-cat-filter-tabs::-webkit-scrollbar { display: none; }
+.ord-cat-filter-tab {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.ord-cat-filter-tab:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-glass-hover);
+  color: var(--text-primary);
+}
+.ord-cat-filter-tab.active {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: #fff;
+}
+
+/* 選択済みトグル行 */
+.ord-filter-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.ord-selected-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  user-select: none;
+}
+.ord-selected-toggle input[type="checkbox"] {
+  accent-color: var(--accent-blue);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+.ord-selected-toggle:hover span { color: var(--text-primary); }
+
+/* スペシャルセクション（ピン留め・最近使った） */
+.ord-special-section {
+  margin-bottom: 8px;
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.ord-special-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 5px 10px;
+  background: var(--bg-glass);
+  border-bottom: 1px solid var(--border-glass);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.ord-special-section .fa-star { color: #f0b429; }
+.ord-special-section .fa-clock-rotate-left { color: var(--accent-cyan); }
+
+/* ピンボタン */
+.ord-pin-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  line-height: 1;
+}
+.ord-pin-btn:hover { color: #f0b429; background: var(--bg-card-hover); }
+.ord-pin-btn.pinned { color: #f0b429; }
+.ord-pin-btn.pinned .fa-star { font-weight: 900; }
+
+/* 仕上げセレクト */
+.ord-finish-select {
+  flex-shrink: 0;
+  width: 68px !important;
+  padding: 2px 4px !important;
+  font-size: 0.78rem !important;
+  height: 26px;
+}
+
+/* 品目行レイアウト更新（pin追加分の対応） */
+.ord-item-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-glass);
+}
+.ord-item-row:last-child { border-bottom: none; }

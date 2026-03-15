@@ -14,6 +14,12 @@ let _historyOffset = 0; // 履歴期間オフセット（0=今期）
 let _gasUrl = '';
 let _orderType = 'factory';    // 工場在庫 / 現場向け
 let _materialFilter = 'all';   // すべて / steel / stainless
+let _categoryFilter = 'all';   // カテゴリ絞り込み
+let _searchQuery = '';          // 検索文字列
+let _showSelectedOnly = false;  // 選択済みのみ表示
+let _pins = [];                 // ピン留め品目ID（localStorage）
+let _recent = [];               // 最近使った品目ID（localStorage、最大10件）
+let _checkedItems = new Map();  // itemId → {checked, qty, length, finish}
 
 // ===== カタログシードデータ =====
 // materialType: 'steel'=スチール, 'stainless'=ステンレス
@@ -458,8 +464,9 @@ function buildEmailContent(orderData) {
 
   const itemLines = orderData.items.map((item, i) => {
     const no = String(i + 1).padStart(2, ' ');
+    const finishStr = item.finish ? `　${item.finish}` : '';
     const lengthStr = item.length ? `　L=${item.length}` : '';
-    const label = `${item.category}　${item.spec}${lengthStr}`;
+    const label = `${item.category}　${item.spec}${finishStr}${lengthStr}`;
     return `${no}    ${label}      ${item.qty}本`;
   }).join('\n');
 
@@ -600,11 +607,86 @@ function switchOrderType(type) {
   renderOrderItemList();
 }
 
+// ===== ピン留め管理 =====
+function loadPins() {
+  try { _pins = JSON.parse(localStorage.getItem('portal-order-pins') || '[]'); } catch { _pins = []; }
+}
+function savePins() {
+  localStorage.setItem('portal-order-pins', JSON.stringify(_pins));
+}
+function togglePin(itemId) {
+  const idx = _pins.indexOf(itemId);
+  if (idx >= 0) _pins.splice(idx, 1); else _pins.unshift(itemId);
+  savePins();
+  renderOrderItemList();
+}
+
+// ===== 最近使った品目 =====
+function loadRecent() {
+  try { _recent = JSON.parse(localStorage.getItem('portal-order-recent') || '[]'); } catch { _recent = []; }
+}
+function saveRecent(itemIds) {
+  _recent = [...new Set([...itemIds, ..._recent])].slice(0, 10);
+  localStorage.setItem('portal-order-recent', JSON.stringify(_recent));
+}
+
+// ===== カテゴリフィルタタブ（動的生成） =====
+function renderCategoryTabs() {
+  const tabsEl = document.getElementById('ord-cat-tabs');
+  if (!tabsEl) return;
+  const cats = [...new Set(
+    _items.filter(it =>
+      it.active !== false &&
+      (_materialFilter === 'all' || (it.materialType || 'steel') === _materialFilter)
+    ).map(it => it.itemCategory || it.name || '')
+  )];
+  tabsEl.innerHTML = [
+    `<button class="ord-cat-filter-tab${_categoryFilter === 'all' ? ' active' : ''}" data-cat="all">すべて</button>`,
+    ...cats.map(c => `<button class="ord-cat-filter-tab${_categoryFilter === c ? ' active' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`)
+  ].join('');
+  tabsEl.querySelectorAll('.ord-cat-filter-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _categoryFilter = btn.dataset.cat;
+      tabsEl.querySelectorAll('.ord-cat-filter-tab').forEach(b => b.classList.toggle('active', b.dataset.cat === _categoryFilter));
+      renderOrderItemList();
+    });
+  });
+}
+
+// ===== 品目行HTML生成 =====
+function buildItemRow(item) {
+  const id = item.id;
+  const lengths = item.availableLengths || [];
+  const lengthHtml = lengths.length > 1
+    ? `<select class="ord-length-select form-input">${lengths.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('')}</select>`
+    : `<span class="ord-item-fixed-length">${esc(lengths[0] || '')}</span>`;
+  const isStainless = (item.materialType || 'steel') === 'stainless';
+  const finishHtml = isStainless
+    ? `<select class="ord-finish-select form-input"><option value="HL">HL</option><option value="#400">#400</option><option value="未研">未研</option></select>`
+    : '';
+  const isPinned = _pins.includes(id);
+  return `
+    <div class="ord-item-row" data-id="${esc(id)}">
+      <button class="ord-pin-btn${isPinned ? ' pinned' : ''}" title="${isPinned ? 'ピン解除' : 'よく使う品目に登録'}">
+        <i class="${isPinned ? 'fa-solid' : 'fa-regular'} fa-star"></i>
+      </button>
+      <input type="checkbox" class="ord-item-check" id="ord-chk-${esc(id)}">
+      <label for="ord-chk-${esc(id)}" class="ord-item-label">
+        <span class="ord-item-spec">${esc(item.spec)}</span>
+      </label>
+      ${finishHtml}
+      ${lengthHtml}
+      <input type="number" class="ord-qty-input form-input" value="${item.defaultQty || 1}" min="1" step="1">
+    </div>`;
+}
+
 function switchMaterialFilter(type) {
   _materialFilter = type;
+  _categoryFilter = 'all';
   document.querySelectorAll('#ord-material-tabs .ord-material-tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.type === type);
   });
+  renderCategoryTabs();
   renderOrderItemList();
 }
 
@@ -612,50 +694,81 @@ function renderOrderItemList() {
   const listEl = document.getElementById('ord-item-list');
   if (!listEl) return;
 
-  const filtered = _items.filter(it =>
-    it.active !== false &&
-    (it.orderType === _orderType || it.orderType === 'both' || !it.orderType) &&
-    (_materialFilter === 'all' || (it.materialType || 'steel') === _materialFilter)
-  );
+  const q = _searchQuery.toLowerCase().trim();
 
-  if (filtered.length === 0) {
-    listEl.innerHTML = `<p class="ord-empty">この条件の鋼材が登録されていません<br><small>⚙設定 → 鋼材マスタで追加できます</small></p>`;
+  // ── フィルタ適用 ──
+  let filtered = _items.filter(it => {
+    if (it.active === false) return false;
+    if (it.orderType && it.orderType !== 'both' && it.orderType !== _orderType) return false;
+    if (_materialFilter !== 'all' && (it.materialType || 'steel') !== _materialFilter) return false;
+    if (_categoryFilter !== 'all' && (it.itemCategory || '') !== _categoryFilter) return false;
+    if (q && !`${it.itemCategory || ''} ${it.spec || ''}`.toLowerCase().includes(q)) return false;
+    if (_showSelectedOnly && !_checkedItems.get(it.id)?.checked) return false;
+    return true;
+  });
+
+  // ── スペシャルセクション（検索・カテゴリ絞り・選択済みモード中は非表示）──
+  const showSpecial = !q && _categoryFilter === 'all' && !_showSelectedOnly;
+  const pinnedItems = showSpecial
+    ? _pins.map(id => _items.find(it => it.id === id)).filter(Boolean)
+        .filter(it => it.active !== false &&
+          (_materialFilter === 'all' || (it.materialType || 'steel') === _materialFilter))
+    : [];
+  const pinnedIds = new Set(pinnedItems.map(it => it.id));
+  const recentItems = showSpecial
+    ? _recent.map(id => _items.find(it => it.id === id)).filter(Boolean)
+        .filter(it => it.active !== false && !pinnedIds.has(it.id) &&
+          (_materialFilter === 'all' || (it.materialType || 'steel') === _materialFilter))
+    : [];
+  const specialIds = new Set([...pinnedIds, ...recentItems.map(it => it.id)]);
+  filtered = filtered.filter(it => !specialIds.has(it.id));
+
+  if (!filtered.length && !pinnedItems.length && !recentItems.length) {
+    listEl.innerHTML = `<p class="ord-empty">該当する鋼材が見つかりません</p>`;
     return;
   }
 
-  // 品種別グループ化
-  const grouped = {};
-  filtered.forEach(item => {
-    const cat = item.itemCategory || item.name || '鋼材';
-    if (!grouped[cat]) grouped[cat] = [];
-    grouped[cat].push(item);
-  });
+  let html = '';
 
-  listEl.innerHTML = Object.entries(grouped).map(([cat, items]) => `
-    <div class="ord-cat-group">
-      <div class="ord-cat-header" data-cat="${esc(cat)}">
-        <i class="fa-solid fa-chevron-down ord-cat-chevron"></i>
-        <span class="ord-cat-name">${esc(cat)}</span>
-        <span class="ord-cat-count">${items.length}種</span>
-      </div>
-      <div class="ord-cat-items">
-        ${items.map(item => {
-          const lengths = item.availableLengths || [];
-          const lengthHtml = lengths.length > 1
-            ? `<select class="ord-length-select form-input">${lengths.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('')}</select>`
-            : `<span class="ord-item-fixed-length">${esc(lengths[0] || '')}</span>`;
-          return `
-            <div class="ord-item-row" data-id="${esc(item.id)}">
-              <input type="checkbox" class="ord-item-check" id="ord-chk-${esc(item.id)}">
-              <label for="ord-chk-${esc(item.id)}" class="ord-item-label">
-                <span class="ord-item-spec">${esc(item.spec)}</span>
-              </label>
-              ${lengthHtml}
-              <input type="number" class="ord-qty-input form-input" value="${item.defaultQty || 1}" min="1" step="1">
-            </div>`;
-        }).join('')}
-      </div>
-    </div>`).join('');
+  // ── ⭐ よく使う品目 ──
+  if (pinnedItems.length) {
+    html += `<div class="ord-special-section">
+      <div class="ord-special-header"><i class="fa-solid fa-star"></i> よく使う品目</div>
+      ${pinnedItems.map(buildItemRow).join('')}
+    </div>`;
+  }
+
+  // ── 🕐 最近使った品目 ──
+  if (recentItems.length) {
+    html += `<div class="ord-special-section">
+      <div class="ord-special-header"><i class="fa-solid fa-clock-rotate-left"></i> 最近使った品目</div>
+      ${recentItems.map(buildItemRow).join('')}
+    </div>`;
+  }
+
+  // ── カテゴリグループ ──
+  if (filtered.length) {
+    const grouped = {};
+    filtered.forEach(item => {
+      const cat = item.itemCategory || item.name || '鋼材';
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(item);
+    });
+    const expandAll = q.length > 0;
+    html += Object.entries(grouped).map(([cat, items]) => `
+      <div class="ord-cat-group">
+        <div class="ord-cat-header" data-cat="${esc(cat)}">
+          <i class="fa-solid fa-chevron-down ord-cat-chevron" style="${expandAll ? '' : 'transform:rotate(-90deg)'}"></i>
+          <span class="ord-cat-name">${esc(cat)}</span>
+          <span class="ord-cat-count">${items.length}種</span>
+        </div>
+        <div class="ord-cat-items${expandAll ? '' : ' collapsed'}">
+          ${items.map(buildItemRow).join('')}
+        </div>
+      </div>`).join('');
+  }
+
+  listEl.innerHTML = html;
 
   // カテゴリ折りたたみイベント
   listEl.querySelectorAll('.ord-cat-header').forEach(header => {
@@ -666,11 +779,47 @@ function renderOrderItemList() {
       chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
     });
   });
+
+  // チェック状態復元 + 変更イベント
+  listEl.querySelectorAll('.ord-item-row[data-id]').forEach(row => {
+    const id = row.dataset.id;
+    const saved = _checkedItems.get(id);
+    const chk = row.querySelector('.ord-item-check');
+    const qtyEl = row.querySelector('.ord-qty-input');
+    const lenEl = row.querySelector('.ord-length-select');
+    const fixedLen = row.querySelector('.ord-item-fixed-length');
+    const finEl = row.querySelector('.ord-finish-select');
+    if (saved) {
+      if (chk) chk.checked = saved.checked;
+      if (qtyEl && saved.qty != null) qtyEl.value = saved.qty;
+      if (lenEl && saved.length) lenEl.value = saved.length;
+      if (finEl && saved.finish) finEl.value = saved.finish;
+    }
+    const sync = () => {
+      _checkedItems.set(id, {
+        checked: chk?.checked || false,
+        qty: parseInt(qtyEl?.value, 10) || 1,
+        length: lenEl?.value || fixedLen?.textContent?.trim() || '',
+        finish: finEl?.value || ''
+      });
+      if (_showSelectedOnly) renderOrderItemList();
+    };
+    chk?.addEventListener('change', sync);
+    qtyEl?.addEventListener('change', sync);
+    lenEl?.addEventListener('change', sync);
+    finEl?.addEventListener('change', sync);
+    // ピンボタン
+    row.querySelector('.ord-pin-btn')?.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation(); togglePin(id);
+    });
+  });
 }
 
 // ===== 発注モーダル =====
 export async function openOrderModal() {
   await loadMasters();
+  loadPins();
+  loadRecent();
 
   const modal = document.getElementById('ord-modal');
   if (!modal) return;
@@ -683,11 +832,21 @@ export async function openOrderModal() {
       : '<option value="">（発注先が登録されていません）</option>';
   }
 
-  // 区分・素材フィルタをリセット
+  // フィルタ・検索・選択状態をリセット
   _materialFilter = 'all';
+  _categoryFilter = 'all';
+  _searchQuery = '';
+  _showSelectedOnly = false;
+  _checkedItems.clear();
+  const searchEl = document.getElementById('ord-search-input');
+  if (searchEl) searchEl.value = '';
+  document.getElementById('ord-search-clear')?.toggleAttribute('hidden', true);
+  const selectedToggle = document.getElementById('ord-show-selected');
+  if (selectedToggle) selectedToggle.checked = false;
   document.querySelectorAll('#ord-material-tabs .ord-material-tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.type === 'all');
   });
+  renderCategoryTabs();
   switchOrderType('factory');
 
   const siteNameEl = document.getElementById('ord-site-name');
@@ -714,25 +873,30 @@ function collectOrderData() {
     return null;
   }
 
-  const rows = document.querySelectorAll('#ord-item-list .ord-item-row');
   const selectedItems = [];
-  rows.forEach(row => {
+
+  // _checkedItems からマスタ品目を収集（フィルタ非表示の品目も取得できる）
+  _checkedItems.forEach((saved, itemId) => {
+    if (!saved.checked) return;
+    const item = _items.find(it => it.id === itemId);
+    if (!item) return;
+    const length = saved.length || (item.availableLengths?.[0] || '');
+    selectedItems.push({
+      itemId, category: item.itemCategory || item.name || '',
+      spec: item.spec, unit: '本', qty: saved.qty || 1,
+      length, finish: saved.finish || ''
+    });
+  });
+
+  // DOM上のカスタム品目を収集
+  document.querySelectorAll('#ord-item-list .ord-item-row--custom').forEach(row => {
     const chk = row.querySelector('.ord-item-check');
-    if (!chk || !chk.checked) return;
-    if (row.dataset.id) {
-      const item = _items.find(it => it.id === row.dataset.id);
-      if (!item) return;
-      const qty = parseInt(row.querySelector('.ord-qty-input').value, 10) || 1;
-      const lengthEl = row.querySelector('.ord-length-select') || row.querySelector('.ord-item-fixed-length');
-      const length = lengthEl ? (lengthEl.value || lengthEl.textContent || '') : '';
-      const category = item.itemCategory || item.name || '';
-      selectedItems.push({ itemId: row.dataset.id, category, spec: item.spec, unit: '本', qty, length });
-    } else {
-      const name = row.querySelector('.ord-custom-name')?.value.trim();
-      const spec = row.querySelector('.ord-custom-spec')?.value.trim() || '';
-      const qty  = parseInt(row.querySelector('.ord-qty-input')?.value, 10) || 1;
-      if (name) selectedItems.push({ itemId: null, category: name, spec, unit: '本', qty, length: '' });
-    }
+    if (!chk?.checked) return;
+    const name = row.querySelector('.ord-custom-name')?.value.trim();
+    const spec = row.querySelector('.ord-custom-spec')?.value.trim() || '';
+    const unit = row.querySelector('.ord-custom-unit')?.value.trim() || '本';
+    const qty  = parseInt(row.querySelector('.ord-qty-input')?.value, 10) || 1;
+    if (name) selectedItems.push({ itemId: null, category: name, spec, unit, qty, length: '', finish: '' });
   });
 
   if (selectedItems.length === 0) {
@@ -810,6 +974,9 @@ async function submitFromPreview() {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> この内容で送信'; }
 
     if (ok) {
+      // 最近使った品目を更新
+      const usedIds = data.items.filter(it => it.itemId).map(it => it.itemId);
+      if (usedIds.length) saveRecent(usedIds);
       alert('メールを送信しました。');
       document.getElementById('ord-preview-modal').classList.remove('visible');
       _pendingOrderData = null;
@@ -1105,6 +1272,26 @@ function bindOrderEvents() {
   document.getElementById('ord-preview-send')?.addEventListener('click', submitFromPreview);
   document.getElementById('ord-preview-modal')?.addEventListener('click', e => {
     if (e.target === document.getElementById('ord-preview-modal')) closePreviewModal();
+  });
+
+  // 検索バー
+  document.getElementById('ord-search-input')?.addEventListener('input', e => {
+    _searchQuery = e.target.value;
+    document.getElementById('ord-search-clear')?.toggleAttribute('hidden', !_searchQuery);
+    renderOrderItemList();
+  });
+  document.getElementById('ord-search-clear')?.addEventListener('click', () => {
+    _searchQuery = '';
+    const el = document.getElementById('ord-search-input');
+    if (el) { el.value = ''; el.focus(); }
+    document.getElementById('ord-search-clear')?.toggleAttribute('hidden', true);
+    renderOrderItemList();
+  });
+
+  // 選択済みのみ表示トグル
+  document.getElementById('ord-show-selected')?.addEventListener('change', e => {
+    _showSelectedOnly = e.target.checked;
+    renderOrderItemList();
   });
 
   // 素材フィルタ
