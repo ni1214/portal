@@ -173,6 +173,143 @@ const CATALOG_SEED = [
   ].map(([spec,lengths],i)=>({itemCategory:'丸パイプ（STKM）',spec,availableLengths:lengths,sortOrder:700+i})),
 ];
 
+// ===== カタログシードデータ V2（磨き材 + ステンレス） =====
+const CATALOG_SEED_V2 = [
+  // ─── 磨き丸鋼 (steel) ───
+  ...[
+    ['φ2',['2m']],['φ4',['2m']],['φ5',['2m']],['φ6',['2m']],
+    ['φ7',['3m','4m']],
+    ...['8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','24','25','26','28'].map(d=>[`φ${d}`,['4m']]),
+    ['φ30',['4m','6m']],
+    ...['32','35','38','40','45','50','55','60','65','70','75','80','90','100'].map(d=>[`φ${d}`,['6m']]),
+  ].map(([spec,lengths],i)=>({itemCategory:'磨き丸鋼',spec,availableLengths:lengths,materialType:'steel',sortOrder:750+i})),
+
+  // ─── 磨き四角鋼 (steel) ───
+  ...[
+    ...['2','3','4','5','6'].map(d=>[`${d}×${d}`,['2m']]),
+    ['7×7',['3m','4m']],
+    ...['8','9','10'].map(d=>[`${d}×${d}`,['3m']]),
+    ...['11','12','13','14','15','16','17','18','19','20','22','25','28','30','32','35','38','40','45','50'].map(d=>[`${d}×${d}`,['4m']]),
+    ...['55','60','65','70','75','80','90','100'].map(d=>[`${d}×${d}`,['3.5m']]),
+  ].map(([spec,lengths],i)=>({itemCategory:'磨き四角鋼',spec,availableLengths:lengths,materialType:'steel',sortOrder:800+i})),
+
+  // ─── 磨き平鋼 (steel) 厚×幅 ───
+  ...[
+    ...['6','9','12','16','19','25','32','38','50'].map(w=>[`3×${w}`,['2m']]),
+    ...['6','9','12','16','19','25','32','38','50','65','75'].map(w=>[`4×${w}`,['2m','3m']]),
+    ...['6','9','12','16','19','25','32','38','50','65','75','100'].map(w=>[`5×${w}`,['3m']]),
+    ...['6','9','12','16','19','25','32','38','50','65','75','100','125','150'].map(w=>[`6×${w}`,['3m','4m']]),
+    ...['9','12','16','19','25','32','38','50','65','75','100','125','150'].map(w=>[`9×${w}`,['3m','4m']]),
+    ...['12','16','19','25','32','38','50','65','75','100','125','150'].map(w=>[`12×${w}`,['4m']]),
+    ...['16','19','25','32','38','50','65','75','100','125','150'].map(w=>[`16×${w}`,['4m']]),
+    ...['19','25','32','38','50','65','75','100','150'].map(w=>[`19×${w}`,['4m']]),
+    ...['25','32','38','50','65','75','100','150'].map(w=>[`25×${w}`,['4m']]),
+    ...['32','38','50','65','75','100','150'].map(w=>[`32×${w}`,['4m']]),
+    ...['38','50','65','75','100','150'].map(w=>[`38×${w}`,['4m']]),
+    ...['50','65','75','100','150'].map(w=>[`50×${w}`,['4m']]),
+  ].map(([spec,lengths],i)=>({itemCategory:'磨き平鋼',spec,availableLengths:lengths,materialType:'steel',sortOrder:850+i})),
+
+  // ─── SUS角パイプ（正方形）(stainless) ───
+  ...[
+    ['7×7',['4m']],['10×10',['4m']],['12×12',['4m']],['13×13',['4m']],['15×15',['4m']],
+    ['16×16',['4m']],['19×19',['4m']],['20×20',['4m']],['22×22',['4m']],['25×25',['4m']],
+    ['30×30',['4m']],['32×32',['4m']],['35×35',['4m']],['38×38',['4m']],['40×40',['4m']],
+    ['45×45',['4m']],['50×50',['4m','6m']],['60×60',['4m','6m']],['65×65',['5m','6m']],
+    ['70×70',['5m','6m']],['75×75',['5m','6m']],['80×80',['5m','6m']],
+    ['90×90',['5m','6m']],['100×100',['5m','6m']],
+  ].map(([spec,lengths],i)=>({itemCategory:'角パイプ（SUS正方形）',spec,availableLengths:lengths,materialType:'stainless',sortOrder:1000+i})),
+
+  // ─── SUS角パイプ（長方形）(stainless) ───
+  ...[
+    ['19×10',['4m']],['20×10',['4m']],['20×15',['4m']],['25×12',['4m']],['25×15',['4m']],
+    ['25×20',['4m']],['30×15',['4m']],['30×20',['4m']],['30×25',['4m']],['35×20',['4m']],
+    ['40×20',['4m']],['40×25',['4m']],['40×30',['4m']],['50×20',['4m']],['50×25',['4m']],
+    ['50×30',['4m']],['50×40',['4m']],['60×30',['4m']],['60×40',['4m']],['75×50',['4m']],
+    ['80×40',['4m']],['80×60',['4m']],['100×50',['4m','5m']],['100×60',['4m','5m']],
+    ['100×75',['5m']],['120×60',['5m']],['120×80',['5m']],['150×50',['5m']],['150×100',['5m']],
+  ].map(([spec,lengths],i)=>({itemCategory:'角パイプ（SUS長方形）',spec,availableLengths:lengths,materialType:'stainless',sortOrder:1050+i})),
+
+  // ─── SUS化粧パイプ (stainless) ───
+  ...[
+    // SUS304
+    ['φ5.0(SUS304)',['4m']],['φ6.35(SUS304)',['4m']],['φ8.0(SUS304)',['4m']],
+    ['φ9.52(SUS304)',['4m']],['φ12.7(SUS304)',['4m']],['φ15.88(SUS304)',['4m']],
+    ['φ19.05(SUS304)',['4m']],['φ22.22(SUS304)',['4m']],['φ25.4(SUS304)',['4m']],
+    ['φ28.58(SUS304)',['4m']],['φ31.75(SUS304)',['4m']],['φ34.0(SUS304)',['4m']],
+    ['φ38.1(SUS304)',['4m']],['φ42.7(SUS304)',['4m']],['φ48.6(SUS304)',['4m']],
+    ['φ50.8(SUS304)',['4m']],['φ57.15(SUS304)',['4m']],['φ60.5(SUS304)',['4m']],
+    ['φ63.5(SUS304)',['4m']],['φ76.3(SUS304)',['4m']],['φ89.1(SUS304)',['4m']],
+    ['φ101.6(SUS304)',['4m']],['φ114.3(SUS304)',['4m']],['φ165.2(SUS304)',['4m']],
+    // SUS430
+    ['φ19(SUS430)',['4m']],['φ22(SUS430)',['4m']],['φ25(SUS430)',['4m']],
+    ['φ28(SUS430)',['4m']],['φ32(SUS430)',['4m']],['φ38(SUS430)',['4m']],
+  ].map(([spec,lengths],i)=>({itemCategory:'化粧パイプ（SUS）',spec,availableLengths:lengths,materialType:'stainless',sortOrder:1100+i})),
+
+  // ─── SUSフラットバー (stainless) 厚×幅 ───
+  ...[
+    ...['6','9','12','16','19','25','32','38','50'].map(w=>[`2×${w}`,['4m']]),
+    ...['6','9','12','16','19','25','32','38','50','65','75','100'].map(w=>[`3×${w}`,['4m']]),
+    ...['6','9','12','16','19','25','32','38','50','65','75','100'].map(w=>[`4×${w}`,['4m']]),
+    ...['6','9','12','16','19','25','32','38','50','65','75','100','125','150'].map(w=>[`5×${w}`,['4m']]),
+    ...['9','12','16','19','25','32','38','50','65','75','100','125','150'].map(w=>[`6×${w}`,['4m']]),
+    ...['12','16','19','25','32','38','50','65','75','100','125','150'].map(w=>[`8×${w}`,['4m']]),
+    ...['16','19','25','32','38','50','65','75','100','125','150'].map(w=>[`10×${w}`,['4m']]),
+    ...['19','25','32','38','50','65','75','100','150'].map(w=>[`12×${w}`,['4m']]),
+    ...['25','32','38','50','65','75','100','150'].map(w=>[`16×${w}`,['4m']]),
+    ...['25','32','38','50','65','75','100','150'].map(w=>[`19×${w}`,['4m']]),
+    ...['32','38','50','65','75','100','150'].map(w=>[`25×${w}`,['4m']]),
+    ...['38','50','65','75','100','150'].map(w=>[`32×${w}`,['4m']]),
+    ...['50','65','75','100','150'].map(w=>[`38×${w}`,['4m']]),
+    ...['65','75','100','150'].map(w=>[`50×${w}`,['4m']]),
+    ['75×100',['4m']],['75×150',['4m']],['100×150',['4m']],
+  ].map(([spec,lengths],i)=>({itemCategory:'フラットバー（SUS）',spec,availableLengths:lengths,materialType:'stainless',sortOrder:1150+i})),
+
+  // ─── SUS角棒 (stainless) ───
+  ...[
+    ['3×3',['2m']],['4×4',['2m']],['5×5',['2m']],
+    ...['6','7','8'].map(d=>[`${d}×${d}`,['2m','4m']]),
+    ...['9','10','11','12','13','14','15','16','17','18','19','20','22','25','28','30','32',
+        '35','38','40','45','50','55','60','65','70','75','80','90','100'].map(d=>[`${d}×${d}`,['4m']]),
+  ].map(([spec,lengths],i)=>({itemCategory:'角棒（SUS）',spec,availableLengths:lengths,materialType:'stainless',sortOrder:1300+i})),
+
+  // ─── SUS配管パイプ TP-A (stainless) ───
+  ...[
+    ['6A',['4m']],['8A',['4m']],['10A',['4m']],['15A',['4m']],['20A',['4m']],
+    ['25A',['4m']],['32A',['4m']],['40A',['4m']],['50A',['4m']],['65A',['4m']],
+    ['80A',['4m']],['90A',['4m']],['100A',['4m']],['125A',['4m']],['150A',['4m']],
+    ['200A',['4m']],['250A',['4m']],['300A',['4m']],
+  ].map(([spec,lengths],i)=>({itemCategory:'配管パイプ TP-A（SUS）',spec,availableLengths:lengths,materialType:'stainless',sortOrder:1350+i})),
+
+  // ─── SUS屋内配管 (stainless) ───
+  ...[
+    ['13',['4m']],['20',['4m']],['25',['4m']],['32',['4m']],['40',['4m']],
+    ['50',['4m']],['65',['4m']],['75',['4m']],['100',['4m']],['125',['4m']],
+    ['150',['4m']],['200',['4m']],['250',['4m']],['300',['4m']],
+  ].map(([spec,lengths],i)=>({itemCategory:'屋内配管（SUS）',spec,availableLengths:lengths,materialType:'stainless',sortOrder:1400+i})),
+
+  // ─── SUSアングル (stainless) ───
+  ...[
+    ['3×20×20',['4m']],['3×25×25',['4m']],['3×30×30',['4m']],['3×40×40',['4m']],
+    ['3×50×50',['4m','6m']],['4×25×25',['4m']],['4×30×30',['4m']],['4×40×40',['4m']],
+    ['4×50×50',['4m','6m']],['4×65×65',['4m','6m']],['4×75×75',['4m','6m']],
+    ['5×40×40',['4m']],['5×50×50',['4m','6m']],['5×65×65',['4m','6m']],
+    ['5×75×75',['4m','6m']],['5×100×100',['4m','6m']],
+    ['6×50×50',['4m','6m']],['6×65×65',['4m','6m']],['6×75×75',['4m','6m']],
+    ['6×100×100',['4m','6m']],['6×150×150',['6m']],
+    ['8×65×65',['4m','6m']],['8×75×75',['4m','6m']],['8×100×100',['4m','6m']],
+    ['8×150×150',['6m']],
+    ['10×75×75',['4m','6m']],['10×100×100',['4m','6m']],['10×150×150',['6m']],
+    ['12×100×100',['4m','6m']],['12×150×150',['6m']],
+  ].map(([spec,lengths],i)=>({itemCategory:'アングル（SUS）',spec,availableLengths:lengths,materialType:'stainless',sortOrder:1450+i})),
+
+  // ─── SUS丸棒 (stainless) ───
+  ...[
+    ...['8','10','12','13','14','15'].map(d=>[`φ${d}`,['4m']]),
+    ...['16','18','19','20','22','25'].map(d=>[`φ${d}`,['4m','6m']]),
+    ...['26','28','30','32','35','38','40','45','50','55','60','65','70','75','80','90','100'].map(d=>[`φ${d}`,['6m']]),
+  ].map(([spec,lengths],i)=>({itemCategory:'丸棒（SUS）',spec,availableLengths:lengths,materialType:'stainless',sortOrder:1500+i})),
+];
+
 // ===== Firestore 初期データ投入 =====
 async function seedInitialData() {
   try {
@@ -189,30 +326,52 @@ async function seedInitialData() {
       });
     }
 
-    // バージョン確認（v1以上なら品目シードはスキップ）
+    // バージョン確認
     const configSnap = await getDoc(doc(db, 'portal', 'config'));
-    const seedVer = configSnap.exists() ? (configSnap.data().orderItemsSeedVersion || 0) : 0;
-    if (seedVer >= 1) return;
+    let seedVer = configSnap.exists() ? (configSnap.data().orderItemsSeedVersion || 0) : 0;
 
-    // カタログ品目を一括追加
-    const suppSnap2 = await getDocs(collection(db, 'order_suppliers'));
-    const suppId = suppSnap2.docs[0]?.id || '';
-    const batch = CATALOG_SEED.map(item => addDoc(collection(db, 'order_items'), {
-      itemCategory: item.itemCategory,
-      name: item.itemCategory,
-      spec: item.spec,
-      materialType: 'steel',
-      availableLengths: item.availableLengths,
-      unit: '本',
-      defaultQty: 1,
-      supplierId: suppId,
-      sortOrder: item.sortOrder,
-      orderType: 'both',
-      active: true
-    }));
-    await Promise.all(batch);
-    await setDoc(doc(db, 'portal', 'config'), { orderItemsSeedVersion: 1 }, { merge: true });
-    console.log(`order: ${CATALOG_SEED.length}件の品目をシードしました`);
+    // ── V1: スチール鋼材カタログ ──
+    if (seedVer < 1) {
+      const suppSnap2 = await getDocs(collection(db, 'order_suppliers'));
+      const suppId = suppSnap2.docs[0]?.id || '';
+      await Promise.all(CATALOG_SEED.map(item => addDoc(collection(db, 'order_items'), {
+        itemCategory: item.itemCategory,
+        name: item.itemCategory,
+        spec: item.spec,
+        materialType: 'steel',
+        availableLengths: item.availableLengths,
+        unit: '本',
+        defaultQty: 1,
+        supplierId: suppId,
+        sortOrder: item.sortOrder,
+        orderType: 'both',
+        active: true
+      })));
+      await setDoc(doc(db, 'portal', 'config'), { orderItemsSeedVersion: 1 }, { merge: true });
+      console.log(`order: ${CATALOG_SEED.length}件のV1品目をシードしました`);
+      seedVer = 1;
+    }
+
+    // ── V2: 磨き材 + ステンレス ──
+    if (seedVer < 2) {
+      const suppSnap3 = await getDocs(collection(db, 'order_suppliers'));
+      const suppId2 = suppSnap3.docs[0]?.id || '';
+      await Promise.all(CATALOG_SEED_V2.map(item => addDoc(collection(db, 'order_items'), {
+        itemCategory: item.itemCategory,
+        name: item.itemCategory,
+        spec: item.spec,
+        materialType: item.materialType || 'steel',
+        availableLengths: item.availableLengths,
+        unit: '本',
+        defaultQty: 1,
+        supplierId: suppId2,
+        sortOrder: item.sortOrder,
+        orderType: 'both',
+        active: true
+      })));
+      await setDoc(doc(db, 'portal', 'config'), { orderItemsSeedVersion: 2 }, { merge: true });
+      console.log(`order: ${CATALOG_SEED_V2.length}件のV2品目をシードしました`);
+    }
   } catch (err) {
     console.error('order: seedInitialData error', err);
   }
