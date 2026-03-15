@@ -130,6 +130,8 @@ import {
   initCompanyCalSettingsForms
 } from './modules/company-calendar.js';
 
+import { initBottomNav } from './modules/bottom-nav.js';
+
 
 // ========== 依存注入 ==========
 // 各モジュールが必要とするクロスモジュール関数を注入
@@ -181,6 +183,9 @@ Object.assign(reqDeps, {
 });
 
 initEmail({ confirmDelete });
+
+// ボトムナビ初期化（スマホ用）
+initBottomNav();
 
 // 会社カレンダーモジュール初期化
 initCompanyCalendar({ renderCalendar });
@@ -1891,11 +1896,18 @@ function applyFavoritesOnlyMode() {
   if (state.favoritesOnlyMode) {
     btn.classList.add('active');
     btn.title = 'すべて表示';
-    btn.innerHTML = '<i class="fa-solid fa-star"></i><span class="btn-fav-label">すべて表示</span>';
+    // サイドバー構造に対応（sidebar-item-icon / sidebar-item-label）
+    const iconEl = btn.querySelector('.sidebar-item-icon i') || btn.querySelector('i');
+    const labelEl = btn.querySelector('.sidebar-item-label') || btn.querySelector('.btn-fav-label');
+    if (iconEl) { iconEl.className = 'fa-solid fa-star'; }
+    if (labelEl) { labelEl.textContent = 'すべて表示'; }
   } else {
     btn.classList.remove('active');
     btn.title = 'お気に入りのみ表示';
-    btn.innerHTML = '<i class="fa-regular fa-star"></i><span class="btn-fav-label">お気に入りのみ</span>';
+    const iconEl = btn.querySelector('.sidebar-item-icon i') || btn.querySelector('i');
+    const labelEl = btn.querySelector('.sidebar-item-label') || btn.querySelector('.btn-fav-label');
+    if (iconEl) { iconEl.className = 'fa-regular fa-star'; }
+    if (labelEl) { labelEl.textContent = 'お気に入り'; }
   }
   renderFavorites();
 }

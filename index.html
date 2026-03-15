@@ -54,52 +54,115 @@
         <i class="fa-solid fa-magnifying-glass search-icon"></i>
       </div>
 
-      <button class="btn-email-assist" id="btn-email-assist" title="メール返信アシスタント（AI）">
-        <i class="fa-solid fa-envelope-open-text"></i>
-      </button>
-
-      <button class="btn-calendar" id="btn-calendar" title="カレンダー・勤怠管理">
-        <i class="fa-regular fa-calendar"></i>
-      </button>
-
-      <button class="btn-task" id="btn-task" title="タスク管理">
-        <i class="fa-solid fa-list-check"></i>
-        <span class="task-badge" id="task-badge" hidden>0</span>
-      </button>
-
-      <button class="btn-reqboard" id="btn-reqboard" title="部門間依頼・目安箱">
-        <i class="fa-solid fa-clipboard-list"></i>
-        <span class="req-badge" id="req-badge" hidden>0</span>
-      </button>
-
-      <button class="btn-notice-bell" id="btn-notice-bell" title="お知らせ">
-        <i class="fa-solid fa-bell"></i>
-        <span class="notice-unread-badge" id="notice-unread-badge" hidden>0</span>
-      </button>
-
-      <button class="btn-favorites-only" id="btn-favorites-only" title="お気に入りのみ表示">
-        <i class="fa-regular fa-star"></i>
-        <span class="btn-fav-label">お気に入りのみ</span>
-      </button>
-
-      <button class="btn-lock-header" id="btn-lock-header" title="ポータルをロック" hidden>
-        <i class="fa-solid fa-lock"></i>
-      </button>
-
-      <button class="btn-user" id="btn-user" title="ユーザー設定">
-        <div class="user-avatar" id="user-avatar"><i class="fa-solid fa-user"></i></div>
-        <div class="user-info">
-          <span class="user-label" id="user-greeting">名前を設定してください</span>
-          <span class="user-name" id="username-display"></span>
+      <div class="header-right">
+        <div class="header-clock">
+          <i class="fa-regular fa-clock"></i>
+          <span id="header-clock"></span>
         </div>
-      </button>
-
-      <div class="header-clock">
-        <i class="fa-regular fa-clock"></i>
-        <span id="header-clock"></span>
+        <button class="btn-user" id="btn-user" title="ユーザー設定">
+          <div class="user-avatar" id="user-avatar"><i class="fa-solid fa-user"></i></div>
+          <div class="user-info">
+            <span class="user-label" id="user-greeting">名前を設定してください</span>
+            <span class="user-name" id="username-display"></span>
+          </div>
+        </button>
       </div>
     </div>
   </header>
+
+  <!-- ==================== App Layout ==================== -->
+  <div class="app-layout">
+
+  <!-- ==================== Sidebar (PC) ==================== -->
+  <aside class="sidebar" id="app-sidebar">
+
+    <!-- 個人エリア -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">個人</div>
+
+      <button class="sidebar-item" id="btn-calendar" title="カレンダー・勤怠管理">
+        <span class="sidebar-item-icon"><i class="fa-regular fa-calendar"></i></span>
+        <span class="sidebar-item-label">カレンダー・勤怠</span>
+      </button>
+
+      <button class="sidebar-item" id="btn-task" title="タスク管理">
+        <span class="sidebar-item-icon">
+          <i class="fa-solid fa-list-check"></i>
+          <span class="task-badge" id="task-badge" hidden>0</span>
+        </span>
+        <span class="sidebar-item-label">タスク管理</span>
+      </button>
+
+      <button class="sidebar-item" id="btn-favorites-only" title="お気に入りのみ表示">
+        <span class="sidebar-item-icon"><i class="fa-regular fa-star"></i></span>
+        <span class="sidebar-item-label">お気に入り</span>
+      </button>
+    </div>
+
+    <!-- 全社共有エリア -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">全社共有</div>
+
+      <button class="sidebar-item" id="btn-notice-bell" title="お知らせ">
+        <span class="sidebar-item-icon">
+          <i class="fa-solid fa-bell"></i>
+          <span class="notice-unread-badge" id="notice-unread-badge" hidden>0</span>
+        </span>
+        <span class="sidebar-item-label">お知らせ</span>
+      </button>
+
+      <button class="sidebar-item" id="btn-reqboard" title="部門間依頼・目安箱">
+        <span class="sidebar-item-icon">
+          <i class="fa-solid fa-clipboard-list"></i>
+          <span class="req-badge" id="req-badge" hidden>0</span>
+        </span>
+        <span class="sidebar-item-label">部門間依頼</span>
+      </button>
+
+      <button class="sidebar-item" id="btn-email-assist" title="メール返信アシスタント（AI）">
+        <span class="sidebar-item-icon"><i class="fa-solid fa-envelope-open-text"></i></span>
+        <span class="sidebar-item-label">メールAI</span>
+      </button>
+
+      <button class="sidebar-item chat-fab" id="chat-fab" title="チャット">
+        <span class="sidebar-item-icon">
+          <i class="fa-solid fa-comments"></i>
+          <span class="chat-unread-badge" id="chat-unread-badge" hidden>0</span>
+        </span>
+        <span class="sidebar-item-label">チャット</span>
+      </button>
+
+      <button class="sidebar-item ft-fab" id="ft-fab" title="ファイル転送">
+        <span class="sidebar-item-icon">
+          <i class="fa-solid fa-file-arrow-up"></i>
+          <span class="ft-badge" id="ft-badge" hidden>0</span>
+        </span>
+        <span class="sidebar-item-label">ファイル転送</span>
+      </button>
+    </div>
+
+    <!-- 設定エリア -->
+    <div class="sidebar-section sidebar-section-settings">
+      <div class="sidebar-section-label">設定</div>
+
+      <button class="sidebar-item settings-fab" id="settings-fab" title="表示設定">
+        <span class="sidebar-item-icon"><i class="fa-solid fa-gear"></i></span>
+        <span class="sidebar-item-label">表示設定</span>
+      </button>
+
+      <button class="sidebar-item help-fab" id="help-fab" title="使い方ガイド">
+        <span class="sidebar-item-icon"><i class="fa-solid fa-question"></i></span>
+        <span class="sidebar-item-label">使い方ガイド</span>
+      </button>
+
+      <button class="sidebar-item btn-lock-header" id="btn-lock-header" title="ポータルをロック" hidden>
+        <span class="sidebar-item-icon"><i class="fa-solid fa-lock"></i></span>
+        <span class="sidebar-item-label">ロック</span>
+      </button>
+    </div>
+
+  </aside>
+  <!-- /sidebar -->
 
   <!-- ==================== Main ==================== -->
   <main class="main">
@@ -218,6 +281,10 @@
       <p>該当するメニューが見つかりません</p>
     </div>
   </main>
+  <!-- /main -->
+
+  </div>
+  <!-- /app-layout -->
 
   <!-- ==================== Footer ==================== -->
   <footer class="footer">
@@ -235,12 +302,6 @@
       </div>
     </div>
   </div>
-
-  <!-- ==================== ファイル転送FABボタン ==================== -->
-  <button class="ft-fab" id="ft-fab" title="ファイル転送">
-    <i class="fa-solid fa-file-arrow-up"></i>
-    <span class="ft-badge" id="ft-badge" hidden>0</span>
-  </button>
 
   <!-- ==================== ファイル転送パネル ==================== -->
   <div id="ft-panel" class="ft-panel" hidden>
@@ -391,12 +452,6 @@
     </div>
   </div>
 
-  <!-- ==================== チャットFABボタン ==================== -->
-  <button class="chat-fab" id="chat-fab" title="チャット">
-    <i class="fa-solid fa-comments"></i>
-    <span class="chat-unread-badge" id="chat-unread-badge" hidden>0</span>
-  </button>
-
   <!-- ==================== チャットパネル ==================== -->
   <div id="chat-panel" class="chat-panel" hidden>
     <!-- リサイズハンドル（左上コーナーをドラッグ） -->
@@ -515,16 +570,6 @@
       </div>
     </div>
   </div>
-
-  <!-- ==================== ヘルプFABボタン ==================== -->
-  <button class="help-fab" id="help-fab" title="使い方ガイド">
-    <i class="fa-solid fa-question"></i>
-  </button>
-
-  <!-- ==================== 設定FABボタン ==================== -->
-  <button class="settings-fab" id="settings-fab" title="表示設定">
-    <i class="fa-solid fa-gear"></i>
-  </button>
 
   <!-- ==================== 設定パネル ==================== -->
   <div id="settings-panel" class="settings-panel" hidden>
@@ -886,6 +931,123 @@
         </div>
 
         <p class="guide-version">最終更新: 2026年3月</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ボトムナビ（スマホ用）==================== -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="bottom-nav-item" id="bnav-home">
+      <i class="fa-solid fa-house"></i>
+      <span>ホーム</span>
+    </button>
+    <button class="bottom-nav-item" id="bnav-chat">
+      <span class="bnav-icon-wrap">
+        <i class="fa-solid fa-comments"></i>
+        <span id="bnav-chat-badge" class="bnav-badge" hidden></span>
+      </span>
+      <span>チャット</span>
+    </button>
+    <button class="bottom-nav-item" id="bnav-notice">
+      <span class="bnav-icon-wrap">
+        <i class="fa-solid fa-bell"></i>
+        <span id="bnav-notice-badge" class="bnav-badge" hidden></span>
+      </span>
+      <span>お知らせ</span>
+    </button>
+    <button class="bottom-nav-item" id="bnav-personal">
+      <i class="fa-solid fa-user"></i>
+      <span>個人</span>
+    </button>
+    <button class="bottom-nav-item" id="bnav-more">
+      <i class="fa-solid fa-ellipsis"></i>
+      <span>その他</span>
+    </button>
+  </nav>
+
+  <!-- ==================== その他ドロワー（スマホ用）==================== -->
+  <div class="more-drawer" id="more-drawer" hidden>
+    <div class="more-drawer-backdrop" id="more-drawer-backdrop"></div>
+    <div class="more-drawer-panel">
+      <div class="more-drawer-header">
+        <span>その他の機能</span>
+        <button class="more-drawer-close" id="more-drawer-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="more-drawer-grid">
+        <button class="more-drawer-item" data-target="btn-calendar">
+          <i class="fa-regular fa-calendar"></i>
+          <span>カレンダー</span>
+        </button>
+        <button class="more-drawer-item" data-target="btn-task">
+          <span class="mdr-icon-wrap">
+            <i class="fa-solid fa-list-check"></i>
+            <span id="mdr-task-badge" class="mdr-badge" hidden></span>
+          </span>
+          <span>タスク</span>
+        </button>
+        <button class="more-drawer-item" data-target="btn-reqboard">
+          <span class="mdr-icon-wrap">
+            <i class="fa-solid fa-clipboard-list"></i>
+            <span id="mdr-req-badge" class="mdr-badge" hidden></span>
+          </span>
+          <span>部門間依頼</span>
+        </button>
+        <button class="more-drawer-item" data-target="btn-email-assist">
+          <i class="fa-solid fa-envelope-open-text"></i>
+          <span>メールAI</span>
+        </button>
+        <button class="more-drawer-item" data-target="ft-fab">
+          <i class="fa-solid fa-file-arrow-up"></i>
+          <span>ファイル転送</span>
+        </button>
+        <button class="more-drawer-item" data-target="btn-favorites-only">
+          <i class="fa-regular fa-star"></i>
+          <span>お気に入り</span>
+        </button>
+        <button class="more-drawer-item" data-target="settings-fab">
+          <i class="fa-solid fa-gear"></i>
+          <span>表示設定</span>
+        </button>
+        <button class="more-drawer-item" data-target="help-fab">
+          <i class="fa-solid fa-question"></i>
+          <span>ヘルプ</span>
+        </button>
+        <button class="more-drawer-item mdr-lock-item" data-target="btn-lock-header" hidden>
+          <i class="fa-solid fa-lock"></i>
+          <span>ロック</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 個人ドロワー（スマホ用）==================== -->
+  <div class="personal-drawer" id="personal-drawer" hidden>
+    <div class="personal-drawer-backdrop" id="personal-drawer-backdrop"></div>
+    <div class="personal-drawer-panel">
+      <div class="personal-drawer-header">
+        <span>個人メニュー</span>
+        <button class="personal-drawer-close" id="personal-drawer-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="personal-drawer-list">
+        <button class="personal-drawer-item" data-target="btn-user">
+          <i class="fa-solid fa-user-circle"></i>
+          <span>ユーザー設定</span>
+        </button>
+        <button class="personal-drawer-item" data-target="btn-calendar">
+          <i class="fa-regular fa-calendar"></i>
+          <span>カレンダー・勤怠</span>
+        </button>
+        <button class="personal-drawer-item" data-target="btn-task">
+          <span class="mdr-icon-wrap">
+            <i class="fa-solid fa-list-check"></i>
+            <span id="pdr-task-badge" class="mdr-badge" hidden></span>
+          </span>
+          <span>タスク管理</span>
+        </button>
+        <button class="personal-drawer-item" data-target="btn-favorites-only">
+          <i class="fa-regular fa-star"></i>
+          <span>お気に入り</span>
+        </button>
       </div>
     </div>
   </div>
