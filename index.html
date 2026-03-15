@@ -230,9 +230,6 @@
       <div class="card-grid" id="favorites-grid"></div>
     </section>
 
-    <!-- お知らせボード（JS が制御） -->
-    <section id="notice-board" class="notice-board"></section>
-
     <!-- 天気ウィジェット（通常は非表示、太陽光カードで展開） -->
     <section id="weather-widget" class="weather-widget" hidden>
       <div class="weather-section-header">
@@ -445,6 +442,19 @@
         <button class="btn-modal-secondary" id="ft-cancel-btn">キャンセル</button>
         <button class="btn-modal-primary" id="ft-confirm-btn" hidden>送信する</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ==================== お知らせパネル ==================== -->
+  <div id="notice-panel" class="notice-panel" hidden>
+    <div class="notice-panel-header">
+      <span><i class="fa-solid fa-bell"></i> お知らせ</span>
+      <button class="notice-panel-close" id="notice-panel-close" title="閉じる">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="notice-panel-body">
+      <section id="notice-board" class="notice-board"></section>
     </div>
   </div>
 
