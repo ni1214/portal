@@ -112,13 +112,8 @@ function fmtDatetime(ts) {
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${wd}）${pad(d.getHours())}時${pad(d.getMinutes())}分`;
 }
 
-// ===== メール送信 =====
-async function sendOrderEmail(orderData, orderId) {
-  if (!_gasUrl) {
-    alert('GAS URLが設定されていません。管理者に設定を依頼してください。');
-    return false;
-  }
-
+// ===== メール本文組み立て =====
+function buildEmailContent(orderData) {
   const supplier = _suppliers.find(s => s.id === orderData.supplierId) || {
     name: orderData.supplierName,
     email: orderData.supplierEmail
@@ -142,8 +137,9 @@ async function sendOrderEmail(orderData, orderId) {
   }).join('\n');
 
   const noteText = (orderData.note || '').trim() || 'なし';
+  const supplierName = supplier.name || orderData.supplierName || '発注先';
 
-  const body = `土屋鋼材株式会社
+  const body = `${supplierName}
 ご担当者様
 
 いつもお世話になっております。
@@ -173,12 +169,24 @@ ${noteText}
 生産管理課
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
+  return { subject, body, toEmail: supplier.email || orderData.supplierEmail };
+}
+
+// ===== メール送信 =====
+async function sendOrderEmail(orderData, orderId) {
+  if (!_gasUrl) {
+    alert('GAS URLが設定されていません。管理者に設定を依頼してください。');
+    return false;
+  }
+
+  const { subject, body, toEmail } = buildEmailContent(orderData);
+
   try {
     await fetch(_gasUrl, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: supplier.email, subject, body })
+      body: JSON.stringify({ to: toEmail, subject, body })
     });
 
     if (orderId) {
@@ -295,11 +303,13 @@ export async function openOrderModal() {
   const modal = document.getElementById('ord-modal');
   if (!modal) return;
 
-  const supplier = _suppliers[0] || { name: '土屋鋼材株式会社', email: 'info@tsuchiyakouzai.com' };
-  const suppEl = document.getElementById('ord-supplier-name');
-  if (suppEl) suppEl.textContent = supplier.name;
-  const suppEmailEl = document.getElementById('ord-supplier-email');
-  if (suppEmailEl) suppEmailEl.textContent = supplier.email;
+  // 発注先プルダウンを構築
+  const sel = document.getElementById('ord-supplier-select');
+  if (sel) {
+    sel.innerHTML = _suppliers.length
+      ? _suppliers.map(s => `<option value="${esc(s.id)}">${esc(s.name)}　${esc(s.email)}</option>`).join('')
+      : '<option value="">（発注先が登録されていません）</option>';
+  }
 
   // 区分を工場在庫にリセット
   switchOrderType('factory');
@@ -318,15 +328,14 @@ export function closeOrderModal() {
   if (modal) modal.classList.remove('visible');
 }
 
-async function submitOrder(sendEmail) {
+// 発注データを画面から収集して返す（バリデーション込み）
+function collectOrderData() {
   const username = state.currentUsername || '未設定';
-
-  // 現場向けの場合は現場名必須
   const siteName = (document.getElementById('ord-site-name')?.value || '').trim();
   if (_orderType === 'site' && !siteName) {
     alert('現場名を入力してください。');
     document.getElementById('ord-site-name')?.focus();
-    return;
+    return null;
   }
 
   const rows = document.querySelectorAll('#ord-item-list .ord-item-row');
@@ -334,15 +343,12 @@ async function submitOrder(sendEmail) {
   rows.forEach(row => {
     const chk = row.querySelector('.ord-item-check');
     if (!chk || !chk.checked) return;
-
     if (row.dataset.id) {
-      // マスタ品目
       const item = _items.find(it => it.id === row.dataset.id);
       if (!item) return;
       const qty = parseInt(row.querySelector('.ord-qty-input').value, 10) || 1;
       selectedItems.push({ itemId: row.dataset.id, name: item.name, spec: item.spec, unit: item.unit, qty });
     } else {
-      // カスタム品目（この発注のみ）
       const name = row.querySelector('.ord-custom-name')?.value.trim();
       const spec = row.querySelector('.ord-custom-spec')?.value.trim() || '';
       const unit = row.querySelector('.ord-custom-unit')?.value.trim() || '';
@@ -353,16 +359,14 @@ async function submitOrder(sendEmail) {
 
   if (selectedItems.length === 0) {
     alert('発注する鋼材を1つ以上選択してください。');
-    return;
+    return null;
   }
 
-  const supplier = _suppliers[0] || { id: '', name: '土屋鋼材株式会社', email: 'info@tsuchiyakouzai.com' };
-  const noteEl = document.getElementById('ord-note');
-  const note = noteEl ? noteEl.value.trim() : '';
+  const selEl = document.getElementById('ord-supplier-select');
+  const supplier = _suppliers.find(s => s.id === selEl?.value) || _suppliers[0] || { id: '', name: '土屋鋼材株式会社', email: 'info@tsuchiyakouzai.com' };
+  const note = document.getElementById('ord-note')?.value.trim() || '';
 
-  const nowLocal = new Date();
-
-  const orderData = {
+  return {
     supplierId: supplier.id,
     supplierName: supplier.name,
     supplierEmail: supplier.email,
@@ -371,6 +375,47 @@ async function submitOrder(sendEmail) {
     items: selectedItems,
     orderedBy: username,
     note,
+    _localNow: new Date()
+  };
+}
+
+// プレビューモーダルを開く
+let _pendingOrderData = null;
+async function openPreviewModal() {
+  const data = collectOrderData();
+  if (!data) return;
+  _pendingOrderData = data;
+
+  const { subject, body, toEmail } = buildEmailContent({ ...data, orderedAt: data._localNow });
+
+  document.getElementById('ord-preview-subject').textContent = subject;
+  document.getElementById('ord-preview-to').textContent = toEmail;
+  document.getElementById('ord-preview-body').textContent = body;
+
+  document.getElementById('ord-modal').classList.remove('visible');
+  document.getElementById('ord-preview-modal').classList.add('visible');
+}
+
+function closePreviewModal() {
+  document.getElementById('ord-preview-modal').classList.remove('visible');
+  document.getElementById('ord-modal').classList.add('visible');
+}
+
+// プレビューから実際に送信
+async function submitFromPreview() {
+  if (!_pendingOrderData) return;
+  const data = _pendingOrderData;
+  const nowLocal = data._localNow;
+
+  const orderData = {
+    supplierId: data.supplierId,
+    supplierName: data.supplierName,
+    supplierEmail: data.supplierEmail,
+    orderType: data.orderType,
+    siteName: data.siteName,
+    items: data.items,
+    orderedBy: data.orderedBy,
+    note: data.note,
     orderedAt: serverTimestamp(),
     emailSent: false,
     emailSentAt: null
@@ -379,26 +424,40 @@ async function submitOrder(sendEmail) {
   try {
     const ref = await addDoc(collection(db, 'orders'), orderData);
     const orderId = ref.id;
+    const localOrderData = { ...orderData, orderedAt: nowLocal, orderId };
 
-    const localOrderData = {
-      ...orderData,
-      orderedAt: nowLocal,
-      orderId
-    };
+    const btn = document.getElementById('ord-preview-send');
+    if (btn) { btn.disabled = true; btn.textContent = '送信中...'; }
+    const ok = await sendOrderEmail(localOrderData, orderId);
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> この内容で送信'; }
 
-    if (sendEmail) {
-      const btn = document.getElementById('ord-btn-email');
-      if (btn) { btn.disabled = true; btn.textContent = '送信中...'; }
-      const ok = await sendOrderEmail(localOrderData, orderId);
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-envelope"></i> メール送信'; }
-      if (ok) {
-        alert('メールを送信しました。');
-        closeOrderModal();
-      }
-    } else {
-      printOrder(localOrderData);
-      closeOrderModal();
+    if (ok) {
+      alert('メールを送信しました。');
+      document.getElementById('ord-preview-modal').classList.remove('visible');
+      _pendingOrderData = null;
     }
+  } catch (err) {
+    console.error('order: submitFromPreview error', err);
+    alert('送信に失敗しました。\n' + err.message);
+  }
+}
+
+async function submitOrder(sendEmail) {
+  const data = collectOrderData();
+  if (!data) return;
+  const nowLocal = data._localNow;
+
+  const orderData = {
+    supplierId: data.supplierId, supplierName: data.supplierName,
+    supplierEmail: data.supplierEmail, orderType: data.orderType,
+    siteName: data.siteName, items: data.items, orderedBy: data.orderedBy,
+    note: data.note, orderedAt: serverTimestamp(), emailSent: false, emailSentAt: null
+  };
+
+  try {
+    const ref = await addDoc(collection(db, 'orders'), orderData);
+    printOrder({ ...orderData, orderedAt: nowLocal, orderId: ref.id });
+    closeOrderModal();
   } catch (err) {
     console.error('order: submitOrder error', err);
     alert('発注の保存に失敗しました。\n' + err.message);
@@ -644,10 +703,18 @@ function bindOrderEvents() {
     closeOrderModal();
     openOrderHistoryModal();
   });
-  document.getElementById('ord-btn-email')?.addEventListener('click', () => submitOrder(true));
+  document.getElementById('ord-btn-email')?.addEventListener('click', openPreviewModal);
   document.getElementById('ord-btn-print')?.addEventListener('click', () => submitOrder(false));
   document.getElementById('ord-modal')?.addEventListener('click', e => {
     if (e.target === document.getElementById('ord-modal')) closeOrderModal();
+  });
+
+  // プレビューモーダル
+  document.getElementById('ord-preview-close')?.addEventListener('click', closePreviewModal);
+  document.getElementById('ord-preview-back')?.addEventListener('click', closePreviewModal);
+  document.getElementById('ord-preview-send')?.addEventListener('click', submitFromPreview);
+  document.getElementById('ord-preview-modal')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('ord-preview-modal')) closePreviewModal();
   });
 
   // 発注区分トグル

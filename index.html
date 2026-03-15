@@ -1799,11 +1799,10 @@
         <input type="text" id="ord-site-name" class="form-input" placeholder="例：〇〇マンション新築工事" maxlength="60" autocomplete="off">
       </div>
 
-      <!-- 発注先 -->
+      <!-- 発注先プルダウン -->
       <div class="ord-supplier-info">
         <div class="ord-supplier-label">発注先</div>
-        <div class="ord-supplier-name" id="ord-supplier-name">土屋鋼材株式会社</div>
-        <div class="ord-supplier-email" id="ord-supplier-email">info@tsuchiyakouzai.com</div>
+        <select id="ord-supplier-select" class="form-input ord-supplier-select"></select>
       </div>
 
       <!-- 鋼材チェックリスト -->
@@ -1825,7 +1824,30 @@
         <button class="btn-modal-secondary" id="ord-btn-cancel">キャンセル</button>
         <button class="btn-modal-secondary" id="ord-btn-history"><i class="fa-solid fa-clock-rotate-left"></i> 履歴</button>
         <button class="btn-modal-secondary" id="ord-btn-print"><i class="fa-solid fa-print"></i> 印刷/PDF</button>
-        <button class="btn-modal-primary" id="ord-btn-email"><i class="fa-solid fa-envelope"></i> メール送信</button>
+        <button class="btn-modal-primary" id="ord-btn-email"><i class="fa-solid fa-eye"></i> プレビュー・送信</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== メールプレビューモーダル ===== -->
+  <div class="modal-overlay" id="ord-preview-modal">
+    <div class="modal-glass ord-modal-inner ord-preview-inner">
+      <div class="modal-header">
+        <h2 class="modal-title"><i class="fa-solid fa-envelope-open-text"></i> メール送信プレビュー</h2>
+        <button class="modal-close" id="ord-preview-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="ord-preview-subject-row">
+        <span class="ord-preview-label">件名</span>
+        <span class="ord-preview-subject" id="ord-preview-subject"></span>
+      </div>
+      <div class="ord-preview-to-row">
+        <span class="ord-preview-label">宛先</span>
+        <span class="ord-preview-to" id="ord-preview-to"></span>
+      </div>
+      <pre class="ord-preview-body" id="ord-preview-body"></pre>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="ord-preview-back"><i class="fa-solid fa-arrow-left"></i> 戻る</button>
+        <button class="btn-modal-primary" id="ord-preview-send"><i class="fa-solid fa-paper-plane"></i> この内容で送信</button>
       </div>
     </div>
   </div>

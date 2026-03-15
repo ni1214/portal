@@ -10551,6 +10551,64 @@ html.font-xl { font-size: 21px; }
   line-height: 1.6;
 }
 
+/* ===== メールプレビューモーダル ===== */
+.ord-preview-inner {
+  max-width: 680px;
+  width: 95%;
+}
+.ord-preview-subject-row,
+.ord-preview-to-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.ord-preview-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 36px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.ord-preview-subject {
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  line-height: 1.4;
+  word-break: break-all;
+}
+.ord-preview-to {
+  font-size: 0.88rem;
+  color: var(--accent-blue);
+  word-break: break-all;
+}
+.ord-preview-body {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 6px;
+  padding: 14px 16px;
+  font-family: 'Noto Sans JP', 'Meiryo', monospace;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 360px;
+  overflow-y: auto;
+  margin-bottom: 0;
+}
+/* ライトモード */
+[data-theme="light"] .ord-preview-body {
+  background: #ffffff;
+  border-color: rgba(31,35,40,0.2);
+}
+
 /* ライトモード対応 */
 [data-theme="light"] .ord-badge-sent {
   background: rgba(34, 197, 94, 0.1);
