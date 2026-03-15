@@ -1,6 +1,6 @@
 // ========== 鋼材発注 (order.js) ==========
 import {
-  db, doc, getDoc, setDoc, addDoc, getDocs, updateDoc,
+  db, doc, getDoc, setDoc, addDoc, getDocs, updateDoc, deleteDoc,
   collection, query, where, orderBy,
   serverTimestamp
 } from './config.js';
@@ -406,12 +406,30 @@ async function submitOrder(sendEmail) {
 }
 
 // ===== 履歴モーダル =====
+// 1年以上古い発注データを自動削除（バックグラウンド実行）
+async function purgeOldOrders() {
+  try {
+    const cutoff = new Date();
+    cutoff.setFullYear(cutoff.getFullYear() - 1);
+    const snap = await getDocs(query(collection(db, 'orders'), where('orderedBy', '==', state.currentUsername)));
+    const old = snap.docs.filter(d => {
+      const t = d.data().orderedAt?.toDate?.() || new Date(d.data().orderedAt || 0);
+      return t < cutoff;
+    });
+    await Promise.all(old.map(d => deleteDoc(doc(db, 'orders', d.id))));
+    if (old.length > 0) console.log(`order: ${old.length}件の古い発注データを削除しました`);
+  } catch (err) {
+    console.warn('order: purgeOldOrders error', err);
+  }
+}
+
 export async function openOrderHistoryModal() {
   _historyOffset = 0;
   await loadMasters();
   const modal = document.getElementById('ord-history-modal');
   if (!modal) return;
   modal.classList.add('visible');
+  purgeOldOrders(); // バックグラウンドで古いデータを削除（完了を待たない）
   await renderHistory();
 }
 
@@ -431,15 +449,12 @@ async function renderHistory() {
 
   try {
     const username = state.currentUsername;
+    // 複合インデックス不要: whereのみで取得し、ソート・期間フィルタはクライアントで実施
     let q;
     if (state.isAdmin) {
-      q = query(collection(db, 'orders'), orderBy('orderedAt', 'desc'));
+      q = query(collection(db, 'orders'));
     } else {
-      q = query(
-        collection(db, 'orders'),
-        where('orderedBy', '==', username),
-        orderBy('orderedAt', 'desc')
-      );
+      q = query(collection(db, 'orders'), where('orderedBy', '==', username));
     }
 
     const snap = await getDocs(q);
@@ -449,6 +464,11 @@ async function renderHistory() {
         if (!o.orderedAt) return false;
         const t = o.orderedAt.toDate ? o.orderedAt.toDate() : new Date(o.orderedAt);
         return t >= period.start && t <= period.end;
+      })
+      .sort((a, b) => {
+        const ta = a.orderedAt.toDate ? a.orderedAt.toDate() : new Date(a.orderedAt);
+        const tb = b.orderedAt.toDate ? b.orderedAt.toDate() : new Date(b.orderedAt);
+        return tb - ta; // 新しい順
       });
 
     if (orders.length === 0) {
