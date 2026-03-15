@@ -20,6 +20,7 @@ let _showSelectedOnly = false;  // 選択済みのみ表示
 let _pins = [];                 // ピン留め品目ID（localStorage）
 let _recent = [];               // 最近使った品目ID（localStorage、最大10件）
 let _checkedItems = new Map();  // itemId → {checked, qty, length, finish}
+let _historyOrders = [];     // 履歴モーダルで読み込んだ発注データ
 
 // ===== カタログシードデータ =====
 // materialType: 'steel'=スチール, 'stainless'=ステンレス
@@ -555,7 +556,7 @@ function printOrder(orderData) {
   const itemRows = orderData.items.map((item, i) => `
     <tr>
       <td>${i + 1}</td>
-      <td>${esc(item.name)}　${esc(item.spec)}</td>
+      <td>${esc(item.category || item.name || '')}　${esc(item.spec)}${item.finish ? '　' + esc(item.finish) : ''}${item.length ? '　L=' + esc(item.length) : ''}</td>
       <td class="ord-print-qty">${item.qty}${esc(item.unit)}</td>
     </tr>`).join('');
 
@@ -630,27 +631,42 @@ function saveRecent(itemIds) {
   localStorage.setItem('portal-order-recent', JSON.stringify(_recent));
 }
 
-// ===== カテゴリフィルタタブ（動的生成） =====
+// ===== 選択中サマリー =====
+function renderSelectedSummary() {
+  const el = document.getElementById('ord-selected-summary');
+  if (!el) return;
+  const selected = [];
+  _checkedItems.forEach((saved, itemId) => {
+    if (!saved.checked) return;
+    const item = _items.find(it => it.id === itemId);
+    if (!item) return;
+    selected.push({ item, saved });
+  });
+  if (!selected.length) { el.hidden = true; return; }
+  el.hidden = false;
+  const chips = selected.map(({ item, saved }) => {
+    const fin = saved.finish ? ` <span class="ord-sum-fin">${esc(saved.finish)}</span>` : '';
+    const len = saved.length ? ` <span class="ord-sum-len">${esc(saved.length)}</span>` : '';
+    return `<span class="ord-sum-chip">${esc(item.spec)}${fin}${len} <strong>×${saved.qty}本</strong></span>`;
+  }).join('');
+  el.innerHTML = `<div class="ord-sum-header"><i class="fa-solid fa-cart-shopping"></i> 選択中 <strong>${selected.length}</strong>品目</div><div class="ord-sum-chips">${chips}</div>`;
+}
+
+// ===== カテゴリフィルタドロップダウン =====
 function renderCategoryTabs() {
-  const tabsEl = document.getElementById('ord-cat-tabs');
-  if (!tabsEl) return;
+  const sel = document.getElementById('ord-cat-select');
+  if (!sel) return;
   const cats = [...new Set(
     _items.filter(it =>
       it.active !== false &&
       (_materialFilter === 'all' || (it.materialType || 'steel') === _materialFilter)
     ).map(it => it.itemCategory || it.name || '')
   )];
-  tabsEl.innerHTML = [
-    `<button class="ord-cat-filter-tab${_categoryFilter === 'all' ? ' active' : ''}" data-cat="all">すべて</button>`,
-    ...cats.map(c => `<button class="ord-cat-filter-tab${_categoryFilter === c ? ' active' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`)
+  sel.innerHTML = [
+    `<option value="all">── カテゴリで絞り込む ──</option>`,
+    ...cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`)
   ].join('');
-  tabsEl.querySelectorAll('.ord-cat-filter-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      _categoryFilter = btn.dataset.cat;
-      tabsEl.querySelectorAll('.ord-cat-filter-tab').forEach(b => b.classList.toggle('active', b.dataset.cat === _categoryFilter));
-      renderOrderItemList();
-    });
-  });
+  sel.value = _categoryFilter;
 }
 
 // ===== 品目行HTML生成 =====
@@ -693,6 +709,7 @@ function switchMaterialFilter(type) {
 function renderOrderItemList() {
   const listEl = document.getElementById('ord-item-list');
   if (!listEl) return;
+  renderSelectedSummary();
 
   const q = _searchQuery.toLowerCase().trim();
 
@@ -802,6 +819,7 @@ function renderOrderItemList() {
         length: lenEl?.value || fixedLen?.textContent?.trim() || '',
         finish: finEl?.value || ''
       });
+      renderSelectedSummary();
       if (_showSelectedOnly) renderOrderItemList();
     };
     chk?.addEventListener('change', sync);
@@ -847,6 +865,8 @@ export async function openOrderModal() {
     btn.classList.toggle('active', btn.dataset.type === 'all');
   });
   renderCategoryTabs();
+  const catSel = document.getElementById('ord-cat-select');
+  if (catSel) catSel.value = 'all';
   switchOrderType('factory');
 
   const siteNameEl = document.getElementById('ord-site-name');
@@ -1080,6 +1100,8 @@ async function renderHistory() {
       return;
     }
 
+    _historyOrders = orders;
+
     // 発注業者ごとにグループ化
     const grouped = {};
     orders.forEach(o => {
@@ -1090,13 +1112,18 @@ async function renderHistory() {
 
     listEl.innerHTML = Object.entries(grouped).map(([supplierName, supplierOrders]) => {
       const rows = supplierOrders.map(o => {
-        const itemsSummary = o.items.map(it => `${it.name}${it.spec ? ' ' + it.spec : ''} ${it.qty}${it.unit}`).join('、');
+        const itemsSummary = o.items.map(it => {
+          const nm = it.category || it.name || '';
+          const fin = it.finish ? ` ${it.finish}` : '';
+          const len = it.length ? ` L=${it.length}` : '';
+          return `${nm}${it.spec ? ' ' + it.spec : ''}${fin}${len} ${it.qty}${it.unit || '本'}`;
+        }).join('、');
         // 工場在庫 or 現場名を表示
         const isFactory = !o.orderType || o.orderType === 'factory';
         const typeLabel = isFactory ? '工場在庫' : (o.siteName || '現場向け');
         const typeCls   = isFactory ? 'ord-type-badge--factory' : 'ord-type-badge--site';
         return `
-          <div class="ord-history-item">
+          <div class="ord-history-item" data-id="${esc(o.id)}" role="button" tabindex="0" title="クリックで詳細を見る">
             <div class="ord-history-header">
               <span class="ord-history-date">${fmtDatetime(o.orderedAt)}</span>
               <span class="ord-type-badge ${typeCls}">${esc(typeLabel)}</span>
@@ -1104,6 +1131,7 @@ async function renderHistory() {
             </div>
             <div class="ord-history-items">${esc(itemsSummary)}</div>
             ${o.note ? `<div class="ord-history-note">備考: ${esc(o.note)}</div>` : ''}
+            <div class="ord-history-detail-btn-row"><button class="ord-history-detail-btn" data-id="${esc(o.id)}"><i class="fa-solid fa-file-lines"></i> 詳細</button></div>
           </div>`;
       }).join('');
 
@@ -1120,6 +1148,62 @@ async function renderHistory() {
     console.error('order: renderHistory error', err);
     listEl.innerHTML = '<p class="ord-empty">読み込みに失敗しました</p>';
   }
+}
+
+// ===== 発注詳細モーダル =====
+function openOrderDetailModal(orderId) {
+  const order = _historyOrders.find(o => o.id === orderId);
+  if (!order) return;
+  const modal = document.getElementById('ord-detail-modal');
+  const content = document.getElementById('ord-detail-content');
+  if (!modal || !content) return;
+
+  const now = order.orderedAt?.toDate ? order.orderedAt.toDate() : new Date(order.orderedAt || 0);
+  const pad = n => String(n).padStart(2, '0');
+  const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const orderNo = `ORD-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${orderId.slice(-4).toUpperCase()}`;
+  const supplier = _suppliers.find(s => s.id === order.supplierId) || { name: order.supplierName || '', address: '', tel: '' };
+  const typeLabel = (!order.orderType || order.orderType === 'factory') ? '工場在庫' : (order.siteName || '現場向け');
+  const noteText = (order.note || '').trim() || '（なし）';
+  const itemRows = (order.items || []).map((item, i) => {
+    const nm = item.category || item.name || '';
+    const fin = item.finish ? `　${item.finish}` : '';
+    const len = item.length ? `　L=${item.length}` : '';
+    return `<tr><td>${i+1}</td><td>${esc(nm)}　${esc(item.spec || '')}${fin}${len}</td><td>${item.qty}${esc(item.unit || '本')}</td></tr>`;
+  }).join('');
+
+  content.innerHTML = `
+    <div class="ord-detail-doc">
+      <div class="ord-detail-title">鋼 材 発 注 書</div>
+      <table class="ord-detail-meta">
+        <tr><th>発注日時</th><td>${dateStr}</td></tr>
+        <tr><th>発注番号</th><td>${orderNo}</td></tr>
+        <tr><th>発注者</th><td>${esc(order.orderedBy || '')}（日建フレメックス株式会社 生産管理課）</td></tr>
+        <tr><th>発注区分</th><td>${typeLabel}</td></tr>
+      </table>
+      <div class="ord-detail-section">【発注先】</div>
+      <div class="ord-detail-supplier">
+        <div>${esc(supplier.name)}</div>
+        ${supplier.address ? `<div>${esc(supplier.address)}</div>` : ''}
+        ${supplier.tel ? `<div>TEL: ${esc(supplier.tel)}</div>` : ''}
+      </div>
+      <div class="ord-detail-section">【発注明細】</div>
+      <table class="ord-detail-items">
+        <thead><tr><th>No.</th><th>品名・規格</th><th>数量</th></tr></thead>
+        <tbody>${itemRows}</tbody>
+      </table>
+      <div class="ord-detail-section">【備考】</div>
+      <div class="ord-detail-note">${esc(noteText)}</div>
+      <div class="ord-detail-footer">日建フレメックス株式会社 生産管理課</div>
+    </div>`;
+
+  modal.classList.add('visible');
+  // 印刷ボタンにデータをセット
+  document.getElementById('ord-detail-print-btn')?.setAttribute('data-id', orderId);
+}
+
+function closeOrderDetailModal() {
+  document.getElementById('ord-detail-modal')?.classList.remove('visible');
 }
 
 // ===== 管理モーダル =====
@@ -1294,6 +1378,12 @@ function bindOrderEvents() {
     renderOrderItemList();
   });
 
+  // カテゴリドロップダウン
+  document.getElementById('ord-cat-select')?.addEventListener('change', e => {
+    _categoryFilter = e.target.value;
+    renderOrderItemList();
+  });
+
   // 素材フィルタ
   document.getElementById('ord-material-tabs')?.addEventListener('click', e => {
     const btn = e.target.closest('.ord-material-tab');
@@ -1323,6 +1413,24 @@ function bindOrderEvents() {
     row.querySelector('.ord-custom-del-btn').addEventListener('click', () => row.remove());
     listEl.appendChild(row);
     row.querySelector('.ord-custom-name').focus();
+  });
+
+  // 履歴詳細
+  document.getElementById('ord-history-list')?.addEventListener('click', e => {
+    const btn = e.target.closest('.ord-history-detail-btn');
+    if (btn) openOrderDetailModal(btn.dataset.id);
+  });
+  document.getElementById('ord-detail-modal')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('ord-detail-modal')) closeOrderDetailModal();
+  });
+  document.getElementById('ord-detail-close')?.addEventListener('click', closeOrderDetailModal);
+  document.getElementById('ord-detail-print-btn')?.addEventListener('click', () => {
+    const orderId = document.getElementById('ord-detail-print-btn')?.dataset.id;
+    const order = _historyOrders.find(o => o.id === orderId);
+    if (order) {
+      const now = order.orderedAt?.toDate ? order.orderedAt.toDate() : new Date(order.orderedAt || 0);
+      printOrder({ ...order, orderedAt: now, orderId });
+    }
   });
 
   // 履歴モーダル

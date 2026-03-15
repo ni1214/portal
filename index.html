@@ -1821,8 +1821,10 @@
           <input type="text" id="ord-search-input" class="form-input ord-search-input" placeholder="品種・サイズで検索（例：アングル、25×25）" autocomplete="off">
           <button class="ord-search-clear" id="ord-search-clear" hidden><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <!-- カテゴリタブ（動的生成） -->
-        <div id="ord-cat-tabs" class="ord-cat-filter-tabs"></div>
+        <!-- カテゴリ絞り込み（ドロップダウン） -->
+        <select id="ord-cat-select" class="form-input ord-cat-select"></select>
+        <!-- 選択中サマリー -->
+        <div id="ord-selected-summary" class="ord-selected-summary" hidden></div>
         <!-- 選択済みのみ表示 -->
         <div class="ord-filter-row">
           <label class="ord-selected-toggle">
@@ -1893,6 +1895,21 @@
 
       <div class="modal-actions">
         <button class="btn-modal-secondary" id="ord-history-cancel">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 発注詳細モーダル ===== -->
+  <div class="modal-overlay" id="ord-detail-modal">
+    <div class="modal-glass ord-modal-inner ord-detail-inner">
+      <div class="modal-header">
+        <h2 class="modal-title"><i class="fa-solid fa-file-lines"></i> 発注詳細</h2>
+        <button class="modal-close" id="ord-detail-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="ord-detail-content" class="ord-detail-content"></div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="ord-detail-close2" onclick="document.getElementById('ord-detail-modal').classList.remove('visible')">閉じる</button>
+        <button class="btn-modal-primary" id="ord-detail-print-btn"><i class="fa-solid fa-print"></i> 印刷/PDF</button>
       </div>
     </div>
   </div>
