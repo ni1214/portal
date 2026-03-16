@@ -153,7 +153,7 @@ export function xxxFunction() { ... }
 | `supplierEmail` | string | 発注先メールアドレス |
 | `orderType` | string | `'factory'` / `'site'` |
 | `siteName` | string\|null | 現場名発注時の現場名 |
-| `projectKey` | string | 案件番号・製番・現場コードをまとめて入れる共通キー（未設定時は空文字） |
+| `projectKey` | string | 物件No（現場コード）を入れる共通キー（未設定時は空文字） |
 | `items` | array | 発注明細 |
 | `orderedBy` | string | 発注者ニックネーム |
 | `note` | string | 備考 |
@@ -169,7 +169,7 @@ export function xxxFunction() { ... }
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `title` | string | 依頼タイトル |
-| `projectKey` | string | 案件番号・製番・現場コードをまとめて入れる共通キー（未設定時は空文字） |
+| `projectKey` | string | 物件No（現場コード）を入れる共通キー（未設定時は空文字） |
 | `toDept` | string | 依頼先部署 |
 | `fromDept` | string | 依頼元部署 |
 | `content` | string | 依頼本文 |
@@ -194,7 +194,7 @@ export function xxxFunction() { ... }
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `sourceType` | string | `'manual'` / `'cross_dept_request'` |
-| `projectKey` | string | 案件番号・製番・現場コードをまとめて入れる共通キー（未設定時は空文字） |
+| `projectKey` | string | 物件No（現場コード）を入れる共通キー（未設定時は空文字） |
 | `sourceRequestId` | string\|null | 元になった部門間依頼ID |
 | `sourceRequestFromDept` | string\|null | 元依頼の依頼元部署 |
 | `sourceRequestToDept` | string\|null | 元依頼の依頼先部署 |
@@ -207,7 +207,7 @@ export function xxxFunction() { ... }
 | `zangyo` | string\|null | 残業時刻（例: `"19:00"`）|
 | `note` | string\|null | メモ |
 | `workSiteHours` | map | その日の現場別工数（`{ [siteId]: number }`、単位:h） |
-| `projectKeys` | array | その日に関係する案件キー配列（案件番号・製番・現場コードなど、重複なし） |
+| `projectKeys` | array | その日に関係する物件No配列（現場コード、重複なし） |
 | `yearMonth` | string | `'YYYY-MM'`（月別クエリ用インデックス）|
 | `updatedAt` | timestamp | `serverTimestamp()` |
 

@@ -599,6 +599,25 @@ function renderProjectKeyPreview(value = null) {
   preview.innerHTML = keys.map(key => `<span class="cal-project-key-chip">${esc(key)}</span>`).join('');
 }
 
+function getSelectedSiteProjectKeys(rows = getDayWorkRowsFromDom()) {
+  return sanitizeProjectKeys(rows.map(row => getSiteById(row.siteId || '')?.code || ''));
+}
+
+function syncProjectKeysFromSelectedSites({ preserveManual = true } = {}) {
+  const input = document.getElementById('cal-project-keys');
+  if (!input) return [];
+  const autoKeys = getSelectedSiteProjectKeys();
+  const prevAutoKeys = Array.isArray(state.calendarAutoProjectKeys) ? state.calendarAutoProjectKeys : [];
+  const manualKeys = preserveManual
+    ? sanitizeProjectKeys(input.value).filter(key => !prevAutoKeys.includes(key))
+    : [];
+  const nextKeys = sanitizeProjectKeys([...autoKeys, ...manualKeys]);
+  input.value = formatProjectKeysInput(nextKeys);
+  state.calendarAutoProjectKeys = autoKeys;
+  renderProjectKeyPreview(nextKeys);
+  return nextKeys;
+}
+
 function getSortedActiveSites() {
   return [...(state.attendanceSites || [])]
     .filter(site => site.active !== false)
@@ -935,6 +954,7 @@ function renderDayWorkInputs(dateStr, workSiteHours, preservedRows = null) {
 
       searchInput?.addEventListener('input', () => {
         syncSelectFromSearch();
+        syncProjectKeysFromSelectedSites();
         updateWorkOverflowHelper();
       });
 
@@ -943,6 +963,7 @@ function renderDayWorkInputs(dateStr, workSiteHours, preservedRows = null) {
         e.preventDefault();
         const { autoSite } = syncSelectFromSearch(true);
         if (select && autoSite) {
+          syncProjectKeysFromSelectedSites();
           rowEl.querySelector('.cal-day-work-hours')?.focus();
           return;
         }
@@ -952,6 +973,7 @@ function renderDayWorkInputs(dateStr, workSiteHours, preservedRows = null) {
       select?.addEventListener('change', () => {
         const site = siteMap.get(select.value || '');
         if (searchInput && site) searchInput.value = formatSiteLabel(site);
+        syncProjectKeysFromSelectedSites();
         updateWorkOverflowHelper();
       });
 
@@ -992,6 +1014,8 @@ function renderDayWorkInputs(dateStr, workSiteHours, preservedRows = null) {
         updateWorkOverflowHelper();
       };
     });
+
+    syncProjectKeysFromSelectedSites();
   };
 
   addBtn.onclick = () => {
@@ -1067,9 +1091,11 @@ export function openDayPanel(dateStr) {
     projectKeysInput.oninput = () => renderProjectKeyPreview();
   }
   renderProjectKeyPreview();
+  state.calendarAutoProjectKeys = [];
 
   // 作業現場入力（その日の内訳）
   renderDayWorkInputs(dateStr, att.workSiteHours);
+  syncProjectKeysFromSelectedSites();
   updateTimeTotal();
 
   // 削除ボタン（記録がある場合のみ表示）
@@ -1110,6 +1136,7 @@ export function closeDayPanel() {
   const panel = document.getElementById('cal-day-panel');
   if (panel) panel.hidden = true;
   state.calendarSelectedDate = null;
+  state.calendarAutoProjectKeys = [];
 }
 
 // ===== 日のタスク一覧 =====
@@ -1145,6 +1172,7 @@ export async function saveDayAttendance() {
   const hayade  = document.getElementById('cal-hayade-time')?.value || null;
   const zangyo  = document.getElementById('cal-zangyo-time')?.value || null;
   const note    = document.getElementById('cal-note')?.value.trim() || null;
+  syncProjectKeysFromSelectedSites();
   const projectKeys = sanitizeProjectKeys(document.getElementById('cal-project-keys')?.value || '');
   const workSiteHours = buildWorkSiteMapFromDom();
 

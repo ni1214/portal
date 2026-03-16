@@ -604,7 +604,7 @@ async function renderWorkTable() {
       : '<span class="calw-work-detail-empty">-</span>';
     const projectKeyHtml = projectKeys.length > 0
       ? `<div class="calw-work-projects">
-          <span class="calw-work-projects-label">案件キー</span>
+          <span class="calw-work-projects-label">物件No</span>
           <div class="calw-work-projects-list">
             ${projectKeys.map(key => `<span class="cal-project-key-chip">${esc(key)}</span>`).join('')}
           </div>

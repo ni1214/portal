@@ -80,7 +80,7 @@ function _taskFilterBarHtml(totalCount, filteredCount) {
           type="text"
           id="task-project-filter-input"
           class="form-input task-project-filter-input"
-          placeholder="案件キーで絞り込み"
+          placeholder="物件Noで絞り込み"
           value="${currentValue}"
           autocomplete="off"
         >
@@ -118,7 +118,7 @@ function _taskProjectKeyHtml(task) {
   if (!task.projectKey) return '';
   return `
     <div class="task-project-key">
-      <span class="task-project-key-label">案件キー</span>
+      <span class="task-project-key-label">物件No</span>
       <span class="task-project-key-chip">${esc(task.projectKey)}</span>
     </div>
   `;
@@ -228,7 +228,7 @@ export function _renderReceivedTasks(container) {
   if (!filtered.length) {
     container.innerHTML = `
       ${_taskFilterBarHtml(state.receivedTasks.length, filtered.length)}
-      <div class="task-empty"><i class="fa-solid fa-magnifying-glass"></i><p>案件キーに一致するタスクはありません</p></div>
+      <div class="task-empty"><i class="fa-solid fa-magnifying-glass"></i><p>物件Noに一致するタスクはありません</p></div>
     `;
     _bindTaskProjectFilterEvents();
     return;
@@ -277,7 +277,7 @@ export function _renderSentTasks(container) {
   if (!filtered.length) {
     container.innerHTML = `
       ${_taskFilterBarHtml(state.sentTasks.length, filtered.length)}
-      <div class="task-empty"><i class="fa-solid fa-magnifying-glass"></i><p>案件キーに一致するタスクはありません</p></div>
+      <div class="task-empty"><i class="fa-solid fa-magnifying-glass"></i><p>物件Noに一致するタスクはありません</p></div>
     `;
     _bindTaskProjectFilterEvents();
     return;
@@ -354,7 +354,7 @@ export function _renderSharedTasks(container) {
   if (!filtered.length) {
     container.innerHTML = `
       ${_taskFilterBarHtml(state.sharedTasks.length, filtered.length)}
-      <div class="task-empty"><i class="fa-solid fa-magnifying-glass"></i><p>案件キーに一致するタスクはありません</p></div>
+      <div class="task-empty"><i class="fa-solid fa-magnifying-glass"></i><p>物件Noに一致するタスクはありません</p></div>
     `;
     _bindTaskProjectFilterEvents();
     return;
@@ -411,8 +411,8 @@ export function _renderNewTaskForm(container) {
         <input type="text" id="new-task-title" class="form-input" placeholder="例：〇〇の資料作成" maxlength="60" autocomplete="off">
       </div>
       <div class="form-group">
-        <label class="form-label">案件キー（任意）</label>
-        <input type="text" id="new-task-project-key" class="form-input" placeholder="案件番号・製番・現場コード 例：NK-240315 / 61065" maxlength="80" autocomplete="off">
+        <label class="form-label">物件No（任意）</label>
+        <input type="text" id="new-task-project-key" class="form-input" placeholder="物件No（現場コード） 例：61065" maxlength="80" autocomplete="off">
       </div>
       <div class="form-group">
         <label class="form-label">詳細（省略可）</label>

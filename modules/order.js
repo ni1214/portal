@@ -572,7 +572,7 @@ function renderHistoryItem(order, { deleted = false } = {}) {
   const { label: typeLabel, className: typeCls } = getOrderTypeMeta(order);
   const itemsSummary = getOrderItemsSummary(order);
   const projectKeyHtml = order.projectKey
-    ? `<div class="ord-history-project"><span class="ord-history-project-label">案件キー</span><span class="ord-project-key-chip">${esc(order.projectKey)}</span></div>`
+    ? `<div class="ord-history-project"><span class="ord-history-project-label">物件No</span><span class="ord-project-key-chip">${esc(order.projectKey)}</span></div>`
     : '';
   const emailBadge = order.emailSent
     ? `<span class="ord-email-badge ord-email-badge--sent"><i class="fa-solid fa-envelope-circle-check"></i> 送信済み</span>`
@@ -623,7 +623,7 @@ function buildEmailContent(orderData) {
   const typeLabel = orderData.orderType === 'site' ? '現場名発注' : '工場在庫';
   const siteInfo  = orderData.orderType === 'site' && orderData.siteName
     ? `現場名　：${orderData.siteName}\n` : '';
-  const projectKeyInfo = orderData.projectKey ? `案件キー：${orderData.projectKey}\n` : '';
+  const projectKeyInfo = orderData.projectKey ? `物件No：${orderData.projectKey}\n` : '';
   const projectKeySuffix = orderData.projectKey ? ` / ${orderData.projectKey}` : '';
 
   const subject = `【鋼材発注・${typeLabel}】${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日${projectKeySuffix} - 日建フレメックス株式会社 生産管理課`;
@@ -747,7 +747,7 @@ function printOrder(orderData) {
         <tr><th>発注番号</th><td>${orderNo}</td></tr>
         <tr><th>発注者</th><td>${esc(orderData.orderedBy)}（日建フレメックス株式会社 生産管理課）</td></tr>
         <tr><th>発注区分</th><td>${orderData.orderType === 'site' ? '現場名発注' : '工場在庫'}${orderData.siteName ? `　現場名：${esc(orderData.siteName)}` : ''}</td></tr>
-        ${orderData.projectKey ? `<tr><th>案件キー</th><td>${esc(orderData.projectKey)}</td></tr>` : ''}
+        ${orderData.projectKey ? `<tr><th>物件No</th><td>${esc(orderData.projectKey)}</td></tr>` : ''}
       </table>
       <div class="ord-print-section-title">【発注先】</div>
       <div class="ord-print-supplier">
@@ -1346,7 +1346,7 @@ function openOrderDetailModal(orderId) {
         <tr><th>発注番号</th><td>${orderNo}</td></tr>
         <tr><th>発注者</th><td>${esc(order.orderedBy || '')}（日建フレメックス株式会社 生産管理課）</td></tr>
         <tr><th>発注区分</th><td>${typeLabel}</td></tr>
-        ${order.projectKey ? `<tr><th>案件キー</th><td><span class="ord-project-key-chip">${esc(order.projectKey)}</span></td></tr>` : ''}
+        ${order.projectKey ? `<tr><th>物件No</th><td><span class="ord-project-key-chip">${esc(order.projectKey)}</span></td></tr>` : ''}
         <tr><th>メール送信</th><td>${order.emailSent ? `<span style="color:var(--accent-cyan)"><i class="fa-solid fa-envelope-circle-check"></i> 送信済み</span>` : `<span style="color:var(--accent-orange)"><i class="fa-solid fa-envelope"></i> 未送信（メール未送信）</span>`}</td></tr>
         ${isOrderDeleted(order) ? `<tr><th>削除状態</th><td>${fmtDatetime(order.deletedAt)} / ${esc(order.deletedBy || '不明')}</td></tr>` : ''}
       </table>

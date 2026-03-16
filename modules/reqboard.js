@@ -238,7 +238,7 @@ function _requestFilterBarHtml(totalCount, filteredCount) {
           type="text"
           id="req-project-filter-input"
           class="form-input req-project-filter-input"
-          placeholder="案件キーで絞り込み"
+          placeholder="物件Noで絞り込み"
           value="${currentValue}"
           autocomplete="off"
         >
@@ -306,7 +306,7 @@ function _requestProjectKeyHtml(projectKey) {
   if (!projectKey) return '';
   return `
     <div class="req-item-sub req-item-sub--project">
-      <span class="req-sub-label">案件キー</span>
+      <span class="req-sub-label">物件No</span>
       <span class="req-project-key-chip">${escHtml(projectKey)}</span>
     </div>
   `;
@@ -315,7 +315,7 @@ function _requestProjectKeyHtml(projectKey) {
 function _buildRequestTaskDescription(req, extraNote = '') {
   const parts = [
     `【部門間依頼】${req.fromDept || '-'} → ${req.toDept || '-'}`,
-    req.projectKey ? `案件キー: ${req.projectKey}` : '',
+    req.projectKey ? `物件No: ${req.projectKey}` : '',
     req.content || '',
     req.proposal ? `対策・提案: ${req.proposal}` : '',
     req.remarks ? `備考: ${req.remarks}` : '',
@@ -346,7 +346,7 @@ export async function openReqTaskifyModal(reqId) {
     summary.innerHTML = `
       <div class="req-taskify-summary-title">${escHtml(req.title)}</div>
       <div class="req-taskify-summary-meta">${escHtml(req.fromDept || req.createdBy || '')} → ${escHtml(req.toDept || '')}</div>
-      ${req.projectKey ? `<div class="req-taskify-summary-project"><span>案件キー</span><strong>${escHtml(req.projectKey)}</strong></div>` : ''}
+      ${req.projectKey ? `<div class="req-taskify-summary-project"><span>物件No</span><strong>${escHtml(req.projectKey)}</strong></div>` : ''}
       <div class="req-taskify-summary-body">${escHtml(req.content || '')}</div>
     `;
   }
@@ -462,7 +462,7 @@ export function _renderReceivedRequests(container) {
   if (filtered.length === 0) {
     container.innerHTML = `
       ${_requestFilterBarHtml(list.length, filtered.length)}
-      <div class="req-empty"><i class="fa-solid fa-magnifying-glass"></i><p>案件キーに一致する依頼はありません</p></div>
+      <div class="req-empty"><i class="fa-solid fa-magnifying-glass"></i><p>物件Noに一致する依頼はありません</p></div>
     `;
     _bindRequestProjectFilterEvents();
     return;
@@ -516,7 +516,7 @@ export function _renderSentRequests(container) {
   if (filtered.length === 0) {
     container.innerHTML = `
       ${_requestFilterBarHtml(list.length, filtered.length)}
-      <div class="req-empty"><i class="fa-solid fa-magnifying-glass"></i><p>案件キーに一致する依頼はありません</p></div>
+      <div class="req-empty"><i class="fa-solid fa-magnifying-glass"></i><p>物件Noに一致する依頼はありません</p></div>
     `;
     _bindRequestProjectFilterEvents();
     return;
@@ -564,8 +564,8 @@ export function _renderNewRequestForm(container) {
         <input type="text" id="req-new-title" class="form-input" placeholder="例：押し緑の向きについて" maxlength="60">
       </div>
       <div class="form-group">
-        <label class="form-label">案件キー（任意）</label>
-        <input type="text" id="req-new-project-key" class="form-input" placeholder="案件番号・製番・現場コード 例：NK-240315 / 61065" maxlength="80" autocomplete="off">
+        <label class="form-label">物件No（任意）</label>
+        <input type="text" id="req-new-project-key" class="form-input" placeholder="物件No（現場コード） 例：61065" maxlength="80" autocomplete="off">
       </div>
       <div class="form-group">
         <label class="form-label">依頼先部署 <span class="req-required">*</span></label>
@@ -613,7 +613,7 @@ function _renderArchivedRequests(container) {
   if (filtered.length === 0) {
     container.innerHTML = `
       ${_requestFilterBarHtml(list.length, filtered.length)}
-      <div class="req-empty"><i class="fa-solid fa-magnifying-glass"></i><p>案件キーに一致する依頼はありません</p></div>
+      <div class="req-empty"><i class="fa-solid fa-magnifying-glass"></i><p>物件Noに一致する依頼はありません</p></div>
     `;
     _bindRequestProjectFilterEvents();
     return;

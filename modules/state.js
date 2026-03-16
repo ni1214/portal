@@ -174,6 +174,7 @@ export const state = {
   attendanceData:  {},   // { 'YYYY-MM-DD': { type, hayade, zangyo, note, workSiteHours, projectKeys } }
   _attendanceSub:  null,
   calendarSelectedDate: null,
+  calendarAutoProjectKeys: [],
 
   // 会社カレンダー（company-calendar.js）
   companyCalConfig: null,          // company_calendar/config のデータ
