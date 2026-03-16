@@ -1,7 +1,7 @@
 // ========== タスク割り振り ==========
 import { db, doc, getDoc, setDoc, addDoc, deleteDoc, updateDoc, collection, query, where, orderBy, serverTimestamp, onSnapshot } from './config.js';
 import { state, TASK_STATUS_LABEL } from './state.js';
-import { esc, getUserAvatarColor } from './utils.js';
+import { esc, getUserAvatarColor, normalizeProjectKey } from './utils.js';
 export const deps = {};
 
 function buildTaskPayload({
@@ -11,6 +11,7 @@ function buildTaskPayload({
   assignedTo,
   status = 'pending',
   dueDate = '',
+  projectKey = '',
   sourceType = 'manual',
   sourceRequestId = null,
   sourceRequestFromDept = null,
@@ -26,6 +27,7 @@ function buildTaskPayload({
     acceptedAt: null,
     doneAt: null,
     dueDate,
+    projectKey,
     notifiedDone: false,
     sharedWith: [],
     sharedResponses: {},
@@ -51,6 +53,16 @@ async function syncRequestLink(taskId, updates) {
     notifyCreator: true,
   });
   return task;
+}
+
+function _taskProjectKeyHtml(task) {
+  if (!task.projectKey) return '';
+  return `
+    <div class="task-project-key">
+      <span class="task-project-key-label">案件キー</span>
+      <span class="task-project-key-chip">${esc(task.projectKey)}</span>
+    </div>
+  `;
 }
 
 export function startTaskListeners(username) {
@@ -173,6 +185,7 @@ export function _renderReceivedTasks(container) {
           ${due}
         </div>
         <div class="task-item-title">${esc(t.title)}</div>
+        ${_taskProjectKeyHtml(t)}
         ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
         <div class="task-item-actions">${actions}</div>
       </div>`;
@@ -234,6 +247,7 @@ export function _renderSentTasks(container) {
           ${due}
         </div>
         <div class="task-item-title">${esc(t.title)}</div>
+        ${_taskProjectKeyHtml(t)}
         ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
         ${sharedBadges}
         ${(editBtn || shareBtn || statusActions) ? `<div class="task-item-actions">${editBtn}${shareBtn}${statusActions}</div>` : ''}
@@ -280,6 +294,7 @@ export function _renderSharedTasks(container) {
           ${due}
         </div>
         <div class="task-item-title">${esc(t.title)}</div>
+        ${_taskProjectKeyHtml(t)}
         ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
         <div class="task-item-actions">${actions}</div>
       </div>`;
@@ -305,6 +320,10 @@ export function _renderNewTaskForm(container) {
       <div class="form-group">
         <label class="form-label">タスク名 <span class="required-mark">*</span></label>
         <input type="text" id="new-task-title" class="form-input" placeholder="例：〇〇の資料作成" maxlength="60" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">案件キー（任意）</label>
+        <input type="text" id="new-task-project-key" class="form-input" placeholder="案件番号・製番・現場コード 例：NK-240315 / 61065" maxlength="80" autocomplete="off">
       </div>
       <div class="form-group">
         <label class="form-label">詳細（省略可）</label>
@@ -340,6 +359,7 @@ export async function submitNewTask() {
   if (!title) { document.getElementById('new-task-title')?.focus(); return; }
   const description = document.getElementById('new-task-desc')?.value.trim() || '';
   const dueDate = document.getElementById('new-task-due')?.value || '';
+  const projectKey = normalizeProjectKey(document.getElementById('new-task-project-key')?.value || '');
 
   const btn = document.getElementById('new-task-submit');
   btn.disabled = true;
@@ -351,14 +371,17 @@ export async function submitNewTask() {
       assignedBy: state.currentUsername,
       assignedTo: state.newTaskAssignee,
       dueDate,
+      projectKey,
       sourceType: 'manual',
     });
     // フォームをリセット
     state.newTaskAssignee = '';
     const titleEl = document.getElementById('new-task-title');
+    const projectKeyEl = document.getElementById('new-task-project-key');
     const descEl  = document.getElementById('new-task-desc');
     const dueEl   = document.getElementById('new-task-due');
     if (titleEl) titleEl.value = '';
+    if (projectKeyEl) projectKeyEl.value = '';
     if (descEl)  descEl.value  = '';
     if (dueEl)   dueEl.value   = '';
     btn.disabled = false;
@@ -431,9 +454,11 @@ export function openTaskEditModal(taskId) {
   if (!task) return;
   state._editingTaskId = taskId;
   const titleEl = document.getElementById('task-edit-title');
+  const projectKeyEl = document.getElementById('task-edit-project-key');
   const descEl  = document.getElementById('task-edit-desc');
   const dueEl   = document.getElementById('task-edit-due');
   if (titleEl) titleEl.value = task.title || '';
+  if (projectKeyEl) projectKeyEl.value = task.projectKey || '';
   if (descEl)  descEl.value  = task.description || '';
   if (dueEl)   dueEl.value   = task.dueDate || '';
   document.getElementById('task-edit-modal').classList.add('visible');
@@ -454,6 +479,7 @@ export async function submitTaskEdit() {
   try {
     await updateDoc(doc(db, 'assigned_tasks', taskId), {
       title,
+      projectKey: normalizeProjectKey(document.getElementById('task-edit-project-key')?.value || ''),
       description: document.getElementById('task-edit-desc')?.value.trim() || '',
       dueDate:     document.getElementById('task-edit-due')?.value || '',
     });

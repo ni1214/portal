@@ -1,7 +1,7 @@
 // ========== 部門間依頼・目安箱 ==========
 import { db, doc, getDoc, setDoc, addDoc, deleteDoc, updateDoc, collection, query, where, orderBy, serverTimestamp, onSnapshot, getDocs } from './config.js';
 import { state, REQ_STATUS_LABEL } from './state.js';
-import { esc, escHtml, getUserAvatarColor, _fmtTs } from './utils.js';
+import { esc, escHtml, getUserAvatarColor, normalizeProjectKey, _fmtTs } from './utils.js';
 export const deps = {};
 
 const LINKED_TASK_STATUS_LABEL = {
@@ -243,9 +243,20 @@ function _requestTaskSummaryHtml(req) {
   `;
 }
 
+function _requestProjectKeyHtml(projectKey) {
+  if (!projectKey) return '';
+  return `
+    <div class="req-item-sub req-item-sub--project">
+      <span class="req-sub-label">案件キー</span>
+      <span class="req-project-key-chip">${escHtml(projectKey)}</span>
+    </div>
+  `;
+}
+
 function _buildRequestTaskDescription(req, extraNote = '') {
   const parts = [
     `【部門間依頼】${req.fromDept || '-'} → ${req.toDept || '-'}`,
+    req.projectKey ? `案件キー: ${req.projectKey}` : '',
     req.content || '',
     req.proposal ? `対策・提案: ${req.proposal}` : '',
     req.remarks ? `備考: ${req.remarks}` : '',
@@ -276,6 +287,7 @@ export async function openReqTaskifyModal(reqId) {
     summary.innerHTML = `
       <div class="req-taskify-summary-title">${escHtml(req.title)}</div>
       <div class="req-taskify-summary-meta">${escHtml(req.fromDept || req.createdBy || '')} → ${escHtml(req.toDept || '')}</div>
+      ${req.projectKey ? `<div class="req-taskify-summary-project"><span>案件キー</span><strong>${escHtml(req.projectKey)}</strong></div>` : ''}
       <div class="req-taskify-summary-body">${escHtml(req.content || '')}</div>
     `;
   }
@@ -333,6 +345,7 @@ export async function submitRequestTaskify() {
       assignedBy: state.currentUsername,
       assignedTo: state.reqTaskifyAssignee,
       dueDate,
+      projectKey: req.projectKey || '',
       sourceType: 'cross_dept_request',
       sourceRequestId: req.id,
       sourceRequestFromDept: req.fromDept || '',
@@ -396,6 +409,7 @@ export function _renderReceivedRequests(container) {
         <span class="req-date">${_fmtTs(r.createdAt)}</span>
       </div>
       <div class="req-item-title">${escHtml(r.title)}</div>
+      ${_requestProjectKeyHtml(r.projectKey)}
       <div class="req-item-body">${escHtml(r.content)}</div>
       ${r.proposal ? `<div class="req-item-sub"><span class="req-sub-label">対策・提案</span>${escHtml(r.proposal)}</div>` : ''}
       ${r.remarks  ? `<div class="req-item-sub"><span class="req-sub-label">備考</span>${escHtml(r.remarks)}</div>` : ''}
@@ -438,6 +452,7 @@ export function _renderSentRequests(container) {
         ${r.notifyCreator ? '<span class="req-notify-dot" title="ステータスが変更されました">●</span>' : ''}
       </div>
       <div class="req-item-title">${escHtml(r.title)}</div>
+      ${_requestProjectKeyHtml(r.projectKey)}
       <div class="req-item-body">${escHtml(r.content)}</div>
       ${r.statusNote ? `<div class="req-item-sub"><span class="req-sub-label">コメント</span>${escHtml(r.statusNote)}</div>` : ''}
       ${_requestTaskSummaryHtml(r)}
@@ -468,6 +483,10 @@ export function _renderNewRequestForm(container) {
       <div class="form-group">
         <label class="form-label">件名 <span class="req-required">*</span></label>
         <input type="text" id="req-new-title" class="form-input" placeholder="例：押し緑の向きについて" maxlength="60">
+      </div>
+      <div class="form-group">
+        <label class="form-label">案件キー（任意）</label>
+        <input type="text" id="req-new-project-key" class="form-input" placeholder="案件番号・製番・現場コード 例：NK-240315 / 61065" maxlength="80" autocomplete="off">
       </div>
       <div class="form-group">
         <label class="form-label">依頼先部署 <span class="req-required">*</span></label>
@@ -530,6 +549,7 @@ function _renderArchivedRequests(container) {
             <span class="req-archived-badge"><i class="fa-solid fa-box-archive"></i> アーカイブ済み</span>
           </div>
           <div class="req-item-title">${escHtml(r.title)}</div>
+          ${_requestProjectKeyHtml(r.projectKey)}
           <div class="req-item-body">${escHtml(r.content)}</div>
           <div class="req-item-actions">
             <button class="btn-req-unarchive" data-id="${r.id}"><i class="fa-solid fa-rotate-left"></i> 元に戻す</button>
@@ -548,6 +568,7 @@ function _renderArchivedRequests(container) {
 
 export async function submitRequest() {
   const title    = document.getElementById('req-new-title')?.value.trim();
+  const projectKey = normalizeProjectKey(document.getElementById('req-new-project-key')?.value || '');
   const toDept   = document.getElementById('req-new-todept')?.value;
   const content  = document.getElementById('req-new-content')?.value.trim();
   const proposal = document.getElementById('req-new-proposal')?.value.trim();
@@ -561,6 +582,7 @@ export async function submitRequest() {
   try {
     await addDoc(collection(db, 'cross_dept_requests'), {
       title,
+      projectKey,
       toDept,
       fromDept: state.userEmailProfile?.department || '',
       content,

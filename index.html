@@ -965,6 +965,7 @@
             <li><strong>勤務内容集計表</strong>はCSV出力と印刷に対応しています。</li>
             <li><strong>登録現場</strong>タブで現場コード・現場名を追加/編集/削除できます（Firestoreに保存）。</li>
             <li>登録現場タブの<strong>「Excel解析して取込」</strong>で、現場マスタを一括登録できます（重複コードは名称を自動統合）。</li>
+            <li>部門間依頼とタスクでは<strong>案件キー（案件番号・製番・現場コード）</strong>を入れておくと、案件単位での追跡がしやすくなります。</li>
           </ul>
         </div>
 
@@ -1820,6 +1821,10 @@
       <div class="form-group">
         <label class="form-label">タスク名 <span class="required-mark">*</span></label>
         <input type="text" id="task-edit-title" class="form-input" placeholder="タスク名" maxlength="60" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">案件キー（任意）</label>
+        <input type="text" id="task-edit-project-key" class="form-input" placeholder="案件番号・製番・現場コード" maxlength="80" autocomplete="off">
       </div>
       <div class="form-group">
         <label class="form-label">詳細（省略可）</label>

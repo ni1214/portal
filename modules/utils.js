@@ -16,6 +16,12 @@ export function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// 案件キー入力を軽く正規化（前後空白除去 + 連続空白を1つに統一）
+export function normalizeProjectKey(value) {
+  if (value === null || value === undefined) return '';
+  return String(value).replace(/\s+/g, ' ').trim();
+}
+
 // Firestore Timestamp をフォーマット
 export function _fmtTs(ts) {
   if (!ts) return '';

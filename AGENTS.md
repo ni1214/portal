@@ -168,6 +168,7 @@ export function xxxFunction() { ... }
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `title` | string | 依頼タイトル |
+| `projectKey` | string | 案件番号・製番・現場コードをまとめて入れる共通キー（未設定時は空文字） |
 | `toDept` | string | 依頼先部署 |
 | `fromDept` | string | 依頼元部署 |
 | `content` | string | 依頼本文 |
@@ -192,6 +193,7 @@ export function xxxFunction() { ... }
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `sourceType` | string | `'manual'` / `'cross_dept_request'` |
+| `projectKey` | string | 案件番号・製番・現場コードをまとめて入れる共通キー（未設定時は空文字） |
 | `sourceRequestId` | string\|null | 元になった部門間依頼ID |
 | `sourceRequestFromDept` | string\|null | 元依頼の依頼元部署 |
 | `sourceRequestToDept` | string\|null | 元依頼の依頼先部署 |

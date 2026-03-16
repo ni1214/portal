@@ -5701,6 +5701,29 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
   margin-bottom: 4px;
 }
+.task-project-key {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.task-project-key-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.task-project-key-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 28%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-blue) 9%, var(--bg-card));
+  color: var(--accent-blue);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
 .task-item-desc {
   font-size: 0.78rem;
   color: var(--text-secondary);
@@ -7389,11 +7412,27 @@ html.font-xl { font-size: 21px; }
   display: flex;
   gap: 8px;
 }
+.req-item-sub--project {
+  align-items: center;
+  flex-wrap: wrap;
+}
 .req-sub-label {
   color: var(--accent-cyan);
   font-weight: 600;
   white-space: nowrap;
   font-size: 0.75rem;
+}
+.req-project-key-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 28%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-blue) 9%, var(--bg-card));
+  color: var(--accent-blue);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
 }
 .req-linked-task {
   margin-top: 8px;
@@ -7567,6 +7606,25 @@ html.font-xl { font-size: 21px; }
   margin-top: 4px;
   color: var(--accent-cyan);
   font-size: 0.75rem;
+}
+.req-taskify-summary-project {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+}
+.req-taskify-summary-project strong {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 28%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-blue) 9%, var(--bg-card));
+  color: var(--accent-blue);
+  font-size: 0.72rem;
 }
 .req-taskify-summary-body {
   margin-top: 8px;
