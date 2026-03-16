@@ -153,6 +153,7 @@ export function xxxFunction() { ... }
 | `supplierEmail` | string | 発注先メールアドレス |
 | `orderType` | string | `'factory'` / `'site'` |
 | `siteName` | string\|null | 現場名発注時の現場名 |
+| `projectKey` | string | 案件番号・製番・現場コードをまとめて入れる共通キー（未設定時は空文字） |
 | `items` | array | 発注明細 |
 | `orderedBy` | string | 発注者ニックネーム |
 | `note` | string | 備考 |

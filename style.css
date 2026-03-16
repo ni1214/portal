@@ -10757,6 +10757,21 @@ html.font-xl { font-size: 21px; }
   resize: vertical;
   min-height: 72px;
 }
+.ord-project-key-group {
+  margin-bottom: 2px;
+}
+.ord-project-key-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 28%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-blue) 9%, var(--bg-card));
+  color: var(--accent-blue);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
 
 /* バッジ */
 .ord-badge-sent {
@@ -10877,6 +10892,16 @@ html.font-xl { font-size: 21px; }
   font-size: 0.8rem;
   color: var(--text-muted);
   font-style: italic;
+}
+.ord-history-project {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ord-history-project-label {
+  font-size: 0.74rem;
+  color: var(--text-muted);
 }
 
 /* 管理モーダル */

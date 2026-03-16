@@ -5,7 +5,7 @@ import {
   serverTimestamp
 } from './config.js';
 import { state } from './state.js';
-import { esc } from './utils.js';
+import { esc, normalizeProjectKey } from './utils.js';
 
 // ===== 内部状態 =====
 let _suppliers = [];   // order_suppliers
@@ -556,6 +556,7 @@ function buildStoredOrderData(data, { emailSent = false } = {}) {
     supplierEmail: data.supplierEmail,
     orderType: data.orderType,
     siteName: data.siteName,
+    projectKey: data.projectKey || '',
     items: data.items,
     orderedBy: data.orderedBy,
     note: data.note,
@@ -570,6 +571,9 @@ function buildStoredOrderData(data, { emailSent = false } = {}) {
 function renderHistoryItem(order, { deleted = false } = {}) {
   const { label: typeLabel, className: typeCls } = getOrderTypeMeta(order);
   const itemsSummary = getOrderItemsSummary(order);
+  const projectKeyHtml = order.projectKey
+    ? `<div class="ord-history-project"><span class="ord-history-project-label">案件キー</span><span class="ord-project-key-chip">${esc(order.projectKey)}</span></div>`
+    : '';
   const emailBadge = order.emailSent
     ? `<span class="ord-email-badge ord-email-badge--sent"><i class="fa-solid fa-envelope-circle-check"></i> 送信済み</span>`
     : `<span class="ord-email-badge ord-email-badge--unsent"><i class="fa-solid fa-envelope"></i> 未送信</span>`;
@@ -597,6 +601,7 @@ function renderHistoryItem(order, { deleted = false } = {}) {
         ${deletedBadge}
       </div>
       <div class="ord-history-items">${esc(itemsSummary)}</div>
+      ${projectKeyHtml}
       ${order.note ? `<div class="ord-history-note">備考: ${esc(order.note)}</div>` : ''}
       ${deletedMeta}
       <div class="ord-history-detail-btn-row">${actionButtons}</div>
@@ -618,8 +623,10 @@ function buildEmailContent(orderData) {
   const typeLabel = orderData.orderType === 'site' ? '現場名発注' : '工場在庫';
   const siteInfo  = orderData.orderType === 'site' && orderData.siteName
     ? `現場名　：${orderData.siteName}\n` : '';
+  const projectKeyInfo = orderData.projectKey ? `案件キー：${orderData.projectKey}\n` : '';
+  const projectKeySuffix = orderData.projectKey ? ` / ${orderData.projectKey}` : '';
 
-  const subject = `【鋼材発注・${typeLabel}】${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 - 日建フレメックス株式会社 生産管理課`;
+  const subject = `【鋼材発注・${typeLabel}】${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日${projectKeySuffix} - 日建フレメックス株式会社 生産管理課`;
 
   const itemLines = orderData.items.map((item, i) => {
     const no = String(i + 1).padStart(2, ' ');
@@ -644,7 +651,7 @@ function buildEmailContent(orderData) {
 発注日時：${dateStr}
 発注担当：${orderData.orderedBy}
 発注区分：${typeLabel}
-${siteInfo}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${siteInfo}${projectKeyInfo}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 【発注明細】
 No.  品名・規格                    数量
@@ -740,6 +747,7 @@ function printOrder(orderData) {
         <tr><th>発注番号</th><td>${orderNo}</td></tr>
         <tr><th>発注者</th><td>${esc(orderData.orderedBy)}（日建フレメックス株式会社 生産管理課）</td></tr>
         <tr><th>発注区分</th><td>${orderData.orderType === 'site' ? '現場名発注' : '工場在庫'}${orderData.siteName ? `　現場名：${esc(orderData.siteName)}` : ''}</td></tr>
+        ${orderData.projectKey ? `<tr><th>案件キー</th><td>${esc(orderData.projectKey)}</td></tr>` : ''}
       </table>
       <div class="ord-print-section-title">【発注先】</div>
       <div class="ord-print-supplier">
@@ -1047,6 +1055,9 @@ export async function openOrderModal() {
   const siteNameEl = document.getElementById('ord-site-name');
   if (siteNameEl) siteNameEl.value = '';
 
+  const projectKeyEl = document.getElementById('ord-project-key');
+  if (projectKeyEl) projectKeyEl.value = '';
+
   const noteEl = document.getElementById('ord-note');
   if (noteEl) noteEl.value = '';
 
@@ -1101,6 +1112,7 @@ function collectOrderData() {
 
   const selEl = document.getElementById('ord-supplier-select');
   const supplier = _suppliers.find(s => s.id === selEl?.value) || _suppliers[0] || { id: '', name: '土屋鋼材株式会社', email: 'info@tsuchiyakouzai.com' };
+  const projectKey = normalizeProjectKey(document.getElementById('ord-project-key')?.value || '');
   const note = document.getElementById('ord-note')?.value.trim() || '';
 
   return {
@@ -1109,6 +1121,7 @@ function collectOrderData() {
     supplierEmail: supplier.email,
     orderType: _orderType,
     siteName: _orderType === 'site' ? siteName : null,
+    projectKey,
     items: selectedItems,
     orderedBy: username,
     note,
@@ -1333,6 +1346,7 @@ function openOrderDetailModal(orderId) {
         <tr><th>発注番号</th><td>${orderNo}</td></tr>
         <tr><th>発注者</th><td>${esc(order.orderedBy || '')}（日建フレメックス株式会社 生産管理課）</td></tr>
         <tr><th>発注区分</th><td>${typeLabel}</td></tr>
+        ${order.projectKey ? `<tr><th>案件キー</th><td><span class="ord-project-key-chip">${esc(order.projectKey)}</span></td></tr>` : ''}
         <tr><th>メール送信</th><td>${order.emailSent ? `<span style="color:var(--accent-cyan)"><i class="fa-solid fa-envelope-circle-check"></i> 送信済み</span>` : `<span style="color:var(--accent-orange)"><i class="fa-solid fa-envelope"></i> 未送信（メール未送信）</span>`}</td></tr>
         ${isOrderDeleted(order) ? `<tr><th>削除状態</th><td>${fmtDatetime(order.deletedAt)} / ${esc(order.deletedBy || '不明')}</td></tr>` : ''}
       </table>
