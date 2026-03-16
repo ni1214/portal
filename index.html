@@ -961,6 +961,7 @@
             <li><strong>勤務内容表</strong>は21日締め（前月21日〜当月20日）で、日ごとの現場工数を0.5時間刻みで入力できます。</li>
             <li><strong>勤務内容集計表</strong>では全ユーザーの入力結果を現場別・人別に集計し、登録単価から金額も表示します。</li>
             <li><strong>登録現場</strong>タブで現場コード・現場名・単価を追加/編集/削除できます（Firestoreに保存）。</li>
+            <li>登録現場タブの<strong>「Excel解析して取込」</strong>で、現場マスタを一括登録できます（重複コードは名称を自動統合）。</li>
           </ul>
         </div>
 
@@ -1554,6 +1555,11 @@
         <div class="calw-view-header">
           <div class="calw-view-title"><i class="fa-solid fa-industry"></i> 登録現場</div>
         </div>
+        <div class="calw-site-import-row">
+          <input id="calw-site-import-file" class="form-input" type="file" accept=".xlsx,.xls,.xlsm">
+          <button class="btn-modal-secondary" id="calw-site-import-btn"><i class="fa-solid fa-file-import"></i> Excel解析して取込</button>
+        </div>
+        <div class="calw-site-import-status" id="calw-site-import-status">サンプル: 「現場名登録」シートのコード/名称を解析して重複整理して取り込みます。</div>
         <div class="calw-site-form-row">
           <input id="calw-site-code-input" class="form-input" type="text" maxlength="20" placeholder="現場コード（例: 61065）">
           <input id="calw-site-name-input" class="form-input" type="text" maxlength="80" placeholder="現場名">
@@ -2056,6 +2062,7 @@
   <!-- ===== 印刷エリア（画面上は非表示・印刷時のみ表示） ===== -->
   <div id="ord-print-area" hidden></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Script (type="module" for Firebase ESM) -->
   <script type="module" src="script.js"></script>
 </body>

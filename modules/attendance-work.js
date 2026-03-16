@@ -1,7 +1,7 @@
 // ========== attendance-work.js — 勤務内容表 / 勤務内容集計表 / 登録現場 ==========
 import { state } from './state.js';
 import {
-  db, collection, collectionGroup, doc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
+  db, collection, collectionGroup, doc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, writeBatch,
   query, where, orderBy, onSnapshot, serverTimestamp, deleteField
 } from './config.js';
 import { esc } from './utils.js';
@@ -11,6 +11,7 @@ let eventsBound = false;
 
 const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 const PERSONAL_TABS = ['calendar', 'work', 'summary', 'sites'];
+const SITE_EXCLUDED_NAMES = new Set(['完成', 'その他', '工事No.コウジ']);
 
 export function initAttendanceWork(d) {
   deps = d || {};
@@ -109,6 +110,240 @@ function hasNonWorkSiteFields(docData) {
     k !== 'yearMonth' &&
     k !== 'updatedAt'
   ));
+}
+
+function normalizeSiteCode(raw) {
+  if (raw === null || raw === undefined) return '';
+  const normalized = String(raw)
+    .replace(/[０-９]/g, ch => String(ch.charCodeAt(0) - 0xFF10))
+    .replace(/\s+/g, '')
+    .trim();
+  if (!normalized) return '';
+  const onlyDigits = normalized.replace(/\D/g, '');
+  if (!onlyDigits) return '';
+  if (onlyDigits.length < 4 || onlyDigits.length > 6) return '';
+  return onlyDigits;
+}
+
+function normalizeSiteName(raw) {
+  if (raw === null || raw === undefined) return '';
+  return String(raw).replace(/\s+/g, ' ').trim();
+}
+
+function isExcludedSite(code, name) {
+  if (!code || !name) return true;
+  if (code === '0000' || code === '0') return true;
+  if (SITE_EXCLUDED_NAMES.has(name)) return true;
+  return false;
+}
+
+function parseSitesFromRows(rows) {
+  const byCode = new Map();
+  const conflicts = [];
+  let candidateRows = 0;
+  let excludedRows = 0;
+
+  const addCandidate = (rowNo, source, codeRaw, nameRaw) => {
+    const code = normalizeSiteCode(codeRaw);
+    const name = normalizeSiteName(nameRaw);
+    if (!code && !name) return;
+    candidateRows += 1;
+    if (isExcludedSite(code, name)) {
+      excludedRows += 1;
+      return;
+    }
+
+    const prev = byCode.get(code);
+    if (!prev) {
+      byCode.set(code, { code, name, source, rowNo });
+      return;
+    }
+    if (prev.name !== name) {
+      conflicts.push({ code, prevName: prev.name, newName: name, rowNo, source });
+      // 名前の長い方を採用（略称より詳細名を優先）
+      if (name.length > prev.name.length) {
+        byCode.set(code, { code, name, source, rowNo });
+      }
+    }
+  };
+
+  rows.forEach((row, idx) => {
+    if (!Array.isArray(row)) return;
+    const rowNo = idx + 1;
+    if (rowNo <= 1) return;
+    // 現場名登録シートは A/B と D/G にコード/名称が混在
+    addCandidate(rowNo, 'AB', row[0], row[1]);
+    addCandidate(rowNo, 'DG', row[3], row[6]);
+  });
+
+  const sites = [...byCode.values()]
+    .sort((a, b) => Number(a.code) - Number(b.code))
+    .map((x, i) => ({
+      code: x.code,
+      name: x.name,
+      sortOrder: i + 1,
+    }));
+
+  return {
+    sites,
+    totalRows: rows.length,
+    candidateRows,
+    excludedRows,
+    uniqueSiteCount: sites.length,
+    conflictCount: conflicts.length,
+    conflicts,
+  };
+}
+
+function parseWorkbookSites(workbook) {
+  const sheetName = workbook.SheetNames.includes('現場名登録')
+    ? '現場名登録'
+    : workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  if (!sheet) throw new Error('シートを読み込めませんでした。');
+  const rows = window.XLSX.utils.sheet_to_json(sheet, {
+    header: 1,
+    raw: false,
+    defval: '',
+  });
+  const parsed = parseSitesFromRows(rows);
+  return { sheetName, ...parsed };
+}
+
+function setImportStatus(message) {
+  const el = document.getElementById('calw-site-import-status');
+  if (el) el.textContent = message;
+}
+
+async function commitSiteOpsInBatches(ops) {
+  const chunkSize = 400; // Firestore 1バッチ上限500に余裕を持たせる
+  for (let i = 0; i < ops.length; i += chunkSize) {
+    const chunk = ops.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    chunk.forEach(op => {
+      if (op.type === 'set') batch.set(op.ref, op.data);
+      if (op.type === 'update') batch.update(op.ref, op.data);
+    });
+    await batch.commit();
+  }
+}
+
+async function importSitesToFirestore(parsed) {
+  const existing = [...(state.attendanceSites || [])];
+  const byCode = new Map();
+  let maxOrder = 0;
+  existing.forEach(site => {
+    const code = normalizeSiteCode(site.code);
+    if (code) byCode.set(code, site);
+    const so = Number(site.sortOrder) || 0;
+    if (so > maxOrder) maxOrder = so;
+  });
+
+  const ops = [];
+  let inserted = 0;
+  let updated = 0;
+
+  parsed.sites.forEach(site => {
+    const found = byCode.get(site.code);
+    if (found) {
+      const patch = {};
+      if ((found.name || '') !== site.name) patch.name = site.name;
+      if ((found.code || '') !== site.code) patch.code = site.code;
+      if (found.active === false) patch.active = true;
+      if (Object.keys(patch).length > 0) {
+        patch.updatedAt = serverTimestamp();
+        patch.updatedBy = state.currentUsername || '';
+        ops.push({
+          type: 'update',
+          ref: doc(db, 'attendance_sites', found.id),
+          data: patch,
+        });
+        updated += 1;
+      }
+      return;
+    }
+
+    maxOrder += 1;
+    const ref = doc(collection(db, 'attendance_sites'));
+    ops.push({
+      type: 'set',
+      ref,
+      data: {
+        code: site.code,
+        name: site.name,
+        unitPrice: 0,
+        active: true,
+        sortOrder: maxOrder,
+        updatedBy: state.currentUsername || '',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      },
+    });
+    inserted += 1;
+  });
+
+  if (ops.length > 0) {
+    await commitSiteOpsInBatches(ops);
+  }
+
+  return { inserted, updated, touched: ops.length };
+}
+
+async function importSitesFromExcelFile() {
+  const fileInput = document.getElementById('calw-site-import-file');
+  const button = document.getElementById('calw-site-import-btn');
+  if (!(fileInput instanceof HTMLInputElement) || !button) return;
+
+  const file = fileInput.files?.[0];
+  if (!file) {
+    alert('Excelファイルを選択してください。');
+    return;
+  }
+  if (!window.XLSX) {
+    alert('Excel解析ライブラリの読み込みに失敗しました。ページを再読み込みしてください。');
+    return;
+  }
+
+  button.disabled = true;
+  setImportStatus('Excelを解析しています...');
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const workbook = window.XLSX.read(arrayBuffer, { type: 'array' });
+    const parsed = parseWorkbookSites(workbook);
+
+    const summary = [
+      `対象シート: ${parsed.sheetName}`,
+      `全行: ${parsed.totalRows}行`,
+      `候補行: ${parsed.candidateRows}行`,
+      `除外行: ${parsed.excludedRows}行`,
+      `有効な現場コード: ${parsed.uniqueSiteCount}件`,
+      `重複コード（名称差異）: ${parsed.conflictCount}件`,
+    ].join(' / ');
+    setImportStatus(`解析完了: ${summary}`);
+
+    if (parsed.uniqueSiteCount === 0) {
+      alert('有効な現場データを検出できませんでした。');
+      return;
+    }
+
+    const go = confirm(`${summary}\n\nこの内容で登録現場へ取り込みますか？`);
+    if (!go) {
+      setImportStatus('取込をキャンセルしました。');
+      return;
+    }
+
+    setImportStatus('Firestoreへ取り込み中...');
+    const result = await importSitesToFirestore(parsed);
+    setImportStatus(`取込完了: 追加 ${result.inserted}件 / 更新 ${result.updated}件 / 解析 ${parsed.uniqueSiteCount}件`);
+    alert(`登録現場の取込が完了しました。\n追加: ${result.inserted}件\n更新: ${result.updated}件`);
+  } catch (err) {
+    console.error('Excel取込エラー:', err);
+    setImportStatus('取込に失敗しました。ファイル形式または内容を確認してください。');
+    alert('Excel取込に失敗しました。');
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function setText(id, text) {
@@ -735,6 +970,9 @@ export function bindAttendanceWorkEvents() {
 
   document.getElementById('calw-site-add-btn')?.addEventListener('click', () => {
     void addAttendanceSiteFromForm();
+  });
+  document.getElementById('calw-site-import-btn')?.addEventListener('click', () => {
+    void importSitesFromExcelFile();
   });
 
   ['calw-site-code-input', 'calw-site-name-input', 'calw-site-unit-price-input'].forEach(id => {

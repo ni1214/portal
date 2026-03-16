@@ -11281,6 +11281,21 @@ html.font-xl { font-size: 21px; }
   gap: 8px;
   margin-bottom: 8px;
 }
+.calw-site-import-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.calw-site-import-status {
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  margin-bottom: 10px;
+  border: 1px dashed var(--border-glass);
+  background: var(--bg-glass);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
 .calw-site-help {
   color: var(--text-muted);
   font-size: 0.76rem;
@@ -11296,6 +11311,9 @@ html.font-xl { font-size: 21px; }
 }
 
 @media (max-width: 980px) {
+  .calw-site-import-row {
+    grid-template-columns: 1fr;
+  }
   .calw-site-form-row {
     grid-template-columns: 1fr;
   }
