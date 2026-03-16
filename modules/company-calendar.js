@@ -106,6 +106,8 @@ export function subscribeCompanyCalConfig() {
     };
     // 再描画
     if (typeof deps.renderCalendar === 'function') deps.renderCalendar();
+    // 勤務内容表/集計表など、会社カレンダー同期が必要な表示を更新
+    deps.onCompanyCalConfigChanged?.();
     if (state.calTab === 'shared') renderSharedCalendar();
     // 設定モーダルが開いていれば更新
     const body = document.getElementById('ccs-body');

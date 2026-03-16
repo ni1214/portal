@@ -145,6 +145,49 @@ function collectInvolvedSiteIds(dateList) {
   return involved;
 }
 
+function getSyncedWorkTypeLabel(dateStr, dow, attType) {
+  const baseType = attType || null;
+  const info = deps.getDateInfo?.(dateStr) || null;
+  let rowClass = '';
+  let typeLabel = baseType || '通常';
+
+  if (!info) {
+    return { typeLabel, rowClass };
+  }
+
+  if (info.isHoliday) rowClass += ' calw-company-holiday';
+  else if (info.jpHolidayName) rowClass += ' calw-jp-holiday';
+
+  if (baseType) {
+    return { typeLabel, rowClass };
+  }
+
+  if (info.isHoliday) {
+    typeLabel = info.holidayLabel || '会社休日';
+  } else if (info.isPlannedLeave) {
+    typeLabel = '計画付与';
+  } else if (dow === 6) {
+    typeLabel = info.isWorkSaturday ? '土曜出勤' : '土曜休';
+  } else if (info.jpHolidayName) {
+    typeLabel = info.jpHolidayName;
+  } else if (dow === 0) {
+    typeLabel = '日曜';
+  }
+
+  return { typeLabel, rowClass };
+}
+
+function countSharedHolidayDays(period) {
+  if (!deps.getDateInfo) return 0;
+  const dates = getPeriodDates(period);
+  let count = 0;
+  dates.forEach(dateStr => {
+    const info = deps.getDateInfo(dateStr);
+    if (info?.isHoliday || info?.isPlannedLeave) count += 1;
+  });
+  return count;
+}
+
 function hasNonWorkSiteFields(docData) {
   if (!docData || typeof docData !== 'object') return false;
   // workSiteHours だけを消す操作で、他の将来フィールドまで消さないようにする
@@ -704,8 +747,9 @@ async function renderWorkTable() {
   const bodyRows = dates.map(dateStr => {
     const dt = new Date(`${dateStr}T00:00:00`);
     const day = dt.getDate();
-    const dow = DOW_LABELS[dt.getDay()];
-    const weekendCls = dt.getDay() === 0 ? ' calw-sun' : dt.getDay() === 6 ? ' calw-sat' : '';
+    const dowIndex = dt.getDay();
+    const dow = DOW_LABELS[dowIndex];
+    const weekendCls = dowIndex === 0 ? ' calw-sun' : dowIndex === 6 ? ' calw-sat' : '';
 
     const att = state.workPeriodAttendance[dateStr] || {};
     const workMap = sanitizeWorkSiteHours(att.workSiteHours);
@@ -733,11 +777,11 @@ async function renderWorkTable() {
     }).join('');
 
     grandTotal += dayTotal;
-    const typeLabel = att.type || '通常';
+    const { typeLabel, rowClass: syncedRowClass } = getSyncedWorkTypeLabel(dateStr, dowIndex, att.type);
     const hayade = att.hayade ? `${fmtHours(att.hayade)}h` : '-';
     const zangyo = att.zangyo ? `${fmtHours(att.zangyo)}h` : '-';
 
-    return `<tr class="calw-day-row${weekendCls}">
+    return `<tr class="calw-day-row${weekendCls}${syncedRowClass}">
       <td class="calw-date-cell">${day}</td>
       <td class="calw-dow-cell">${dow}</td>
       <td>${esc(typeLabel)}</td>
@@ -786,7 +830,8 @@ async function renderWorkSummary() {
   const period = getWorkPeriod();
   state.workSummaryPeriodLabel = period.label;
   setText('calw-summary-period-label', period.label);
-  setText('calw-summary-total-hours', '総稼働時間: 0h');
+  const sharedHolidayDays = countSharedHolidayDays(period);
+  setText('calw-summary-total-hours', `総稼働時間: 0h / 共有休日: ${sharedHolidayDays}日`);
 
   container.innerHTML = '<div class="calw-loading">勤務内容を集計中...</div>';
 
@@ -917,7 +962,7 @@ async function renderWorkSummary() {
 
     const footerUserCols = users.map(u => `<th class="calw-num">${fmtHours(userTotals[u] || 0)}</th>`).join('');
 
-    setText('calw-summary-total-hours', `総稼働時間: ${fmtHours(grandHours)}h`);
+    setText('calw-summary-total-hours', `総稼働時間: ${fmtHours(grandHours)}h / 共有休日: ${sharedHolidayDays}日`);
 
     container.innerHTML = `
       <div class="calw-summary-table-wrap">

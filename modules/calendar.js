@@ -382,6 +382,26 @@ export function calNextMonth() {
   if (state.calTab === 'shared') deps.renderSharedCalendar?.();
 }
 
+function buildSharedDayInfoText(dateStr) {
+  const info = deps.getDateInfo ? deps.getDateInfo(dateStr) : null;
+  if (!info) return '';
+
+  const parts = [];
+  if (info.jpHolidayName) parts.push(`祝日: ${info.jpHolidayName}`);
+  if (info.isHoliday) parts.push(`会社休日: ${info.holidayLabel || '会社休日'}`);
+  if (info.isPlannedLeave) parts.push('計画付与日');
+  else {
+    const dow = new Date(`${dateStr}T00:00:00`).getDay();
+    if (dow === 6) parts.push(info.isWorkSaturday ? '土曜出勤日' : '土曜休');
+  }
+  if (info.events?.length) {
+    const labels = info.events.map(e => e.label).filter(Boolean);
+    if (labels.length) parts.push(`行事: ${labels.join(' / ')}`);
+  }
+
+  return parts.join(' ｜ ');
+}
+
 // ===== 日付詳細パネル =====
 export function openDayPanel(dateStr) {
   state.calendarSelectedDate = dateStr;
@@ -395,6 +415,12 @@ export function openDayPanel(dateStr) {
   // タイトル
   const titleEl = document.getElementById('cal-day-title');
   if (titleEl) titleEl.textContent = `${d.getMonth()+1}月${d.getDate()}日（${dow}）`;
+  const sharedInfoEl = document.getElementById('cal-day-shared-info');
+  if (sharedInfoEl) {
+    const sharedText = buildSharedDayInfoText(dateStr);
+    sharedInfoEl.textContent = sharedText;
+    sharedInfoEl.hidden = !sharedText;
+  }
 
   // 勤務区分ボタン
   const typeBtnsEl = document.getElementById('cal-type-btns');

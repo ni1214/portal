@@ -208,7 +208,12 @@ initOrder({});
 initBottomNav();
 
 // 会社カレンダーモジュール初期化
-initCompanyCalendar({ renderCalendar });
+initCompanyCalendar({
+  renderCalendar,
+  onCompanyCalConfigChanged: () => {
+    void onCalendarMonthChanged();
+  },
+});
 
 // カレンダーモジュールに会社カレンダー関数を注入
 initCalendar({
@@ -223,6 +228,7 @@ initCalendar({
 initAttendanceWork({
   renderCalendar,
   updateCalendarSummary,
+  getDateInfo,
 });
 
 bindAttendanceWorkEvents();

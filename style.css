@@ -7980,6 +7980,15 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
   flex: 1;
 }
+.cal-day-shared-info {
+  margin-bottom: 12px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  padding: 8px 10px;
+  font-size: 0.76rem;
+}
 #cal-day-cancel-btn {
   background: none;
   border: none;
@@ -11299,6 +11308,12 @@ html.font-xl { font-size: 21px; }
 .calw-day-row.calw-sat td:first-child,
 .calw-day-row.calw-sat .calw-dow-cell {
   color: #3b82f6;
+}
+.calw-day-row.calw-company-holiday td {
+  background: color-mix(in srgb, var(--accent-purple) 8%, transparent);
+}
+.calw-day-row.calw-jp-holiday td {
+  background: color-mix(in srgb, #ef4444 7%, transparent);
 }
 
 .calw-date-cell,
