@@ -10295,7 +10295,8 @@ html.font-xl { font-size: 21px; }
   gap: 8px;
 }
 .ord-modal-inner .modal-actions .btn-modal-primary,
-.ord-modal-inner .modal-actions .btn-modal-secondary {
+.ord-modal-inner .modal-actions .btn-modal-secondary,
+.ord-modal-inner .modal-actions .btn-modal-danger {
   padding: 7px 16px;
   font-size: 0.82rem;
   white-space: nowrap;
@@ -11049,9 +11050,11 @@ html.font-xl { font-size: 21px; }
 .ord-history-detail-btn-row {
   display: flex;
   justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
   margin-top: 4px;
 }
-.ord-history-detail-btn {
+.ord-history-action-btn {
   font-size: 0.75rem;
   padding: 3px 10px;
   background: var(--bg-glass);
@@ -11069,10 +11072,84 @@ html.font-xl { font-size: 21px; }
   border-color: var(--accent-blue);
   color: var(--accent-blue);
 }
+.ord-history-delete-btn {
+  color: var(--accent-orange);
+  border-color: color-mix(in srgb, var(--accent-orange) 24%, var(--border-glass));
+}
+.ord-history-delete-btn:hover {
+  background: color-mix(in srgb, var(--accent-orange) 14%, var(--bg-card));
+  border-color: var(--accent-orange);
+}
+.ord-history-restore-btn {
+  color: var(--accent-cyan);
+  border-color: color-mix(in srgb, var(--accent-cyan) 24%, var(--border-glass));
+}
+.ord-history-restore-btn:hover {
+  background: color-mix(in srgb, var(--accent-cyan) 14%, var(--bg-card));
+  border-color: var(--accent-cyan);
+}
+.ord-history-item--deleted {
+  border-style: dashed;
+  opacity: 0.9;
+}
+.ord-history-deleted-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent-orange);
+  background: color-mix(in srgb, var(--accent-orange) 12%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--accent-orange) 24%, var(--border-glass));
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.ord-history-deleted-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.ord-history-deleted-details {
+  margin-top: 4px;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+}
+.ord-history-deleted-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.ord-history-deleted-help {
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+.ord-history-deleted-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
 /* ===== 発注詳細モーダル ===== */
 .ord-detail-inner {
   width: min(680px, 95vw);
+}
+.ord-detail-inner .modal-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .ord-detail-content {
   max-height: 65vh;
@@ -11090,6 +11167,19 @@ html.font-xl { font-size: 21px; }
   padding-bottom: 10px;
   border-bottom: 2px solid var(--border-glass-hover);
   margin-bottom: 14px;
+}
+.ord-detail-deleted-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--accent-orange) 10%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--accent-orange) 22%, var(--border-glass));
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.6;
 }
 .ord-detail-meta {
   width: 100%;

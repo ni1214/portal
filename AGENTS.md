@@ -143,7 +143,26 @@ export function xxxFunction() { ... }
 | `attendance_sites/` | 勤務内容表で使用する登録現場マスタ（コード・現場名） |
 | `order_suppliers/` | 発注先マスタ |
 | `order_items/` | 鋼材マスタ（品名・規格・単位・デフォルト数量） |
-| `orders/` | 発注履歴（明細・送信状態・20日締め管理） |
+| `orders/` | 発注履歴（明細・送信状態・20日締め管理・ソフト削除復元） |
+
+### 発注履歴フィールド（`orders/{orderId}`）
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `supplierId` | string | 発注先ID |
+| `supplierName` | string | 発注先名 |
+| `supplierEmail` | string | 発注先メールアドレス |
+| `orderType` | string | `'factory'` / `'site'` |
+| `siteName` | string\|null | 現場名発注時の現場名 |
+| `items` | array | 発注明細 |
+| `orderedBy` | string | 発注者ニックネーム |
+| `note` | string | 備考 |
+| `orderedAt` | timestamp | 発注日時 |
+| `emailSent` | boolean | メール送信済みフラグ |
+| `emailSentAt` | timestamp\|null | メール送信日時 |
+| `deletedAt` | timestamp\|null | 履歴を削除した日時（`null` なら表示対象） |
+| `deletedBy` | string\|null | 履歴を削除したユーザー名 |
+
+- **保持ポリシー（2026-03 追加）**: `orders/` は通常履歴を1年保持し、`deletedAt` が入った削除済み履歴は30日を過ぎたらフロント側クリーンアップで完全削除する。
 
 ### 勤怠データフィールド（`users/{name}/attendance/{YYYY-MM-DD}`）
 | フィールド | 型 | 説明 |

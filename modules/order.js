@@ -21,6 +21,7 @@ let _pins = [];                 // ピン留め品目ID（localStorage）
 let _recent = [];               // 最近使った品目ID（localStorage、最大10件）
 let _checkedItems = new Map();  // itemId → {checked, qty, length, finish}
 let _historyOrders = [];     // 履歴モーダルで読み込んだ発注データ
+let _deletedHistoryOrders = []; // 削除済み履歴
 
 // ===== カタログシードデータ =====
 // materialType: 'steel'=スチール, 'stainless'=ステンレス
@@ -517,6 +518,91 @@ function fmtDatetime(ts) {
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${wd}）${pad(d.getHours())}時${pad(d.getMinutes())}分`;
 }
 
+function toDateValue(value) {
+  if (!value) return null;
+  const date = value.toDate ? value.toDate() : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isOrderDeleted(order) {
+  return Boolean(order?.deletedAt);
+}
+
+function findOrderById(orderId) {
+  return _historyOrders.find(o => o.id === orderId) || _deletedHistoryOrders.find(o => o.id === orderId) || null;
+}
+
+function getOrderTypeMeta(order) {
+  const isFactory = !order.orderType || order.orderType === 'factory';
+  return {
+    label: isFactory ? '工場在庫' : (order.siteName || '現場名発注'),
+    className: isFactory ? 'ord-type-badge--factory' : 'ord-type-badge--site'
+  };
+}
+
+function getOrderItemsSummary(order) {
+  return (order.items || []).map(it => {
+    const nm = it.category || it.name || '';
+    const fin = it.finish ? ` ${it.finish}` : '';
+    const len = it.length ? ` L=${it.length}` : '';
+    return `${nm}${it.spec ? ' ' + it.spec : ''}${fin}${len} ${it.qty}${it.unit || '本'}`;
+  }).join('、');
+}
+
+function buildStoredOrderData(data, { emailSent = false } = {}) {
+  return {
+    supplierId: data.supplierId,
+    supplierName: data.supplierName,
+    supplierEmail: data.supplierEmail,
+    orderType: data.orderType,
+    siteName: data.siteName,
+    items: data.items,
+    orderedBy: data.orderedBy,
+    note: data.note,
+    orderedAt: serverTimestamp(),
+    emailSent,
+    emailSentAt: emailSent ? serverTimestamp() : null,
+    deletedAt: null,
+    deletedBy: null
+  };
+}
+
+function renderHistoryItem(order, { deleted = false } = {}) {
+  const { label: typeLabel, className: typeCls } = getOrderTypeMeta(order);
+  const itemsSummary = getOrderItemsSummary(order);
+  const emailBadge = order.emailSent
+    ? `<span class="ord-email-badge ord-email-badge--sent"><i class="fa-solid fa-envelope-circle-check"></i> 送信済み</span>`
+    : `<span class="ord-email-badge ord-email-badge--unsent"><i class="fa-solid fa-envelope"></i> 未送信</span>`;
+  const deletedBadge = deleted
+    ? '<span class="ord-history-deleted-badge"><i class="fa-solid fa-trash-can"></i> 削除済み</span>'
+    : '';
+  const deletedMeta = deleted
+    ? `<div class="ord-history-deleted-note"><i class="fa-solid fa-rotate-left"></i> ${fmtDatetime(order.deletedAt)} に ${esc(order.deletedBy || '不明')} が削除</div>`
+    : '';
+  const actionButtons = deleted
+    ? `
+        <button class="ord-history-action-btn ord-history-detail-btn" data-id="${esc(order.id)}"><i class="fa-solid fa-file-lines"></i> 詳細</button>
+        <button class="ord-history-action-btn ord-history-restore-btn" data-id="${esc(order.id)}"><i class="fa-solid fa-rotate-left"></i> 元に戻す</button>`
+    : `
+        <button class="ord-history-action-btn ord-history-detail-btn" data-id="${esc(order.id)}"><i class="fa-solid fa-file-lines"></i> 詳細</button>
+        <button class="ord-history-action-btn ord-history-delete-btn" data-id="${esc(order.id)}"><i class="fa-solid fa-trash"></i> 削除</button>`;
+
+  return `
+    <div class="ord-history-item${deleted ? ' ord-history-item--deleted' : ''}" data-id="${esc(order.id)}">
+      <div class="ord-history-header">
+        <span class="ord-history-date">${fmtDatetime(order.orderedAt)}</span>
+        <span class="ord-type-badge ${typeCls}">${esc(typeLabel)}</span>
+        <span class="ord-history-by">${esc(order.orderedBy || '')}</span>
+        ${emailBadge}
+        ${deletedBadge}
+      </div>
+      <div class="ord-history-items">${esc(itemsSummary)}</div>
+      ${order.note ? `<div class="ord-history-note">備考: ${esc(order.note)}</div>` : ''}
+      ${deletedMeta}
+      <div class="ord-history-detail-btn-row">${actionButtons}</div>
+    </div>`;
+}
+
 // ===== メール本文組み立て =====
 function buildEmailContent(orderData) {
   const supplier = _suppliers.find(s => s.id === orderData.supplierId) || {
@@ -583,7 +669,7 @@ E-mail：takabayashi@framex.co.jp
 // ===== メール送信 =====
 const NOTIFY_EMAIL = 'takabayashi@framex.co.jp';
 
-async function sendOrderEmail(orderData, orderId) {
+async function sendOrderEmail(orderData) {
   if (!_gasUrl) {
     alert('GAS URLが設定されていません。管理者に設定を依頼してください。');
     return false;
@@ -612,12 +698,6 @@ async function sendOrderEmail(orderData, orderId) {
       })
     });
 
-    if (orderId) {
-      await updateDoc(doc(db, 'orders', orderId), {
-        emailSent: true,
-        emailSentAt: serverTimestamp()
-      });
-    }
     return true;
   } catch (err) {
     console.error('order: sendOrderEmail error', err);
@@ -1063,80 +1143,59 @@ async function submitFromPreview() {
   if (!_pendingOrderData) return;
   const data = _pendingOrderData;
   const nowLocal = data._localNow;
-
-  const orderData = {
-    supplierId: data.supplierId,
-    supplierName: data.supplierName,
-    supplierEmail: data.supplierEmail,
-    orderType: data.orderType,
-    siteName: data.siteName,
-    items: data.items,
-    orderedBy: data.orderedBy,
-    note: data.note,
-    orderedAt: serverTimestamp(),
-    emailSent: false,
-    emailSentAt: null
-  };
+  const localOrderData = { ...data, orderedAt: nowLocal };
+  const btn = document.getElementById('ord-preview-send');
 
   try {
-    const ref = await addDoc(collection(db, 'orders'), orderData);
-    const orderId = ref.id;
-    const localOrderData = { ...orderData, orderedAt: nowLocal, orderId };
-
-    const btn = document.getElementById('ord-preview-send');
     if (btn) { btn.disabled = true; btn.textContent = '送信中...'; }
-    const ok = await sendOrderEmail(localOrderData, orderId);
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> この内容で送信'; }
+    const ok = await sendOrderEmail(localOrderData);
+    if (!ok) return;
 
-    if (ok) {
-      // 最近使った品目を更新
-      const usedIds = data.items.filter(it => it.itemId).map(it => it.itemId);
-      if (usedIds.length) saveRecent(usedIds);
-      alert('メールを送信しました。');
-      document.getElementById('ord-preview-modal').classList.remove('visible');
-      _pendingOrderData = null;
-    }
+    await addDoc(collection(db, 'orders'), buildStoredOrderData(data, { emailSent: true }));
+
+    const usedIds = data.items.filter(it => it.itemId).map(it => it.itemId);
+    if (usedIds.length) saveRecent(usedIds);
+    alert('メールを送信しました。');
+    document.getElementById('ord-preview-modal').classList.remove('visible');
+    _pendingOrderData = null;
   } catch (err) {
     console.error('order: submitFromPreview error', err);
-    alert('送信に失敗しました。\n' + err.message);
+    document.getElementById('ord-preview-modal')?.classList.remove('visible');
+    _pendingOrderData = null;
+    alert('メール送信後の履歴保存に失敗しました。\n履歴に残っていない可能性があります。\n' + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> この内容で送信';
+    }
   }
 }
 
-async function submitOrder(sendEmail) {
+function printDraftOrder() {
   const data = collectOrderData();
   if (!data) return;
-  const nowLocal = data._localNow;
-
-  const orderData = {
-    supplierId: data.supplierId, supplierName: data.supplierName,
-    supplierEmail: data.supplierEmail, orderType: data.orderType,
-    siteName: data.siteName, items: data.items, orderedBy: data.orderedBy,
-    note: data.note, orderedAt: serverTimestamp(), emailSent: false, emailSentAt: null
-  };
-
-  try {
-    const ref = await addDoc(collection(db, 'orders'), orderData);
-    printOrder({ ...orderData, orderedAt: nowLocal, orderId: ref.id });
-    closeOrderModal();
-  } catch (err) {
-    console.error('order: submitOrder error', err);
-    alert('発注の保存に失敗しました。\n' + err.message);
-  }
+  printOrder({ ...data, orderedAt: data._localNow });
+  closeOrderModal();
 }
 
 // ===== 履歴モーダル =====
-// 1年以上古い発注データを自動削除（バックグラウンド実行）
+// 1年以上古い履歴と、30日を過ぎた削除済み履歴を自動削除（バックグラウンド実行）
 async function purgeOldOrders() {
   try {
-    const cutoff = new Date();
-    cutoff.setFullYear(cutoff.getFullYear() - 1);
+    const orderCutoff = new Date();
+    orderCutoff.setFullYear(orderCutoff.getFullYear() - 1);
+    const deletedCutoff = new Date();
+    deletedCutoff.setDate(deletedCutoff.getDate() - 30);
     const snap = await getDocs(query(collection(db, 'orders'), where('orderedBy', '==', state.currentUsername)));
     const old = snap.docs.filter(d => {
-      const t = d.data().orderedAt?.toDate?.() || new Date(d.data().orderedAt || 0);
-      return t < cutoff;
+      const data = d.data();
+      const orderedAt = toDateValue(data.orderedAt);
+      const deletedAt = toDateValue(data.deletedAt);
+      if (deletedAt) return deletedAt < deletedCutoff;
+      return orderedAt ? orderedAt < orderCutoff : false;
     });
     await Promise.all(old.map(d => deleteDoc(doc(db, 'orders', d.id))));
-    if (old.length > 0) console.log(`order: ${old.length}件の古い発注データを削除しました`);
+    if (old.length > 0) console.log(`order: ${old.length}件の期限切れ履歴を削除しました`);
   } catch (err) {
     console.warn('order: purgeOldOrders error', err);
   }
@@ -1168,81 +1227,72 @@ async function renderHistory() {
 
   try {
     const username = state.currentUsername;
-    // 複合インデックス不要: whereのみで取得し、ソート・期間フィルタはクライアントで実施
-    let q;
-    if (state.isAdmin) {
-      q = query(collection(db, 'orders'));
-    } else {
-      q = query(collection(db, 'orders'), where('orderedBy', '==', username));
-    }
+    let q = state.isAdmin
+      ? query(collection(db, 'orders'))
+      : query(collection(db, 'orders'), where('orderedBy', '==', username));
 
     const snap = await getDocs(q);
     const orders = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(o => {
-        if (!o.orderedAt) return false;
-        const t = o.orderedAt.toDate ? o.orderedAt.toDate() : new Date(o.orderedAt);
+        const t = toDateValue(o.orderedAt);
+        if (!t) return false;
         return t >= period.start && t <= period.end;
       })
       .sort((a, b) => {
-        const ta = a.orderedAt.toDate ? a.orderedAt.toDate() : new Date(a.orderedAt);
-        const tb = b.orderedAt.toDate ? b.orderedAt.toDate() : new Date(b.orderedAt);
+        const ta = toDateValue(a.orderedAt) || new Date(0);
+        const tb = toDateValue(b.orderedAt) || new Date(0);
         return tb - ta; // 新しい順
       });
 
-    if (orders.length === 0) {
+    _historyOrders = orders.filter(order => !isOrderDeleted(order));
+    _deletedHistoryOrders = orders
+      .filter(order => isOrderDeleted(order))
+      .sort((a, b) => {
+        const ta = toDateValue(a.deletedAt) || new Date(0);
+        const tb = toDateValue(b.deletedAt) || new Date(0);
+        return tb - ta;
+      });
+
+    if (_historyOrders.length === 0 && _deletedHistoryOrders.length === 0) {
       listEl.innerHTML = '<p class="ord-empty">この期間の発注はありません</p>';
       return;
     }
 
-    _historyOrders = orders;
-
-    // 発注業者ごとにグループ化
     const grouped = {};
-    orders.forEach(o => {
+    _historyOrders.forEach(o => {
       const key = o.supplierName || '不明';
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(o);
     });
 
-    listEl.innerHTML = Object.entries(grouped).map(([supplierName, supplierOrders]) => {
-      const rows = supplierOrders.map(o => {
-        const itemsSummary = o.items.map(it => {
-          const nm = it.category || it.name || '';
-          const fin = it.finish ? ` ${it.finish}` : '';
-          const len = it.length ? ` L=${it.length}` : '';
-          return `${nm}${it.spec ? ' ' + it.spec : ''}${fin}${len} ${it.qty}${it.unit || '本'}`;
-        }).join('、');
-        // 工場在庫 or 現場名を表示
-        const isFactory = !o.orderType || o.orderType === 'factory';
-        const typeLabel = isFactory ? '工場在庫' : (o.siteName || '現場名発注');
-        const typeCls   = isFactory ? 'ord-type-badge--factory' : 'ord-type-badge--site';
-        const emailBadge = o.emailSent
-          ? `<span class="ord-email-badge ord-email-badge--sent"><i class="fa-solid fa-envelope-circle-check"></i> 送信済み</span>`
-          : `<span class="ord-email-badge ord-email-badge--unsent"><i class="fa-solid fa-envelope"></i> 未送信</span>`;
-        return `
-          <div class="ord-history-item" data-id="${esc(o.id)}" role="button" tabindex="0" title="クリックで詳細を見る">
-            <div class="ord-history-header">
-              <span class="ord-history-date">${fmtDatetime(o.orderedAt)}</span>
-              <span class="ord-type-badge ${typeCls}">${esc(typeLabel)}</span>
-              <span class="ord-history-by">${esc(o.orderedBy)}</span>
-              ${emailBadge}
+    const activeHtml = _historyOrders.length > 0
+      ? Object.entries(grouped).map(([supplierName, supplierOrders]) => `
+          <div class="ord-history-group">
+            <div class="ord-history-group-header">
+              <i class="fa-solid fa-building"></i> ${esc(supplierName)}
+              <span class="ord-history-count">${supplierOrders.length}件</span>
             </div>
-            <div class="ord-history-items">${esc(itemsSummary)}</div>
-            ${o.note ? `<div class="ord-history-note">備考: ${esc(o.note)}</div>` : ''}
-            <div class="ord-history-detail-btn-row"><button class="ord-history-detail-btn" data-id="${esc(o.id)}"><i class="fa-solid fa-file-lines"></i> 詳細</button></div>
-          </div>`;
-      }).join('');
+            ${supplierOrders.map(order => renderHistoryItem(order)).join('')}
+          </div>`).join('')
+      : '<p class="ord-empty">この期間の表示中履歴はありません</p>';
 
-      return `
-        <div class="ord-history-group">
-          <div class="ord-history-group-header">
-            <i class="fa-solid fa-building"></i> ${esc(supplierName)}
-            <span class="ord-history-count">${supplierOrders.length}件</span>
-          </div>
-          ${rows}
-        </div>`;
-    }).join('');
+    const deletedHtml = _deletedHistoryOrders.length > 0
+      ? `
+          <details class="ord-history-deleted-details">
+            <summary class="ord-history-deleted-summary">
+              <i class="fa-solid fa-trash-can-arrow-up"></i> 削除済み履歴（${_deletedHistoryOrders.length}件）
+            </summary>
+            <div class="ord-history-deleted-help">
+              誤って削除した履歴はここから元に戻せます。削除済み履歴は30日後に自動で完全削除されます。
+            </div>
+            <div class="ord-history-deleted-list">
+              ${_deletedHistoryOrders.map(order => renderHistoryItem(order, { deleted: true })).join('')}
+            </div>
+          </details>`
+      : '';
+
+    listEl.innerHTML = activeHtml + deletedHtml;
   } catch (err) {
     console.error('order: renderHistory error', err);
     listEl.innerHTML = '<p class="ord-empty">読み込みに失敗しました</p>';
@@ -1251,19 +1301,22 @@ async function renderHistory() {
 
 // ===== 発注詳細モーダル =====
 function openOrderDetailModal(orderId) {
-  const order = _historyOrders.find(o => o.id === orderId);
+  const order = findOrderById(orderId);
   if (!order) return;
   const modal = document.getElementById('ord-detail-modal');
   const content = document.getElementById('ord-detail-content');
   if (!modal || !content) return;
 
-  const now = order.orderedAt?.toDate ? order.orderedAt.toDate() : new Date(order.orderedAt || 0);
+  const now = toDateValue(order.orderedAt) || new Date();
   const pad = n => String(n).padStart(2, '0');
   const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${pad(now.getHours())}:${pad(now.getMinutes())}`;
   const orderNo = `ORD-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${orderId.slice(-4).toUpperCase()}`;
   const supplier = _suppliers.find(s => s.id === order.supplierId) || { name: order.supplierName || '', address: '', tel: '' };
   const typeLabel = (!order.orderType || order.orderType === 'factory') ? '工場在庫' : (order.siteName || '現場名発注');
   const noteText = (order.note || '').trim() || '（なし）';
+  const deletedInfo = isOrderDeleted(order)
+    ? `<div class="ord-detail-deleted-banner"><i class="fa-solid fa-trash-can-arrow-up"></i> この履歴は削除済みです。${fmtDatetime(order.deletedAt)} に ${esc(order.deletedBy || '不明')} が削除しました。</div>`
+    : '';
   const itemRows = (order.items || []).map((item, i) => {
     const nm = item.category || item.name || '';
     const fin = item.finish ? `　${item.finish}` : '';
@@ -1274,12 +1327,14 @@ function openOrderDetailModal(orderId) {
   content.innerHTML = `
     <div class="ord-detail-doc">
       <div class="ord-detail-title">鋼 材 発 注 書</div>
+      ${deletedInfo}
       <table class="ord-detail-meta">
         <tr><th>発注日時</th><td>${dateStr}</td></tr>
         <tr><th>発注番号</th><td>${orderNo}</td></tr>
         <tr><th>発注者</th><td>${esc(order.orderedBy || '')}（日建フレメックス株式会社 生産管理課）</td></tr>
         <tr><th>発注区分</th><td>${typeLabel}</td></tr>
         <tr><th>メール送信</th><td>${order.emailSent ? `<span style="color:var(--accent-cyan)"><i class="fa-solid fa-envelope-circle-check"></i> 送信済み</span>` : `<span style="color:var(--accent-orange)"><i class="fa-solid fa-envelope"></i> 未送信（メール未送信）</span>`}</td></tr>
+        ${isOrderDeleted(order) ? `<tr><th>削除状態</th><td>${fmtDatetime(order.deletedAt)} / ${esc(order.deletedBy || '不明')}</td></tr>` : ''}
       </table>
       <div class="ord-detail-section">【発注先】</div>
       <div class="ord-detail-supplier">
@@ -1298,12 +1353,60 @@ function openOrderDetailModal(orderId) {
     </div>`;
 
   modal.classList.add('visible');
-  // 印刷ボタンにデータをセット
   document.getElementById('ord-detail-print-btn')?.setAttribute('data-id', orderId);
+  const deleteBtn = document.getElementById('ord-detail-delete-btn');
+  const restoreBtn = document.getElementById('ord-detail-restore-btn');
+  if (deleteBtn) {
+    deleteBtn.dataset.id = orderId;
+    deleteBtn.hidden = isOrderDeleted(order);
+  }
+  if (restoreBtn) {
+    restoreBtn.dataset.id = orderId;
+    restoreBtn.hidden = !isOrderDeleted(order);
+  }
 }
 
 function closeOrderDetailModal() {
   document.getElementById('ord-detail-modal')?.classList.remove('visible');
+}
+
+async function deleteOrderHistory(orderId) {
+  const order = findOrderById(orderId);
+  if (!order || isOrderDeleted(order)) return;
+  const summary = getOrderItemsSummary(order) || '発注明細';
+  const ok = confirm(`この履歴を削除しますか？\n\n${summary}\n\n削除後も「削除済み履歴」から元に戻せます。`);
+  if (!ok) return;
+
+  try {
+    await updateDoc(doc(db, 'orders', orderId), {
+      deletedAt: serverTimestamp(),
+      deletedBy: state.currentUsername || '不明'
+    });
+    closeOrderDetailModal();
+    await renderHistory();
+    alert('履歴を削除しました。誤って削除した場合は「削除済み履歴」から元に戻せます。');
+  } catch (err) {
+    console.error('order: deleteOrderHistory error', err);
+    alert('履歴の削除に失敗しました。\n' + err.message);
+  }
+}
+
+async function restoreOrderHistory(orderId) {
+  const order = findOrderById(orderId);
+  if (!order || !isOrderDeleted(order)) return;
+
+  try {
+    await updateDoc(doc(db, 'orders', orderId), {
+      deletedAt: null,
+      deletedBy: null
+    });
+    closeOrderDetailModal();
+    await renderHistory();
+    alert('履歴を元に戻しました。');
+  } catch (err) {
+    console.error('order: restoreOrderHistory error', err);
+    alert('履歴の復元に失敗しました。\n' + err.message);
+  }
 }
 
 // ===== 管理モーダル =====
@@ -1445,7 +1548,7 @@ function bindOrderEvents() {
     openOrderHistoryModal();
   });
   document.getElementById('ord-btn-email')?.addEventListener('click', openPreviewModal);
-  document.getElementById('ord-btn-print')?.addEventListener('click', () => submitOrder(false));
+  document.getElementById('ord-btn-print')?.addEventListener('click', printDraftOrder);
   document.getElementById('ord-modal')?.addEventListener('click', e => {
     if (e.target === document.getElementById('ord-modal')) closeOrderModal();
   });
@@ -1517,20 +1620,41 @@ function bindOrderEvents() {
 
   // 履歴詳細
   document.getElementById('ord-history-list')?.addEventListener('click', e => {
-    const btn = e.target.closest('.ord-history-detail-btn');
-    if (btn) openOrderDetailModal(btn.dataset.id);
+    const detailBtn = e.target.closest('.ord-history-detail-btn');
+    if (detailBtn) {
+      openOrderDetailModal(detailBtn.dataset.id);
+      return;
+    }
+    const deleteBtn = e.target.closest('.ord-history-delete-btn');
+    if (deleteBtn) {
+      deleteOrderHistory(deleteBtn.dataset.id);
+      return;
+    }
+    const restoreBtn = e.target.closest('.ord-history-restore-btn');
+    if (restoreBtn) {
+      restoreOrderHistory(restoreBtn.dataset.id);
+    }
   });
   document.getElementById('ord-detail-modal')?.addEventListener('click', e => {
     if (e.target === document.getElementById('ord-detail-modal')) closeOrderDetailModal();
   });
   document.getElementById('ord-detail-close')?.addEventListener('click', closeOrderDetailModal);
+  document.getElementById('ord-detail-close2')?.addEventListener('click', closeOrderDetailModal);
   document.getElementById('ord-detail-print-btn')?.addEventListener('click', () => {
     const orderId = document.getElementById('ord-detail-print-btn')?.dataset.id;
-    const order = _historyOrders.find(o => o.id === orderId);
+    const order = findOrderById(orderId);
     if (order) {
-      const now = order.orderedAt?.toDate ? order.orderedAt.toDate() : new Date(order.orderedAt || 0);
+      const now = toDateValue(order.orderedAt) || new Date();
       printOrder({ ...order, orderedAt: now, orderId });
     }
+  });
+  document.getElementById('ord-detail-delete-btn')?.addEventListener('click', () => {
+    const orderId = document.getElementById('ord-detail-delete-btn')?.dataset.id;
+    if (orderId) deleteOrderHistory(orderId);
+  });
+  document.getElementById('ord-detail-restore-btn')?.addEventListener('click', () => {
+    const orderId = document.getElementById('ord-detail-restore-btn')?.dataset.id;
+    if (orderId) restoreOrderHistory(orderId);
   });
 
   // 履歴モーダル
