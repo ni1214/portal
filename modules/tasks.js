@@ -55,6 +55,65 @@ async function syncRequestLink(taskId, updates) {
   return task;
 }
 
+function _taskProjectKeyFilterValue() {
+  return normalizeProjectKey(state.taskProjectKeyFilter || '').toLowerCase();
+}
+
+function _filterTasksByProjectKey(list) {
+  const filter = _taskProjectKeyFilterValue();
+  if (!filter) return list;
+  return list.filter(task =>
+    normalizeProjectKey(task.projectKey || '').toLowerCase().includes(filter)
+  );
+}
+
+function _taskFilterBarHtml(totalCount, filteredCount) {
+  const currentValue = esc(state.taskProjectKeyFilter || '');
+  const countLabel = state.taskProjectKeyFilter
+    ? `${filteredCount} / ${totalCount}件`
+    : `${totalCount}件`;
+  return `
+    <div class="task-project-filter-row">
+      <div class="task-project-filter-input-wrap">
+        <i class="fa-solid fa-magnifying-glass task-project-filter-icon"></i>
+        <input
+          type="text"
+          id="task-project-filter-input"
+          class="form-input task-project-filter-input"
+          placeholder="案件キーで絞り込み"
+          value="${currentValue}"
+          autocomplete="off"
+        >
+        <button
+          type="button"
+          class="task-project-filter-clear"
+          id="task-project-filter-clear"
+          ${state.taskProjectKeyFilter ? '' : 'hidden'}
+          title="検索をクリア"
+        ><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <span class="task-project-filter-count">${countLabel}</span>
+    </div>
+  `;
+}
+
+function _bindTaskProjectFilterEvents() {
+  const input = document.getElementById('task-project-filter-input');
+  const clearBtn = document.getElementById('task-project-filter-clear');
+  if (input) {
+    input.addEventListener('input', e => {
+      state.taskProjectKeyFilter = normalizeProjectKey(e.target.value || '');
+      renderTaskTabContent();
+    });
+  }
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      state.taskProjectKeyFilter = '';
+      renderTaskTabContent();
+    });
+  }
+}
+
 function _taskProjectKeyHtml(task) {
   if (!task.projectKey) return '';
   return `
@@ -165,7 +224,16 @@ export function _renderReceivedTasks(container) {
     container.innerHTML = '<div class="task-empty"><i class="fa-solid fa-inbox"></i><p>受け取ったタスクはありません</p></div>';
     return;
   }
-  container.innerHTML = state.receivedTasks.map(t => {
+  const filtered = _filterTasksByProjectKey(state.receivedTasks);
+  if (!filtered.length) {
+    container.innerHTML = `
+      ${_taskFilterBarHtml(state.receivedTasks.length, filtered.length)}
+      <div class="task-empty"><i class="fa-solid fa-magnifying-glass"></i><p>案件キーに一致するタスクはありません</p></div>
+    `;
+    _bindTaskProjectFilterEvents();
+    return;
+  }
+  container.innerHTML = _taskFilterBarHtml(state.receivedTasks.length, filtered.length) + filtered.map(t => {
     const s = TASK_STATUS_LABEL[t.status] || TASK_STATUS_LABEL.pending;
     const due = t.dueDate ? `<span class="task-due"><i class="fa-regular fa-calendar"></i> ${esc(t.dueDate)}</span>` : '';
     let actions = '';
@@ -191,6 +259,7 @@ export function _renderReceivedTasks(container) {
       </div>`;
   }).join('');
 
+  _bindTaskProjectFilterEvents();
   container.querySelectorAll('.task-action-accept').forEach(btn =>
     btn.addEventListener('click', () => acceptTask(btn.dataset.id)));
   container.querySelectorAll('.task-action-done').forEach(btn =>
@@ -204,7 +273,16 @@ export function _renderSentTasks(container) {
     container.innerHTML = '<div class="task-empty"><i class="fa-solid fa-paper-plane"></i><p>依頼したタスクはありません</p></div>';
     return;
   }
-  container.innerHTML = state.sentTasks.map(t => {
+  const filtered = _filterTasksByProjectKey(state.sentTasks);
+  if (!filtered.length) {
+    container.innerHTML = `
+      ${_taskFilterBarHtml(state.sentTasks.length, filtered.length)}
+      <div class="task-empty"><i class="fa-solid fa-magnifying-glass"></i><p>案件キーに一致するタスクはありません</p></div>
+    `;
+    _bindTaskProjectFilterEvents();
+    return;
+  }
+  container.innerHTML = _taskFilterBarHtml(state.sentTasks.length, filtered.length) + filtered.map(t => {
     const s = TASK_STATUS_LABEL[t.status] || TASK_STATUS_LABEL.pending;
     const due = t.dueDate ? `<span class="task-due"><i class="fa-regular fa-calendar"></i> ${esc(t.dueDate)}</span>` : '';
     const isNewDone = t.status === 'done' && !t.notifiedDone;
@@ -254,6 +332,7 @@ export function _renderSentTasks(container) {
       </div>`;
   }).join('');
 
+  _bindTaskProjectFilterEvents();
   container.querySelectorAll('.task-action-edit').forEach(btn =>
     btn.addEventListener('click', () => openTaskEditModal(btn.dataset.id)));
   container.querySelectorAll('.task-action-share').forEach(btn =>
@@ -271,7 +350,16 @@ export function _renderSharedTasks(container) {
     container.innerHTML = '<div class="task-empty"><i class="fa-solid fa-share-nodes"></i><p>共有されたタスクはありません</p></div>';
     return;
   }
-  container.innerHTML = state.sharedTasks.map(t => {
+  const filtered = _filterTasksByProjectKey(state.sharedTasks);
+  if (!filtered.length) {
+    container.innerHTML = `
+      ${_taskFilterBarHtml(state.sharedTasks.length, filtered.length)}
+      <div class="task-empty"><i class="fa-solid fa-magnifying-glass"></i><p>案件キーに一致するタスクはありません</p></div>
+    `;
+    _bindTaskProjectFilterEvents();
+    return;
+  }
+  container.innerHTML = _taskFilterBarHtml(state.sharedTasks.length, filtered.length) + filtered.map(t => {
     const s   = TASK_STATUS_LABEL[t.status] || TASK_STATUS_LABEL.pending;
     const due = t.dueDate ? `<span class="task-due"><i class="fa-regular fa-calendar"></i> ${esc(t.dueDate)}</span>` : '';
     const resp = t.sharedResponses?.[state.currentUsername] || 'pending';
@@ -300,6 +388,7 @@ export function _renderSharedTasks(container) {
       </div>`;
   }).join('');
 
+  _bindTaskProjectFilterEvents();
   container.querySelectorAll('.task-action-share-accept').forEach(btn =>
     btn.addEventListener('click', () => acceptSharedTask(btn.dataset.id)));
   container.querySelectorAll('.task-action-share-decline').forEach(btn =>

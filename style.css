@@ -5648,6 +5648,60 @@ html.font-xl { font-size: 21px; }
 .task-empty i { font-size: 2rem; opacity: 0.25; }
 .task-empty p { margin: 0; opacity: 0.6; }
 
+/* 案件キー絞り込み */
+.task-project-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.task-project-filter-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: min(100%, 240px);
+}
+.task-project-filter-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+.task-project-filter-input {
+  width: 100%;
+  padding-left: 34px;
+  padding-right: 38px;
+}
+.task-project-filter-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.task-project-filter-clear:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+.task-project-filter-count {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 /* タスクアイテム */
 .task-item {
   background: var(--bg-glass);
@@ -7313,6 +7367,60 @@ html.font-xl { font-size: 21px; }
   text-align: center;
 }
 .req-empty i { font-size: 2rem; opacity: 0.4; }
+
+/* 案件キー絞り込み */
+.req-project-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.req-project-filter-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: min(100%, 240px);
+}
+.req-project-filter-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+.req-project-filter-input {
+  width: 100%;
+  padding-left: 34px;
+  padding-right: 38px;
+}
+.req-project-filter-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.req-project-filter-clear:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+.req-project-filter-count {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
 
 /* ステータスバッジ */
 .req-status-badge {

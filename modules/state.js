@@ -135,6 +135,7 @@ export const state = {
   _sharedTasksUnsub: null,     // sharedWith クエリのリスナー
   taskModalOpen: false,
   activeTaskTab: 'received',
+  taskProjectKeyFilter: '',
   newTaskAssignee: '',
   _editingTaskId: null,        // 編集中 or 共有操作中のタスクID
 
@@ -144,6 +145,7 @@ export const state = {
   reqModalOpen: false,
   activeReqTab: 'request',
   activeReqSubTab: 'received',
+  reqProjectKeyFilter: '',
   receivedRequests: [],
   sentRequests: [],
   suggestionList: [],

@@ -213,6 +213,65 @@ function _reqStatusHtml(status) {
   return `<span class="req-status-badge ${s.cls}">${s.text}</span>`;
 }
 
+function _requestProjectKeyFilterValue() {
+  return normalizeProjectKey(state.reqProjectKeyFilter || '').toLowerCase();
+}
+
+function _filterRequestsByProjectKey(list) {
+  const filter = _requestProjectKeyFilterValue();
+  if (!filter) return list;
+  return list.filter(req =>
+    normalizeProjectKey(req.projectKey || '').toLowerCase().includes(filter)
+  );
+}
+
+function _requestFilterBarHtml(totalCount, filteredCount) {
+  const currentValue = escHtml(state.reqProjectKeyFilter || '');
+  const countLabel = state.reqProjectKeyFilter
+    ? `${filteredCount} / ${totalCount}件`
+    : `${totalCount}件`;
+  return `
+    <div class="req-project-filter-row">
+      <div class="req-project-filter-input-wrap">
+        <i class="fa-solid fa-magnifying-glass req-project-filter-icon"></i>
+        <input
+          type="text"
+          id="req-project-filter-input"
+          class="form-input req-project-filter-input"
+          placeholder="案件キーで絞り込み"
+          value="${currentValue}"
+          autocomplete="off"
+        >
+        <button
+          type="button"
+          class="req-project-filter-clear"
+          id="req-project-filter-clear"
+          ${state.reqProjectKeyFilter ? '' : 'hidden'}
+          title="検索をクリア"
+        ><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <span class="req-project-filter-count">${countLabel}</span>
+    </div>
+  `;
+}
+
+function _bindRequestProjectFilterEvents() {
+  const input = document.getElementById('req-project-filter-input');
+  const clearBtn = document.getElementById('req-project-filter-clear');
+  if (input) {
+    input.addEventListener('input', e => {
+      state.reqProjectKeyFilter = normalizeProjectKey(e.target.value || '');
+      renderReqContent();
+    });
+  }
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      state.reqProjectKeyFilter = '';
+      renderReqContent();
+    });
+  }
+}
+
 function _getRequestById(reqId) {
   return [...state.receivedRequests, ...state.sentRequests].find(r => r.id === reqId) || null;
 }
@@ -399,7 +458,16 @@ export function _renderReceivedRequests(container) {
     container.innerHTML = `<div class="req-empty"><i class="fa-solid fa-inbox"></i><p>受け取った依頼はありません</p></div>`;
     return;
   }
-  container.innerHTML = list.map(r => `
+  const filtered = _filterRequestsByProjectKey(list);
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      ${_requestFilterBarHtml(list.length, filtered.length)}
+      <div class="req-empty"><i class="fa-solid fa-magnifying-glass"></i><p>案件キーに一致する依頼はありません</p></div>
+    `;
+    _bindRequestProjectFilterEvents();
+    return;
+  }
+  container.innerHTML = _requestFilterBarHtml(list.length, filtered.length) + filtered.map(r => `
     <div class="req-item">
       <div class="req-item-header">
         ${_reqStatusHtml(r.status)}
@@ -423,6 +491,7 @@ export function _renderReceivedRequests(container) {
       </div>
     </div>
   `).join('');
+  _bindRequestProjectFilterEvents();
   container.querySelectorAll('.btn-req-status').forEach(btn => {
     btn.addEventListener('click', () => openStatusModal(btn.dataset.id));
   });
@@ -443,7 +512,16 @@ export function _renderSentRequests(container) {
     container.innerHTML = `<div class="req-empty"><i class="fa-solid fa-paper-plane"></i><p>投稿した依頼はありません</p></div>`;
     return;
   }
-  container.innerHTML = list.map(r => `
+  const filtered = _filterRequestsByProjectKey(list);
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      ${_requestFilterBarHtml(list.length, filtered.length)}
+      <div class="req-empty"><i class="fa-solid fa-magnifying-glass"></i><p>案件キーに一致する依頼はありません</p></div>
+    `;
+    _bindRequestProjectFilterEvents();
+    return;
+  }
+  container.innerHTML = _requestFilterBarHtml(list.length, filtered.length) + filtered.map(r => `
     <div class="req-item${r.notifyCreator ? ' req-item--notify' : ''}">
       <div class="req-item-header">
         ${_reqStatusHtml(r.status)}
@@ -463,6 +541,7 @@ export function _renderSentRequests(container) {
       </div>
     </div>
   `).join('');
+  _bindRequestProjectFilterEvents();
   container.querySelectorAll('.btn-req-status').forEach(btn => {
     btn.addEventListener('click', () => openStatusModal(btn.dataset.id));
   });
@@ -517,8 +596,6 @@ export function _renderNewRequestForm(container) {
 }
 
 function _renderArchivedRequests(container) {
-  // 自分が関わるアーカイブ済み依頼をまとめて表示
-  const myDept = state.userEmailProfile ? state.userEmailProfile.department : null;
   const archived = [
     ...state.receivedRequests.filter(r => r.archived),
     ...state.sentRequests.filter(r => r.archived),
@@ -532,8 +609,18 @@ function _renderArchivedRequests(container) {
     container.innerHTML = `<div class="req-empty"><i class="fa-solid fa-box-archive"></i><p>アーカイブされた依頼はありません</p></div>`;
     return;
   }
-  container.innerHTML = `<div class="req-archive-note"><i class="fa-solid fa-circle-info"></i> アーカイブ済みの依頼です。元に戻すか完全削除できます。</div>` +
-    list.map(r => {
+  const filtered = _filterRequestsByProjectKey(list);
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      ${_requestFilterBarHtml(list.length, filtered.length)}
+      <div class="req-empty"><i class="fa-solid fa-magnifying-glass"></i><p>案件キーに一致する依頼はありません</p></div>
+    `;
+    _bindRequestProjectFilterEvents();
+    return;
+  }
+  container.innerHTML = _requestFilterBarHtml(list.length, filtered.length)
+    + `<div class="req-archive-note"><i class="fa-solid fa-circle-info"></i> アーカイブ済みの依頼です。元に戻すか完全削除できます。</div>`
+    + filtered.map(r => {
       const isSent = r.createdBy === state.currentUsername;
       return `
         <div class="req-item req-item--archived">
@@ -558,6 +645,7 @@ function _renderArchivedRequests(container) {
         </div>
       `;
     }).join('');
+  _bindRequestProjectFilterEvents();
   container.querySelectorAll('.btn-req-unarchive').forEach(btn => {
     btn.addEventListener('click', () => unarchiveRequest(btn.dataset.id));
   });
