@@ -189,10 +189,6 @@ export const state = {
   attendanceSites: [],             // [{ id, code, name, active, sortOrder, ... }]
   _attendanceSitesSub: null,       // onSnapshot unsubscriber for attendance_sites
   workPeriodAttendance: {},        // { 'YYYY-MM-DD': attendanceDocData }
-  workTableSiteQuery: '',          // 勤務内容表: 現場検索キーワード
-  workTableInvolvedOnly: true,     // 勤務内容表: 自分が関わった現場のみ表示
-  workTableWeekIndex: 0,           // 勤務内容表: 週インデックス（0始まり）
-  workTablePeriodKey: '',          // 勤務内容表: 期間切り替え検知用
   workSummaryRows: [],             // 集計表表示用キャッシュ
   workSummaryUsers: [],            // 集計表ユーザー列
   workSummaryPeriodLabel: '',      // 集計対象期間ラベル

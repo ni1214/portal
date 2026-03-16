@@ -1,8 +1,8 @@
 // ========== attendance-work.js — 勤務内容表 / 勤務内容集計表 / 登録現場 ==========
 import { state } from './state.js';
 import {
-  db, collection, collectionGroup, doc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, writeBatch,
-  query, where, orderBy, onSnapshot, serverTimestamp, deleteField
+  db, collection, collectionGroup, doc, getDocs, addDoc, updateDoc, deleteDoc, writeBatch,
+  query, where, orderBy, onSnapshot, serverTimestamp
 } from './config.js';
 import { esc } from './utils.js';
 
@@ -11,7 +11,7 @@ let eventsBound = false;
 
 const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 const PERSONAL_TABS = ['calendar', 'work', 'summary', 'sites'];
-const SITE_EXCLUDED_NAMES = new Set(['完成', 'その他', '工事No.コウジ']);
+const SITE_EXCLUDED_NAMES = new Set(['完成', 'その他', '工事No.0000']);
 const ATTENDANCE_RETENTION_DAYS = 180;
 const ATTENDANCE_CLEANUP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 週1回
 const ATTENDANCE_CLEANUP_KEY_PREFIX = 'portal-attendance-cleanup-last:';
@@ -79,33 +79,6 @@ function formatDateWithDow(dateStr) {
   return `${pad2(d.getMonth() + 1)}/${pad2(d.getDate())}(${DOW_LABELS[d.getDay()]})`;
 }
 
-function splitDatesByWeek(dates) {
-  const weeks = [];
-  for (let i = 0; i < dates.length; i += 7) {
-    const weekDates = dates.slice(i, i + 7);
-    weeks.push({
-      index: weeks.length,
-      dates: weekDates,
-      startStr: weekDates[0],
-      endStr: weekDates[weekDates.length - 1],
-    });
-  }
-  return weeks;
-}
-
-function getTodayWeekIndex(weeks) {
-  if (!weeks.length) return 0;
-  const todayStr = toDateStr(new Date());
-  const idx = weeks.findIndex(w => todayStr >= w.startStr && todayStr <= w.endStr);
-  return idx >= 0 ? idx : 0;
-}
-
-function normalizeSiteSearchText(raw) {
-  return String(raw || '')
-    .replace(/\s+/g, '')
-    .toLowerCase();
-}
-
 function normalizeHours(raw) {
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0) return 0;
@@ -131,18 +104,6 @@ function sanitizeWorkSiteHours(src) {
     if (h > 0) out[siteId] = h;
   });
   return out;
-}
-
-function collectInvolvedSiteIds(dateList) {
-  const involved = new Set();
-  dateList.forEach(dateStr => {
-    const att = state.workPeriodAttendance?.[dateStr] || {};
-    const workMap = sanitizeWorkSiteHours(att.workSiteHours);
-    Object.entries(workMap).forEach(([siteId, hours]) => {
-      if (hours > 0) involved.add(siteId);
-    });
-  });
-  return involved;
 }
 
 function getSyncedWorkTypeLabel(dateStr, dow, attType) {
@@ -186,16 +147,6 @@ function countSharedHolidayDays(period) {
     if (info?.isHoliday || info?.isPlannedLeave) count += 1;
   });
   return count;
-}
-
-function hasNonWorkSiteFields(docData) {
-  if (!docData || typeof docData !== 'object') return false;
-  // workSiteHours だけを消す操作で、他の将来フィールドまで消さないようにする
-  return Object.keys(docData).some(k => (
-    k !== 'workSiteHours' &&
-    k !== 'yearMonth' &&
-    k !== 'updatedAt'
-  ));
 }
 
 function normalizeSiteCode(raw) {
@@ -579,52 +530,6 @@ async function runAttendanceCleanupIfNeeded() {
   }
 }
 
-async function saveWorkHoursForCell(dateStr, siteId, hours) {
-  if (!state.currentUsername || !dateStr || !siteId) return;
-
-  const ref = doc(db, 'users', state.currentUsername, 'attendance', dateStr);
-  const prevDoc = state.workPeriodAttendance[dateStr] || {};
-  const nextMap = sanitizeWorkSiteHours(prevDoc.workSiteHours);
-
-  if (hours > 0) nextMap[siteId] = hours;
-  else delete nextMap[siteId];
-
-  const shouldKeepDoc = hasNonWorkSiteFields(prevDoc);
-
-  if (Object.keys(nextMap).length === 0) {
-    if (!prevDoc || Object.keys(prevDoc).length === 0) return;
-
-    if (shouldKeepDoc) {
-      await updateDoc(ref, {
-        workSiteHours: deleteField(),
-        yearMonth: dateStr.slice(0, 7),
-        updatedAt: serverTimestamp(),
-      });
-      const nextDoc = { ...prevDoc };
-      delete nextDoc.workSiteHours;
-      state.workPeriodAttendance[dateStr] = nextDoc;
-      if (state.attendanceData[dateStr]) {
-        delete state.attendanceData[dateStr].workSiteHours;
-      }
-      return;
-    }
-
-    await deleteDoc(ref);
-    delete state.workPeriodAttendance[dateStr];
-    delete state.attendanceData[dateStr];
-    return;
-  }
-
-  const payload = {
-    workSiteHours: nextMap,
-    yearMonth: dateStr.slice(0, 7),
-    updatedAt: serverTimestamp(),
-  };
-  await setDoc(ref, payload, { merge: true });
-  state.workPeriodAttendance[dateStr] = { ...prevDoc, ...payload };
-  state.attendanceData[dateStr] = { ...(state.attendanceData[dateStr] || {}), ...payload };
-}
-
 async function renderWorkTable() {
   const containerId = 'calw-work-table-container';
   const container = document.getElementById(containerId);
@@ -638,12 +543,6 @@ async function renderWorkTable() {
     return;
   }
 
-  const sites = getActiveSites();
-  if (sites.length === 0) {
-    renderEmpty(containerId, '登録現場がありません。「登録現場」タブで現場を追加してください。');
-    return;
-  }
-
   container.innerHTML = '<div class="calw-loading">勤務内容表を読み込み中...</div>';
 
   try {
@@ -654,95 +553,10 @@ async function renderWorkTable() {
     return;
   }
 
-  const allDates = getPeriodDates(period);
-  const weeks = splitDatesByWeek(allDates);
-  const periodKey = `${period.startStr}_${period.endStr}`;
-  if (state.workTablePeriodKey !== periodKey) {
-    state.workTablePeriodKey = periodKey;
-    state.workTableWeekIndex = getTodayWeekIndex(weeks);
-  }
-  if (typeof state.workTableSiteQuery !== 'string') state.workTableSiteQuery = '';
-  if (typeof state.workTableInvolvedOnly !== 'boolean') state.workTableInvolvedOnly = true;
-
-  const maxWeekIndex = Math.max(0, weeks.length - 1);
-  const weekIndex = Math.min(Math.max(Number(state.workTableWeekIndex) || 0, 0), maxWeekIndex);
-  state.workTableWeekIndex = weekIndex;
-
-  const currentWeek = weeks[weekIndex] || {
-    dates: allDates,
-    startStr: period.startStr,
-    endStr: period.endStr,
-  };
-  const dates = currentWeek.dates;
-  const weekLabel = `第${weekIndex + 1}週 ${formatDateWithDow(currentWeek.startStr)} 〜 ${formatDateWithDow(currentWeek.endStr)}`;
-
-  const involvedIds = collectInvolvedSiteIds(allDates);
-  const queryText = normalizeSiteSearchText(state.workTableSiteQuery);
-  const useInvolvedOnly = state.workTableInvolvedOnly && involvedIds.size > 0;
-
-  const filteredSites = sites.filter(site => {
-    if (useInvolvedOnly && !involvedIds.has(site.id)) return false;
-    if (!queryText) return true;
-    const siteText = normalizeSiteSearchText(`${site.code || ''}${site.name || ''}`);
-    return siteText.includes(queryText);
-  });
-
-  const filterMeta = [];
-  filterMeta.push(`表示 ${filteredSites.length}/${sites.length} 現場`);
-  if (useInvolvedOnly) filterMeta.push('関与現場のみ');
-  if (state.workTableInvolvedOnly && involvedIds.size === 0) {
-    filterMeta.push('入力実績がないため全現場表示');
-  }
-  const controlsHtml = `
-    <div class="calw-work-tools">
-      <div class="calw-work-filter-row">
-        <input
-          id="calw-work-site-search"
-          class="form-input calw-work-search-input"
-          type="text"
-          maxlength="60"
-          placeholder="現場コード / 現場名で検索"
-          value="${esc(state.workTableSiteQuery || '')}"
-        >
-        <button class="btn-modal-secondary calw-work-filter-btn" type="button" data-work-filter-action="search">
-          <i class="fa-solid fa-magnifying-glass"></i> 検索
-        </button>
-        <button class="btn-modal-secondary calw-work-filter-btn" type="button" data-work-filter-action="clear">
-          クリア
-        </button>
-        <label class="calw-work-involved-toggle">
-          <input type="checkbox" id="calw-work-involved-only" ${state.workTableInvolvedOnly ? 'checked' : ''}>
-          関わった現場のみ
-        </label>
-      </div>
-      <div class="calw-work-week-row">
-        <button class="btn-modal-secondary calw-week-nav-btn" type="button" data-work-week-move="-1" ${weekIndex <= 0 ? 'disabled' : ''}>
-          <i class="fa-solid fa-chevron-left"></i> 前週
-        </button>
-        <div class="calw-work-week-label">${esc(weekLabel)}</div>
-        <button class="btn-modal-secondary calw-week-nav-btn" type="button" data-work-week-move="1" ${weekIndex >= maxWeekIndex ? 'disabled' : ''}>
-          次週 <i class="fa-solid fa-chevron-right"></i>
-        </button>
-      </div>
-      <div class="calw-work-filter-meta">${esc(filterMeta.join(' / '))}</div>
-    </div>
-  `;
-
-  if (filteredSites.length === 0) {
-    container.innerHTML = `${controlsHtml}<div class="calw-empty">条件に一致する現場がありません。検索条件を調整してください。</div>`;
-    return;
-  }
-
+  const dates = getPeriodDates(period);
+  const siteMetaMap = new Map((state.attendanceSites || []).map(s => [s.id, s]));
   const siteTotals = {};
-  filteredSites.forEach(s => { siteTotals[s.id] = 0; });
   let grandTotal = 0;
-
-  const theadSiteCols = filteredSites.map(site => `
-      <th class="calw-site-head" title="${esc(site.name || '')}">
-        <span>${esc(site.code || '-') }</span>
-        <small>${esc(site.name || '現場') }</small>
-      </th>
-    `).join('');
 
   const bodyRows = dates.map(dateStr => {
     const dt = new Date(`${dateStr}T00:00:00`);
@@ -753,28 +567,36 @@ async function renderWorkTable() {
 
     const att = state.workPeriodAttendance[dateStr] || {};
     const workMap = sanitizeWorkSiteHours(att.workSiteHours);
-    let dayTotal = 0;
+    const siteRows = Object.entries(workMap)
+      .filter(([, hours]) => hours > 0)
+      .map(([siteId, hours]) => {
+        const meta = siteMetaMap.get(siteId);
+        return {
+          siteId,
+          code: meta?.code || '',
+          name: meta?.name || `未登録現場(${siteId})`,
+          sortOrder: Number(meta?.sortOrder) || 999999,
+          hours,
+        };
+      })
+      .sort((a, b) => {
+        if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+        const c = (a.code || '').localeCompare(b.code || '', 'ja');
+        if (c !== 0) return c;
+        return (a.name || '').localeCompare(b.name || '', 'ja');
+      });
 
-    const siteInputs = filteredSites.map(site => {
-      const h = Number(workMap[site.id]) || 0;
-      if (h > 0) {
-        dayTotal += h;
-        siteTotals[site.id] += h;
-      }
-      const valueAttr = h > 0 ? ` value="${fmtHours(h)}"` : '';
-      return `<td>
-        <input
-          type="number"
-          class="calw-hours-input"
-          min="0"
-          step="0.5"
-          inputmode="decimal"
-          data-date="${dateStr}"
-          data-site-id="${esc(site.id)}"
-          placeholder="0"${valueAttr}
-        >
-      </td>`;
-    }).join('');
+    let dayTotal = 0;
+    const detailHtml = siteRows.length > 0
+      ? siteRows.map(item => {
+        dayTotal += item.hours;
+        siteTotals[item.siteId] = (siteTotals[item.siteId] || 0) + item.hours;
+        return `<div class="calw-work-detail-item">
+          <span class="calw-work-detail-site">${esc(item.code || '-')} ${esc(item.name || '')}</span>
+          <span class="calw-work-detail-hours">${fmtHours(item.hours)}h</span>
+        </div>`;
+      }).join('')
+      : '<span class="calw-work-detail-empty">-</span>';
 
     grandTotal += dayTotal;
     const { typeLabel, rowClass: syncedRowClass } = getSyncedWorkTypeLabel(dateStr, dowIndex, att.type);
@@ -787,15 +609,58 @@ async function renderWorkTable() {
       <td>${esc(typeLabel)}</td>
       <td>${esc(hayade)}</td>
       <td>${esc(zangyo)}</td>
-      ${siteInputs}
+      <td class="calw-work-detail-cell">${detailHtml}</td>
       <td class="calw-day-total">${fmtHours(dayTotal)}</td>
     </tr>`;
   }).join('');
 
-  const footerSiteTotals = filteredSites.map(site => `<th>${fmtHours(siteTotals[site.id] || 0)}</th>`).join('');
+  const siteSummaryRows = Object.entries(siteTotals)
+    .map(([siteId, totalHours]) => {
+      const meta = siteMetaMap.get(siteId);
+      return {
+        siteId,
+        code: meta?.code || '',
+        name: meta?.name || `未登録現場(${siteId})`,
+        sortOrder: Number(meta?.sortOrder) || 999999,
+        totalHours,
+      };
+    })
+    .sort((a, b) => {
+      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+      const c = (a.code || '').localeCompare(b.code || '', 'ja');
+      if (c !== 0) return c;
+      return (a.name || '').localeCompare(b.name || '', 'ja');
+    });
+
+  const siteSummaryHtml = siteSummaryRows.length > 0
+    ? `
+      <div class="calw-work-site-summary">
+        <div class="calw-work-site-summary-title">期間内の現場合計（個人）</div>
+        <div class="calw-site-table-wrap">
+          <table class="calw-site-table">
+            <thead>
+              <tr>
+                <th>現場コード</th>
+                <th>現場名</th>
+                <th>合計h</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${siteSummaryRows.map(row => `
+                <tr>
+                  <td>${esc(row.code || '-')}</td>
+                  <td>${esc(row.name || '')}</td>
+                  <td class="calw-num">${fmtHours(row.totalHours)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `
+    : '';
 
   container.innerHTML = `
-    ${controlsHtml}
     <div class="calw-work-table-wrap">
       <table class="calw-work-table">
         <thead>
@@ -805,20 +670,20 @@ async function renderWorkTable() {
             <th>勤務区分</th>
             <th>早出</th>
             <th>残業</th>
-            ${theadSiteCols}
+            <th>作業現場（時間）</th>
             <th>日計</th>
           </tr>
         </thead>
         <tbody>${bodyRows}</tbody>
         <tfoot>
           <tr>
-            <th colspan="5">合計</th>
-            ${footerSiteTotals}
+            <th colspan="6">合計</th>
             <th>${fmtHours(grandTotal)}</th>
           </tr>
         </tfoot>
       </table>
     </div>
+    ${siteSummaryHtml}
   `;
 }
 
@@ -993,6 +858,182 @@ async function renderWorkSummary() {
   }
 }
 
+function csvEscape(val) {
+  const s = String(val ?? '');
+  if (/["\r\n,]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function buildSummarySnapshot() {
+  const users = Array.isArray(state.workSummaryUsers) ? [...state.workSummaryUsers] : [];
+  const rows = Array.isArray(state.workSummaryRows) ? [...state.workSummaryRows] : [];
+  if (users.length === 0) return null;
+
+  const userTotals = {};
+  users.forEach(u => { userTotals[u] = 0; });
+  let grandHours = 0;
+  rows.forEach(row => {
+    const total = Number(row.totalHours) || 0;
+    grandHours += total;
+    users.forEach(u => {
+      userTotals[u] += Number(row.userHours?.[u]) || 0;
+    });
+  });
+
+  return {
+    periodLabel: state.workSummaryPeriodLabel || getWorkPeriod().label,
+    users,
+    rows,
+    userTotals,
+    grandHours,
+  };
+}
+
+async function ensureSummarySnapshot() {
+  let snapshot = buildSummarySnapshot();
+  if (snapshot) return snapshot;
+  await renderWorkSummary();
+  snapshot = buildSummarySnapshot();
+  return snapshot;
+}
+
+function buildSummaryCsv(snapshot) {
+  const lines = [];
+  const printedAt = new Date().toLocaleString('ja-JP', { hour12: false });
+  lines.push(['勤務内容集計表', snapshot.periodLabel].map(csvEscape).join(','));
+  lines.push(['出力日時', printedAt].map(csvEscape).join(','));
+  lines.push('');
+  lines.push(['No', '現場コード', '現場名', ...snapshot.users, '合計'].map(csvEscape).join(','));
+
+  snapshot.rows.forEach((row, idx) => {
+    const rowCells = [
+      idx + 1,
+      row.code || '',
+      row.name || '',
+      ...snapshot.users.map(u => {
+        const h = Number(row.userHours?.[u]) || 0;
+        return h > 0 ? fmtHours(h) : '';
+      }),
+      fmtHours(row.totalHours || 0),
+    ];
+    lines.push(rowCells.map(csvEscape).join(','));
+  });
+
+  const totalRow = [
+    '',
+    '',
+    '合計',
+    ...snapshot.users.map(u => fmtHours(snapshot.userTotals[u] || 0)),
+    fmtHours(snapshot.grandHours || 0),
+  ];
+  lines.push(totalRow.map(csvEscape).join(','));
+  return lines.join('\r\n');
+}
+
+async function exportSummaryCsv() {
+  const snapshot = await ensureSummarySnapshot();
+  if (!snapshot) {
+    alert('集計データがありません。');
+    return;
+  }
+
+  const csv = buildSummaryCsv(snapshot);
+  const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+  const blob = new Blob([bom, csv], { type: 'text/csv;charset=utf-8;' });
+  const fileMonth = `${state.calendarYear}${pad2(state.calendarMonth + 1)}`;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `勤務内容集計表_${fileMonth}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildSummaryPrintHtml(snapshot) {
+  const printedAt = new Date().toLocaleString('ja-JP', { hour12: false });
+  const headCols = snapshot.users.map(u => `<th>${esc(u)}</th>`).join('');
+  const bodyRows = snapshot.rows.map((row, idx) => {
+    const userCols = snapshot.users.map(u => {
+      const h = Number(row.userHours?.[u]) || 0;
+      return `<td class="num">${h > 0 ? esc(fmtHours(h)) : ''}</td>`;
+    }).join('');
+    return `<tr>
+      <td class="num">${idx + 1}</td>
+      <td>${esc(row.code || '-')}</td>
+      <td>${esc(row.name || '')}</td>
+      ${userCols}
+      <td class="num strong">${esc(fmtHours(row.totalHours || 0))}</td>
+    </tr>`;
+  }).join('');
+  const footerCols = snapshot.users.map(u => (
+    `<th class="num">${esc(fmtHours(snapshot.userTotals[u] || 0))}</th>`
+  )).join('');
+
+  return `<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>勤務内容集計表</title>
+  <style>
+    body { font-family: "Yu Gothic", "Meiryo", sans-serif; margin: 20px; color: #111; }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    .meta { font-size: 12px; margin-bottom: 10px; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    th, td { border: 1px solid #555; padding: 4px 6px; vertical-align: top; }
+    th { background: #f0f0f0; }
+    .num { text-align: right; white-space: nowrap; }
+    .strong { font-weight: 700; }
+    tfoot th { background: #e8e8e8; }
+  </style>
+</head>
+<body>
+  <h1>勤務内容集計表</h1>
+  <div class="meta">期間: ${esc(snapshot.periodLabel)} / 出力日時: ${esc(printedAt)}</div>
+  <table>
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>現場コード</th>
+        <th>現場名</th>
+        ${headCols}
+        <th>合計</th>
+      </tr>
+    </thead>
+    <tbody>${bodyRows}</tbody>
+    <tfoot>
+      <tr>
+        <th colspan="3">合計</th>
+        ${footerCols}
+        <th class="num">${esc(fmtHours(snapshot.grandHours || 0))}</th>
+      </tr>
+    </tfoot>
+  </table>
+</body>
+</html>`;
+}
+
+async function printSummaryTable() {
+  const snapshot = await ensureSummarySnapshot();
+  if (!snapshot) {
+    alert('印刷できる集計データがありません。');
+    return;
+  }
+
+  const win = window.open('', '_blank', 'noopener,noreferrer,width=1280,height=900');
+  if (!win) {
+    alert('印刷ウィンドウを開けませんでした。ポップアップブロックを確認してください。');
+    return;
+  }
+
+  win.document.open();
+  win.document.write(buildSummaryPrintHtml(snapshot));
+  win.document.close();
+  win.focus();
+  win.print();
+}
+
 function renderAttendanceSiteTable() {
   const tbody = document.getElementById('calw-site-table-body');
   if (!tbody) return;
@@ -1162,25 +1203,6 @@ export async function switchCalPersonalTab(tab) {
   renderAttendanceSiteTable();
 }
 
-async function onWorkTableInputChange(input) {
-  const dateStr = input.dataset.date;
-  const siteId = input.dataset.siteId;
-  if (!dateStr || !siteId) return;
-
-  const hours = normalizeHours(input.value);
-  input.value = hours > 0 ? fmtHours(hours) : '';
-  input.disabled = true;
-  try {
-    await saveWorkHoursForCell(dateStr, siteId, hours);
-    await renderWorkTable();
-  } catch (err) {
-    console.error('勤務内容保存エラー:', err);
-    alert('勤務内容の保存に失敗しました。');
-  } finally {
-    input.disabled = false;
-  }
-}
-
 export async function onCalendarModalOpen() {
   state.calPersonalTab = 'calendar';
   subscribeAttendanceSites();
@@ -1213,65 +1235,14 @@ export function bindAttendanceWorkEvents() {
     });
   });
 
-  const workTableContainer = document.getElementById('calw-work-table-container');
-  workTableContainer?.addEventListener('click', e => {
-    const target = e.target instanceof Element ? e.target : null;
-    if (!target) return;
-
-    const weekBtn = target.closest('button[data-work-week-move]');
-    if (weekBtn) {
-      const move = Number(weekBtn.dataset.workWeekMove || 0);
-      if (move !== 0) {
-        state.workTableWeekIndex = (Number(state.workTableWeekIndex) || 0) + move;
-        void renderWorkTable();
-      }
-      return;
-    }
-
-    const actionBtn = target.closest('button[data-work-filter-action]');
-    if (!actionBtn) return;
-    const action = actionBtn.dataset.workFilterAction;
-    const searchEl = document.getElementById('calw-work-site-search');
-    if (!(searchEl instanceof HTMLInputElement)) return;
-
-    if (action === 'search') {
-      state.workTableSiteQuery = searchEl.value.trim();
-      void renderWorkTable();
-      return;
-    }
-    if (action === 'clear') {
-      searchEl.value = '';
-      state.workTableSiteQuery = '';
-      void renderWorkTable();
-    }
-  });
-  workTableContainer?.addEventListener('keydown', e => {
-    const target = e.target instanceof Element ? e.target : null;
-    if (!target || e.key !== 'Enter') return;
-    const searchEl = target.closest('#calw-work-site-search');
-    if (!(searchEl instanceof HTMLInputElement)) return;
-    e.preventDefault();
-    state.workTableSiteQuery = searchEl.value.trim();
-    void renderWorkTable();
-  });
-  workTableContainer?.addEventListener('change', e => {
-    const target = e.target instanceof Element ? e.target : null;
-    if (!target) return;
-
-    const involvedToggle = target.closest('#calw-work-involved-only');
-    if (involvedToggle) {
-      state.workTableInvolvedOnly = !!involvedToggle.checked;
-      void renderWorkTable();
-      return;
-    }
-
-    const input = target.closest('.calw-hours-input');
-    if (!input) return;
-    void onWorkTableInputChange(input);
-  });
-
   document.getElementById('calw-summary-refresh-btn')?.addEventListener('click', () => {
     void renderWorkSummary();
+  });
+  document.getElementById('calw-summary-export-csv-btn')?.addEventListener('click', () => {
+    void exportSummaryCsv();
+  });
+  document.getElementById('calw-summary-print-btn')?.addEventListener('click', () => {
+    void printSummaryTable();
   });
 
   document.getElementById('calw-site-add-btn')?.addEventListener('click', () => {

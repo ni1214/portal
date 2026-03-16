@@ -959,9 +959,10 @@
           <ul class="guide-list">
             <li>「カレンダー・勤怠」モーダルの個人タブ内に、<strong>勤怠カレンダー / 勤務内容表 / 勤務内容集計表 / 登録現場</strong>の4つのサブタブがあります。</li>
             <li><strong>勤務内容表</strong>は21日締め（前月21日〜当月20日）で、日ごとの現場工数を0.5時間刻みで入力できます。</li>
-            <li><strong>勤務内容表</strong>は現場検索・「関わった現場のみ」フィルタ・1週間ごとの表示切替（前週/次週）に対応しています。</li>
+            <li>作業現場と工数の入力は、勤怠カレンダーの日付詳細パネル内で行います（入力を1か所に統合）。</li>
             <li>共有カレンダーで設定した会社休日・計画付与は、個人カレンダーの日詳細と勤務内容表/勤務内容集計表に同期表示されます。</li>
             <li><strong>勤務内容集計表</strong>では全ユーザーの入力結果を現場別・人別に集計し、工数（時間）を確認できます。</li>
+            <li><strong>勤務内容集計表</strong>はCSV出力と印刷に対応しています。</li>
             <li><strong>登録現場</strong>タブで現場コード・現場名を追加/編集/削除できます（Firestoreに保存）。</li>
             <li>登録現場タブの<strong>「Excel解析して取込」</strong>で、現場マスタを一括登録できます（重複コードは名称を自動統合）。</li>
           </ul>
@@ -1516,6 +1517,16 @@
           <!-- 合計表示 -->
           <div id="cal-time-total" class="cal-time-total" hidden></div>
 
+          <!-- 作業現場入力 -->
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-industry"></i> 作業現場と時間</label>
+            <div id="cal-day-worksites" class="cal-day-worksites"></div>
+            <button type="button" class="btn-modal-secondary cal-day-work-add-btn" id="cal-day-work-add-btn">
+              <i class="fa-solid fa-plus"></i> 現場行を追加
+            </button>
+            <div class="cal-day-work-help">登録現場から選択し、時間は0.5時間刻みで入力します。</div>
+          </div>
+
           <!-- メモ -->
           <div class="form-group">
             <label class="form-label">メモ（任意）</label>
@@ -1543,13 +1554,15 @@
       </div>
 
       <div id="calw-view-summary" class="calw-view" style="display:none">
-        <div class="calw-view-header">
-          <div class="calw-view-title"><i class="fa-solid fa-chart-column"></i> 勤務内容集計表</div>
-          <div class="calw-view-header-right">
-            <div class="calw-view-period" id="calw-summary-period-label">-</div>
-            <button class="btn-modal-secondary calw-refresh-btn" id="calw-summary-refresh-btn"><i class="fa-solid fa-rotate"></i> 再集計</button>
+          <div class="calw-view-header">
+            <div class="calw-view-title"><i class="fa-solid fa-chart-column"></i> 勤務内容集計表</div>
+            <div class="calw-view-header-right">
+              <div class="calw-view-period" id="calw-summary-period-label">-</div>
+              <button class="btn-modal-secondary calw-refresh-btn" id="calw-summary-export-csv-btn"><i class="fa-solid fa-file-csv"></i> CSV出力</button>
+              <button class="btn-modal-secondary calw-refresh-btn" id="calw-summary-print-btn"><i class="fa-solid fa-print"></i> 印刷</button>
+              <button class="btn-modal-secondary calw-refresh-btn" id="calw-summary-refresh-btn"><i class="fa-solid fa-rotate"></i> 再集計</button>
+            </div>
           </div>
-        </div>
         <div class="calw-summary-total" id="calw-summary-total-hours">総稼働時間: 0h</div>
         <div id="calw-summary-table-container" class="calw-summary-table-container"></div>
       </div>

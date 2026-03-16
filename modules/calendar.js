@@ -1,7 +1,7 @@
 // ========== calendar.js — カレンダー & 個人勤怠管理 ==========
 import { state } from './state.js';
 import {
-  db, collection, doc, setDoc, deleteDoc, getDocs, query, where, onSnapshot, serverTimestamp
+  db, collection, doc, setDoc, deleteDoc, getDocs, query, where, onSnapshot, serverTimestamp, deleteField
 } from './config.js';
 import { esc } from './utils.js';
 
@@ -27,11 +27,18 @@ export async function saveAttendance(dateStr, data) {
   if (!state.currentUsername) return;
   const yearMonth = dateStr.slice(0, 7);
   try {
-    await setDoc(attendancePath(state.currentUsername, dateStr), {
+    const payload = {
       ...data,
       yearMonth,
       updatedAt: serverTimestamp(),
-    }, { merge: true });
+    };
+    if ('workSiteHours' in payload) {
+      const map = payload.workSiteHours;
+      payload.workSiteHours = (map && typeof map === 'object' && Object.keys(map).length > 0)
+        ? map
+        : deleteField();
+    }
+    await setDoc(attendancePath(state.currentUsername, dateStr), payload, { merge: true });
     // 公開出席への同期
     if (data.type && data.type !== 'normal' && data.type !== null) {
       await deps.writePublicAttendance?.(dateStr, state.currentUsername, data.type);
@@ -402,6 +409,121 @@ function buildSharedDayInfoText(dateStr) {
   return parts.join(' ｜ ');
 }
 
+function normalizeWorkHours(raw) {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.round(n * 2) / 2;
+}
+
+function sanitizeWorkSiteHours(src) {
+  if (!src || typeof src !== 'object') return {};
+  const out = {};
+  Object.entries(src).forEach(([siteId, val]) => {
+    const h = normalizeWorkHours(val);
+    if (h > 0) out[siteId] = h;
+  });
+  return out;
+}
+
+function getSortedActiveSites() {
+  return [...(state.attendanceSites || [])]
+    .filter(site => site.active !== false)
+    .sort((a, b) => {
+      const ao = Number(a.sortOrder) || 0;
+      const bo = Number(b.sortOrder) || 0;
+      if (ao !== bo) return ao - bo;
+      return (a.code || '').localeCompare(b.code || '', 'ja');
+    });
+}
+
+function getDayWorkRowsFromDom() {
+  const container = document.getElementById('cal-day-worksites');
+  if (!container) return [];
+  return [...container.querySelectorAll('.cal-day-work-row')].map(row => {
+    const siteId = row.querySelector('.cal-day-work-site')?.value || '';
+    const hoursRaw = row.querySelector('.cal-day-work-hours')?.value || '';
+    return { siteId, hours: hoursRaw };
+  });
+}
+
+function buildWorkSiteMapFromDom() {
+  const map = {};
+  getDayWorkRowsFromDom().forEach(row => {
+    const siteId = row.siteId || '';
+    const hours = normalizeWorkHours(row.hours);
+    if (!siteId || hours <= 0) return;
+    map[siteId] = (map[siteId] || 0) + hours;
+  });
+  return map;
+}
+
+function renderDayWorkInputs(dateStr, workSiteHours) {
+  const container = document.getElementById('cal-day-worksites');
+  const addBtn = document.getElementById('cal-day-work-add-btn');
+  if (!container || !addBtn) return;
+
+  const sites = getSortedActiveSites();
+  if (sites.length === 0) {
+    container.innerHTML = '<div class="cal-day-work-empty">登録現場がありません。先に「登録現場」タブで追加してください。</div>';
+    addBtn.disabled = true;
+    addBtn.onclick = null;
+    return;
+  }
+
+  addBtn.disabled = false;
+  const srcMap = sanitizeWorkSiteHours(workSiteHours);
+  const initialRows = Object.keys(srcMap).length > 0
+    ? Object.entries(srcMap).map(([siteId, hours]) => ({ siteId, hours: String(hours) }))
+    : [{ siteId: '', hours: '' }];
+
+  const renderRows = (rows) => {
+    const options = sites.map(site => (
+      `<option value="${site.id}">${esc(site.code || '-')} ${esc(site.name || '')}</option>`
+    )).join('');
+
+    container.innerHTML = rows.map((row, idx) => `
+      <div class="cal-day-work-row" data-index="${idx}">
+        <select class="form-input cal-day-work-site">
+          <option value="">現場を選択</option>
+          ${options}
+        </select>
+        <input
+          type="number"
+          class="form-input cal-day-work-hours"
+          min="0"
+          step="0.5"
+          inputmode="decimal"
+          placeholder="時間"
+          value="${esc(row.hours || '')}"
+        >
+        <button type="button" class="btn-modal-danger cal-day-work-del-btn" data-index="${idx}">削除</button>
+      </div>
+    `).join('');
+
+    [...container.querySelectorAll('.cal-day-work-site')].forEach((select, idx) => {
+      select.value = rows[idx]?.siteId || '';
+    });
+
+    container.querySelectorAll('.cal-day-work-del-btn').forEach(btn => {
+      btn.onclick = () => {
+        const index = Number(btn.dataset.index || -1);
+        const next = getDayWorkRowsFromDom();
+        if (index >= 0) next.splice(index, 1);
+        if (next.length === 0) next.push({ siteId: '', hours: '' });
+        renderRows(next);
+      };
+    });
+  };
+
+  addBtn.onclick = () => {
+    const next = getDayWorkRowsFromDom();
+    next.push({ siteId: '', hours: '' });
+    renderRows(next);
+  };
+
+  renderRows(initialRows);
+}
+
 // ===== 日付詳細パネル =====
 export function openDayPanel(dateStr) {
   state.calendarSelectedDate = dateStr;
@@ -455,6 +577,9 @@ export function openDayPanel(dateStr) {
   // メモ
   const noteInput = document.getElementById('cal-note');
   if (noteInput) noteInput.value = att.note || '';
+
+  // 作業現場入力（その日の内訳）
+  renderDayWorkInputs(dateStr, att.workSiteHours);
 
   // 削除ボタン（記録がある場合のみ表示）
   const delBtn = document.getElementById('cal-day-delete-btn');
@@ -524,6 +649,7 @@ export async function saveDayAttendance() {
   const hayade  = document.getElementById('cal-hayade-time')?.value || null;
   const zangyo  = document.getElementById('cal-zangyo-time')?.value || null;
   const note    = document.getElementById('cal-note')?.value.trim() || null;
+  const workSiteHours = buildWorkSiteMapFromDom();
 
   const btn = document.getElementById('cal-day-save-btn');
   if (btn) { btn.disabled = true; btn.textContent = '保存中…'; }
@@ -533,6 +659,7 @@ export async function saveDayAttendance() {
     hayade: hayade || null,
     zangyo: zangyo || null,
     note:   note   || null,
+    workSiteHours,
   });
 
   if (btn) { btn.disabled = false; btn.textContent = '保存'; }

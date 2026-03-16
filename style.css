@@ -8079,6 +8079,39 @@ html.font-xl { font-size: 21px; }
   border-color: rgba(255,173,96,0.2);
 }
 
+/* 日付詳細: 作業現場入力 */
+.cal-day-worksites {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cal-day-work-row {
+  display: grid;
+  grid-template-columns: 1fr 120px auto;
+  gap: 8px;
+  align-items: center;
+}
+.cal-day-work-hours {
+  text-align: right;
+}
+.cal-day-work-empty {
+  border: 1px dashed var(--border-glass-hover);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  padding: 8px 10px;
+}
+.cal-day-work-add-btn {
+  margin-top: 8px;
+  width: 100%;
+}
+.cal-day-work-help {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
 /* メモ */
 .cal-note-input {
   width: 100%;
@@ -11322,6 +11355,32 @@ html.font-xl { font-size: 21px; }
   text-align: right;
 }
 
+.calw-work-detail-cell {
+  min-width: 300px;
+  white-space: normal !important;
+}
+.calw-work-detail-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+.calw-work-detail-item + .calw-work-detail-item {
+  border-top: 1px dashed var(--border-glass);
+}
+.calw-work-detail-site {
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.calw-work-detail-hours {
+  color: var(--text-secondary);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.calw-work-detail-empty {
+  color: var(--text-muted);
+}
+
 .calw-hours-input {
   width: 60px;
   padding: 3px 6px;
@@ -11345,6 +11404,16 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
   font-size: 0.85rem;
   font-weight: 700;
+}
+
+.calw-work-site-summary {
+  margin-top: 10px;
+}
+.calw-work-site-summary-title {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 6px;
 }
 
 .calw-site-form-row {
@@ -11442,6 +11511,9 @@ html.font-xl { font-size: 21px; }
     grid-template-columns: 1fr;
   }
   .calw-site-form-row {
+    grid-template-columns: 1fr;
+  }
+  .cal-day-work-row {
     grid-template-columns: 1fr;
   }
   .calw-subtab-btn {
