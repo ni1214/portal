@@ -959,7 +959,7 @@
           <ul class="guide-list">
             <li>「カレンダー・勤怠」モーダルの個人タブ内に、<strong>勤怠カレンダー / 勤務内容表 / 勤務内容集計表 / 登録現場</strong>の4つのサブタブがあります。</li>
             <li><strong>勤務内容表</strong>は21日締め（前月21日〜当月20日）で、日ごとの現場工数を0.5時間刻みで入力できます。</li>
-            <li>作業現場と工数の入力は、勤怠カレンダーの日付詳細パネル内で行います。現場コード検索と最近使った現場からの再選択に対応しています。</li>
+            <li>作業現場と工数の入力は、勤怠カレンダーの日付詳細パネル内で行います。現場コード検索、最近使った現場の再選択、8時間超過時の早出・残業割り振りに対応しています。</li>
             <li>共有カレンダーで設定した会社休日・計画付与は、個人カレンダーの日詳細と勤務内容表/勤務内容集計表に同期表示されます。</li>
             <li><strong>勤務内容集計表</strong>では全ユーザーの入力結果を現場別・人別に集計し、工数（時間）を確認できます。</li>
             <li><strong>勤務内容集計表</strong>はCSV出力と印刷に対応しています。</li>
@@ -1516,6 +1516,7 @@
           </div>
           <!-- 合計表示 -->
           <div id="cal-time-total" class="cal-time-total" hidden></div>
+          <div id="cal-work-overflow-helper" class="cal-work-overflow-helper" hidden></div>
 
           <!-- 作業現場入力 -->
           <div class="form-group">
@@ -1524,7 +1525,7 @@
             <button type="button" class="btn-modal-secondary cal-day-work-add-btn" id="cal-day-work-add-btn">
               <i class="fa-solid fa-plus"></i> 現場行を追加
             </button>
-            <div class="cal-day-work-help">現場コード・現場名で検索でき、最近使った現場からもすぐ選べます。時間は0.5時間刻みで入力します。</div>
+            <div class="cal-day-work-help">現場コード・現場名で検索でき、最近使った現場からもすぐ選べます。時間は0.5時間刻みで入力し、8時間超過時は上の補助から早出・残業へ割り振れます。</div>
           </div>
 
           <!-- メモ -->

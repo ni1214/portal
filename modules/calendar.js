@@ -16,6 +16,8 @@ const TYPE_LABELS = {
 const TYPE_KEYS = ['normal', '有給', '半休午前', '半休午後', '欠勤'];
 const RECENT_WORK_SITE_LIMIT = 8;
 const RECENT_WORK_SITE_MONTH_SPAN = 4;
+const REGULAR_WORK_HOURS = 8;
+const EXTRA_HOURS_SELECT_MAX = 8;
 
 let deps = {};
 let recentWorkSiteCache = {
@@ -435,6 +437,132 @@ function normalizeWorkHours(raw) {
   return Math.round(n * 2) / 2;
 }
 
+function formatHourValue(hours) {
+  const normalized = normalizeWorkHours(hours);
+  return Number.isInteger(normalized) ? String(normalized) : normalized.toFixed(1);
+}
+
+function formatHourLabel(hours) {
+  const value = formatHourValue(hours);
+  return value === '0.5' ? '0.5時間（30分）' : `${value}時間`;
+}
+
+function ensureHourSelectOptions(selectEl, maxHours = EXTRA_HOURS_SELECT_MAX) {
+  if (!selectEl) return;
+  const existingValues = new Set([...selectEl.options].map(option => option.value));
+  for (let hours = 0.5; hours <= maxHours + 0.001; hours += 0.5) {
+    const value = formatHourValue(hours);
+    if (existingValues.has(value)) continue;
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = formatHourLabel(hours);
+    selectEl.append(option);
+  }
+}
+
+function setHourSelectValue(selectEl, hours) {
+  if (!selectEl) return;
+  const normalized = normalizeWorkHours(hours);
+  if (normalized <= 0) {
+    selectEl.value = '';
+    return;
+  }
+  ensureHourSelectOptions(selectEl, Math.max(EXTRA_HOURS_SELECT_MAX, normalized));
+  selectEl.value = formatHourValue(normalized);
+}
+
+function getSelectedHourValue(selectEl) {
+  return normalizeWorkHours(selectEl?.value || 0);
+}
+
+function splitOverflowHours(hours) {
+  const normalized = normalizeWorkHours(hours);
+  const hayade = Math.floor(normalized) / 2;
+  return {
+    hayade: normalizeWorkHours(hayade),
+    zangyo: normalizeWorkHours(normalized - hayade),
+  };
+}
+
+function getCurrentWorkSiteTotalHours() {
+  return Object.values(buildWorkSiteMapFromDom()).reduce((sum, hours) => sum + (Number(hours) || 0), 0);
+}
+
+function applyOverflowAllocation(mode, overflowHours) {
+  const hayadeSelect = document.getElementById('cal-hayade-time');
+  const zangyoSelect = document.getElementById('cal-zangyo-time');
+  if (!hayadeSelect || !zangyoSelect) return;
+
+  let hayadeHours = 0;
+  let zangyoHours = 0;
+
+  if (mode === 'hayade') {
+    hayadeHours = overflowHours;
+  } else if (mode === 'zangyo') {
+    zangyoHours = overflowHours;
+  } else {
+    const split = splitOverflowHours(overflowHours);
+    hayadeHours = split.hayade;
+    zangyoHours = split.zangyo;
+  }
+
+  setHourSelectValue(hayadeSelect, hayadeHours);
+  setHourSelectValue(zangyoSelect, zangyoHours);
+  updateTimeTotal();
+}
+
+function updateWorkOverflowHelper() {
+  const helperEl = document.getElementById('cal-work-overflow-helper');
+  if (!helperEl) return;
+
+  const totalHours = normalizeWorkHours(getCurrentWorkSiteTotalHours());
+  const overflowHours = normalizeWorkHours(totalHours - REGULAR_WORK_HOURS);
+  if (overflowHours <= 0) {
+    helperEl.hidden = true;
+    helperEl.innerHTML = '';
+    return;
+  }
+
+  const hayadeHours = getSelectedHourValue(document.getElementById('cal-hayade-time'));
+  const zangyoHours = getSelectedHourValue(document.getElementById('cal-zangyo-time'));
+  const assignedHours = normalizeWorkHours(hayadeHours + zangyoHours);
+  const split = splitOverflowHours(overflowHours);
+  const splitButtonHtml = overflowHours >= 1
+    ? `
+      <button type="button" class="btn-modal-secondary cal-work-overflow-btn" data-mode="split">
+        早出 ${formatHourValue(split.hayade)}h / 残業 ${formatHourValue(split.zangyo)}h
+      </button>
+    `
+    : '';
+
+  helperEl.hidden = false;
+  helperEl.innerHTML = `
+    <div class="cal-work-overflow-title">
+      <i class="fa-solid fa-wand-magic-sparkles"></i>
+      現場時間が ${formatHourValue(totalHours)} 時間なので、定時 ${REGULAR_WORK_HOURS} 時間を ${formatHourValue(overflowHours)} 時間超えています。
+    </div>
+    <div class="cal-work-overflow-status">
+      現在の割り振り: 早出 ${formatHourValue(hayadeHours)}h / 残業 ${formatHourValue(zangyoHours)}h
+      ${assignedHours === overflowHours ? '<span class="cal-work-overflow-match">超過分と一致しています</span>' : ''}
+    </div>
+    <div class="cal-work-overflow-actions">
+      <button type="button" class="btn-modal-secondary cal-work-overflow-btn" data-mode="hayade">
+        超過 ${formatHourValue(overflowHours)}h を早出へ
+      </button>
+      <button type="button" class="btn-modal-secondary cal-work-overflow-btn" data-mode="zangyo">
+        超過 ${formatHourValue(overflowHours)}h を残業へ
+      </button>
+      ${splitButtonHtml}
+    </div>
+  `;
+
+  helperEl.querySelectorAll('.cal-work-overflow-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      applyOverflowAllocation(btn.dataset.mode || '', overflowHours);
+    });
+  });
+}
+
 function sanitizeWorkSiteHours(src) {
   if (!src || typeof src !== 'object') return {};
   const out = {};
@@ -781,6 +909,7 @@ function renderDayWorkInputs(dateStr, workSiteHours, preservedRows = null) {
 
       searchInput?.addEventListener('input', () => {
         syncSelectFromSearch();
+        updateWorkOverflowHelper();
       });
 
       searchInput?.addEventListener('keydown', e => {
@@ -797,7 +926,11 @@ function renderDayWorkInputs(dateStr, workSiteHours, preservedRows = null) {
       select?.addEventListener('change', () => {
         const site = siteMap.get(select.value || '');
         if (searchInput && site) searchInput.value = formatSiteLabel(site);
+        updateWorkOverflowHelper();
       });
+
+      rowEl.querySelector('.cal-day-work-hours')?.addEventListener('input', updateWorkOverflowHelper);
+      rowEl.querySelector('.cal-day-work-hours')?.addEventListener('change', updateWorkOverflowHelper);
     });
 
     container.querySelectorAll('.cal-day-work-recent-btn').forEach(btn => {
@@ -812,6 +945,7 @@ function renderDayWorkInputs(dateStr, workSiteHours, preservedRows = null) {
           search: formatSiteLabel(siteMap.get(siteId)),
         };
         renderRows(next);
+        updateWorkOverflowHelper();
         const targetRow = container.querySelector(`.cal-day-work-row[data-index="${targetIndex}"]`);
         const hoursInput = targetRow?.querySelector('.cal-day-work-hours');
         if (hoursInput && !next[targetIndex].hours) {
@@ -829,6 +963,7 @@ function renderDayWorkInputs(dateStr, workSiteHours, preservedRows = null) {
         if (index >= 0) next.splice(index, 1);
         if (next.length === 0) next.push({ siteId: '', hours: '', search: '' });
         renderRows(next);
+        updateWorkOverflowHelper();
       };
     });
   };
@@ -837,9 +972,11 @@ function renderDayWorkInputs(dateStr, workSiteHours, preservedRows = null) {
     const next = getDayWorkRowsFromDom();
     next.push({ siteId: '', hours: '', search: '' });
     renderRows(next);
+    updateWorkOverflowHelper();
   };
 
   renderRows(initialRows);
+  updateWorkOverflowHelper();
 }
 
 // ===== 日付詳細パネル =====
@@ -882,6 +1019,8 @@ export function openDayPanel(dateStr) {
   // 早出・残業（プルダウン）
   const hayadeInput = document.getElementById('cal-hayade-time');
   const zangyoInput = document.getElementById('cal-zangyo-time');
+  ensureHourSelectOptions(hayadeInput);
+  ensureHourSelectOptions(zangyoInput);
   if (hayadeInput) hayadeInput.value = att.hayade || '';
   if (zangyoInput) zangyoInput.value = att.zangyo || '';
 
@@ -898,6 +1037,7 @@ export function openDayPanel(dateStr) {
 
   // 作業現場入力（その日の内訳）
   renderDayWorkInputs(dateStr, att.workSiteHours);
+  updateTimeTotal();
 
   // 削除ボタン（記録がある場合のみ表示）
   const delBtn = document.getElementById('cal-day-delete-btn');
@@ -913,12 +1053,16 @@ export function openDayPanel(dateStr) {
 // ===== 早出・残業 合計表示 =====
 function updateTimeTotal() {
   const totalEl  = document.getElementById('cal-time-total');
-  if (!totalEl) return;
+  if (!totalEl) {
+    updateWorkOverflowHelper();
+    return;
+  }
   const hayade = parseFloat(document.getElementById('cal-hayade-time')?.value) || 0;
   const zangyo = parseFloat(document.getElementById('cal-zangyo-time')?.value) || 0;
   const total  = hayade + zangyo;
   if (total === 0) {
     totalEl.hidden = true;
+    updateWorkOverflowHelper();
     return;
   }
   totalEl.hidden = false;
@@ -926,6 +1070,7 @@ function updateTimeTotal() {
   if (hayade > 0) parts.push(`早出 ${hayade}時間`);
   if (zangyo > 0) parts.push(`残業 ${zangyo}時間`);
   totalEl.innerHTML = `<i class="fa-solid fa-clock"></i> ${parts.join('　')}　<strong>計 ${total}時間</strong>`;
+  updateWorkOverflowHelper();
 }
 
 export function closeDayPanel() {
