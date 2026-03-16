@@ -22,6 +22,23 @@ export function normalizeProjectKey(value) {
   return String(value).replace(/\s+/g, ' ').trim();
 }
 
+export function normalizeProjectKeys(value) {
+  const rawItems = Array.isArray(value)
+    ? value
+    : String(value ?? '')
+      .split(/\r?\n|[,，、;；]+|\s[\/／]\s/g);
+
+  const uniq = [];
+  const seen = new Set();
+  rawItems.forEach(item => {
+    const normalized = normalizeProjectKey(item);
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    uniq.push(normalized);
+  });
+  return uniq;
+}
+
 // Firestore Timestamp をフォーマット
 export function _fmtTs(ts) {
   if (!ts) return '';

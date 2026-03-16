@@ -965,7 +965,7 @@
             <li><strong>勤務内容集計表</strong>はCSV出力と印刷に対応しています。</li>
             <li><strong>登録現場</strong>タブで現場コード・現場名を追加/編集/削除できます（Firestoreに保存）。</li>
             <li>登録現場タブの<strong>「Excel解析して取込」</strong>で、現場マスタを一括登録できます（重複コードは名称を自動統合）。</li>
-            <li>部門間依頼・タスク・鋼材発注では<strong>案件キー（案件番号・製番・現場コード）</strong>を入れておくと、案件単位での追跡がしやすくなります。部門間依頼とタスクは各一覧の上部から案件キーで絞り込みもできます。</li>
+            <li>部門間依頼・タスク・鋼材発注・個人カレンダーでは<strong>案件キー（案件番号・製番・現場コード）</strong>を入れておくと、案件単位での追跡がしやすくなります。部門間依頼とタスクは各一覧の上部から案件キーで絞り込みもできます。</li>
           </ul>
         </div>
 
@@ -1527,6 +1527,13 @@
               <i class="fa-solid fa-plus"></i> 現場行を追加
             </button>
             <div class="cal-day-work-help">現場コード・現場名で検索でき、最近使った現場からもすぐ選べます。時間は0.5時間刻みで入力し、8時間超過時は上の補助から早出・残業へ割り振れます。</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-key"></i> 案件キー（任意）</label>
+            <input type="text" id="cal-project-keys" class="form-input" placeholder="カンマ区切りで複数可 例：NK-240315, 61065" maxlength="160" autocomplete="off">
+            <div id="cal-project-key-preview" class="cal-project-key-preview" hidden></div>
+            <div class="cal-day-work-help">案件番号・製番・現場コードなどを入れておくと、発注や依頼と同じ案件で追いやすくなります。</div>
           </div>
 
           <!-- メモ -->

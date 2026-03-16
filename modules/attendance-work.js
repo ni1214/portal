@@ -4,7 +4,7 @@ import {
   db, collection, collectionGroup, doc, getDocs, addDoc, updateDoc, deleteDoc, writeBatch,
   query, where, orderBy, onSnapshot, serverTimestamp
 } from './config.js';
-import { esc } from './utils.js';
+import { esc, normalizeProjectKeys } from './utils.js';
 
 let deps = {};
 let eventsBound = false;
@@ -104,6 +104,10 @@ function sanitizeWorkSiteHours(src) {
     if (h > 0) out[siteId] = h;
   });
   return out;
+}
+
+function sanitizeProjectKeys(src) {
+  return normalizeProjectKeys(src);
 }
 
 function getSyncedWorkTypeLabel(dateStr, dow, attType) {
@@ -567,6 +571,7 @@ async function renderWorkTable() {
 
     const att = state.workPeriodAttendance[dateStr] || {};
     const workMap = sanitizeWorkSiteHours(att.workSiteHours);
+    const projectKeys = sanitizeProjectKeys(att.projectKeys);
     const siteRows = Object.entries(workMap)
       .filter(([, hours]) => hours > 0)
       .map(([siteId, hours]) => {
@@ -597,6 +602,14 @@ async function renderWorkTable() {
         </div>`;
       }).join('')
       : '<span class="calw-work-detail-empty">-</span>';
+    const projectKeyHtml = projectKeys.length > 0
+      ? `<div class="calw-work-projects">
+          <span class="calw-work-projects-label">案件キー</span>
+          <div class="calw-work-projects-list">
+            ${projectKeys.map(key => `<span class="cal-project-key-chip">${esc(key)}</span>`).join('')}
+          </div>
+        </div>`
+      : '';
 
     grandTotal += dayTotal;
     const { typeLabel, rowClass: syncedRowClass } = getSyncedWorkTypeLabel(dateStr, dowIndex, att.type);
@@ -609,7 +622,7 @@ async function renderWorkTable() {
       <td>${esc(typeLabel)}</td>
       <td>${esc(hayade)}</td>
       <td>${esc(zangyo)}</td>
-      <td class="calw-work-detail-cell">${detailHtml}</td>
+      <td class="calw-work-detail-cell">${detailHtml}${projectKeyHtml}</td>
       <td class="calw-day-total">${fmtHours(dayTotal)}</td>
     </tr>`;
   }).join('');

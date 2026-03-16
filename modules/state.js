@@ -171,7 +171,7 @@ export const state = {
   // カレンダー・勤怠管理
   calendarYear:    new Date().getFullYear(),
   calendarMonth:   new Date().getMonth(),   // 0-indexed
-  attendanceData:  {},   // { 'YYYY-MM-DD': { type, hayade, zangyo, note, workSiteHours } }
+  attendanceData:  {},   // { 'YYYY-MM-DD': { type, hayade, zangyo, note, workSiteHours, projectKeys } }
   _attendanceSub:  null,
   calendarSelectedDate: null,
 

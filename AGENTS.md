@@ -207,6 +207,7 @@ export function xxxFunction() { ... }
 | `zangyo` | string\|null | 残業時刻（例: `"19:00"`）|
 | `note` | string\|null | メモ |
 | `workSiteHours` | map | その日の現場別工数（`{ [siteId]: number }`、単位:h） |
+| `projectKeys` | array | その日に関係する案件キー配列（案件番号・製番・現場コードなど、重複なし） |
 | `yearMonth` | string | `'YYYY-MM'`（月別クエリ用インデックス）|
 | `updatedAt` | timestamp | `serverTimestamp()` |
 

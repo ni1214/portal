@@ -3,7 +3,7 @@ import { state } from './state.js';
 import {
   db, collection, doc, setDoc, deleteDoc, getDocs, query, where, onSnapshot, serverTimestamp, deleteField
 } from './config.js';
-import { esc } from './utils.js';
+import { esc, normalizeProjectKeys } from './utils.js';
 
 const DOW_LABELS  = ['日','月','火','水','木','金','土'];
 const TYPE_LABELS = {
@@ -47,6 +47,10 @@ export async function saveAttendance(dateStr, data) {
       payload.workSiteHours = (map && typeof map === 'object' && Object.keys(map).length > 0)
         ? map
         : deleteField();
+    }
+    if ('projectKeys' in payload) {
+      const keys = normalizeProjectKeys(payload.projectKeys);
+      payload.projectKeys = keys.length > 0 ? keys : deleteField();
     }
     await setDoc(attendancePath(state.currentUsername, dateStr), payload, { merge: true });
     // 公開出席への同期
@@ -573,6 +577,28 @@ function sanitizeWorkSiteHours(src) {
   return out;
 }
 
+function sanitizeProjectKeys(src) {
+  return normalizeProjectKeys(src);
+}
+
+function formatProjectKeysInput(src) {
+  return sanitizeProjectKeys(src).join(', ');
+}
+
+function renderProjectKeyPreview(value = null) {
+  const preview = document.getElementById('cal-project-key-preview');
+  const input = document.getElementById('cal-project-keys');
+  if (!preview || !input) return;
+  const keys = sanitizeProjectKeys(value === null ? input.value : value);
+  if (keys.length === 0) {
+    preview.hidden = true;
+    preview.innerHTML = '';
+    return;
+  }
+  preview.hidden = false;
+  preview.innerHTML = keys.map(key => `<span class="cal-project-key-chip">${esc(key)}</span>`).join('');
+}
+
 function getSortedActiveSites() {
   return [...(state.attendanceSites || [])]
     .filter(site => site.active !== false)
@@ -1035,6 +1061,13 @@ export function openDayPanel(dateStr) {
   const noteInput = document.getElementById('cal-note');
   if (noteInput) noteInput.value = att.note || '';
 
+  const projectKeysInput = document.getElementById('cal-project-keys');
+  if (projectKeysInput) {
+    projectKeysInput.value = formatProjectKeysInput(att.projectKeys);
+    projectKeysInput.oninput = () => renderProjectKeyPreview();
+  }
+  renderProjectKeyPreview();
+
   // 作業現場入力（その日の内訳）
   renderDayWorkInputs(dateStr, att.workSiteHours);
   updateTimeTotal();
@@ -1112,6 +1145,7 @@ export async function saveDayAttendance() {
   const hayade  = document.getElementById('cal-hayade-time')?.value || null;
   const zangyo  = document.getElementById('cal-zangyo-time')?.value || null;
   const note    = document.getElementById('cal-note')?.value.trim() || null;
+  const projectKeys = sanitizeProjectKeys(document.getElementById('cal-project-keys')?.value || '');
   const workSiteHours = buildWorkSiteMapFromDom();
 
   const btn = document.getElementById('cal-day-save-btn');
@@ -1123,6 +1157,7 @@ export async function saveDayAttendance() {
     hayade: hayade || null,
     zangyo: zangyo || null,
     note:   note   || null,
+    projectKeys,
     workSiteHours,
   });
 

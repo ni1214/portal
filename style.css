@@ -8477,6 +8477,24 @@ html.font-xl { font-size: 21px; }
   color: var(--text-muted);
   font-size: 0.76rem;
 }
+.cal-project-key-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.cal-project-key-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 28%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-blue) 9%, var(--bg-card));
+  color: var(--accent-blue);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
 
 /* メモ */
 .cal-note-input {
@@ -11860,6 +11878,25 @@ html.font-xl { font-size: 21px; }
 }
 .calw-work-detail-empty {
   color: var(--text-muted);
+}
+.calw-work-projects {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.calw-work-projects-label {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding-top: 3px;
+}
+.calw-work-projects-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
 }
 
 .calw-hours-input {
