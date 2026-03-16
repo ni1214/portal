@@ -189,12 +189,15 @@ export function renderCalendar() {
     const tasks   = taskMap[dateStr] || [];
 
     // 会社カレンダー情報
-    const info = deps.getDateInfo ? deps.getDateInfo(dateStr) : { isWorkSaturday: false, isPlannedLeave: false, isHoliday: false, holidayLabel: '', events: [] };
+    const info = deps.getDateInfo
+      ? deps.getDateInfo(dateStr)
+      : { isWorkSaturday: false, isPlannedLeave: false, isHoliday: false, holidayLabel: '', events: [], jpHolidayName: '' };
 
     let cellCls = 'cal-cell';
     if (isToday)   cellCls += ' cal-today';
     if (dow === 0) cellCls += ' cal-sun';
     if (dow === 6 && !info.isWorkSaturday) cellCls += ' cal-sat';
+    if (info.jpHolidayName && dow !== 0) cellCls += ' cal-jp-holiday';
     if (info.isHoliday) cellCls += ' cal-company-holiday';
 
     // 勤怠タイプ背景色
@@ -202,6 +205,9 @@ export function renderCalendar() {
 
     // 会社カレンダーバッジ（個人カレンダーにも表示）
     let companyBadges = '';
+    if (info.jpHolidayName) {
+      companyBadges += `<span class="cal-company-badge jp-holiday-badge">${esc(info.jpHolidayName)}</span>`;
+    }
     if (info.isPlannedLeave) {
       companyBadges += `<span class="cal-company-badge planned-lv">計画付与</span>`;
     } else if (info.isWorkSaturday) {

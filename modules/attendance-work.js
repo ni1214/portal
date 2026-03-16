@@ -127,10 +127,10 @@ function getSyncedWorkTypeLabel(dateStr, dow, attType) {
     typeLabel = info.holidayLabel || '会社休日';
   } else if (info.isPlannedLeave) {
     typeLabel = '計画付与';
-  } else if (dow === 6) {
-    typeLabel = info.isWorkSaturday ? '土曜出勤' : '土曜休';
   } else if (info.jpHolidayName) {
     typeLabel = info.jpHolidayName;
+  } else if (dow === 6) {
+    typeLabel = info.isWorkSaturday ? '土曜出勤' : '土曜休';
   } else if (dow === 0) {
     typeLabel = '日曜';
   }
@@ -144,7 +144,7 @@ function countSharedHolidayDays(period) {
   let count = 0;
   dates.forEach(dateStr => {
     const info = deps.getDateInfo(dateStr);
-    if (info?.isHoliday || info?.isPlannedLeave) count += 1;
+    if (info?.isHoliday || info?.isPlannedLeave || info?.jpHolidayName) count += 1;
   });
   return count;
 }
@@ -696,7 +696,7 @@ async function renderWorkSummary() {
   state.workSummaryPeriodLabel = period.label;
   setText('calw-summary-period-label', period.label);
   const sharedHolidayDays = countSharedHolidayDays(period);
-  setText('calw-summary-total-hours', `総稼働時間: 0h / 共有休日: ${sharedHolidayDays}日`);
+  setText('calw-summary-total-hours', `総稼働時間: 0h / 共有休日・祝祭日: ${sharedHolidayDays}日`);
 
   container.innerHTML = '<div class="calw-loading">勤務内容を集計中...</div>';
 
@@ -827,7 +827,7 @@ async function renderWorkSummary() {
 
     const footerUserCols = users.map(u => `<th class="calw-num">${fmtHours(userTotals[u] || 0)}</th>`).join('');
 
-    setText('calw-summary-total-hours', `総稼働時間: ${fmtHours(grandHours)}h / 共有休日: ${sharedHolidayDays}日`);
+    setText('calw-summary-total-hours', `総稼働時間: ${fmtHours(grandHours)}h / 共有休日・祝祭日: ${sharedHolidayDays}日`);
 
     container.innerHTML = `
       <div class="calw-summary-table-wrap">
