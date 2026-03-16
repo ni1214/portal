@@ -4,7 +4,7 @@ import {
   db, collection, collectionGroup, doc, getDocs, addDoc, updateDoc, deleteDoc, writeBatch,
   query, where, orderBy, onSnapshot, serverTimestamp
 } from './config.js';
-import { esc, normalizeProjectKeys } from './utils.js';
+import { esc, normalizeProjectKey, normalizeProjectKeys } from './utils.js';
 
 let deps = {};
 let eventsBound = false;
@@ -108,6 +108,40 @@ function sanitizeWorkSiteHours(src) {
 
 function sanitizeProjectKeys(src) {
   return normalizeProjectKeys(src);
+}
+
+function getWorkProjectFilterValue() {
+  return normalizeProjectKey(state.attendanceWorkProjectKeyFilter || '').toLowerCase();
+}
+
+function matchesAttendanceProjectFilter(att, siteMetaMap) {
+  const filter = getWorkProjectFilterValue();
+  if (!filter) return true;
+
+  if (sanitizeProjectKeys(att.projectKeys).some(key => normalizeProjectKey(key).toLowerCase().includes(filter))) {
+    return true;
+  }
+
+  const workMap = sanitizeWorkSiteHours(att.workSiteHours);
+  return Object.keys(workMap).some(siteId => {
+    const meta = siteMetaMap.get(siteId);
+    return normalizeProjectKey(meta?.code || '').toLowerCase().includes(filter);
+  });
+}
+
+function updateWorkProjectFilterUi(totalCount, filteredCount) {
+  const input = document.getElementById('calw-work-project-filter');
+  const clearBtn = document.getElementById('calw-work-project-filter-clear');
+  const countEl = document.getElementById('calw-work-project-filter-count');
+  if (input && input.value !== (state.attendanceWorkProjectKeyFilter || '')) {
+    input.value = state.attendanceWorkProjectKeyFilter || '';
+  }
+  if (clearBtn) clearBtn.hidden = !state.attendanceWorkProjectKeyFilter;
+  if (countEl) {
+    countEl.textContent = state.attendanceWorkProjectKeyFilter
+      ? `${filteredCount} / ${totalCount}日`
+      : `${totalCount}日`;
+  }
 }
 
 function getSyncedWorkTypeLabel(dateStr, dow, attType) {
@@ -543,6 +577,7 @@ async function renderWorkTable() {
   setText('calw-work-period-label', period.label);
 
   if (!state.currentUsername) {
+    updateWorkProjectFilterUi(0, 0);
     renderEmpty(containerId, 'ユーザー名を設定すると勤務内容表を利用できます。');
     return;
   }
@@ -552,6 +587,7 @@ async function renderWorkTable() {
   try {
     await loadCurrentUserPeriodAttendance(period);
   } catch (err) {
+    updateWorkProjectFilterUi(0, 0);
     console.error('勤務内容表データ読み込みエラー:', err);
     renderEmpty(containerId, '勤務内容表の読み込みに失敗しました。');
     return;
@@ -559,10 +595,16 @@ async function renderWorkTable() {
 
   const dates = getPeriodDates(period);
   const siteMetaMap = new Map((state.attendanceSites || []).map(s => [s.id, s]));
+  const filteredDates = dates.filter(dateStr => matchesAttendanceProjectFilter(state.workPeriodAttendance[dateStr] || {}, siteMetaMap));
+  updateWorkProjectFilterUi(dates.length, filteredDates.length);
+  if (filteredDates.length === 0) {
+    container.innerHTML = '<div class="calw-empty">物件Noに一致する日はありません。</div>';
+    return;
+  }
   const siteTotals = {};
   let grandTotal = 0;
 
-  const bodyRows = dates.map(dateStr => {
+  const bodyRows = filteredDates.map(dateStr => {
     const dt = new Date(`${dateStr}T00:00:00`);
     const day = dt.getDate();
     const dowIndex = dt.getDay();
@@ -1256,6 +1298,19 @@ export function bindAttendanceWorkEvents() {
   });
   document.getElementById('calw-summary-print-btn')?.addEventListener('click', () => {
     void printSummaryTable();
+  });
+  document.getElementById('calw-work-project-filter')?.addEventListener('input', e => {
+    state.attendanceWorkProjectKeyFilter = normalizeProjectKey(e.target.value || '');
+    if (state.calPersonalTab === 'work') void renderWorkTable();
+  });
+  document.getElementById('calw-work-project-filter-clear')?.addEventListener('click', () => {
+    state.attendanceWorkProjectKeyFilter = '';
+    const input = document.getElementById('calw-work-project-filter');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+    if (state.calPersonalTab === 'work') void renderWorkTable();
   });
 
   document.getElementById('calw-site-add-btn')?.addEventListener('click', () => {

@@ -532,6 +532,31 @@ function findOrderById(orderId) {
   return _historyOrders.find(o => o.id === orderId) || _deletedHistoryOrders.find(o => o.id === orderId) || null;
 }
 
+function getOrderHistoryProjectFilterValue() {
+  return normalizeProjectKey(state.orderHistoryProjectKeyFilter || '').toLowerCase();
+}
+
+function filterOrdersByProjectKey(list) {
+  const filter = getOrderHistoryProjectFilterValue();
+  if (!filter) return list;
+  return list.filter(order => normalizeProjectKey(order.projectKey || '').toLowerCase().includes(filter));
+}
+
+function updateOrderHistoryFilterUi(totalCount, filteredCount) {
+  const input = document.getElementById('ord-history-project-filter');
+  const clearBtn = document.getElementById('ord-history-project-filter-clear');
+  const countEl = document.getElementById('ord-history-project-filter-count');
+  if (input && input.value !== (state.orderHistoryProjectKeyFilter || '')) {
+    input.value = state.orderHistoryProjectKeyFilter || '';
+  }
+  if (clearBtn) clearBtn.hidden = !state.orderHistoryProjectKeyFilter;
+  if (countEl) {
+    countEl.textContent = state.orderHistoryProjectKeyFilter
+      ? `${filteredCount} / ${totalCount}件`
+      : `${totalCount}件`;
+  }
+}
+
 function getOrderTypeMeta(order) {
   const isFactory = !order.orderType || order.orderType === 'factory';
   return {
@@ -1216,10 +1241,12 @@ async function purgeOldOrders() {
 
 export async function openOrderHistoryModal() {
   _historyOffset = 0;
+  state.orderHistoryProjectKeyFilter = '';
   await loadMasters();
   const modal = document.getElementById('ord-history-modal');
   if (!modal) return;
   modal.classList.add('visible');
+  updateOrderHistoryFilterUi(0, 0);
   purgeOldOrders(); // バックグラウンドで古いデータを削除（完了を待たない）
   await renderHistory();
 }
@@ -1305,7 +1332,7 @@ async function renderHistory() {
           </details>`
       : '';
 
-    listEl.innerHTML = activeHtml + deletedHtml;
+    renderHistoryList();
   } catch (err) {
     console.error('order: renderHistory error', err);
     listEl.innerHTML = '<p class="ord-empty">読み込みに失敗しました</p>';
@@ -1313,6 +1340,61 @@ async function renderHistory() {
 }
 
 // ===== 発注詳細モーダル =====
+function renderHistoryList() {
+  const listEl = document.getElementById('ord-history-list');
+  if (!listEl) return;
+
+  const totalCount = _historyOrders.length + _deletedHistoryOrders.length;
+  const filteredActiveOrders = filterOrdersByProjectKey(_historyOrders);
+  const filteredDeletedOrders = filterOrdersByProjectKey(_deletedHistoryOrders);
+  const filteredCount = filteredActiveOrders.length + filteredDeletedOrders.length;
+  updateOrderHistoryFilterUi(totalCount, filteredCount);
+
+  if (totalCount === 0) {
+    listEl.innerHTML = '<p class="ord-empty">この期間の発注はありません</p>';
+    return;
+  }
+  if (filteredCount === 0) {
+    listEl.innerHTML = '<p class="ord-empty">物件Noに一致する履歴はありません</p>';
+    return;
+  }
+
+  const grouped = {};
+  filteredActiveOrders.forEach(order => {
+    const key = order.supplierName || '不明';
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(order);
+  });
+
+  const activeHtml = filteredActiveOrders.length > 0
+    ? Object.entries(grouped).map(([supplierName, supplierOrders]) => `
+        <div class="ord-history-group">
+          <div class="ord-history-group-header">
+            <i class="fa-solid fa-building"></i> ${esc(supplierName)}
+            <span class="ord-history-count">${supplierOrders.length}件</span>
+          </div>
+          ${supplierOrders.map(order => renderHistoryItem(order)).join('')}
+        </div>`).join('')
+    : '<p class="ord-empty">この条件の表示中履歴はありません</p>';
+
+  const deletedHtml = filteredDeletedOrders.length > 0
+    ? `
+        <details class="ord-history-deleted-details">
+          <summary class="ord-history-deleted-summary">
+            <i class="fa-solid fa-trash-can-arrow-up"></i> 削除済み履歴（${filteredDeletedOrders.length}件）
+          </summary>
+          <div class="ord-history-deleted-help">
+            誤って削除した履歴はここから元に戻せます。削除済み履歴は30日後に自動で完全削除されます。
+          </div>
+          <div class="ord-history-deleted-list">
+            ${filteredDeletedOrders.map(order => renderHistoryItem(order, { deleted: true })).join('')}
+          </div>
+        </details>`
+    : '';
+
+  listEl.innerHTML = activeHtml + deletedHtml;
+}
+
 function openOrderDetailModal(orderId) {
   const order = findOrderById(orderId);
   if (!order) return;
@@ -1648,6 +1730,19 @@ function bindOrderEvents() {
     if (restoreBtn) {
       restoreOrderHistory(restoreBtn.dataset.id);
     }
+  });
+  document.getElementById('ord-history-project-filter')?.addEventListener('input', e => {
+    state.orderHistoryProjectKeyFilter = normalizeProjectKey(e.target.value || '');
+    renderHistoryList();
+  });
+  document.getElementById('ord-history-project-filter-clear')?.addEventListener('click', () => {
+    state.orderHistoryProjectKeyFilter = '';
+    const input = document.getElementById('ord-history-project-filter');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+    renderHistoryList();
   });
   document.getElementById('ord-detail-modal')?.addEventListener('click', e => {
     if (e.target === document.getElementById('ord-detail-modal')) closeOrderDetailModal();

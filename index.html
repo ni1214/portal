@@ -1555,10 +1555,20 @@
       </div>
 
       <div id="calw-view-work" class="calw-view" style="display:none">
-        <div class="calw-view-header">
-          <div class="calw-view-title"><i class="fa-solid fa-table-cells-large"></i> 勤務内容表</div>
-          <div class="calw-view-period" id="calw-work-period-label">-</div>
+      <div class="calw-view-header">
+        <div class="calw-view-title"><i class="fa-solid fa-table-cells-large"></i> 勤務内容表</div>
+        <div class="calw-view-period" id="calw-work-period-label">-</div>
+      </div>
+      <div class="calw-work-tools">
+        <div class="calw-work-filter-row">
+          <div class="calw-work-filter-input-wrap">
+            <i class="fa-solid fa-magnifying-glass calw-work-filter-icon"></i>
+            <input type="text" id="calw-work-project-filter" class="form-input calw-work-search-input" placeholder="物件Noで絞り込み" autocomplete="off">
+            <button type="button" class="calw-work-filter-clear" id="calw-work-project-filter-clear" hidden><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div class="calw-work-filter-count" id="calw-work-project-filter-count">-</div>
         </div>
+      </div>
         <div id="calw-work-table-container" class="calw-work-table-container"></div>
       </div>
 
@@ -2025,6 +2035,15 @@
         <button class="btn-modal-secondary ord-period-btn" id="ord-period-prev"><i class="fa-solid fa-chevron-left"></i></button>
         <span class="ord-period-label" id="ord-period-label">読み込み中...</span>
         <button class="btn-modal-secondary ord-period-btn" id="ord-period-next"><i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+
+      <div class="ord-history-filter-row">
+        <div class="ord-history-filter-input-wrap">
+          <i class="fa-solid fa-magnifying-glass ord-history-filter-icon"></i>
+          <input type="text" id="ord-history-project-filter" class="form-input ord-history-filter-input" placeholder="物件Noで絞り込み" autocomplete="off">
+          <button type="button" class="ord-history-filter-clear" id="ord-history-project-filter-clear" hidden><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="ord-history-filter-count" id="ord-history-project-filter-count">-</div>
       </div>
 
       <div id="ord-history-list" class="ord-history-list"></div>

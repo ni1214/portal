@@ -136,6 +136,7 @@ export const state = {
   taskModalOpen: false,
   activeTaskTab: 'received',
   taskProjectKeyFilter: '',
+  orderHistoryProjectKeyFilter: '',
   newTaskAssignee: '',
   _editingTaskId: null,        // 編集中 or 共有操作中のタスクID
 
@@ -193,6 +194,7 @@ export const state = {
   // 勤務内容表
   attendanceSites: [],             // [{ id, code, name, active, sortOrder, ... }]
   _attendanceSitesSub: null,       // onSnapshot unsubscriber for attendance_sites
+  attendanceWorkProjectKeyFilter: '',
   workPeriodAttendance: {},        // { 'YYYY-MM-DD': attendanceDocData }
   workSummaryRows: [],             // 集計表表示用キャッシュ
   workSummaryUsers: [],            // 集計表ユーザー列
