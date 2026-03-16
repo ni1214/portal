@@ -4,6 +4,55 @@ import { state, TASK_STATUS_LABEL } from './state.js';
 import { esc, getUserAvatarColor } from './utils.js';
 export const deps = {};
 
+function buildTaskPayload({
+  title,
+  description = '',
+  assignedBy,
+  assignedTo,
+  status = 'pending',
+  dueDate = '',
+  sourceType = 'manual',
+  sourceRequestId = null,
+  sourceRequestFromDept = null,
+  sourceRequestToDept = null,
+}) {
+  return {
+    title,
+    description,
+    assignedBy,
+    assignedTo,
+    status,
+    createdAt: serverTimestamp(),
+    acceptedAt: null,
+    doneAt: null,
+    dueDate,
+    notifiedDone: false,
+    sharedWith: [],
+    sharedResponses: {},
+    sourceType,
+    sourceRequestId,
+    sourceRequestFromDept,
+    sourceRequestToDept,
+  };
+}
+
+export async function createTaskRecord(taskInput) {
+  return addDoc(collection(db, 'assigned_tasks'), buildTaskPayload(taskInput));
+}
+
+async function syncRequestLink(taskId, updates) {
+  const taskSnap = await getDoc(doc(db, 'assigned_tasks', taskId));
+  if (!taskSnap.exists()) return null;
+  const task = { id: taskSnap.id, ...taskSnap.data() };
+  if (!task.sourceRequestId) return task;
+  await updateDoc(doc(db, 'cross_dept_requests', task.sourceRequestId), {
+    ...updates,
+    updatedAt: serverTimestamp(),
+    notifyCreator: true,
+  });
+  return task;
+}
+
 export function startTaskListeners(username) {
   if (!username) return;
   if (state._receivedTasksUnsub) { state._receivedTasksUnsub(); state._receivedTasksUnsub = null; }
@@ -296,18 +345,13 @@ export async function submitNewTask() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> 送信中...';
   try {
-    await addDoc(collection(db, 'assigned_tasks'), {
-      title, description,
+    await createTaskRecord({
+      title,
+      description,
       assignedBy: state.currentUsername,
       assignedTo: state.newTaskAssignee,
-      status: 'pending',
-      createdAt: serverTimestamp(),
-      acceptedAt: null,
-      doneAt: null,
       dueDate,
-      notifiedDone: false,
-      sharedWith: [],
-      sharedResponses: {},
+      sourceType: 'manual',
     });
     // フォームをリセット
     state.newTaskAssignee = '';
@@ -334,6 +378,10 @@ export async function acceptTask(taskId) {
       status: 'accepted',
       acceptedAt: serverTimestamp(),
     });
+    await syncRequestLink(taskId, {
+      linkedTaskStatus: 'accepted',
+      linkedTaskClosedAt: null,
+    });
   } catch (err) { console.error('タスク承諾エラー:', err); }
 }
 
@@ -343,6 +391,10 @@ export async function completeTask(taskId) {
     await updateDoc(doc(db, 'assigned_tasks', taskId), {
       status: 'done',
       doneAt: serverTimestamp(),
+    });
+    await syncRequestLink(taskId, {
+      linkedTaskStatus: 'done',
+      linkedTaskClosedAt: serverTimestamp(),
     });
   } catch (err) { console.error('タスク完了エラー:', err); }
 }
@@ -356,7 +408,19 @@ export async function acknowledgeTask(taskId) {
 export async function deleteTask(taskId, confirmMsg) {
   if (!confirm(confirmMsg)) return;
   try {
+    const taskSnap = await getDoc(doc(db, 'assigned_tasks', taskId));
+    const task = taskSnap.exists() ? { id: taskSnap.id, ...taskSnap.data() } : null;
     await deleteDoc(doc(db, 'assigned_tasks', taskId));
+    if (task?.sourceRequestId) {
+      await updateDoc(doc(db, 'cross_dept_requests', task.sourceRequestId), {
+        linkedTaskId: null,
+        linkedTaskStatus: task.status === 'done' ? 'done' : 'cancelled',
+        linkedTaskAssignedTo: task.assignedTo || null,
+        linkedTaskClosedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        notifyCreator: true,
+      });
+    }
   } catch (err) { console.error('タスク削除エラー:', err); }
 }
 

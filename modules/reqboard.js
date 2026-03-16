@@ -4,6 +4,13 @@ import { state, REQ_STATUS_LABEL } from './state.js';
 import { esc, escHtml, getUserAvatarColor, _fmtTs } from './utils.js';
 export const deps = {};
 
+const LINKED_TASK_STATUS_LABEL = {
+  pending:   { text: '承諾待ち', cls: 'req-task-link--pending' },
+  accepted:  { text: '進行中',   cls: 'req-task-link--accepted' },
+  done:      { text: '完了',     cls: 'req-task-link--done' },
+  cancelled: { text: '取消',     cls: 'req-task-link--cancelled' },
+};
+
 export async function loadConfigDepartmentsAndViewers() {
   try {
     const snap = await getDoc(doc(db, 'portal', 'config'));
@@ -109,6 +116,7 @@ export function openReqModal(initialTab) {
 export function closeReqModal() {
   state.reqModalOpen = false;
   document.getElementById('reqboard-modal').classList.remove('visible');
+  closeReqTaskifyModal();
 }
 
 export function switchReqTab(tab) {
@@ -205,6 +213,168 @@ function _reqStatusHtml(status) {
   return `<span class="req-status-badge ${s.cls}">${s.text}</span>`;
 }
 
+function _getRequestById(reqId) {
+  return [...state.receivedRequests, ...state.sentRequests].find(r => r.id === reqId) || null;
+}
+
+function _canCreateTaskFromRequest(req) {
+  return !!req
+    && !req.archived
+    && req.status !== 'rejected'
+    && (!req.linkedTaskStatus || req.linkedTaskStatus === 'cancelled');
+}
+
+function _requestTaskSummaryHtml(req) {
+  const statusInfo = LINKED_TASK_STATUS_LABEL[req.linkedTaskStatus || ''] || null;
+  if (!statusInfo && !req.linkedTaskAssignedTo) return '';
+  const linkedBy = req.linkedTaskLinkedBy ? ` / 起票: ${escHtml(req.linkedTaskLinkedBy)}` : '';
+  const linkedAt = req.linkedTaskLinkedAt ? ` / ${_fmtTs(req.linkedTaskLinkedAt)}` : '';
+  return `
+    <div class="req-linked-task">
+      <div class="req-linked-task-header">
+        <span class="req-sub-label">関連タスク</span>
+        ${statusInfo ? `<span class="req-linked-task-badge ${statusInfo.cls}">${statusInfo.text}</span>` : ''}
+      </div>
+      <div class="req-linked-task-meta">
+        ${req.linkedTaskAssignedTo ? `担当: ${escHtml(req.linkedTaskAssignedTo)}` : '担当未設定'}
+        ${linkedBy}${linkedAt}
+      </div>
+    </div>
+  `;
+}
+
+function _buildRequestTaskDescription(req, extraNote = '') {
+  const parts = [
+    `【部門間依頼】${req.fromDept || '-'} → ${req.toDept || '-'}`,
+    req.content || '',
+    req.proposal ? `対策・提案: ${req.proposal}` : '',
+    req.remarks ? `備考: ${req.remarks}` : '',
+    extraNote ? `タスク化メモ: ${extraNote}` : '',
+  ].filter(Boolean);
+  return parts.join('\n');
+}
+
+function _setReqTaskifyAssignee(name = '') {
+  state.reqTaskifyAssignee = name;
+  const display = document.getElementById('req-taskify-assignee-display');
+  if (!display) return;
+  display.textContent = name || '未選択';
+  display.classList.toggle('selected', !!name);
+}
+
+export async function openReqTaskifyModal(reqId) {
+  const req = state.receivedRequests.find(r => r.id === reqId);
+  if (!req) return;
+  if (!_canCreateTaskFromRequest(req)) {
+    alert('この依頼は現在タスク化できません');
+    return;
+  }
+  state._pendingReqTaskify = { reqId };
+  _setReqTaskifyAssignee('');
+  const summary = document.getElementById('req-taskify-summary');
+  if (summary) {
+    summary.innerHTML = `
+      <div class="req-taskify-summary-title">${escHtml(req.title)}</div>
+      <div class="req-taskify-summary-meta">${escHtml(req.fromDept || req.createdBy || '')} → ${escHtml(req.toDept || '')}</div>
+      <div class="req-taskify-summary-body">${escHtml(req.content || '')}</div>
+    `;
+  }
+  const dueEl = document.getElementById('req-taskify-due');
+  const noteEl = document.getElementById('req-taskify-note');
+  if (dueEl) dueEl.value = '';
+  if (noteEl) noteEl.value = '';
+  document.getElementById('req-taskify-modal')?.classList.add('visible');
+}
+
+export function closeReqTaskifyModal() {
+  document.getElementById('req-taskify-modal')?.classList.remove('visible');
+  state._pendingReqTaskify = null;
+  _setReqTaskifyAssignee('');
+  const dueEl = document.getElementById('req-taskify-due');
+  const noteEl = document.getElementById('req-taskify-note');
+  if (dueEl) dueEl.value = '';
+  if (noteEl) noteEl.value = '';
+}
+
+export async function openReqTaskifyUserPicker() {
+  document.getElementById('task-user-picker-modal')?.classList.add('visible');
+  const searchEl = document.getElementById('task-user-search');
+  if (searchEl) searchEl.value = '';
+  await deps.loadUsersForChatPicker?.('task-user-list', 'task-user-search', (name) => {
+    _setReqTaskifyAssignee(name);
+    document.getElementById('task-user-picker-modal')?.classList.remove('visible');
+  }, false);
+}
+
+export async function submitRequestTaskify() {
+  const reqId = state._pendingReqTaskify?.reqId;
+  const req = reqId ? _getRequestById(reqId) : null;
+  if (!req) return;
+  if (!_canCreateTaskFromRequest(req)) {
+    alert('この依頼は現在タスク化できません');
+    return;
+  }
+  if (!state.reqTaskifyAssignee) {
+    alert('担当者を選択してください');
+    return;
+  }
+
+  const dueDate = document.getElementById('req-taskify-due')?.value || '';
+  const extraNote = document.getElementById('req-taskify-note')?.value.trim() || '';
+  const btn = document.getElementById('req-taskify-confirm');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'タスク化中...';
+  }
+  try {
+    const taskInput = {
+      title: req.title,
+      description: _buildRequestTaskDescription(req, extraNote),
+      assignedBy: state.currentUsername,
+      assignedTo: state.reqTaskifyAssignee,
+      dueDate,
+      sourceType: 'cross_dept_request',
+      sourceRequestId: req.id,
+      sourceRequestFromDept: req.fromDept || '',
+      sourceRequestToDept: req.toDept || '',
+    };
+    const taskRef = deps.createTaskRecord
+      ? await deps.createTaskRecord(taskInput)
+      : await addDoc(collection(db, 'assigned_tasks'), {
+          ...taskInput,
+          status: 'pending',
+          createdAt: serverTimestamp(),
+          acceptedAt: null,
+          doneAt: null,
+          notifiedDone: false,
+          sharedWith: [],
+          sharedResponses: {},
+        });
+
+    await updateDoc(doc(db, 'cross_dept_requests', req.id), {
+      status: 'accepted',
+      statusUpdatedBy: state.currentUsername,
+      updatedAt: serverTimestamp(),
+      notifyCreator: true,
+      linkedTaskId: taskRef.id,
+      linkedTaskStatus: 'pending',
+      linkedTaskAssignedTo: state.reqTaskifyAssignee,
+      linkedTaskLinkedAt: serverTimestamp(),
+      linkedTaskLinkedBy: state.currentUsername,
+      linkedTaskClosedAt: null,
+    });
+    closeReqTaskifyModal();
+  } catch (err) {
+    console.error('依頼タスク化エラー:', err);
+    alert('タスク化に失敗しました');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'タスク化する';
+    }
+  }
+}
+
 export function _renderReceivedRequests(container) {
   const myDept = state.userEmailProfile ? state.userEmailProfile.department : null;
   if (!myDept) {
@@ -230,7 +400,9 @@ export function _renderReceivedRequests(container) {
       ${r.proposal ? `<div class="req-item-sub"><span class="req-sub-label">対策・提案</span>${escHtml(r.proposal)}</div>` : ''}
       ${r.remarks  ? `<div class="req-item-sub"><span class="req-sub-label">備考</span>${escHtml(r.remarks)}</div>` : ''}
       ${r.statusNote ? `<div class="req-item-sub"><span class="req-sub-label">コメント</span>${escHtml(r.statusNote)}</div>` : ''}
+      ${_requestTaskSummaryHtml(r)}
       <div class="req-item-actions">
+        ${_canCreateTaskFromRequest(r) ? `<button class="btn-req-taskify" data-id="${r.id}"><i class="fa-solid fa-list-check"></i> ${r.linkedTaskStatus === 'cancelled' ? '再タスク化' : 'タスク化'}</button>` : ''}
         <button class="btn-req-status" data-id="${r.id}"><i class="fa-solid fa-pen-to-square"></i> ステータス変更</button>
         <button class="btn-req-archive" data-id="${r.id}" title="アーカイブに移動"><i class="fa-solid fa-box-archive"></i> アーカイブ</button>
         <button class="btn-req-delete" data-id="${r.id}" title="削除"><i class="fa-solid fa-trash"></i></button>
@@ -239,6 +411,9 @@ export function _renderReceivedRequests(container) {
   `).join('');
   container.querySelectorAll('.btn-req-status').forEach(btn => {
     btn.addEventListener('click', () => openStatusModal(btn.dataset.id));
+  });
+  container.querySelectorAll('.btn-req-taskify').forEach(btn => {
+    btn.addEventListener('click', () => openReqTaskifyModal(btn.dataset.id));
   });
   container.querySelectorAll('.btn-req-archive').forEach(btn => {
     btn.addEventListener('click', () => archiveRequest(btn.dataset.id));
@@ -265,6 +440,7 @@ export function _renderSentRequests(container) {
       <div class="req-item-title">${escHtml(r.title)}</div>
       <div class="req-item-body">${escHtml(r.content)}</div>
       ${r.statusNote ? `<div class="req-item-sub"><span class="req-sub-label">コメント</span>${escHtml(r.statusNote)}</div>` : ''}
+      ${_requestTaskSummaryHtml(r)}
       <div class="req-item-actions">
         <button class="btn-req-status" data-id="${r.id}"><i class="fa-solid fa-pen-to-square"></i> ステータス変更</button>
         <button class="btn-req-archive" data-id="${r.id}" title="アーカイブに移動"><i class="fa-solid fa-box-archive"></i> アーカイブ</button>
@@ -394,9 +570,16 @@ export async function submitRequest() {
       createdBy: state.currentUsername,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
+      archived: false,
       statusNote: '',
       statusUpdatedBy: state.currentUsername,
       notifyCreator: false,
+      linkedTaskId: null,
+      linkedTaskStatus: null,
+      linkedTaskAssignedTo: null,
+      linkedTaskLinkedAt: null,
+      linkedTaskLinkedBy: null,
+      linkedTaskClosedAt: null,
     });
     switchReqSubTab('sent');
   } catch (err) {

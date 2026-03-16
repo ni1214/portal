@@ -1757,6 +1757,35 @@
     </div>
   </div>
 
+  <!-- 依頼タスク化モーダル -->
+  <div class="modal-overlay" id="req-taskify-modal">
+    <div class="modal-glass" style="max-width:460px;width:min(460px,94vw);">
+      <h3 class="modal-title"><i class="fa-solid fa-list-check"></i> 依頼をタスク化</h3>
+      <div id="req-taskify-summary" class="req-taskify-summary"></div>
+      <div class="form-group">
+        <label class="form-label">担当者 <span class="req-required">*</span></label>
+        <div class="task-assignee-row">
+          <span class="task-assignee-display" id="req-taskify-assignee-display">未選択</span>
+          <button type="button" class="task-pick-btn" id="req-taskify-pick-user">
+            <i class="fa-solid fa-user-plus"></i> 選択
+          </button>
+        </div>
+      </div>
+      <div class="form-group form-group-inline">
+        <input type="date" id="req-taskify-due" class="date-icon-only">
+        <label class="form-label" for="req-taskify-due">期限入力（省略可）</label>
+      </div>
+      <div class="form-group">
+        <label class="form-label">補足コメント（任意）</label>
+        <textarea id="req-taskify-note" class="form-input" rows="3" placeholder="引き継ぎたい注意点があれば入力"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="req-taskify-cancel">キャンセル</button>
+        <button class="btn-modal-primary" id="req-taskify-confirm">タスク化する</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 目安箱返信モーダル -->
   <div class="modal-overlay" id="sugg-reply-modal">
     <div class="modal-glass" style="max-width:420px;width:90%">

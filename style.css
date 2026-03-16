@@ -7395,10 +7395,71 @@ html.font-xl { font-size: 21px; }
   white-space: nowrap;
   font-size: 0.75rem;
 }
+.req-linked-task {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+}
+.req-linked-task-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.req-linked-task-meta {
+  margin-top: 5px;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+}
+.req-linked-task-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.req-task-link--pending {
+  background: rgba(255, 166, 87, 0.16);
+  color: var(--accent-orange);
+}
+.req-task-link--accepted {
+  background: rgba(0, 200, 255, 0.12);
+  color: var(--accent-cyan);
+}
+.req-task-link--done {
+  background: rgba(57, 208, 181, 0.12);
+  color: #6ee7d2;
+}
+.req-task-link--cancelled {
+  background: rgba(255, 126, 182, 0.12);
+  color: var(--accent-pink);
+}
 .req-item-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+}
+.btn-req-taskify {
+  padding: 5px 12px;
+  background: color-mix(in srgb, var(--accent-cyan) 10%, var(--bg-glass));
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 32%, var(--border-glass));
+  border-radius: var(--radius-sm);
+  color: var(--accent-cyan);
+  font-size: 0.75rem;
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.btn-req-taskify:hover {
+  background: color-mix(in srgb, var(--accent-cyan) 16%, var(--bg-card-hover));
+  border-color: color-mix(in srgb, var(--accent-cyan) 50%, var(--border-glass-hover));
 }
 .btn-req-status {
   padding: 5px 12px;
@@ -7489,6 +7550,30 @@ html.font-xl { font-size: 21px; }
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 4px;
+}
+.req-taskify-summary {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+}
+.req-taskify-summary-title {
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+.req-taskify-summary-meta {
+  margin-top: 4px;
+  color: var(--accent-cyan);
+  font-size: 0.75rem;
+}
+.req-taskify-summary-body {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  line-height: 1.5;
 }
 .req-status-option {
   padding: 6px 14px;

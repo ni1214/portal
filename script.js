@@ -79,7 +79,7 @@ import {
   deps as taskDeps,
   startTaskListeners, updateTaskBadge,
   openTaskModal, closeTaskModal, switchTaskTab, renderTaskTabContent,
-  openTaskUserPicker, submitNewTask,
+  openTaskUserPicker, submitNewTask, createTaskRecord,
   acceptTask, completeTask, acknowledgeTask, deleteTask,
   openTaskEditModal, closeTaskEditModal, submitTaskEdit,
   openTaskSharePicker, closeTaskSharePicker, submitTaskShare,
@@ -97,6 +97,7 @@ import {
   renderReqContent,
   submitRequest, openStatusModal, updateRequestStatus,
   markRequestSeen,
+  openReqTaskifyModal, closeReqTaskifyModal, openReqTaskifyUserPicker, submitRequestTaskify,
   submitSuggestion, openSuggReplyModal, sendSuggReply,
   _markSuggestionsViewed,
   renderAdminSuggBoxSection, addSuggBoxViewer,
@@ -196,7 +197,8 @@ Object.assign(taskDeps, {
 });
 
 Object.assign(reqDeps, {
-  // reqboard は現在 deps なし
+  loadUsersForChatPicker,
+  createTaskRecord,
 });
 
 initEmail({ confirmDelete });
@@ -2702,6 +2704,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     state._pendingStatusChange = null;
   });
   document.getElementById('req-status-ok').addEventListener('click', updateRequestStatus);
+  document.getElementById('req-taskify-cancel').addEventListener('click', closeReqTaskifyModal);
+  document.getElementById('req-taskify-pick-user').addEventListener('click', openReqTaskifyUserPicker);
+  document.getElementById('req-taskify-confirm').addEventListener('click', submitRequestTaskify);
+  document.getElementById('req-taskify-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeReqTaskifyModal();
+  });
   document.getElementById('sugg-reply-cancel').addEventListener('click', () => {
     document.getElementById('sugg-reply-modal').classList.remove('visible');
     state._pendingSuggReply = null;

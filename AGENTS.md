@@ -164,6 +164,38 @@ export function xxxFunction() { ... }
 
 - **保持ポリシー（2026-03 追加）**: `orders/` は通常履歴を1年保持し、`deletedAt` が入った削除済み履歴は30日を過ぎたらフロント側クリーンアップで完全削除する。
 
+### 部門間依頼フィールド（`cross_dept_requests/{requestId}`）
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `title` | string | 依頼タイトル |
+| `toDept` | string | 依頼先部署 |
+| `fromDept` | string | 依頼元部署 |
+| `content` | string | 依頼本文 |
+| `proposal` | string | 対策・提案 |
+| `remarks` | string | 備考 |
+| `status` | string | `'submitted'` / `'reviewing'` / `'accepted'` / `'rejected'` |
+| `createdBy` | string | 投稿者ニックネーム |
+| `createdAt` | timestamp | 投稿日時 |
+| `updatedAt` | timestamp | 最終更新日時 |
+| `archived` | boolean | アーカイブ済みフラグ |
+| `statusNote` | string | ステータス更新コメント |
+| `statusUpdatedBy` | string | ステータス更新者ニックネーム |
+| `notifyCreator` | boolean | 依頼元への通知フラグ |
+| `linkedTaskId` | string\|null | 依頼から起票した関連タスクID |
+| `linkedTaskStatus` | string\|null | `'pending'` / `'accepted'` / `'done'` / `'cancelled'` |
+| `linkedTaskAssignedTo` | string\|null | 関連タスクの担当者ニックネーム |
+| `linkedTaskLinkedAt` | timestamp\|null | タスク化した日時 |
+| `linkedTaskLinkedBy` | string\|null | タスク化したユーザーニックネーム |
+| `linkedTaskClosedAt` | timestamp\|null | 関連タスクが完了/取消になった日時 |
+
+### タスク追加フィールド（`assigned_tasks/{taskId}`）
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `sourceType` | string | `'manual'` / `'cross_dept_request'` |
+| `sourceRequestId` | string\|null | 元になった部門間依頼ID |
+| `sourceRequestFromDept` | string\|null | 元依頼の依頼元部署 |
+| `sourceRequestToDept` | string\|null | 元依頼の依頼先部署 |
+
 ### 勤怠データフィールド（`users/{name}/attendance/{YYYY-MM-DD}`）
 | フィールド | 型 | 説明 |
 |---|---|---|

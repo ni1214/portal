@@ -153,6 +153,8 @@ export const state = {
   isSuggestionBoxViewer: false,
   suggestionBoxViewers: [],
   _pendingStatusChange: null,
+  _pendingReqTaskify: null,
+  reqTaskifyAssignee: '',
   _pendingSuggReply: null,
   lastViewedSuggestionsAt: 0,
 
