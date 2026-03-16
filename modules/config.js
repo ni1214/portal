@@ -1,7 +1,7 @@
 // ========== Firebase Imports ==========
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import {
-  getFirestore, collection, doc,
+  getFirestore, collection, collectionGroup, doc,
   getDocs, getDoc, setDoc, addDoc, deleteDoc, updateDoc,
   query, where, orderBy, limit, writeBatch, serverTimestamp, onSnapshot,
   arrayUnion, arrayRemove, deleteField
@@ -22,7 +22,7 @@ export const db = getFirestore(app);
 
 // Re-export Firestore functions for use by all modules
 export {
-  collection, doc,
+  collection, collectionGroup, doc,
   getDocs, getDoc, setDoc, addDoc, deleteDoc, updateDoc,
   query, where, orderBy, limit, writeBatch, serverTimestamp, onSnapshot,
   arrayUnion, arrayRemove, deleteField

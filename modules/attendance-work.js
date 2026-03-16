@@ -1,7 +1,7 @@
 // ========== attendance-work.js — 勤務内容表 / 勤務内容集計表 / 登録現場 ==========
 import { state } from './state.js';
 import {
-  db, collection, doc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
+  db, collection, collectionGroup, doc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
   query, where, orderBy, onSnapshot, serverTimestamp, deleteField
 } from './config.js';
 import { esc } from './utils.js';
@@ -101,6 +101,16 @@ function sanitizeWorkSiteHours(src) {
   return out;
 }
 
+function hasNonWorkSiteFields(docData) {
+  if (!docData || typeof docData !== 'object') return false;
+  // workSiteHours だけを消す操作で、他の将来フィールドまで消さないようにする
+  return Object.keys(docData).some(k => (
+    k !== 'workSiteHours' &&
+    k !== 'yearMonth' &&
+    k !== 'updatedAt'
+  ));
+}
+
 function setText(id, text) {
   const el = document.getElementById(id);
   if (el) el.textContent = text;
@@ -156,17 +166,12 @@ async function saveWorkHoursForCell(dateStr, siteId, hours) {
   if (hours > 0) nextMap[siteId] = hours;
   else delete nextMap[siteId];
 
-  const hasMainAttendanceValue = !!(
-    prevDoc.type ||
-    prevDoc.hayade ||
-    prevDoc.zangyo ||
-    prevDoc.note
-  );
+  const shouldKeepDoc = hasNonWorkSiteFields(prevDoc);
 
   if (Object.keys(nextMap).length === 0) {
     if (!prevDoc || Object.keys(prevDoc).length === 0) return;
 
-    if (hasMainAttendanceValue) {
+    if (shouldKeepDoc) {
       await updateDoc(ref, {
         workSiteHours: deleteField(),
         yearMonth: dateStr.slice(0, 7),
@@ -328,21 +333,64 @@ async function renderWorkSummary() {
 
   try {
     const usersSnap = await getDocs(collection(db, 'users_list'));
-    const users = usersSnap.docs.map(d => d.id).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja'));
-    if (state.currentUsername && !users.includes(state.currentUsername)) users.unshift(state.currentUsername);
+    const users = usersSnap.docs.map(d => d.id).filter(Boolean);
+    const yms = getPeriodYearMonths(period);
+
+    let attendanceRows = [];
+    try {
+      const attSnap = await getDocs(
+        query(
+          collectionGroup(db, 'attendance'),
+          where('yearMonth', 'in', yms)
+        )
+      );
+      attendanceRows = attSnap.docs
+        .map(d => ({
+          username: d.ref.parent?.parent?.id || '',
+          dateStr: d.id,
+          data: d.data(),
+        }))
+        .filter(row => (
+          !!row.username &&
+          row.dateStr >= period.startStr &&
+          row.dateStr <= period.endStr
+        ));
+    } catch (err) {
+      console.warn('勤務内容集計: collectionGroup取得失敗。ユーザー別取得へフォールバックします。', err);
+      const userEntries = await Promise.all(
+        users.map(async username => {
+          const map = await loadUserPeriodAttendance(username, period);
+          return { username, map };
+        })
+      );
+      attendanceRows = [];
+      userEntries.forEach(({ username, map }) => {
+        Object.entries(map).forEach(([dateStr, data]) => {
+          attendanceRows.push({ username, dateStr, data });
+        });
+      });
+    }
+
+    // users_list にないユーザーが混ざっていても表に出せるようにする
+    const userSet = new Set(users);
+    attendanceRows.forEach(row => {
+      if (row.username && !userSet.has(row.username)) {
+        users.push(row.username);
+        userSet.add(row.username);
+      }
+    });
+
+    users.sort((a, b) => a.localeCompare(b, 'ja'));
+    if (state.currentUsername && users.includes(state.currentUsername)) {
+      users.splice(users.indexOf(state.currentUsername), 1);
+      users.unshift(state.currentUsername);
+    }
     state.workSummaryUsers = users;
 
     if (users.length === 0) {
       renderEmpty(containerId, '集計対象ユーザーがいません。');
       return;
     }
-
-    const userEntries = await Promise.all(
-      users.map(async username => {
-        const map = await loadUserPeriodAttendance(username, period);
-        return { username, map };
-      })
-    );
 
     const siteMetaMap = new Map((state.attendanceSites || []).map(s => [s.id, s]));
     const rowsMap = new Map();
@@ -364,15 +412,13 @@ async function renderWorkSummary() {
       return row;
     };
 
-    userEntries.forEach(({ username, map }) => {
-      Object.values(map).forEach(att => {
-        const workMap = sanitizeWorkSiteHours(att.workSiteHours);
-        Object.entries(workMap).forEach(([siteId, hours]) => {
-          if (hours <= 0) return;
-          const row = ensureRow(siteId);
-          row.userHours[username] = (row.userHours[username] || 0) + hours;
-          row.totalHours += hours;
-        });
+    attendanceRows.forEach(({ username, data: att }) => {
+      const workMap = sanitizeWorkSiteHours(att.workSiteHours);
+      Object.entries(workMap).forEach(([siteId, hours]) => {
+        if (hours <= 0) return;
+        const row = ensureRow(siteId);
+        row.userHours[username] = (row.userHours[username] || 0) + hours;
+        row.totalHours += hours;
       });
     });
 
