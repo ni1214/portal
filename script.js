@@ -118,7 +118,7 @@ import {
   openCalendarModal, closeCalendarModal,
   calPrevMonth, calNextMonth, calGoToday,
   closeDayPanel, saveDayAttendance, deleteAttendance,
-  switchCalTab, renderCalendar
+  switchCalTab, renderCalendar, updateCalendarSummary
 } from './modules/calendar.js';
 
 import {
@@ -130,6 +130,15 @@ import {
   getDateInfo,
   initCompanyCalSettingsForms
 } from './modules/company-calendar.js';
+
+import {
+  initAttendanceWork,
+  bindAttendanceWorkEvents,
+  switchCalPersonalTab,
+  onCalendarModalOpen,
+  onCalendarModalClose,
+  onCalendarMonthChanged
+} from './modules/attendance-work.js';
 
 import { initBottomNav } from './modules/bottom-nav.js';
 
@@ -210,6 +219,13 @@ initCalendar({
   unsubscribeCompanyCalConfig,
   getDateInfo,
 });
+
+initAttendanceWork({
+  renderCalendar,
+  updateCalendarSummary,
+});
+
+bindAttendanceWorkEvents();
 
 
 // ========== 個人TODO ==========
@@ -2714,11 +2730,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ===== カレンダー =====
-  document.getElementById('btn-calendar').addEventListener('click', openCalendarModal);
-  document.getElementById('cal-close-btn').addEventListener('click', closeCalendarModal);
-  document.getElementById('cal-prev-btn').addEventListener('click', calPrevMonth);
-  document.getElementById('cal-next-btn').addEventListener('click', calNextMonth);
-  document.getElementById('cal-today-btn').addEventListener('click', calGoToday);
+  document.getElementById('btn-calendar').addEventListener('click', async () => {
+    await openCalendarModal();
+    if (document.getElementById('cal-modal')?.classList.contains('visible')) {
+      await onCalendarModalOpen();
+    }
+  });
+  document.getElementById('cal-close-btn').addEventListener('click', () => {
+    closeCalendarModal();
+    onCalendarModalClose();
+  });
+  document.getElementById('cal-prev-btn').addEventListener('click', async () => {
+    calPrevMonth();
+    await onCalendarMonthChanged();
+  });
+  document.getElementById('cal-next-btn').addEventListener('click', async () => {
+    calNextMonth();
+    await onCalendarMonthChanged();
+  });
+  document.getElementById('cal-today-btn').addEventListener('click', async () => {
+    calGoToday();
+    await onCalendarMonthChanged();
+  });
   document.getElementById('cal-day-cancel-btn').addEventListener('click', closeDayPanel);
   document.getElementById('cal-day-save-btn').addEventListener('click', saveDayAttendance);
   document.getElementById('cal-day-delete-btn').addEventListener('click', () => {
@@ -2726,7 +2759,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (calendarSelectedDate) deleteAttendance(calendarSelectedDate);
   });
   // タブ切替
-  document.getElementById('cal-tab-personal').addEventListener('click', () => switchCalTab('personal'));
+  document.getElementById('cal-tab-personal').addEventListener('click', async () => {
+    switchCalTab('personal');
+    await switchCalPersonalTab(state.calPersonalTab || 'calendar');
+  });
   document.getElementById('cal-tab-shared').addEventListener('click',   () => switchCalTab('shared'));
   // 管理者設定ボタン（共有カレンダータブ内 — イベントデリゲーション）
   document.getElementById('cal-modal').addEventListener('click', e => {
@@ -2734,7 +2770,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   // モーダル外クリックで閉じる
   document.getElementById('cal-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeCalendarModal();
+    if (e.target === e.currentTarget) {
+      closeCalendarModal();
+      onCalendarModalClose();
+    }
   });
   // 会社カレンダー設定フォーム初期化（1回限り）
   initCompanyCalSettingsForms();

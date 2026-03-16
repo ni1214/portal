@@ -167,7 +167,7 @@ export const state = {
   // カレンダー・勤怠管理
   calendarYear:    new Date().getFullYear(),
   calendarMonth:   new Date().getMonth(),   // 0-indexed
-  attendanceData:  {},   // { 'YYYY-MM-DD': { type, hayade, zangyo, note } }
+  attendanceData:  {},   // { 'YYYY-MM-DD': { type, hayade, zangyo, note, workSiteHours } }
   _attendanceSub:  null,
   calendarSelectedDate: null,
 
@@ -179,10 +179,19 @@ export const state = {
 
   // カレンダーUIタブ
   calTab: 'personal',              // 'personal' | 'shared'
+  calPersonalTab: 'calendar',      // 'calendar' | 'work' | 'summary' | 'sites'
 
   // 集計用
   prevMonthAttendance: {},         // { 'YYYY-MM-DD': {...} } 前月データ（締め計算用）
   fiscalYearPaidLeave: 0,          // 年度累計有給消化日数（カレンダーモーダルを開いたとき更新）
+
+  // 勤務内容表
+  attendanceSites: [],             // [{ id, code, name, unitPrice, active, sortOrder, ... }]
+  _attendanceSitesSub: null,       // onSnapshot unsubscriber for attendance_sites
+  workPeriodAttendance: {},        // { 'YYYY-MM-DD': attendanceDocData }
+  workSummaryRows: [],             // 集計表表示用キャッシュ
+  workSummaryUsers: [],            // 集計表ユーザー列
+  workSummaryPeriodLabel: '',      // 集計対象期間ラベル
 
   // 管理者認証
   isAdmin: false,   // 管理者PIN認証済みフラグ

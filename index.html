@@ -955,6 +955,16 @@
         </div>
 
         <div class="guide-section">
+          <h4 class="guide-section-title"><span class="guide-icon">🗓️</span> カレンダー・勤務内容表</h4>
+          <ul class="guide-list">
+            <li>「カレンダー・勤怠」モーダルの個人タブ内に、<strong>勤怠カレンダー / 勤務内容表 / 勤務内容集計表 / 登録現場</strong>の4つのサブタブがあります。</li>
+            <li><strong>勤務内容表</strong>は21日締め（前月21日〜当月20日）で、日ごとの現場工数を0.5時間刻みで入力できます。</li>
+            <li><strong>勤務内容集計表</strong>では全ユーザーの入力結果を現場別・人別に集計し、登録単価から金額も表示します。</li>
+            <li><strong>登録現場</strong>タブで現場コード・現場名・単価を追加/編集/削除できます（Firestoreに保存）。</li>
+          </ul>
+        </div>
+
+        <div class="guide-section">
           <h4 class="guide-section-title"><span class="guide-icon">☀️</span> 天気・太陽光発電パネル</h4>
           <ul class="guide-list">
             <li>外部ツールの<strong>「太陽光発電」アイコン</strong>をクリックするとパネルが展開されます。</li>
@@ -1432,82 +1442,137 @@
       <!-- 個人カレンダーコンテナ -->
       <div id="cal-personal-container">
 
-      <!-- 月間サマリー（個人タブのみ表示） -->
-      <div class="cal-summary">
-        <span class="cal-summary-item cal-summary-yukyu"><i class="fa-solid fa-umbrella-beach"></i> 有給 <b id="cal-cnt-yukyu">0</b>日</span>
-        <span class="cal-summary-item cal-summary-hankyu"><i class="fa-solid fa-clock-rotate-left"></i> 半休 <b id="cal-cnt-hankyu">0</b>日</span>
-        <span class="cal-summary-item cal-summary-hayade"><i class="fa-solid fa-sunrise"></i> 早出 <b id="cal-cnt-hayade">0h</b></span>
-        <span class="cal-summary-item cal-summary-zangyo"><i class="fa-solid fa-moon"></i> 残業 <b id="cal-cnt-zangyo">0h</b></span>
-        <span class="cal-summary-item cal-summary-fiscal"><i class="fa-solid fa-calendar-check"></i> 年度有給 <b id="cal-cnt-fiscal-paid">0日</b></span>
+      <div class="calw-subtab-bar">
+        <button class="calw-subtab-btn active" id="calw-tab-calendar" data-tab="calendar"><i class="fa-regular fa-calendar"></i> 勤怠カレンダー</button>
+        <button class="calw-subtab-btn" id="calw-tab-work" data-tab="work"><i class="fa-solid fa-table-cells-large"></i> 勤務内容表</button>
+        <button class="calw-subtab-btn" id="calw-tab-summary" data-tab="summary"><i class="fa-solid fa-chart-column"></i> 勤務内容集計表</button>
+        <button class="calw-subtab-btn" id="calw-tab-sites" data-tab="sites"><i class="fa-solid fa-industry"></i> 登録現場</button>
       </div>
 
-      <!-- カレンダーグリッド -->
-      <div id="cal-grid-container" class="cal-grid-container"></div>
-
-      <!-- 日付詳細パネル -->
-      <div id="cal-day-panel" class="cal-day-panel" hidden>
-        <div class="cal-day-panel-header">
-          <div class="cal-day-title" id="cal-day-title">3月13日（木）</div>
+      <div id="calw-view-calendar" class="calw-view">
+        <!-- 月間サマリー（個人タブのみ表示） -->
+        <div class="cal-summary">
+          <span class="cal-summary-item cal-summary-yukyu"><i class="fa-solid fa-umbrella-beach"></i> 有給 <b id="cal-cnt-yukyu">0</b>日</span>
+          <span class="cal-summary-item cal-summary-hankyu"><i class="fa-solid fa-clock-rotate-left"></i> 半休 <b id="cal-cnt-hankyu">0</b>日</span>
+          <span class="cal-summary-item cal-summary-hayade"><i class="fa-solid fa-sunrise"></i> 早出 <b id="cal-cnt-hayade">0h</b></span>
+          <span class="cal-summary-item cal-summary-zangyo"><i class="fa-solid fa-moon"></i> 残業 <b id="cal-cnt-zangyo">0h</b></span>
+          <span class="cal-summary-item cal-summary-fiscal"><i class="fa-solid fa-calendar-check"></i> 年度有給 <b id="cal-cnt-fiscal-paid">0日</b></span>
         </div>
 
-        <!-- 勤務区分 -->
-        <div class="form-group">
-          <label class="form-label">勤務区分</label>
-          <div class="cal-type-btns" id="cal-type-btns"></div>
-        </div>
+        <!-- カレンダーグリッド -->
+        <div id="cal-grid-container" class="cal-grid-container"></div>
 
-        <!-- 早出・残業（横並び） -->
-        <div class="cal-time-row">
-          <div class="form-group" style="flex:1">
-            <label class="form-label"><i class="fa-solid fa-sun" style="color:#f59e0b"></i> 早出時間</label>
-            <select id="cal-hayade-time" class="form-input cal-hours-select">
-              <option value="">なし</option>
-              <option value="0.5">0.5時間（30分）</option>
-              <option value="1">1時間</option>
-              <option value="1.5">1.5時間</option>
-              <option value="2">2時間</option>
-              <option value="2.5">2.5時間</option>
-              <option value="3">3時間</option>
-              <option value="3.5">3.5時間</option>
-              <option value="4">4時間</option>
-              <option value="4.5">4.5時間</option>
-              <option value="5">5時間</option>
-            </select>
+        <!-- 日付詳細パネル -->
+        <div id="cal-day-panel" class="cal-day-panel" hidden>
+          <div class="cal-day-panel-header">
+            <div class="cal-day-title" id="cal-day-title">3月13日（木）</div>
           </div>
-          <div class="form-group" style="flex:1">
-            <label class="form-label"><i class="fa-solid fa-moon" style="color:#818cf8"></i> 残業時間</label>
-            <select id="cal-zangyo-time" class="form-input cal-hours-select">
-              <option value="">なし</option>
-              <option value="0.5">0.5時間（30分）</option>
-              <option value="1">1時間</option>
-              <option value="1.5">1.5時間</option>
-              <option value="2">2時間</option>
-              <option value="2.5">2.5時間</option>
-              <option value="3">3時間</option>
-              <option value="3.5">3.5時間</option>
-              <option value="4">4時間</option>
-              <option value="4.5">4.5時間</option>
-              <option value="5">5時間</option>
-            </select>
+
+          <!-- 勤務区分 -->
+          <div class="form-group">
+            <label class="form-label">勤務区分</label>
+            <div class="cal-type-btns" id="cal-type-btns"></div>
+          </div>
+
+          <!-- 早出・残業（横並び） -->
+          <div class="cal-time-row">
+            <div class="form-group" style="flex:1">
+              <label class="form-label"><i class="fa-solid fa-sun" style="color:#f59e0b"></i> 早出時間</label>
+              <select id="cal-hayade-time" class="form-input cal-hours-select">
+                <option value="">なし</option>
+                <option value="0.5">0.5時間（30分）</option>
+                <option value="1">1時間</option>
+                <option value="1.5">1.5時間</option>
+                <option value="2">2時間</option>
+                <option value="2.5">2.5時間</option>
+                <option value="3">3時間</option>
+                <option value="3.5">3.5時間</option>
+                <option value="4">4時間</option>
+                <option value="4.5">4.5時間</option>
+                <option value="5">5時間</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex:1">
+              <label class="form-label"><i class="fa-solid fa-moon" style="color:#818cf8"></i> 残業時間</label>
+              <select id="cal-zangyo-time" class="form-input cal-hours-select">
+                <option value="">なし</option>
+                <option value="0.5">0.5時間（30分）</option>
+                <option value="1">1時間</option>
+                <option value="1.5">1.5時間</option>
+                <option value="2">2時間</option>
+                <option value="2.5">2.5時間</option>
+                <option value="3">3時間</option>
+                <option value="3.5">3.5時間</option>
+                <option value="4">4時間</option>
+                <option value="4.5">4.5時間</option>
+                <option value="5">5時間</option>
+              </select>
+            </div>
+          </div>
+          <!-- 合計表示 -->
+          <div id="cal-time-total" class="cal-time-total" hidden></div>
+
+          <!-- メモ -->
+          <div class="form-group">
+            <label class="form-label">メモ（任意）</label>
+            <input type="text" id="cal-note" class="form-input" placeholder="例：代休申請済み" maxlength="50">
+          </div>
+
+          <!-- この日のタスク -->
+          <div id="cal-day-tasks" class="cal-day-tasks" hidden></div>
+
+          <!-- アクション -->
+          <div class="modal-actions">
+            <button class="btn-modal-secondary" id="cal-day-cancel-btn">キャンセル</button>
+            <button class="btn-modal-danger" id="cal-day-delete-btn" hidden>削除</button>
+            <button class="btn-modal-primary" id="cal-day-save-btn">保存</button>
           </div>
         </div>
-        <!-- 合計表示 -->
-        <div id="cal-time-total" class="cal-time-total" hidden></div>
+      </div>
 
-        <!-- メモ -->
-        <div class="form-group">
-          <label class="form-label">メモ（任意）</label>
-          <input type="text" id="cal-note" class="form-input" placeholder="例：代休申請済み" maxlength="50">
+      <div id="calw-view-work" class="calw-view" style="display:none">
+        <div class="calw-view-header">
+          <div class="calw-view-title"><i class="fa-solid fa-table-cells-large"></i> 勤務内容表</div>
+          <div class="calw-view-period" id="calw-work-period-label">-</div>
         </div>
+        <div id="calw-work-table-container" class="calw-work-table-container"></div>
+      </div>
 
-        <!-- この日のタスク -->
-        <div id="cal-day-tasks" class="cal-day-tasks" hidden></div>
+      <div id="calw-view-summary" class="calw-view" style="display:none">
+        <div class="calw-view-header">
+          <div class="calw-view-title"><i class="fa-solid fa-chart-column"></i> 勤務内容集計表</div>
+          <div class="calw-view-header-right">
+            <div class="calw-view-period" id="calw-summary-period-label">-</div>
+            <button class="btn-modal-secondary calw-refresh-btn" id="calw-summary-refresh-btn"><i class="fa-solid fa-rotate"></i> 再集計</button>
+          </div>
+        </div>
+        <div class="calw-summary-total" id="calw-summary-total-amount">月額合計: 0円</div>
+        <div id="calw-summary-table-container" class="calw-summary-table-container"></div>
+      </div>
 
-        <!-- アクション -->
-        <div class="modal-actions">
-          <button class="btn-modal-secondary" id="cal-day-cancel-btn">キャンセル</button>
-          <button class="btn-modal-danger" id="cal-day-delete-btn" hidden>削除</button>
-          <button class="btn-modal-primary" id="cal-day-save-btn">保存</button>
+      <div id="calw-view-sites" class="calw-view" style="display:none">
+        <div class="calw-view-header">
+          <div class="calw-view-title"><i class="fa-solid fa-industry"></i> 登録現場</div>
+        </div>
+        <div class="calw-site-form-row">
+          <input id="calw-site-code-input" class="form-input" type="text" maxlength="20" placeholder="現場コード（例: 61065）">
+          <input id="calw-site-name-input" class="form-input" type="text" maxlength="80" placeholder="現場名">
+          <input id="calw-site-unit-price-input" class="form-input" type="number" min="0" step="1" placeholder="単価（円/時間）">
+          <button class="btn-modal-primary" id="calw-site-add-btn"><i class="fa-solid fa-plus"></i> 追加</button>
+        </div>
+        <div class="calw-site-help">登録した現場は勤務内容表の列と勤務内容集計表の行に反映されます。</div>
+        <div class="calw-site-table-wrap">
+          <table class="calw-site-table">
+            <thead>
+              <tr>
+                <th>コード</th>
+                <th>現場名</th>
+                <th>単価（円/h）</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="calw-site-table-body"></tbody>
+          </table>
         </div>
       </div>
 

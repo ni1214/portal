@@ -31,7 +31,7 @@ export async function saveAttendance(dateStr, data) {
       ...data,
       yearMonth,
       updatedAt: serverTimestamp(),
-    });
+    }, { merge: true });
     // 公開出席への同期
     if (data.type && data.type !== 'normal' && data.type !== null) {
       await deps.writePublicAttendance?.(dateStr, state.currentUsername, data.type);
