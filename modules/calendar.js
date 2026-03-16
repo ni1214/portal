@@ -755,30 +755,41 @@ function renderDayWorkInputs(dateStr, workSiteHours, preservedRows = null) {
         return filteredSites;
       };
 
+      const syncSelectFromSearch = (normalizeSearch = false) => {
+        const queryText = searchInput?.value || '';
+        const selectedSiteId = select?.value || current.siteId || '';
+        const filteredSites = applySelectOptions(queryText, selectedSiteId);
+        const autoSite = findAutoSelectSite(queryText, filteredSites);
+        if (select && autoSite) {
+          select.value = autoSite.id;
+          if (normalizeSearch && searchInput) {
+            searchInput.value = formatSiteLabel(autoSite);
+          }
+          return { filteredSites, autoSite };
+        }
+        if (select && queryText.trim() && selectedSiteId) {
+          const selectedSite = siteMap.get(selectedSiteId);
+          if (!matchesSiteQuery(selectedSite, queryText)) {
+            select.value = '';
+          }
+        }
+        return { filteredSites, autoSite: null };
+      };
+
       if (searchInput && current.search == null && current.siteId) {
         searchInput.value = formatSiteLabel(siteMap.get(current.siteId));
       }
-      applySelectOptions(searchInput?.value || '', current.siteId);
+      syncSelectFromSearch();
 
       searchInput?.addEventListener('input', () => {
-        const filteredSites = applySelectOptions(searchInput.value, select?.value || '');
-        const autoSite = findAutoSelectSite(searchInput.value, filteredSites);
-        if (select && autoSite) {
-          select.value = autoSite.id;
-        } else if (select && searchInput.value.trim() && select.value) {
-          const selectedSite = siteMap.get(select.value);
-          if (!matchesSiteQuery(selectedSite, searchInput.value)) select.value = '';
-        }
+        syncSelectFromSearch();
       });
 
       searchInput?.addEventListener('keydown', e => {
         if (e.key !== 'Enter') return;
         e.preventDefault();
-        const filteredSites = applySelectOptions(searchInput.value, select?.value || '');
-        const autoSite = findAutoSelectSite(searchInput.value, filteredSites);
+        const { autoSite } = syncSelectFromSearch(true);
         if (select && autoSite) {
-          select.value = autoSite.id;
-          searchInput.value = formatSiteLabel(autoSite);
           rowEl.querySelector('.cal-day-work-hours')?.focus();
           return;
         }
