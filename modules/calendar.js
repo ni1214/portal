@@ -14,8 +14,16 @@ const TYPE_LABELS = {
   '欠勤':    { text: '欠勤',   cls: 'cal-type-kekkin'   },
 };
 const TYPE_KEYS = ['normal', '有給', '半休午前', '半休午後', '欠勤'];
+const RECENT_WORK_SITE_LIMIT = 8;
+const RECENT_WORK_SITE_MONTH_SPAN = 4;
 
 let deps = {};
+let recentWorkSiteCache = {
+  username: '',
+  loaded: false,
+  items: [],
+  promise: null,
+};
 export function initCalendar(d) { deps = d; }
 
 // ===== Firestore helpers =====
@@ -45,7 +53,12 @@ export async function saveAttendance(dateStr, data) {
     } else {
       await deps.removePublicAttendance?.(dateStr, state.currentUsername);
     }
-  } catch (err) { console.error('勤怠保存エラー:', err); alert('保存に失敗しました'); }
+    return true;
+  } catch (err) {
+    console.error('勤怠保存エラー:', err);
+    alert('保存に失敗しました');
+    return false;
+  }
 }
 
 export async function deleteAttendance(dateStr) {
@@ -364,6 +377,7 @@ export async function openCalendarModal() {
   subscribeAttendance(state.currentUsername);
   deps.subscribeCompanyCalConfig?.();
   renderCalendar();
+  void loadRecentWorkSites(true);
   // 年度累計を非同期で取得（UIをブロックしない）
   fetchFiscalYearPaidLeave();
 }
@@ -442,14 +456,186 @@ function getSortedActiveSites() {
     });
 }
 
+function getSiteById(siteId) {
+  return (state.attendanceSites || []).find(site => site.id === siteId) || null;
+}
+
+function formatSiteLabel(site) {
+  if (!site) return '';
+  return [site.code || '', site.name || ''].filter(Boolean).join(' ');
+}
+
+function normalizeSiteSearchText(raw) {
+  if (raw === null || raw === undefined) return '';
+  return String(raw)
+    .replace(/[０-９]/g, ch => String(ch.charCodeAt(0) - 0xFF10))
+    .replace(/\s+/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function matchesSiteQuery(site, queryText) {
+  const token = normalizeSiteSearchText(queryText);
+  if (!token) return true;
+  const code = normalizeSiteSearchText(site?.code || '');
+  const name = normalizeSiteSearchText(site?.name || '');
+  return code.includes(token) || name.includes(token) || `${code}${name}`.includes(token);
+}
+
+function getRecentWorkSiteYearMonthRange() {
+  const end = new Date();
+  const start = new Date(end.getFullYear(), end.getMonth() - (RECENT_WORK_SITE_MONTH_SPAN - 1), 1);
+  return {
+    startYm: buildYearMonth(start.getFullYear(), start.getMonth()),
+    endYm: buildYearMonth(end.getFullYear(), end.getMonth()),
+  };
+}
+
+function sortRecentWorkSiteItems(items) {
+  return [...items].sort((a, b) => {
+    if (a.lastDate !== b.lastDate) return b.lastDate.localeCompare(a.lastDate);
+    if ((a.usedCount || 0) !== (b.usedCount || 0)) return (b.usedCount || 0) - (a.usedCount || 0);
+    return (b.totalHours || 0) - (a.totalHours || 0);
+  });
+}
+
+function setRecentWorkSiteCache(items, username = state.currentUsername || '') {
+  recentWorkSiteCache = {
+    username,
+    loaded: true,
+    items: sortRecentWorkSiteItems(items).slice(0, RECENT_WORK_SITE_LIMIT),
+    promise: null,
+  };
+}
+
+function getRecentWorkSiteEntries() {
+  const siteMap = new Map(getSortedActiveSites().map(site => [site.id, site]));
+  return (recentWorkSiteCache.items || [])
+    .map(item => {
+      const site = siteMap.get(item.siteId);
+      if (!site) return null;
+      return { ...item, site, label: formatSiteLabel(site) };
+    })
+    .filter(Boolean)
+    .slice(0, RECENT_WORK_SITE_LIMIT);
+}
+
+async function loadRecentWorkSites(force = false) {
+  const username = state.currentUsername || '';
+  if (!username) {
+    setRecentWorkSiteCache([], '');
+    return [];
+  }
+
+  if (!force && recentWorkSiteCache.loaded && recentWorkSiteCache.username === username) {
+    return recentWorkSiteCache.items;
+  }
+  if (!force && recentWorkSiteCache.promise && recentWorkSiteCache.username === username) {
+    return recentWorkSiteCache.promise;
+  }
+
+  recentWorkSiteCache.username = username;
+  recentWorkSiteCache.promise = (async () => {
+    try {
+      const { startYm, endYm } = getRecentWorkSiteYearMonthRange();
+      const snap = await getDocs(query(
+        collection(db, 'users', username, 'attendance'),
+        where('yearMonth', '>=', startYm),
+        where('yearMonth', '<=', endYm)
+      ));
+      const activeSiteIds = new Set(getSortedActiveSites().map(site => site.id));
+      const usageMap = new Map();
+
+      snap.docs
+        .map(d => ({ dateStr: d.id, data: d.data() }))
+        .sort((a, b) => b.dateStr.localeCompare(a.dateStr))
+        .forEach(({ dateStr, data }) => {
+          const workMap = sanitizeWorkSiteHours(data.workSiteHours);
+          Object.entries(workMap).forEach(([siteId, hours]) => {
+            if (!activeSiteIds.has(siteId)) return;
+            const prev = usageMap.get(siteId) || {
+              siteId,
+              lastDate: dateStr,
+              usedCount: 0,
+              totalHours: 0,
+            };
+            if (dateStr > prev.lastDate) prev.lastDate = dateStr;
+            prev.usedCount += 1;
+            prev.totalHours += Number(hours) || 0;
+            usageMap.set(siteId, prev);
+          });
+        });
+
+      setRecentWorkSiteCache([...usageMap.values()], username);
+      return recentWorkSiteCache.items;
+    } catch (err) {
+      console.warn('最近使った現場の取得エラー:', err);
+      setRecentWorkSiteCache([], username);
+      return [];
+    } finally {
+      recentWorkSiteCache.promise = null;
+      if (state.calendarSelectedDate && !document.getElementById('cal-day-panel')?.hidden) {
+        renderDayWorkInputs(state.calendarSelectedDate, null, getDayWorkRowsFromDom());
+      }
+    }
+  })();
+
+  return recentWorkSiteCache.promise;
+}
+
+function updateRecentWorkSiteCacheFromMap(workSiteHours, dateStr) {
+  const siteIds = Object.keys(workSiteHours || {}).filter(Boolean);
+  if (siteIds.length === 0) return;
+
+  const existing = recentWorkSiteCache.username === (state.currentUsername || '')
+    ? [...(recentWorkSiteCache.items || [])]
+    : [];
+  const byId = new Map(existing.map(item => [item.siteId, item]));
+
+  siteIds.forEach(siteId => {
+    const prev = byId.get(siteId) || { siteId, usedCount: 0, totalHours: 0 };
+    byId.set(siteId, {
+      siteId,
+      lastDate: dateStr,
+      usedCount: (prev.usedCount || 0) + 1,
+      totalHours: (prev.totalHours || 0) + (Number(workSiteHours[siteId]) || 0),
+    });
+  });
+
+  setRecentWorkSiteCache([...byId.values()], state.currentUsername || '');
+}
+
 function getDayWorkRowsFromDom() {
   const container = document.getElementById('cal-day-worksites');
   if (!container) return [];
   return [...container.querySelectorAll('.cal-day-work-row')].map(row => {
     const siteId = row.querySelector('.cal-day-work-site')?.value || '';
     const hoursRaw = row.querySelector('.cal-day-work-hours')?.value || '';
-    return { siteId, hours: hoursRaw };
+    const search = row.querySelector('.cal-day-work-search')?.value || '';
+    return { siteId, hours: hoursRaw, search };
   });
+}
+
+function getPreferredWorkRowIndex(rows) {
+  const activeRow = document.activeElement?.closest?.('.cal-day-work-row');
+  if (activeRow) {
+    const activeIndex = Number(activeRow.dataset.index || -1);
+    if (activeIndex >= 0 && activeIndex < rows.length) return activeIndex;
+  }
+  const emptyIndex = rows.findIndex(row => !row.siteId);
+  return emptyIndex >= 0 ? emptyIndex : rows.length;
+}
+
+function buildInitialDayWorkRows(workSiteHours) {
+  const srcMap = sanitizeWorkSiteHours(workSiteHours);
+  if (Object.keys(srcMap).length === 0) {
+    return [{ siteId: '', hours: '', search: '' }];
+  }
+  return Object.entries(srcMap).map(([siteId, hours]) => ({
+    siteId,
+    hours: String(hours),
+    search: formatSiteLabel(getSiteById(siteId)),
+  }));
 }
 
 function buildWorkSiteMapFromDom() {
@@ -463,12 +649,13 @@ function buildWorkSiteMapFromDom() {
   return map;
 }
 
-function renderDayWorkInputs(dateStr, workSiteHours) {
+function renderDayWorkInputs(dateStr, workSiteHours, preservedRows = null) {
   const container = document.getElementById('cal-day-worksites');
   const addBtn = document.getElementById('cal-day-work-add-btn');
   if (!container || !addBtn) return;
 
   const sites = getSortedActiveSites();
+  const siteMap = new Map(sites.map(site => [site.id, site]));
   if (sites.length === 0) {
     container.innerHTML = '<div class="cal-day-work-empty">登録現場がありません。先に「登録現場」タブで追加してください。</div>';
     addBtn.disabled = true;
@@ -477,22 +664,71 @@ function renderDayWorkInputs(dateStr, workSiteHours) {
   }
 
   addBtn.disabled = false;
-  const srcMap = sanitizeWorkSiteHours(workSiteHours);
-  const initialRows = Object.keys(srcMap).length > 0
-    ? Object.entries(srcMap).map(([siteId, hours]) => ({ siteId, hours: String(hours) }))
-    : [{ siteId: '', hours: '' }];
+  const initialRows = (Array.isArray(preservedRows) && preservedRows.length > 0
+    ? preservedRows
+    : buildInitialDayWorkRows(workSiteHours)
+  ).map(row => ({
+    siteId: row.siteId || '',
+    hours: row.hours || '',
+    search: typeof row.search === 'string'
+      ? row.search
+      : formatSiteLabel(siteMap.get(row.siteId || '')),
+  }));
 
   const renderRows = (rows) => {
-    const options = sites.map(site => (
-      `<option value="${site.id}">${esc(site.code || '-')} ${esc(site.name || '')}</option>`
-    )).join('');
+    const buildOptionsHtml = (filteredSites) => [
+      '<option value="">現場を選択</option>',
+      ...filteredSites.map(site => `<option value="${site.id}">${esc(formatSiteLabel(site))}</option>`)
+    ].join('');
 
-    container.innerHTML = rows.map((row, idx) => `
+    const getFilteredSites = (queryText, selectedSiteId = '') => {
+      const filtered = sites.filter(site => matchesSiteQuery(site, queryText));
+      if (selectedSiteId && !filtered.some(site => site.id === selectedSiteId)) {
+        const selectedSite = siteMap.get(selectedSiteId);
+        if (selectedSite) filtered.unshift(selectedSite);
+      }
+      return filtered;
+    };
+
+    const findAutoSelectSite = (queryText, filteredSites) => {
+      const token = normalizeSiteSearchText(queryText);
+      if (!token) return null;
+      const exactCodeMatches = sites.filter(site => normalizeSiteSearchText(site.code || '') === token);
+      if (exactCodeMatches.length === 1) return exactCodeMatches[0];
+      return filteredSites.length === 1 ? filteredSites[0] : null;
+    };
+
+    const recentSites = getRecentWorkSiteEntries();
+    const recentHtml = recentSites.length > 0
+      ? `
+          <div class="cal-day-work-recent">
+            <div class="cal-day-work-recent-title"><i class="fa-solid fa-clock-rotate-left"></i> 最近やった現場</div>
+            <div class="cal-day-work-recent-list">
+              ${recentSites.map(item => `
+                <button type="button" class="cal-day-work-recent-btn" data-site-id="${item.site.id}">
+                  <span class="cal-day-work-recent-code">${esc(item.site.code || '-')}</span>
+                  <span class="cal-day-work-recent-name">${esc(item.site.name || '')}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>`
+      : (recentWorkSiteCache.promise
+        ? '<div class="cal-day-work-recent-loading">最近使った現場を読み込み中...</div>'
+        : '');
+
+    container.innerHTML = recentHtml + rows.map((row, idx) => `
       <div class="cal-day-work-row" data-index="${idx}">
-        <select class="form-input cal-day-work-site">
-          <option value="">現場を選択</option>
-          ${options}
-        </select>
+        <div class="cal-day-work-site-group">
+          <input
+            type="search"
+            class="form-input cal-day-work-search"
+            placeholder="番号/現場名で検索"
+            value="${esc(row.search || '')}"
+          >
+          <select class="form-input cal-day-work-site">
+            ${buildOptionsHtml(getFilteredSites(row.search || '', row.siteId || ''))}
+          </select>
+        </div>
         <input
           type="number"
           class="form-input cal-day-work-hours"
@@ -506,8 +742,75 @@ function renderDayWorkInputs(dateStr, workSiteHours) {
       </div>
     `).join('');
 
-    [...container.querySelectorAll('.cal-day-work-site')].forEach((select, idx) => {
-      select.value = rows[idx]?.siteId || '';
+    [...container.querySelectorAll('.cal-day-work-row')].forEach((rowEl, idx) => {
+      const searchInput = rowEl.querySelector('.cal-day-work-search');
+      const select = rowEl.querySelector('.cal-day-work-site');
+      const current = rows[idx] || { siteId: '', search: '' };
+
+      const applySelectOptions = (queryText, selectedSiteId = '') => {
+        if (!select) return [];
+        const filteredSites = getFilteredSites(queryText, selectedSiteId);
+        select.innerHTML = buildOptionsHtml(filteredSites);
+        if (selectedSiteId) select.value = selectedSiteId;
+        return filteredSites;
+      };
+
+      if (searchInput && current.search == null && current.siteId) {
+        searchInput.value = formatSiteLabel(siteMap.get(current.siteId));
+      }
+      applySelectOptions(searchInput?.value || '', current.siteId);
+
+      searchInput?.addEventListener('input', () => {
+        const filteredSites = applySelectOptions(searchInput.value, select?.value || '');
+        const autoSite = findAutoSelectSite(searchInput.value, filteredSites);
+        if (select && autoSite) {
+          select.value = autoSite.id;
+        } else if (select && searchInput.value.trim() && select.value) {
+          const selectedSite = siteMap.get(select.value);
+          if (!matchesSiteQuery(selectedSite, searchInput.value)) select.value = '';
+        }
+      });
+
+      searchInput?.addEventListener('keydown', e => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const filteredSites = applySelectOptions(searchInput.value, select?.value || '');
+        const autoSite = findAutoSelectSite(searchInput.value, filteredSites);
+        if (select && autoSite) {
+          select.value = autoSite.id;
+          searchInput.value = formatSiteLabel(autoSite);
+          rowEl.querySelector('.cal-day-work-hours')?.focus();
+          return;
+        }
+        select?.focus();
+      });
+
+      select?.addEventListener('change', () => {
+        const site = siteMap.get(select.value || '');
+        if (searchInput && site) searchInput.value = formatSiteLabel(site);
+      });
+    });
+
+    container.querySelectorAll('.cal-day-work-recent-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const siteId = btn.dataset.siteId || '';
+        const next = getDayWorkRowsFromDom();
+        let targetIndex = getPreferredWorkRowIndex(next);
+        if (targetIndex >= next.length) next.push({ siteId: '', hours: '', search: '' });
+        next[targetIndex] = {
+          ...next[targetIndex],
+          siteId,
+          search: formatSiteLabel(siteMap.get(siteId)),
+        };
+        renderRows(next);
+        const targetRow = container.querySelector(`.cal-day-work-row[data-index="${targetIndex}"]`);
+        const hoursInput = targetRow?.querySelector('.cal-day-work-hours');
+        if (hoursInput && !next[targetIndex].hours) {
+          hoursInput.focus();
+        } else {
+          targetRow?.querySelector('.cal-day-work-site')?.focus();
+        }
+      });
     });
 
     container.querySelectorAll('.cal-day-work-del-btn').forEach(btn => {
@@ -515,7 +818,7 @@ function renderDayWorkInputs(dateStr, workSiteHours) {
         const index = Number(btn.dataset.index || -1);
         const next = getDayWorkRowsFromDom();
         if (index >= 0) next.splice(index, 1);
-        if (next.length === 0) next.push({ siteId: '', hours: '' });
+        if (next.length === 0) next.push({ siteId: '', hours: '', search: '' });
         renderRows(next);
       };
     });
@@ -523,7 +826,7 @@ function renderDayWorkInputs(dateStr, workSiteHours) {
 
   addBtn.onclick = () => {
     const next = getDayWorkRowsFromDom();
-    next.push({ siteId: '', hours: '' });
+    next.push({ siteId: '', hours: '', search: '' });
     renderRows(next);
   };
 
@@ -660,7 +963,8 @@ export async function saveDayAttendance() {
   const btn = document.getElementById('cal-day-save-btn');
   if (btn) { btn.disabled = true; btn.textContent = '保存中…'; }
 
-  await saveAttendance(dateStr, {
+  const saved =
+    await saveAttendance(dateStr, {
     type:   type === 'normal' ? null : type,
     hayade: hayade || null,
     zangyo: zangyo || null,
@@ -669,6 +973,8 @@ export async function saveDayAttendance() {
   });
 
   if (btn) { btn.disabled = false; btn.textContent = '保存'; }
+  if (!saved) return;
+  updateRecentWorkSiteCacheFromMap(workSiteHours, dateStr);
   closeDayPanel();
 }
 

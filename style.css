@@ -8091,8 +8091,72 @@ html.font-xl { font-size: 21px; }
   gap: 8px;
   align-items: center;
 }
+.cal-day-work-site-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.cal-day-work-search {
+  font-size: 0.82rem;
+}
 .cal-day-work-hours {
   text-align: right;
+}
+.cal-day-work-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+}
+.cal-day-work-recent-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+.cal-day-work-recent-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cal-day-work-recent-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--border-glass);
+  border-radius: 999px;
+  background: var(--bg-glass);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.cal-day-work-recent-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-glass-hover);
+  transform: translateY(-1px);
+}
+.cal-day-work-recent-code {
+  color: var(--accent-blue);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.cal-day-work-recent-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cal-day-work-recent-loading {
+  color: var(--text-muted);
+  font-size: 0.76rem;
 }
 .cal-day-work-empty {
   border: 1px dashed var(--border-glass-hover);
