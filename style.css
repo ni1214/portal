@@ -8087,21 +8087,25 @@ html.font-xl { font-size: 21px; }
 }
 .cal-day-work-row {
   display: grid;
-  grid-template-columns: 1fr 120px auto;
+  grid-template-columns: minmax(150px, 0.95fr) minmax(180px, 1.25fr) 78px 84px;
   gap: 8px;
   align-items: center;
 }
-.cal-day-work-site-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
 .cal-day-work-search {
+  min-width: 0;
   font-size: 0.82rem;
 }
+.cal-day-work-site {
+  min-width: 0;
+}
 .cal-day-work-hours {
+  min-width: 0;
   text-align: right;
+}
+.cal-day-work-del-btn {
+  min-width: 0;
+  width: 100%;
+  white-space: nowrap;
 }
 .cal-day-work-recent {
   display: flex;
@@ -11668,10 +11672,16 @@ html.font-xl { font-size: 21px; }
     grid-template-columns: 1fr;
   }
   .cal-day-work-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 72px 78px;
   }
   .calw-subtab-btn {
     font-size: 0.74rem;
     padding: 4px 10px;
+  }
+}
+
+@media (max-width: 720px) {
+  .cal-day-work-row {
+    grid-template-columns: 1fr;
   }
 }

@@ -718,17 +718,15 @@ function renderDayWorkInputs(dateStr, workSiteHours, preservedRows = null) {
 
     container.innerHTML = recentHtml + rows.map((row, idx) => `
       <div class="cal-day-work-row" data-index="${idx}">
-        <div class="cal-day-work-site-group">
-          <input
-            type="search"
-            class="form-input cal-day-work-search"
-            placeholder="番号/現場名で検索"
-            value="${esc(row.search || '')}"
-          >
-          <select class="form-input cal-day-work-site">
-            ${buildOptionsHtml(getFilteredSites(row.search || '', row.siteId || ''))}
-          </select>
-        </div>
+        <input
+          type="search"
+          class="form-input cal-day-work-search"
+          placeholder="番号/現場名で検索"
+          value="${esc(row.search || '')}"
+        >
+        <select class="form-input cal-day-work-site">
+          ${buildOptionsHtml(getFilteredSites(row.search || '', row.siteId || ''))}
+        </select>
         <input
           type="number"
           class="form-input cal-day-work-hours"
