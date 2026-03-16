@@ -74,6 +74,38 @@ function getPeriodYearMonths(period) {
   return [...yms];
 }
 
+function formatDateWithDow(dateStr) {
+  const d = new Date(`${dateStr}T00:00:00`);
+  return `${pad2(d.getMonth() + 1)}/${pad2(d.getDate())}(${DOW_LABELS[d.getDay()]})`;
+}
+
+function splitDatesByWeek(dates) {
+  const weeks = [];
+  for (let i = 0; i < dates.length; i += 7) {
+    const weekDates = dates.slice(i, i + 7);
+    weeks.push({
+      index: weeks.length,
+      dates: weekDates,
+      startStr: weekDates[0],
+      endStr: weekDates[weekDates.length - 1],
+    });
+  }
+  return weeks;
+}
+
+function getTodayWeekIndex(weeks) {
+  if (!weeks.length) return 0;
+  const todayStr = toDateStr(new Date());
+  const idx = weeks.findIndex(w => todayStr >= w.startStr && todayStr <= w.endStr);
+  return idx >= 0 ? idx : 0;
+}
+
+function normalizeSiteSearchText(raw) {
+  return String(raw || '')
+    .replace(/\s+/g, '')
+    .toLowerCase();
+}
+
 function normalizeHours(raw) {
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0) return 0;
@@ -99,6 +131,18 @@ function sanitizeWorkSiteHours(src) {
     if (h > 0) out[siteId] = h;
   });
   return out;
+}
+
+function collectInvolvedSiteIds(dateList) {
+  const involved = new Set();
+  dateList.forEach(dateStr => {
+    const att = state.workPeriodAttendance?.[dateStr] || {};
+    const workMap = sanitizeWorkSiteHours(att.workSiteHours);
+    Object.entries(workMap).forEach(([siteId, hours]) => {
+      if (hours > 0) involved.add(siteId);
+    });
+  });
+  return involved;
 }
 
 function hasNonWorkSiteFields(docData) {
@@ -567,12 +611,90 @@ async function renderWorkTable() {
     return;
   }
 
-  const dates = getPeriodDates(period);
+  const allDates = getPeriodDates(period);
+  const weeks = splitDatesByWeek(allDates);
+  const periodKey = `${period.startStr}_${period.endStr}`;
+  if (state.workTablePeriodKey !== periodKey) {
+    state.workTablePeriodKey = periodKey;
+    state.workTableWeekIndex = getTodayWeekIndex(weeks);
+  }
+  if (typeof state.workTableSiteQuery !== 'string') state.workTableSiteQuery = '';
+  if (typeof state.workTableInvolvedOnly !== 'boolean') state.workTableInvolvedOnly = true;
+
+  const maxWeekIndex = Math.max(0, weeks.length - 1);
+  const weekIndex = Math.min(Math.max(Number(state.workTableWeekIndex) || 0, 0), maxWeekIndex);
+  state.workTableWeekIndex = weekIndex;
+
+  const currentWeek = weeks[weekIndex] || {
+    dates: allDates,
+    startStr: period.startStr,
+    endStr: period.endStr,
+  };
+  const dates = currentWeek.dates;
+  const weekLabel = `第${weekIndex + 1}週 ${formatDateWithDow(currentWeek.startStr)} 〜 ${formatDateWithDow(currentWeek.endStr)}`;
+
+  const involvedIds = collectInvolvedSiteIds(allDates);
+  const queryText = normalizeSiteSearchText(state.workTableSiteQuery);
+  const useInvolvedOnly = state.workTableInvolvedOnly && involvedIds.size > 0;
+
+  const filteredSites = sites.filter(site => {
+    if (useInvolvedOnly && !involvedIds.has(site.id)) return false;
+    if (!queryText) return true;
+    const siteText = normalizeSiteSearchText(`${site.code || ''}${site.name || ''}`);
+    return siteText.includes(queryText);
+  });
+
+  const filterMeta = [];
+  filterMeta.push(`表示 ${filteredSites.length}/${sites.length} 現場`);
+  if (useInvolvedOnly) filterMeta.push('関与現場のみ');
+  if (state.workTableInvolvedOnly && involvedIds.size === 0) {
+    filterMeta.push('入力実績がないため全現場表示');
+  }
+  const controlsHtml = `
+    <div class="calw-work-tools">
+      <div class="calw-work-filter-row">
+        <input
+          id="calw-work-site-search"
+          class="form-input calw-work-search-input"
+          type="text"
+          maxlength="60"
+          placeholder="現場コード / 現場名で検索"
+          value="${esc(state.workTableSiteQuery || '')}"
+        >
+        <button class="btn-modal-secondary calw-work-filter-btn" type="button" data-work-filter-action="search">
+          <i class="fa-solid fa-magnifying-glass"></i> 検索
+        </button>
+        <button class="btn-modal-secondary calw-work-filter-btn" type="button" data-work-filter-action="clear">
+          クリア
+        </button>
+        <label class="calw-work-involved-toggle">
+          <input type="checkbox" id="calw-work-involved-only" ${state.workTableInvolvedOnly ? 'checked' : ''}>
+          関わった現場のみ
+        </label>
+      </div>
+      <div class="calw-work-week-row">
+        <button class="btn-modal-secondary calw-week-nav-btn" type="button" data-work-week-move="-1" ${weekIndex <= 0 ? 'disabled' : ''}>
+          <i class="fa-solid fa-chevron-left"></i> 前週
+        </button>
+        <div class="calw-work-week-label">${esc(weekLabel)}</div>
+        <button class="btn-modal-secondary calw-week-nav-btn" type="button" data-work-week-move="1" ${weekIndex >= maxWeekIndex ? 'disabled' : ''}>
+          次週 <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+      <div class="calw-work-filter-meta">${esc(filterMeta.join(' / '))}</div>
+    </div>
+  `;
+
+  if (filteredSites.length === 0) {
+    container.innerHTML = `${controlsHtml}<div class="calw-empty">条件に一致する現場がありません。検索条件を調整してください。</div>`;
+    return;
+  }
+
   const siteTotals = {};
-  sites.forEach(s => { siteTotals[s.id] = 0; });
+  filteredSites.forEach(s => { siteTotals[s.id] = 0; });
   let grandTotal = 0;
 
-  const theadSiteCols = sites.map(site => `
+  const theadSiteCols = filteredSites.map(site => `
       <th class="calw-site-head" title="${esc(site.name || '')}">
         <span>${esc(site.code || '-') }</span>
         <small>${esc(site.name || '現場') }</small>
@@ -589,7 +711,7 @@ async function renderWorkTable() {
     const workMap = sanitizeWorkSiteHours(att.workSiteHours);
     let dayTotal = 0;
 
-    const siteInputs = sites.map(site => {
+    const siteInputs = filteredSites.map(site => {
       const h = Number(workMap[site.id]) || 0;
       if (h > 0) {
         dayTotal += h;
@@ -626,9 +748,10 @@ async function renderWorkTable() {
     </tr>`;
   }).join('');
 
-  const footerSiteTotals = sites.map(site => `<th>${fmtHours(siteTotals[site.id] || 0)}</th>`).join('');
+  const footerSiteTotals = filteredSites.map(site => `<th>${fmtHours(siteTotals[site.id] || 0)}</th>`).join('');
 
   container.innerHTML = `
+    ${controlsHtml}
     <div class="calw-work-table-wrap">
       <table class="calw-work-table">
         <thead>
@@ -1045,8 +1168,59 @@ export function bindAttendanceWorkEvents() {
     });
   });
 
-  document.getElementById('calw-work-table-container')?.addEventListener('change', e => {
-    const input = e.target.closest('.calw-hours-input');
+  const workTableContainer = document.getElementById('calw-work-table-container');
+  workTableContainer?.addEventListener('click', e => {
+    const target = e.target instanceof Element ? e.target : null;
+    if (!target) return;
+
+    const weekBtn = target.closest('button[data-work-week-move]');
+    if (weekBtn) {
+      const move = Number(weekBtn.dataset.workWeekMove || 0);
+      if (move !== 0) {
+        state.workTableWeekIndex = (Number(state.workTableWeekIndex) || 0) + move;
+        void renderWorkTable();
+      }
+      return;
+    }
+
+    const actionBtn = target.closest('button[data-work-filter-action]');
+    if (!actionBtn) return;
+    const action = actionBtn.dataset.workFilterAction;
+    const searchEl = document.getElementById('calw-work-site-search');
+    if (!(searchEl instanceof HTMLInputElement)) return;
+
+    if (action === 'search') {
+      state.workTableSiteQuery = searchEl.value.trim();
+      void renderWorkTable();
+      return;
+    }
+    if (action === 'clear') {
+      searchEl.value = '';
+      state.workTableSiteQuery = '';
+      void renderWorkTable();
+    }
+  });
+  workTableContainer?.addEventListener('keydown', e => {
+    const target = e.target instanceof Element ? e.target : null;
+    if (!target || e.key !== 'Enter') return;
+    const searchEl = target.closest('#calw-work-site-search');
+    if (!(searchEl instanceof HTMLInputElement)) return;
+    e.preventDefault();
+    state.workTableSiteQuery = searchEl.value.trim();
+    void renderWorkTable();
+  });
+  workTableContainer?.addEventListener('change', e => {
+    const target = e.target instanceof Element ? e.target : null;
+    if (!target) return;
+
+    const involvedToggle = target.closest('#calw-work-involved-only');
+    if (involvedToggle) {
+      state.workTableInvolvedOnly = !!involvedToggle.checked;
+      void renderWorkTable();
+      return;
+    }
+
+    const input = target.closest('.calw-hours-input');
     if (!input) return;
     void onWorkTableInputChange(input);
   });

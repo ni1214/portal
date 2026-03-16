@@ -11184,6 +11184,63 @@ html.font-xl { font-size: 21px; }
   font-size: 0.83rem;
 }
 
+.calw-work-tools {
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  background: var(--bg-glass);
+  padding: 10px;
+  margin-bottom: 8px;
+}
+.calw-work-filter-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.calw-work-search-input {
+  min-width: 220px;
+  max-width: 420px;
+  flex: 1;
+}
+.calw-work-filter-btn {
+  padding-inline: 10px;
+  font-size: 0.78rem;
+}
+.calw-work-involved-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  user-select: none;
+}
+.calw-work-week-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.calw-week-nav-btn {
+  font-size: 0.76rem;
+  padding: 4px 10px;
+}
+.calw-week-nav-btn[disabled] {
+  opacity: 0.55;
+  cursor: default;
+}
+.calw-work-week-label {
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.calw-work-filter-meta {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
 .calw-work-table-wrap,
 .calw-summary-table-wrap,
 .calw-site-table-wrap {
@@ -11356,6 +11413,16 @@ html.font-xl { font-size: 21px; }
 }
 
 @media (max-width: 980px) {
+  .calw-work-filter-row {
+    align-items: stretch;
+  }
+  .calw-work-search-input {
+    min-width: 0;
+    max-width: none;
+  }
+  .calw-work-week-label {
+    width: 100%;
+  }
   .calw-site-import-row {
     grid-template-columns: 1fr;
   }
