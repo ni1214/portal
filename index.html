@@ -959,8 +959,8 @@
           <ul class="guide-list">
             <li>「カレンダー・勤怠」モーダルの個人タブ内に、<strong>勤怠カレンダー / 勤務内容表 / 勤務内容集計表 / 登録現場</strong>の4つのサブタブがあります。</li>
             <li><strong>勤務内容表</strong>は21日締め（前月21日〜当月20日）で、日ごとの現場工数を0.5時間刻みで入力できます。</li>
-            <li><strong>勤務内容集計表</strong>では全ユーザーの入力結果を現場別・人別に集計し、登録単価から金額も表示します。</li>
-            <li><strong>登録現場</strong>タブで現場コード・現場名・単価を追加/編集/削除できます（Firestoreに保存）。</li>
+            <li><strong>勤務内容集計表</strong>では全ユーザーの入力結果を現場別・人別に集計し、工数（時間）を確認できます。</li>
+            <li><strong>登録現場</strong>タブで現場コード・現場名を追加/編集/削除できます（Firestoreに保存）。</li>
             <li>登録現場タブの<strong>「Excel解析して取込」</strong>で、現場マスタを一括登録できます（重複コードは名称を自動統合）。</li>
           </ul>
         </div>
@@ -1547,7 +1547,7 @@
             <button class="btn-modal-secondary calw-refresh-btn" id="calw-summary-refresh-btn"><i class="fa-solid fa-rotate"></i> 再集計</button>
           </div>
         </div>
-        <div class="calw-summary-total" id="calw-summary-total-amount">月額合計: 0円</div>
+        <div class="calw-summary-total" id="calw-summary-total-hours">総稼働時間: 0h</div>
         <div id="calw-summary-table-container" class="calw-summary-table-container"></div>
       </div>
 
@@ -1556,14 +1556,17 @@
           <div class="calw-view-title"><i class="fa-solid fa-industry"></i> 登録現場</div>
         </div>
         <div class="calw-site-import-row">
-          <input id="calw-site-import-file" class="form-input" type="file" accept=".xlsx,.xls,.xlsm">
+          <label class="calw-file-picker" for="calw-site-import-file">
+            <span class="calw-file-picker-btn"><i class="fa-solid fa-file"></i> ファイルを選択</span>
+            <span class="calw-file-picker-name" id="calw-site-import-filename">選択されていません</span>
+          </label>
           <button class="btn-modal-secondary" id="calw-site-import-btn"><i class="fa-solid fa-file-import"></i> Excel解析して取込</button>
         </div>
+        <input id="calw-site-import-file" class="calw-site-import-file" type="file" accept=".xlsx,.xls,.xlsm">
         <div class="calw-site-import-status" id="calw-site-import-status">サンプル: 「現場名登録」シートのコード/名称を解析して重複整理して取り込みます。</div>
         <div class="calw-site-form-row">
           <input id="calw-site-code-input" class="form-input" type="text" maxlength="20" placeholder="現場コード（例: 61065）">
           <input id="calw-site-name-input" class="form-input" type="text" maxlength="80" placeholder="現場名">
-          <input id="calw-site-unit-price-input" class="form-input" type="number" min="0" step="1" placeholder="単価（円/時間）">
           <button class="btn-modal-primary" id="calw-site-add-btn"><i class="fa-solid fa-plus"></i> 追加</button>
         </div>
         <div class="calw-site-help">登録した現場は勤務内容表の列と勤務内容集計表の行に反映されます。</div>
@@ -1573,7 +1576,6 @@
               <tr>
                 <th>コード</th>
                 <th>現場名</th>
-                <th>単価（円/h）</th>
                 <th>操作</th>
               </tr>
             </thead>

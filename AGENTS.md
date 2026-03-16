@@ -140,7 +140,7 @@ export function xxxFunction() { ... }
 | `suggestion_box/` | 目安箱（全員投稿可、閲覧は管理者のみ） |
 | `assigned_tasks/` | タスク割り振り（sharedWith/sharedResponses で共有機能あり） |
 | `users/{name}/attendance/{YYYY-MM-DD}` | 個人勤怠（完全プライベート）|
-| `attendance_sites/` | 勤務内容表で使用する登録現場マスタ（コード・現場名・単価） |
+| `attendance_sites/` | 勤務内容表で使用する登録現場マスタ（コード・現場名） |
 | `order_suppliers/` | 発注先マスタ |
 | `order_items/` | 鋼材マスタ（品名・規格・単位・デフォルト数量） |
 | `orders/` | 発注履歴（明細・送信状態・20日締め管理） |
@@ -155,6 +155,8 @@ export function xxxFunction() { ... }
 | `workSiteHours` | map | その日の現場別工数（`{ [siteId]: number }`、単位:h） |
 | `yearMonth` | string | `'YYYY-MM'`（月別クエリ用インデックス）|
 | `updatedAt` | timestamp | `serverTimestamp()` |
+
+- **保持ポリシー（2026-03 追加）**: `users/{name}/attendance/` はフロント側で週1回クリーンアップし、180日より古い日付ドキュメントを自動削除する。
 
 ## セキュリティ
 - Firestore セキュリティルールなし（ユーザー名を知らないと個人データにアクセスできない「obscurity」方式）

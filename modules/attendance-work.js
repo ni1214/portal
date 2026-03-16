@@ -12,6 +12,11 @@ let eventsBound = false;
 const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 const PERSONAL_TABS = ['calendar', 'work', 'summary', 'sites'];
 const SITE_EXCLUDED_NAMES = new Set(['完成', 'その他', '工事No.コウジ']);
+const ATTENDANCE_RETENTION_DAYS = 180;
+const ATTENDANCE_CLEANUP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 週1回
+const ATTENDANCE_CLEANUP_KEY_PREFIX = 'portal-attendance-cleanup-last:';
+
+let attendanceCleanupRunning = false;
 
 export function initAttendanceWork(d) {
   deps = d || {};
@@ -80,12 +85,6 @@ function fmtHours(raw) {
   if (!Number.isFinite(n) || n <= 0) return '0';
   const rounded = Math.round(n * 10) / 10;
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1).replace(/\.0$/, '');
-}
-
-function fmtYen(raw) {
-  const n = Number(raw);
-  if (!Number.isFinite(n) || n <= 0) return '0円';
-  return `${Math.round(n).toLocaleString('ja-JP')}円`;
 }
 
 function getActiveSites() {
@@ -215,6 +214,16 @@ function setImportStatus(message) {
   if (el) el.textContent = message;
 }
 
+function updateSiteImportFileLabel() {
+  const fileInput = document.getElementById('calw-site-import-file');
+  const nameEl = document.getElementById('calw-site-import-filename');
+  if (!(fileInput instanceof HTMLInputElement) || !nameEl) return;
+
+  const file = fileInput.files?.[0] || null;
+  nameEl.textContent = file ? file.name : '選択されていません';
+  nameEl.title = file ? file.name : '';
+}
+
 async function commitSiteOpsInBatches(ops) {
   const chunkSize = 400; // Firestore 1バッチ上限500に余裕を持たせる
   for (let i = 0; i < ops.length; i += chunkSize) {
@@ -271,7 +280,6 @@ async function importSitesToFirestore(parsed) {
       data: {
         code: site.code,
         name: site.name,
-        unitPrice: 0,
         active: true,
         sortOrder: maxOrder,
         updatedBy: state.currentUsername || '',
@@ -337,6 +345,8 @@ async function importSitesFromExcelFile() {
     const result = await importSitesToFirestore(parsed);
     setImportStatus(`取込完了: 追加 ${result.inserted}件 / 更新 ${result.updated}件 / 解析 ${parsed.uniqueSiteCount}件`);
     alert(`登録現場の取込が完了しました。\n追加: ${result.inserted}件\n更新: ${result.updated}件`);
+    fileInput.value = '';
+    updateSiteImportFileLabel();
   } catch (err) {
     console.error('Excel取込エラー:', err);
     setImportStatus('取込に失敗しました。ファイル形式または内容を確認してください。');
@@ -389,6 +399,97 @@ async function loadCurrentUserPeriodAttendance(period) {
     return;
   }
   state.workPeriodAttendance = await loadUserPeriodAttendance(state.currentUsername, period);
+}
+
+function getAttendanceCleanupStorageKey() {
+  return `${ATTENDANCE_CLEANUP_KEY_PREFIX}${state.currentUsername || ''}`;
+}
+
+function getAttendanceCleanupLastAt() {
+  try {
+    const raw = localStorage.getItem(getAttendanceCleanupStorageKey());
+    const parsed = Number(raw || 0);
+    return Number.isFinite(parsed) ? parsed : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function setAttendanceCleanupLastAt(ts) {
+  try {
+    localStorage.setItem(getAttendanceCleanupStorageKey(), String(ts));
+  } catch {
+    // localStorage が使えない環境でも動作継続
+  }
+}
+
+function getAttendanceCleanupCutoffDateStr() {
+  const cutoff = new Date();
+  cutoff.setHours(0, 0, 0, 0);
+  cutoff.setDate(cutoff.getDate() - ATTENDANCE_RETENTION_DAYS);
+  return toDateStr(cutoff);
+}
+
+async function cleanupOldAttendanceForCurrentUser() {
+  if (!state.currentUsername) return { deleted: 0 };
+
+  const cutoffDateStr = getAttendanceCleanupCutoffDateStr();
+  const cutoffYm = cutoffDateStr.slice(0, 7);
+  const attendanceCol = collection(db, 'users', state.currentUsername, 'attendance');
+
+  const [olderMonthsSnap, cutoffMonthSnap] = await Promise.all([
+    getDocs(query(attendanceCol, where('yearMonth', '<', cutoffYm))),
+    getDocs(query(attendanceCol, where('yearMonth', '==', cutoffYm))),
+  ]);
+
+  const deleteRefs = [];
+  olderMonthsSnap.docs.forEach(d => deleteRefs.push(d.ref));
+  cutoffMonthSnap.docs.forEach(d => {
+    if (d.id < cutoffDateStr) deleteRefs.push(d.ref);
+  });
+
+  if (deleteRefs.length === 0) {
+    return { deleted: 0, cutoffDateStr };
+  }
+
+  const chunkSize = 400;
+  for (let i = 0; i < deleteRefs.length; i += chunkSize) {
+    const batch = writeBatch(db);
+    deleteRefs.slice(i, i + chunkSize).forEach(ref => {
+      batch.delete(ref);
+    });
+    await batch.commit();
+  }
+
+  Object.keys(state.workPeriodAttendance || {}).forEach(dateStr => {
+    if (dateStr < cutoffDateStr) delete state.workPeriodAttendance[dateStr];
+  });
+  Object.keys(state.attendanceData || {}).forEach(dateStr => {
+    if (dateStr < cutoffDateStr) delete state.attendanceData[dateStr];
+  });
+
+  return { deleted: deleteRefs.length, cutoffDateStr };
+}
+
+async function runAttendanceCleanupIfNeeded() {
+  if (!state.currentUsername || attendanceCleanupRunning) return;
+
+  const now = Date.now();
+  const lastAt = getAttendanceCleanupLastAt();
+  if (lastAt > 0 && now - lastAt < ATTENDANCE_CLEANUP_INTERVAL_MS) return;
+
+  attendanceCleanupRunning = true;
+  try {
+    const result = await cleanupOldAttendanceForCurrentUser();
+    setAttendanceCleanupLastAt(now);
+    if (result.deleted > 0) {
+      console.info(`勤怠クリーンアップ実行: ${result.deleted}件削除（${result.cutoffDateStr}より前）`);
+    }
+  } catch (err) {
+    console.warn('勤怠クリーンアップに失敗しました。次回起動時に再試行します。', err);
+  } finally {
+    attendanceCleanupRunning = false;
+  }
 }
 
 async function saveWorkHoursForCell(dateStr, siteId, hours) {
@@ -562,7 +663,7 @@ async function renderWorkSummary() {
   const period = getWorkPeriod();
   state.workSummaryPeriodLabel = period.label;
   setText('calw-summary-period-label', period.label);
-  setText('calw-summary-total-amount', '月額合計: 0円');
+  setText('calw-summary-total-hours', '総稼働時間: 0h');
 
   container.innerHTML = '<div class="calw-loading">勤務内容を集計中...</div>';
 
@@ -637,11 +738,9 @@ async function renderWorkSummary() {
         siteId,
         code: meta?.code || '',
         name: meta?.name || `未登録現場(${siteId})`,
-        unitPrice: Number(meta?.unitPrice) || 0,
         sortOrder: Number(meta?.sortOrder) || 999999,
         userHours: {},
         totalHours: 0,
-        amount: 0,
       };
       rowsMap.set(siteId, row);
       return row;
@@ -658,7 +757,6 @@ async function renderWorkSummary() {
     });
 
     const rows = [...rowsMap.values()]
-      .map(r => ({ ...r, amount: r.totalHours * r.unitPrice }))
       .sort((a, b) => {
         if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
         const c = (a.code || '').localeCompare(b.code || '', 'ja');
@@ -676,7 +774,6 @@ async function renderWorkSummary() {
     const userTotals = {};
     users.forEach(u => { userTotals[u] = 0; });
     let grandHours = 0;
-    let grandAmount = 0;
 
     const userCols = users.map(u => `<th>${esc(u)}</th>`).join('');
     const bodyRows = rows.map((row, idx) => {
@@ -686,20 +783,18 @@ async function renderWorkSummary() {
         return `<td class="calw-num">${h > 0 ? fmtHours(h) : ''}</td>`;
       }).join('');
       grandHours += row.totalHours;
-      grandAmount += row.amount;
       return `<tr>
         <td class="calw-num">${idx + 1}</td>
         <td>${esc(row.code || '-')}</td>
         <td>${esc(row.name || '')}</td>
         ${userCells}
         <td class="calw-num calw-strong">${fmtHours(row.totalHours)}</td>
-        <td class="calw-num calw-strong">${fmtYen(row.amount)}</td>
       </tr>`;
     }).join('');
 
     const footerUserCols = users.map(u => `<th class="calw-num">${fmtHours(userTotals[u] || 0)}</th>`).join('');
 
-    setText('calw-summary-total-amount', `月額合計: ${fmtYen(grandAmount)}`);
+    setText('calw-summary-total-hours', `総稼働時間: ${fmtHours(grandHours)}h`);
 
     container.innerHTML = `
       <div class="calw-summary-table-wrap">
@@ -711,7 +806,6 @@ async function renderWorkSummary() {
               <th>現場名</th>
               ${userCols}
               <th>合計h</th>
-              <th>金額</th>
             </tr>
           </thead>
           <tbody>${bodyRows}</tbody>
@@ -720,7 +814,6 @@ async function renderWorkSummary() {
               <th colspan="3">合計</th>
               ${footerUserCols}
               <th class="calw-num">${fmtHours(grandHours)}</th>
-              <th class="calw-num">${fmtYen(grandAmount)}</th>
             </tr>
           </tfoot>
         </table>
@@ -744,7 +837,7 @@ function renderAttendanceSiteTable() {
   });
 
   if (rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" class="calw-empty-row">登録現場はまだありません。</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" class="calw-empty-row">登録現場はまだありません。</td></tr>';
     return;
   }
 
@@ -752,7 +845,6 @@ function renderAttendanceSiteTable() {
     <tr>
       <td>${esc(site.code || '-')}</td>
       <td>${esc(site.name || '')}</td>
-      <td class="calw-num">${site.unitPrice ? Number(site.unitPrice).toLocaleString('ja-JP') : '0'}</td>
       <td class="calw-site-actions">
         <button class="btn-modal-secondary calw-site-edit-btn" data-action="edit" data-id="${esc(site.id)}">編集</button>
         <button class="btn-modal-danger calw-site-del-btn" data-action="delete" data-id="${esc(site.id)}">削除</button>
@@ -764,13 +856,11 @@ function renderAttendanceSiteTable() {
 async function addAttendanceSiteFromForm() {
   const codeEl = document.getElementById('calw-site-code-input');
   const nameEl = document.getElementById('calw-site-name-input');
-  const priceEl = document.getElementById('calw-site-unit-price-input');
   const btn = document.getElementById('calw-site-add-btn');
-  if (!codeEl || !nameEl || !priceEl || !btn) return;
+  if (!codeEl || !nameEl || !btn) return;
 
   const code = codeEl.value.trim();
   const name = nameEl.value.trim();
-  const unitPrice = Math.max(0, Math.round(Number(priceEl.value || 0) || 0));
 
   if (!name) {
     nameEl.focus();
@@ -788,7 +878,6 @@ async function addAttendanceSiteFromForm() {
     await addDoc(collection(db, 'attendance_sites'), {
       code: code || '',
       name,
-      unitPrice,
       active: true,
       sortOrder: maxOrder + 1,
       updatedBy: state.currentUsername || '',
@@ -797,7 +886,6 @@ async function addAttendanceSiteFromForm() {
     });
     codeEl.value = '';
     nameEl.value = '';
-    priceEl.value = '';
     nameEl.focus();
   } catch (err) {
     console.error('登録現場追加エラー:', err);
@@ -815,12 +903,9 @@ async function editAttendanceSite(siteId) {
   if (nextCode === null) return;
   const nextName = prompt('現場名を入力してください。', site.name || '');
   if (nextName === null) return;
-  const nextPriceRaw = prompt('単価（円/時間）を入力してください。', String(site.unitPrice || 0));
-  if (nextPriceRaw === null) return;
 
   const code = nextCode.trim();
   const name = nextName.trim();
-  const unitPrice = Math.max(0, Math.round(Number(nextPriceRaw || 0) || 0));
   if (!name) {
     alert('現場名は必須です。');
     return;
@@ -830,7 +915,6 @@ async function editAttendanceSite(siteId) {
     await updateDoc(doc(db, 'attendance_sites', siteId), {
       code: code || '',
       name,
-      unitPrice,
       updatedBy: state.currentUsername || '',
       updatedAt: serverTimestamp(),
     });
@@ -906,6 +990,7 @@ export async function switchCalPersonalTab(tab) {
     await renderWorkSummary();
     return;
   }
+  updateSiteImportFileLabel();
   renderAttendanceSiteTable();
 }
 
@@ -931,6 +1016,8 @@ async function onWorkTableInputChange(input) {
 export async function onCalendarModalOpen() {
   state.calPersonalTab = 'calendar';
   subscribeAttendanceSites();
+  void runAttendanceCleanupIfNeeded();
+  updateSiteImportFileLabel();
   await switchCalPersonalTab('calendar');
 }
 
@@ -974,8 +1061,11 @@ export function bindAttendanceWorkEvents() {
   document.getElementById('calw-site-import-btn')?.addEventListener('click', () => {
     void importSitesFromExcelFile();
   });
+  document.getElementById('calw-site-import-file')?.addEventListener('change', () => {
+    updateSiteImportFileLabel();
+  });
 
-  ['calw-site-code-input', 'calw-site-name-input', 'calw-site-unit-price-input'].forEach(id => {
+  ['calw-site-code-input', 'calw-site-name-input'].forEach(id => {
     document.getElementById(id)?.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -993,4 +1083,6 @@ export function bindAttendanceWorkEvents() {
     if (action === 'edit') void editAttendanceSite(id);
     if (action === 'delete') void deleteAttendanceSite(id);
   });
+
+  updateSiteImportFileLabel();
 }

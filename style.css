@@ -11277,7 +11277,7 @@ html.font-xl { font-size: 21px; }
 
 .calw-site-form-row {
   display: grid;
-  grid-template-columns: 120px 1fr 160px auto;
+  grid-template-columns: 140px 1fr auto;
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -11286,6 +11286,51 @@ html.font-xl { font-size: 21px; }
   grid-template-columns: 1fr auto;
   gap: 8px;
   margin-bottom: 8px;
+}
+.calw-site-import-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.calw-file-picker {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  background: var(--bg-glass);
+  cursor: pointer;
+  transition: border-color var(--transition-base), background var(--transition-base);
+}
+.calw-file-picker:hover {
+  border-color: var(--border-glass-hover);
+  background: var(--bg-card-hover);
+}
+.calw-file-picker-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-glass);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 6px 11px;
+}
+.calw-file-picker-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
 }
 .calw-site-import-status {
   color: var(--text-secondary);

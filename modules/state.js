@@ -186,7 +186,7 @@ export const state = {
   fiscalYearPaidLeave: 0,          // 年度累計有給消化日数（カレンダーモーダルを開いたとき更新）
 
   // 勤務内容表
-  attendanceSites: [],             // [{ id, code, name, unitPrice, active, sortOrder, ... }]
+  attendanceSites: [],             // [{ id, code, name, active, sortOrder, ... }]
   _attendanceSitesSub: null,       // onSnapshot unsubscriber for attendance_sites
   workPeriodAttendance: {},        // { 'YYYY-MM-DD': attendanceDocData }
   workSummaryRows: [],             // 集計表表示用キャッシュ
