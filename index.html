@@ -191,9 +191,6 @@
       </div>
     </div>
 
-    <!-- ==================== お知らせボード（全スペースの上） ==================== -->
-    <section id="notice-board" class="notice-board"></section>
-
     <!-- ==================== 個人スペース wrapper ==================== -->
     <div class="space-wrapper space-personal" id="space-personal">
       <div class="area-header area-personal" id="area-personal-header">
@@ -266,6 +263,9 @@
         <p class="area-header-desc">全社員に共有されます。お知らせ・リンク集・各部門の資料などをここで確認・管理できます。天気・太陽光データはクイックリンク内の <i class="fa-solid fa-solar-panel" style="color:var(--accent-orange)"></i> アイコンから確認できます。</p>
       </div>
       <div class="space-body" id="shared-space-body">
+
+        <!-- ==================== お知らせボード（全社共有スペースの先頭） ==================== -->
+        <section id="notice-board" class="notice-board"></section>
 
         <!-- 天気ウィジェット（通常は非表示、太陽光カードで展開） -->
         <section id="weather-widget" class="weather-widget" hidden>
