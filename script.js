@@ -163,6 +163,7 @@ import {
 
 import {
   initReadDiagnostics,
+  recordGetDocsRead,
   recordListenerStart,
   recordListenerSnapshot,
   wrapTrackedListenerUnsubscribe,
@@ -786,23 +787,38 @@ async function loadCategories() {
   }
 }
 
-function subscribeCards() {
-  if (state.unsubscribeCards) state.unsubscribeCards();
+function sortCards(cards = []) {
+  return [...cards].sort((a, b) =>
+    (a.categoryOrder ?? 0) - (b.categoryOrder ?? 0) ||
+    (a.order ?? 0) - (b.order ?? 0)
+  );
+}
+
+function rerenderCards() {
+  renderAllSections();
+  renderFavorites();
+}
+
+async function subscribeCards() {
+  if (state.unsubscribeCards) {
+    state.unsubscribeCards();
+    state.unsubscribeCards = null;
+  }
   const q = query(collection(db, 'cards'), orderBy('categoryOrder'));
-  recordListenerStart('cards.all', '公開カード一覧', 'cards');
-  state.unsubscribeCards = wrapTrackedListenerUnsubscribe('cards.all', onSnapshot(q, snapshot => {
-    recordListenerSnapshot('cards.all', snapshot.size, 'cards');
-    state.allCards = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (a.categoryOrder ?? 0) - (b.categoryOrder ?? 0) || (a.order ?? 0) - (b.order ?? 0));
-    renderAllSections();
-    renderFavorites();
-  }, err => console.error('onSnapshot エラー:', err)));
+  const snap = await getDocs(q);
+  recordGetDocsRead('cards.all', '公開カード一覧', 'cards', snap.size);
+  state.allCards = sortCards(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  rerenderCards();
 }
 
 async function saveCard(docId, data) {
   await updateDoc(doc(db, 'cards', docId), { ...data, updatedAt: serverTimestamp() });
   const idx = state.allCards.findIndex(c => c.id === docId);
-  if (idx !== -1) state.allCards[idx] = { ...state.allCards[idx], ...data };
+  if (idx !== -1) {
+    state.allCards[idx] = { ...state.allCards[idx], ...data };
+    state.allCards = sortCards(state.allCards);
+    rerenderCards();
+  }
 }
 
 async function addCard(data) {
@@ -819,12 +835,15 @@ async function addCard(data) {
     isExternalTool: data.category === 'external',
     updatedAt: serverTimestamp()
   };
-  await addDoc(collection(db, 'cards'), newData);
+  const ref = await addDoc(collection(db, 'cards'), newData);
+  state.allCards = sortCards([...state.allCards, { id: ref.id, ...newData }]);
+  rerenderCards();
 }
 
 async function deleteCard(docId) {
   await deleteDoc(doc(db, 'cards', docId));
   state.allCards = state.allCards.filter(c => c.id !== docId);
+  rerenderCards();
 }
 
 
@@ -1650,6 +1669,10 @@ async function reorderCards(srcId, targetId) {
     batch.update(doc(db, 'cards', c.id), { order: i, updatedAt: serverTimestamp() });
   });
   await batch.commit();
+  const reordered = catCards.map((c, i) => ({ ...c, order: i }));
+  const otherCards = state.allCards.filter(c => c.category !== src.category);
+  state.allCards = sortCards([...otherCards, ...reordered]);
+  rerenderCards();
 }
 
 
@@ -2406,7 +2429,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await migrateAddBox();
     await loadCategories();
     subscribeNotices();
-    subscribeCards();
+    await subscribeCards();
   } catch (err) {
     console.error('Firestore エラー:', err);
   }
