@@ -202,7 +202,10 @@ export const state = {
   calendarYear:    new Date().getFullYear(),
   calendarMonth:   new Date().getMonth(),   // 0-indexed
   attendanceData:  {},   // { 'YYYY-MM-DD': { type, hayade, zangyo, note, workSiteHours, projectKeys } }
+  todayAttendance: null,
+  todayAttendanceDate: '',
   _attendanceSub:  null,
+  _todayAttendanceSub: null,
   calendarSelectedDate: null,
   calendarAutoProjectKeys: [],
 

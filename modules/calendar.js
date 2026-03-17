@@ -33,6 +33,60 @@ function attendancePath(username, dateStr) {
   return doc(db, 'users', username, 'attendance', dateStr);
 }
 
+function getTodayDateStr() {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+}
+
+function buildAttendanceStateForStore(dateStr, data) {
+  const record = {
+    type: data.type || null,
+    hayade: data.hayade || null,
+    zangyo: data.zangyo || null,
+    note: data.note || null,
+    yearMonth: dateStr.slice(0, 7),
+  };
+  const workSiteHours = data.workSiteHours && typeof data.workSiteHours === 'object'
+    ? Object.fromEntries(Object.entries(data.workSiteHours).filter(([, hours]) => Number(hours) > 0))
+    : {};
+  const projectKeys = normalizeProjectKeys(data.projectKeys);
+  if (Object.keys(workSiteHours).length > 0) record.workSiteHours = workSiteHours;
+  if (projectKeys.length > 0) record.projectKeys = projectKeys;
+  return record;
+}
+
+function syncTodayAttendanceState(dateStr, data) {
+  state.todayAttendanceDate = dateStr;
+  state.todayAttendance = data ? { ...data } : null;
+}
+
+export function subscribeTodayAttendance(username) {
+  if (state._todayAttendanceSub) {
+    state._todayAttendanceSub();
+    state._todayAttendanceSub = null;
+  }
+  if (!username) {
+    syncTodayAttendanceState('', null);
+    deps.renderTodayDashboard?.();
+    return;
+  }
+
+  const todayStr = getTodayDateStr();
+  state.todayAttendanceDate = todayStr;
+  state._todayAttendanceSub = onSnapshot(attendancePath(username, todayStr), snap => {
+    syncTodayAttendanceState(todayStr, snap.exists() ? snap.data() : null);
+    deps.renderTodayDashboard?.();
+  });
+}
+
+export function unsubscribeTodayAttendance() {
+  if (state._todayAttendanceSub) {
+    state._todayAttendanceSub();
+    state._todayAttendanceSub = null;
+  }
+  syncTodayAttendanceState('', null);
+}
+
 export async function saveAttendance(dateStr, data) {
   if (!state.currentUsername) return;
   const yearMonth = dateStr.slice(0, 7);
@@ -59,6 +113,10 @@ export async function saveAttendance(dateStr, data) {
     } else {
       await deps.removePublicAttendance?.(dateStr, state.currentUsername);
     }
+    if (dateStr === getTodayDateStr()) {
+      syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
+      deps.renderTodayDashboard?.();
+    }
     return true;
   } catch (err) {
     console.error('勤怠保存エラー:', err);
@@ -72,6 +130,9 @@ export async function deleteAttendance(dateStr) {
   try {
     await deleteDoc(attendancePath(state.currentUsername, dateStr));
     delete state.attendanceData[dateStr];
+    if (dateStr === getTodayDateStr()) {
+      syncTodayAttendanceState(dateStr, null);
+    }
     // 公開出席からも削除
     await deps.removePublicAttendance?.(dateStr, state.currentUsername);
     renderCalendar();

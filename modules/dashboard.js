@@ -170,7 +170,9 @@ function buildRequestCard() {
 }
 
 function buildAttendanceCard(todayKey) {
-  const attendance = state.attendanceData?.[todayKey] || null;
+  const attendance = state.todayAttendanceDate === todayKey
+    ? (state.todayAttendance || null)
+    : (state.attendanceData?.[todayKey] || null);
   const siteMap = new Map((state.attendanceSites || []).map(site => [site.id, site]));
 
   if (!attendance) {

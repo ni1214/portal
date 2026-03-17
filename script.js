@@ -120,7 +120,8 @@ import {
   openCalendarModal, closeCalendarModal,
   calPrevMonth, calNextMonth, calGoToday,
   closeDayPanel, saveDayAttendance, deleteAttendance,
-  switchCalTab, renderCalendar, updateCalendarSummary
+  switchCalTab, renderCalendar, updateCalendarSummary,
+  subscribeTodayAttendance
 } from './modules/calendar.js';
 
 import {
@@ -520,6 +521,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     await loadDriveContacts(username);
     startDriveListeners(username);
     await loadUserEmailProfile(username);
+    subscribeTodayAttendance(username);
     refreshNoticeVisibility();
     await loadConfigDepartmentsAndViewers();
     renderMissionBanner(); // ミッションテキストが読み込まれた後に再描画
