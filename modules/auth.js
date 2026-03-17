@@ -63,6 +63,14 @@ function refreshInviteVerifiedState() {
   state.inviteCodeVerified = sessionStorage.getItem(INVITE_SESSION_KEY) === '1' || hasTrustedInviteAccess();
 }
 
+function isMobilePreloginExemptDevice() {
+  if (typeof window === 'undefined') return false;
+  const isNarrowViewport = window.matchMedia?.('(max-width: 768px)')?.matches ?? window.innerWidth <= 768;
+  const hasTouchLikeInput = (navigator.maxTouchPoints || 0) > 0
+    || (window.matchMedia?.('(pointer: coarse)')?.matches ?? false);
+  return isNarrowViewport && hasTouchLikeInput;
+}
+
 function hideInviteError() {
   const box = document.getElementById('auth-invite-error');
   if (box) {
@@ -607,7 +615,7 @@ export async function restoreStoredUsernameSession(username) {
   if (!normalized) return false;
   return await loginExistingUsername(normalized, {
     fromStored: true,
-    requirePreloginPin: false,
+    requirePreloginPin: !isMobilePreloginExemptDevice(),
   });
 }
 
