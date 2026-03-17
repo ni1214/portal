@@ -471,3 +471,4 @@ assigned_tasks/{taskId}
 - ヘルプガイド (`#guide-modal` in `index.html`) は大きな機能追加時に更新すること
 - 返答は**日本語**で行うこと
 - 「記録して」と言われた場合は **AGENTS.md** に記載する（MEMORY.md はローカル専用のため Git 経由で別 PC に引き継がれない）
+- 実機テスト用の招待コード・PIN など**秘密値そのものは AGENTS.md に書かない**。必要な場合はローカル専用の `C:\Users\frx\.codex\memory.md` を参照し、ここには「ローカル専用メモを使う」という運用ルールだけ残す
