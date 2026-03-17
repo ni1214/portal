@@ -132,6 +132,11 @@
         <span class="sidebar-item-label">鋼材発注</span>
       </button>
 
+      <button class="sidebar-item" id="btn-property-summary" title="物件Noごとの依頼・タスク・発注・作業記録をまとめて確認">
+        <span class="sidebar-item-icon"><i class="fa-solid fa-magnifying-glass-chart"></i></span>
+        <span class="sidebar-item-label">物件Noまとめ</span>
+      </button>
+
       <button class="sidebar-item chat-fab" id="chat-fab" title="チャット">
         <span class="sidebar-item-icon">
           <i class="fa-solid fa-comments"></i>
@@ -979,6 +984,15 @@
           </ul>
         </div>
 
+        <div class="guide-section">
+          <h4 class="guide-section-title"><span class="guide-icon">🔎</span> 物件Noまとめ</h4>
+          <ul class="guide-list">
+            <li>サイドバーの<strong>「物件Noまとめ」</strong>から、同じ物件Noにひもづく依頼・タスク・鋼材発注・作業記録を横断して確認できます。</li>
+            <li>一致したデータ件数を見ながら、<strong>依頼画面 / タスク画面 / 発注履歴 / 勤務内容表</strong>へそのまま移動できます。</li>
+            <li>作業記録は現場コードベースの補完も入るため、物件No自動入力前の直近データも追いやすくしています。</li>
+          </ul>
+        </div>
+
         <p class="guide-version">最終更新: 2026年3月</p>
       </div>
     </div>
@@ -1052,6 +1066,10 @@
         <button class="more-drawer-item" data-target="btn-order-launch">
           <i class="fa-solid fa-boxes-stacked"></i>
           <span>鋼材発注</span>
+        </button>
+        <button class="more-drawer-item" data-target="btn-property-summary">
+          <i class="fa-solid fa-magnifying-glass-chart"></i>
+          <span>物件Noまとめ</span>
         </button>
         <button class="more-drawer-item" data-target="ft-fab">
           <i class="fa-solid fa-file-arrow-up"></i>
@@ -2147,6 +2165,45 @@
 
   <!-- ===== 印刷エリア（画面上は非表示・印刷時のみ表示） ===== -->
   <div id="ord-print-area" hidden></div>
+
+  <!-- ==================== 物件Noまとめ ==================== -->
+  <div class="modal-overlay" id="prop-summary-modal">
+    <div class="modal-glass prop-summary-inner">
+      <div class="modal-header prop-summary-header">
+        <h2 class="modal-title"><i class="fa-solid fa-magnifying-glass-chart"></i> 物件Noまとめ</h2>
+        <button class="modal-close" id="prop-summary-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="prop-summary-search-row">
+        <div class="prop-summary-search-input-wrap">
+          <i class="fa-solid fa-hashtag prop-summary-search-icon"></i>
+          <input
+            type="text"
+            id="prop-summary-search-input"
+            class="form-input prop-summary-search-input"
+            placeholder="例: 61065"
+            autocomplete="off"
+          >
+          <button
+            type="button"
+            class="prop-summary-search-clear"
+            id="prop-summary-search-clear"
+            title="検索をクリア"
+            hidden
+          ><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <button class="btn-modal-primary prop-summary-search-btn" id="prop-summary-search-btn">
+          <i class="fa-solid fa-magnifying-glass"></i> 検索
+        </button>
+      </div>
+      <div class="prop-summary-help">物件Noごとに、部署間依頼・タスク・鋼材発注・作業記録をまとめて確認できます。</div>
+      <div id="prop-summary-content" class="prop-summary-content">
+        <div class="prop-summary-empty">
+          <i class="fa-solid fa-magnifying-glass-chart"></i>
+          <p>物件Noを入れると、依頼・タスク・鋼材発注・作業記録をまとめて確認できます。</p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Script (type="module" for Firebase ESM) -->

@@ -150,6 +150,11 @@ import {
   openOrderAdminModal, closeOrderAdminModal
 } from './modules/order.js';
 
+import {
+  initPropertySummary,
+  openPropertySummaryModal,
+} from './modules/property-summary.js';
+
 
 // ========== 依存注入 ==========
 // 各モジュールが必要とするクロスモジュール関数を注入
@@ -234,6 +239,32 @@ initAttendanceWork({
 });
 
 bindAttendanceWorkEvents();
+
+initPropertySummary({
+  openRequests: projectKey => {
+    state.reqProjectKeyFilter = projectKey;
+    state.activeReqTab = 'request';
+    state.activeReqSubTab = 'received';
+    openReqModal('request');
+  },
+  openTasks: projectKey => {
+    state.taskProjectKeyFilter = projectKey;
+    state.activeTaskTab = 'received';
+    openTaskModal();
+  },
+  openOrders: async projectKey => {
+    await openOrderHistoryModal(projectKey);
+  },
+  openWork: async projectKey => {
+    state.attendanceWorkProjectKeyFilter = projectKey;
+    state.calPersonalTab = 'work';
+    await openCalendarModal();
+    if (document.getElementById('cal-modal')?.classList.contains('visible')) {
+      await onCalendarModalOpen();
+      await switchCalPersonalTab('work');
+    }
+  },
+});
 
 
 // ========== 個人TODO ==========
@@ -2551,6 +2582,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== 鋼材発注 =====
   document.getElementById('btn-order-launch').addEventListener('click', openOrderModal);
+  document.getElementById('btn-property-summary').addEventListener('click', () => openPropertySummaryModal());
   document.getElementById('ord-open-admin-btn').addEventListener('click', () => {
     document.getElementById('ord-modal').classList.remove('visible');
     openOrderAdminModal();

@@ -1239,9 +1239,9 @@ async function purgeOldOrders() {
   }
 }
 
-export async function openOrderHistoryModal() {
+export async function openOrderHistoryModal(initialProjectKey = '') {
   _historyOffset = 0;
-  state.orderHistoryProjectKeyFilter = '';
+  state.orderHistoryProjectKeyFilter = normalizeProjectKey(initialProjectKey || '');
   await loadMasters();
   const modal = document.getElementById('ord-history-modal');
   if (!modal) return;

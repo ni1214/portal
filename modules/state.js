@@ -137,6 +137,11 @@ export const state = {
   activeTaskTab: 'received',
   taskProjectKeyFilter: '',
   orderHistoryProjectKeyFilter: '',
+  propertySummaryModalOpen: false,
+  propertySummaryQuery: '',
+  propertySummaryResults: null,
+  propertySummaryLoading: false,
+  propertySummaryError: '',
   newTaskAssignee: '',
   _editingTaskId: null,        // 編集中 or 共有操作中のタスクID
 
