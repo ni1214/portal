@@ -142,6 +142,8 @@ export const state = {
   propertySummaryResults: null,
   propertySummaryLoading: false,
   propertySummaryError: '',
+  propertySummarySiteCandidates: [],
+  propertySummaryResolvedSite: null,
   newTaskAssignee: '',
   _editingTaskId: null,        // 編集中 or 共有操作中のタスクID
 

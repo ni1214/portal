@@ -12232,6 +12232,68 @@ html.font-xl { font-size: 21px; }
   white-space: nowrap;
 }
 
+.prop-summary-candidates {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+  background: var(--bg-glass);
+}
+
+.prop-summary-candidates-label {
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.prop-summary-candidate-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.prop-summary-candidate-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-glass);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.prop-summary-candidate-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-glass-hover);
+}
+
+.prop-summary-candidate-btn.is-active {
+  border-color: color-mix(in srgb, var(--accent-blue) 40%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-blue) 10%, var(--bg-card));
+}
+
+.prop-summary-candidate-code {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--accent-blue);
+}
+
+.prop-summary-candidate-name {
+  min-width: 0;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.prop-summary-candidates-more {
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
 .prop-summary-help {
   margin-top: 8px;
   color: var(--text-secondary);
@@ -12530,6 +12592,11 @@ html.font-xl { font-size: 21px; }
   .prop-summary-search-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .prop-summary-candidate-btn {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .prop-summary-stats {

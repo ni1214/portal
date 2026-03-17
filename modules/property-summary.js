@@ -8,6 +8,9 @@ let deps = {};
 let eventsBound = false;
 
 const ATTENDANCE_FALLBACK_MONTHS = 4;
+const PROPERTY_SITE_CANDIDATE_LIMIT = 8;
+
+let _cachedSiteMap = null;
 
 export function initPropertySummary(d = {}) {
   deps = d;
@@ -32,6 +35,7 @@ export function openPropertySummaryModal(initialProjectKey = '') {
 
   input.value = state.propertySummaryQuery || '';
   renderPropertySummary();
+  void refreshSiteCandidates(state.propertySummaryQuery || '');
   setTimeout(() => input.focus(), 30);
 }
 
@@ -41,32 +45,49 @@ export function closePropertySummaryModal() {
   state.propertySummaryModalOpen = false;
 }
 
-async function searchPropertySummary(rawValue = null) {
+async function searchPropertySummary(rawValue = null, options = {}) {
   const input = document.getElementById('prop-summary-search-input');
-  const projectKey = normalizeProjectKey(rawValue ?? input?.value ?? '');
+  const queryText = normalizeProjectKey(rawValue ?? input?.value ?? '');
 
-  state.propertySummaryQuery = projectKey;
+  state.propertySummaryQuery = queryText;
   state.propertySummaryError = '';
   updateSearchControls();
 
-  if (!projectKey) {
+  if (!queryText) {
     state.propertySummaryResults = null;
     state.propertySummaryLoading = false;
+    state.propertySummarySiteCandidates = [];
+    state.propertySummaryResolvedSite = null;
     renderPropertySummary();
     input?.focus();
     return;
   }
 
+  const siteMap = await loadAttendanceSiteMap();
+  const resolution = resolvePropertySummaryQuery(queryText, siteMap, options.selectedSite || null);
+  state.propertySummarySiteCandidates = resolution.candidates;
+  state.propertySummaryResolvedSite = resolution.siteMatch || null;
+
+  if (!resolution.projectKey) {
+    state.propertySummaryResults = null;
+    state.propertySummaryLoading = false;
+    if (resolution.needsSelection) {
+      state.propertySummaryError = '現場名に一致する候補が複数あります。候補から選んでください。';
+    }
+    renderPropertySummary();
+    return;
+  }
+
+  const projectKey = resolution.projectKey;
   state.propertySummaryLoading = true;
   state.propertySummaryResults = null;
   renderPropertySummary();
 
   try {
-    const [requestSnap, taskSnap, orderSnap, siteMap] = await Promise.all([
+    const [requestSnap, taskSnap, orderSnap] = await Promise.all([
       getDocs(query(collection(db, 'cross_dept_requests'), where('projectKey', '==', projectKey))),
       getDocs(query(collection(db, 'assigned_tasks'), where('projectKey', '==', projectKey))),
       getDocs(query(collection(db, 'orders'), where('projectKey', '==', projectKey))),
-      loadAttendanceSiteMap(),
     ]);
 
     let attendanceRecords = await loadAttendanceByProjectKey(state.currentUsername, projectKey, siteMap);
@@ -98,11 +119,14 @@ async function searchPropertySummary(rawValue = null) {
       .filter(item => state.isAdmin || item.orderedBy === currentUser)
       .sort((a, b) => getDateValue(b.orderedAt) - getDateValue(a.orderedAt));
 
-    const siteMatch = [...siteMap.values()].find(site => normalizeProjectKey(site.code || '') === projectKey) || null;
+    const siteMatch = resolution.siteMatch
+      || [...siteMap.values()].find(site => normalizeProjectKey(site.code || '') === projectKey)
+      || null;
 
     state.propertySummaryResults = {
       projectKey,
       siteMatch,
+      searchedBy: queryText,
       requests,
       tasks,
       orders,
@@ -128,11 +152,154 @@ async function searchPropertySummary(rawValue = null) {
 async function loadAttendanceSiteMap() {
   const existing = Array.isArray(state.attendanceSites) ? state.attendanceSites : [];
   if (existing.length > 0) {
-    return new Map(existing.map(site => [site.id, site]));
+    if (!_cachedSiteMap || _cachedSiteMap.size !== existing.length) {
+      _cachedSiteMap = new Map(existing.map(site => [site.id, site]));
+    }
+    return _cachedSiteMap;
   }
+
+  if (_cachedSiteMap && _cachedSiteMap.size > 0) {
+    return _cachedSiteMap;
+  }
+
   const snap = await getDocs(query(collection(db, 'attendance_sites')));
   const sites = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-  return new Map(sites.map(site => [site.id, site]));
+  _cachedSiteMap = new Map(sites.map(site => [site.id, site]));
+  return _cachedSiteMap;
+}
+
+function normalizeSearchText(value) {
+  return normalizeProjectKey(value || '')
+    .normalize('NFKC')
+    .replace(/\s+/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function getSiteCandidateList(queryText, siteMap) {
+  const needle = normalizeSearchText(queryText);
+  if (!needle) return [];
+
+  return [...siteMap.values()]
+    .map(site => {
+      const code = normalizeProjectKey(site.code || '');
+      const name = normalizeProjectKey(site.name || '');
+      const codeLower = normalizeSearchText(code);
+      const nameLower = normalizeSearchText(name);
+      const joinedLower = `${codeLower}${nameLower}`;
+      let rank = Number.POSITIVE_INFINITY;
+
+      if (codeLower === needle) rank = 0;
+      else if (nameLower === needle) rank = 1;
+      else if (joinedLower === needle) rank = 2;
+      else if (codeLower.startsWith(needle)) rank = 3;
+      else if (nameLower.startsWith(needle)) rank = 4;
+      else if (joinedLower.startsWith(needle)) rank = 5;
+      else if (codeLower.includes(needle)) rank = 6;
+      else if (nameLower.includes(needle)) rank = 7;
+      else if (joinedLower.includes(needle)) rank = 8;
+
+      return Number.isFinite(rank) ? { ...site, _rank: rank, _code: code } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (a._rank !== b._rank) return a._rank - b._rank;
+      const numA = Number(a._code || 0);
+      const numB = Number(b._code || 0);
+      if (Number.isFinite(numA) && Number.isFinite(numB) && numA !== numB) return numA - numB;
+      return String(a.name || '').localeCompare(String(b.name || ''), 'ja');
+    });
+}
+
+function resolvePropertySummaryQuery(queryText, siteMap, selectedSite = null) {
+  if (selectedSite) {
+    const projectKey = normalizeProjectKey(selectedSite.code || queryText);
+    return {
+      projectKey,
+      siteMatch: selectedSite,
+      candidates: [selectedSite],
+      needsSelection: false,
+    };
+  }
+
+  const normalizedQuery = normalizeProjectKey(queryText);
+  if (!normalizedQuery) {
+    return {
+      projectKey: '',
+      siteMatch: null,
+      candidates: [],
+      needsSelection: false,
+    };
+  }
+
+  const candidates = getSiteCandidateList(normalizedQuery, siteMap);
+  const exactCodeMatch = candidates.find(site => normalizeProjectKey(site.code || '') === normalizedQuery) || null;
+  if (exactCodeMatch) {
+    return {
+      projectKey: normalizeProjectKey(exactCodeMatch.code || normalizedQuery),
+      siteMatch: exactCodeMatch,
+      candidates,
+      needsSelection: false,
+    };
+  }
+
+  const exactNameMatches = candidates.filter(site => normalizeSearchText(site.name || '') === normalizeSearchText(normalizedQuery));
+  if (exactNameMatches.length === 1) {
+    return {
+      projectKey: normalizeProjectKey(exactNameMatches[0].code || normalizedQuery),
+      siteMatch: exactNameMatches[0],
+      candidates,
+      needsSelection: false,
+    };
+  }
+
+  if (candidates.length === 1) {
+    return {
+      projectKey: normalizeProjectKey(candidates[0].code || normalizedQuery),
+      siteMatch: candidates[0],
+      candidates,
+      needsSelection: false,
+    };
+  }
+
+  if (candidates.length > 1) {
+    return {
+      projectKey: '',
+      siteMatch: null,
+      candidates,
+      needsSelection: true,
+    };
+  }
+
+  return {
+    projectKey: normalizedQuery,
+    siteMatch: null,
+    candidates: [],
+    needsSelection: false,
+  };
+}
+
+async function refreshSiteCandidates(rawQuery) {
+  const queryText = normalizeProjectKey(rawQuery || '');
+  if (!queryText) {
+    state.propertySummarySiteCandidates = [];
+    state.propertySummaryResolvedSite = null;
+    renderPropertySummary();
+    return;
+  }
+
+  try {
+    const siteMap = await loadAttendanceSiteMap();
+    const resolution = resolvePropertySummaryQuery(queryText, siteMap);
+    state.propertySummarySiteCandidates = resolution.candidates;
+    state.propertySummaryResolvedSite = resolution.siteMatch || null;
+  } catch (err) {
+    console.error('property summary candidate error:', err);
+    state.propertySummarySiteCandidates = [];
+    state.propertySummaryResolvedSite = null;
+  }
+
+  renderPropertySummary();
 }
 
 async function loadAttendanceByProjectKey(username, projectKey, siteMap) {
@@ -264,8 +431,62 @@ function updateSearchControls() {
   if (clearBtn) clearBtn.hidden = !(state.propertySummaryQuery || '');
 }
 
+function isDirectProjectKeyText(value) {
+  return /^[0-9A-Za-z_-]+$/.test(normalizeProjectKey(value || ''));
+}
+
+function renderSiteCandidates() {
+  const container = document.getElementById('prop-summary-candidates');
+  if (!container) return;
+
+  const queryText = normalizeProjectKey(state.propertySummaryQuery || '');
+  const candidates = Array.isArray(state.propertySummarySiteCandidates)
+    ? state.propertySummarySiteCandidates
+    : [];
+  const shouldShow = queryText
+    && candidates.length > 0
+    && (!isDirectProjectKeyText(queryText) || candidates.length > 1 || normalizeProjectKey(candidates[0].code || '') !== queryText);
+
+  if (!shouldShow) {
+    container.hidden = true;
+    container.innerHTML = '';
+    return;
+  }
+
+  const shownCandidates = candidates.slice(0, PROPERTY_SITE_CANDIDATE_LIMIT);
+  const extraCount = Math.max(0, candidates.length - shownCandidates.length);
+  const selectedCode = normalizeProjectKey(
+    state.propertySummaryResults?.siteMatch?.code
+      || state.propertySummaryResolvedSite?.code
+      || ''
+  );
+
+  container.hidden = false;
+  container.innerHTML = `
+    <div class="prop-summary-candidates-label">現場候補 ${candidates.length}件</div>
+    <div class="prop-summary-candidate-list">
+      ${shownCandidates.map(site => {
+        const code = normalizeProjectKey(site.code || '');
+        const active = selectedCode && selectedCode === code;
+        return `
+          <button
+            type="button"
+            class="prop-summary-candidate-btn ${active ? 'is-active' : ''}"
+            data-prop-summary-site-code="${esc(code)}"
+          >
+            <span class="prop-summary-candidate-code">${esc(code)}</span>
+            <span class="prop-summary-candidate-name">${esc(site.name || '')}</span>
+          </button>
+        `;
+      }).join('')}
+    </div>
+    ${extraCount > 0 ? `<div class="prop-summary-candidates-more">ほか ${extraCount} 件あります。もう少し絞ると選びやすくなります。</div>` : ''}
+  `;
+}
+
 function renderPropertySummary() {
   updateSearchControls();
+  renderSiteCandidates();
 
   const container = document.getElementById('prop-summary-content');
   if (!container) return;
@@ -295,7 +516,7 @@ function renderPropertySummary() {
     container.innerHTML = `
       <div class="prop-summary-empty">
         <i class="fa-solid fa-magnifying-glass-chart"></i>
-        <p>物件Noを入れると、依頼・タスク・鋼材発注・作業記録をまとめて確認できます。</p>
+        <p>物件Noまたは現場名を入れると、依頼・タスク・鋼材発注・作業記録をまとめて確認できます。</p>
       </div>
     `;
     return;
@@ -305,7 +526,7 @@ function renderPropertySummary() {
     container.innerHTML = `
       <div class="prop-summary-empty">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <p>検索ボタンで物件Noを横断検索します。</p>
+        <p>検索ボタンで物件Noまたは現場名を横断検索します。</p>
       </div>
     `;
     return;
@@ -314,6 +535,9 @@ function renderPropertySummary() {
   const totalHits = Object.values(results.counts).reduce((sum, count) => sum + count, 0);
   const siteLabel = results.siteMatch
     ? `<div class="prop-summary-context"><span class="prop-summary-context-label">登録現場</span><strong>${esc(results.siteMatch.code)} ${esc(results.siteMatch.name || '')}</strong></div>`
+    : '';
+  const searchedBy = results.searchedBy && results.searchedBy !== results.projectKey
+    ? `<div class="prop-summary-context"><span class="prop-summary-context-label">検索語</span><strong>${esc(results.searchedBy)}</strong></div>`
     : '';
   const searchedAt = results.searchedAt
     ? `<div class="prop-summary-context"><span class="prop-summary-context-label">検索時刻</span><strong>${esc(formatTimestampLike(results.searchedAt))}</strong></div>`
@@ -333,6 +557,7 @@ function renderPropertySummary() {
       </div>
       <div class="prop-summary-contexts">
         ${siteLabel}
+        ${searchedBy}
         ${searchedAt}
       </div>
       ${fallbackNote}
@@ -551,28 +776,45 @@ function bindPropertySummaryEvents() {
   document.getElementById('prop-summary-search-input')?.addEventListener('input', e => {
     const nextValue = normalizeProjectKey(e.target.value || '');
     state.propertySummaryQuery = nextValue;
-    if (state.propertySummaryResults?.projectKey !== nextValue) {
+    if (state.propertySummaryResults?.projectKey !== nextValue && state.propertySummaryResults?.searchedBy !== nextValue) {
       state.propertySummaryResults = null;
       state.propertySummaryError = '';
-      renderPropertySummary();
     }
     updateSearchControls();
+    void refreshSiteCandidates(nextValue);
   });
   document.getElementById('prop-summary-search-clear')?.addEventListener('click', () => {
     state.propertySummaryQuery = '';
     state.propertySummaryResults = null;
     state.propertySummaryError = '';
     state.propertySummaryLoading = false;
+    state.propertySummarySiteCandidates = [];
+    state.propertySummaryResolvedSite = null;
     updateSearchControls();
     renderPropertySummary();
     document.getElementById('prop-summary-search-input')?.focus();
   });
 
+  document.getElementById('prop-summary-candidates')?.addEventListener('click', e => {
+    const btn = e.target.closest('[data-prop-summary-site-code]');
+    if (!btn) return;
+
+    const siteCode = normalizeProjectKey(btn.dataset.propSummarySiteCode || '');
+    const selectedSite = (state.propertySummarySiteCandidates || []).find(site =>
+      normalizeProjectKey(site.code || '') === siteCode
+    );
+    if (!selectedSite) return;
+
+    state.propertySummaryQuery = normalizeProjectKey(selectedSite.name || selectedSite.code || siteCode);
+    updateSearchControls();
+    void searchPropertySummary(state.propertySummaryQuery, { selectedSite });
+  });
+
   document.getElementById('prop-summary-content')?.addEventListener('click', e => {
     const btn = e.target.closest('[data-prop-summary-open]');
-    if (!btn || !state.propertySummaryQuery) return;
+    const queryValue = state.propertySummaryResults?.projectKey || normalizeProjectKey(state.propertySummaryQuery || '');
+    if (!btn || !queryValue) return;
 
-    const queryValue = state.propertySummaryQuery;
     const actionType = btn.dataset.propSummaryOpen;
     closePropertySummaryModal();
 

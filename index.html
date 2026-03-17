@@ -987,7 +987,7 @@
         <div class="guide-section">
           <h4 class="guide-section-title"><span class="guide-icon">🔎</span> 物件Noまとめ</h4>
           <ul class="guide-list">
-            <li>サイドバーの<strong>「物件Noまとめ」</strong>から、同じ物件Noにひもづく依頼・タスク・鋼材発注・作業記録を横断して確認できます。</li>
+            <li>サイドバーの<strong>「物件Noまとめ」</strong>から、同じ物件Noにひもづく依頼・タスク・鋼材発注・作業記録を横断して確認できます。<strong>現場名から候補を出して検索</strong>することもできます。</li>
             <li>一致したデータ件数を見ながら、<strong>依頼画面 / タスク画面 / 発注履歴 / 勤務内容表</strong>へそのまま移動できます。</li>
             <li>作業記録は現場コードベースの補完も入るため、物件No自動入力前の直近データも追いやすくしています。</li>
           </ul>
@@ -2180,7 +2180,7 @@
             type="text"
             id="prop-summary-search-input"
             class="form-input prop-summary-search-input"
-            placeholder="例: 61065"
+            placeholder="例: 61065 / 南池袋2C地区SD"
             autocomplete="off"
           >
           <button
@@ -2195,11 +2195,12 @@
           <i class="fa-solid fa-magnifying-glass"></i> 検索
         </button>
       </div>
-      <div class="prop-summary-help">物件Noごとに、部署間依頼・タスク・鋼材発注・作業記録をまとめて確認できます。</div>
+      <div id="prop-summary-candidates" class="prop-summary-candidates" hidden></div>
+      <div class="prop-summary-help">物件Noまたは現場名で、部署間依頼・タスク・鋼材発注・作業記録をまとめて確認できます。</div>
       <div id="prop-summary-content" class="prop-summary-content">
         <div class="prop-summary-empty">
           <i class="fa-solid fa-magnifying-glass-chart"></i>
-          <p>物件Noを入れると、依頼・タスク・鋼材発注・作業記録をまとめて確認できます。</p>
+          <p>物件Noまたは現場名を入れると、依頼・タスク・鋼材発注・作業記録をまとめて確認できます。</p>
         </div>
       </div>
     </div>
