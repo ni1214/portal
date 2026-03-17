@@ -144,8 +144,24 @@ export const state = {
   receivedTasks: [],
   sentTasks: [],
   sharedTasks: [],             // 自分が sharedWith に含まれるタスク
+  taskHistoryCache: {
+    received: [],
+    sent: [],
+    shared: [],
+  },
+  taskHistoryLoaded: {
+    received: false,
+    sent: false,
+    shared: false,
+  },
+  taskHistoryLoading: {
+    received: false,
+    sent: false,
+    shared: false,
+  },
   _receivedTasksUnsub: null,
   _sentTasksUnsub: null,
+  _sentTaskDoneNotifyUnsub: null,
   _sharedTasksUnsub: null,     // sharedWith クエリのリスナー
   taskModalOpen: false,
   activeTaskTab: 'received',
@@ -181,6 +197,18 @@ export const state = {
   reqProjectKeyFilter: '',
   receivedRequests: [],
   sentRequests: [],
+  reqHistoryCache: {
+    received: [],
+    sent: [],
+  },
+  reqHistoryLoaded: {
+    received: false,
+    sent: false,
+  },
+  reqHistoryLoading: {
+    received: false,
+    sent: false,
+  },
   suggestionList: [],
   _reqReceivedUnsub: null,
   _reqSentUnsub: null,

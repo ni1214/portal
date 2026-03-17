@@ -1,13 +1,21 @@
 // ========== タスク割り振り ==========
-import { db, doc, getDoc, setDoc, addDoc, deleteDoc, updateDoc, collection, query, where, orderBy, serverTimestamp, onSnapshot } from './config.js';
+import { db, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, collection, query, where, orderBy, serverTimestamp, onSnapshot } from './config.js';
 import { state, TASK_STATUS_LABEL } from './state.js';
 import { esc, getUserAvatarColor, normalizeProjectKey } from './utils.js';
 import {
+  recordGetDocsRead,
   recordListenerStart,
   recordListenerSnapshot,
   wrapTrackedListenerUnsubscribe,
 } from './read-diagnostics.js';
 export const deps = {};
+
+const ACTIVE_TASK_STATUSES = ['pending', 'accepted'];
+
+let liveReceivedTasks = [];
+let liveSentTasks = [];
+let liveSentDoneNotifyTasks = [];
+let liveSharedTasks = [];
 
 function buildTaskPayload({
   title,
@@ -129,41 +137,221 @@ function _taskProjectKeyHtml(task) {
   `;
 }
 
+function _sortTasks(list) {
+  return [...list].sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+}
+
+function _mergeTaskLists(...lists) {
+  const merged = new Map();
+  lists.flat().forEach(task => {
+    if (task?.id) merged.set(task.id, task);
+  });
+  return _sortTasks([...merged.values()]);
+}
+
+function _isReceivedTaskLive(task) {
+  return ACTIVE_TASK_STATUSES.includes(task?.status);
+}
+
+function _isSentTaskLive(task) {
+  return ACTIVE_TASK_STATUSES.includes(task?.status) || (task?.status === 'done' && !task?.notifiedDone);
+}
+
+function _isSharedTaskLive(task) {
+  const response = task?.sharedResponses?.[state.currentUsername] || 'pending';
+  return response === 'pending';
+}
+
+function _syncReceivedTasks() {
+  state.receivedTasks = _mergeTaskLists(state.taskHistoryCache.received, liveReceivedTasks);
+}
+
+function _syncSentTasks() {
+  state.sentTasks = _mergeTaskLists(state.taskHistoryCache.sent, liveSentTasks, liveSentDoneNotifyTasks);
+}
+
+function _syncSharedTasks() {
+  state.sharedTasks = _mergeTaskLists(state.taskHistoryCache.shared, liveSharedTasks);
+}
+
+function _syncAllTaskLists() {
+  _syncReceivedTasks();
+  _syncSentTasks();
+  _syncSharedTasks();
+}
+
+function _resetTaskHistoryState() {
+  if (state._receivedTasksUnsub) { state._receivedTasksUnsub(); state._receivedTasksUnsub = null; }
+  if (state._sentTasksUnsub) { state._sentTasksUnsub(); state._sentTasksUnsub = null; }
+  if (state._sentTaskDoneNotifyUnsub) { state._sentTaskDoneNotifyUnsub(); state._sentTaskDoneNotifyUnsub = null; }
+  if (state._sharedTasksUnsub) { state._sharedTasksUnsub(); state._sharedTasksUnsub = null; }
+  liveReceivedTasks = [];
+  liveSentTasks = [];
+  liveSentDoneNotifyTasks = [];
+  liveSharedTasks = [];
+  state.taskHistoryCache = {
+    received: [],
+    sent: [],
+    shared: [],
+  };
+  state.taskHistoryLoaded = {
+    received: false,
+    sent: false,
+    shared: false,
+  };
+  state.taskHistoryLoading = {
+    received: false,
+    sent: false,
+    shared: false,
+  };
+  _syncAllTaskLists();
+}
+
+function _upsertTaskHistory(tab, task) {
+  if (!task?.id) return;
+  const current = Array.isArray(state.taskHistoryCache[tab]) ? state.taskHistoryCache[tab] : [];
+  const withoutCurrent = current.filter(item => item.id !== task.id);
+  const shouldStayInHistory =
+    (tab === 'received' && !_isReceivedTaskLive(task)) ||
+    (tab === 'sent' && !_isSentTaskLive(task)) ||
+    (tab === 'shared' && !_isSharedTaskLive(task));
+
+  state.taskHistoryCache = {
+    ...state.taskHistoryCache,
+    [tab]: shouldStayInHistory ? _sortTasks([...withoutCurrent, task]) : withoutCurrent,
+  };
+  _syncAllTaskLists();
+}
+
+function _removeTaskFromAllCaches(taskId) {
+  if (!taskId) return;
+  liveReceivedTasks = liveReceivedTasks.filter(task => task.id !== taskId);
+  liveSentTasks = liveSentTasks.filter(task => task.id !== taskId);
+  liveSentDoneNotifyTasks = liveSentDoneNotifyTasks.filter(task => task.id !== taskId);
+  liveSharedTasks = liveSharedTasks.filter(task => task.id !== taskId);
+  state.taskHistoryCache = {
+    received: state.taskHistoryCache.received.filter(task => task.id !== taskId),
+    sent: state.taskHistoryCache.sent.filter(task => task.id !== taskId),
+    shared: state.taskHistoryCache.shared.filter(task => task.id !== taskId),
+  };
+  _syncAllTaskLists();
+}
+
+async function _loadTaskHistory(tab, force = false) {
+  if (!state.currentUsername) return;
+  if (!force && state.taskHistoryLoaded[tab]) return;
+  if (state.taskHistoryLoading[tab]) return;
+
+  state.taskHistoryLoading = { ...state.taskHistoryLoading, [tab]: true };
+  if (state.taskModalOpen && state.activeTaskTab === tab) {
+    renderTaskTabContent();
+  }
+
+  try {
+    let historyQuery = null;
+    if (tab === 'received') {
+      historyQuery = query(collection(db, 'assigned_tasks'), where('assignedTo', '==', state.currentUsername));
+    } else if (tab === 'sent') {
+      historyQuery = query(collection(db, 'assigned_tasks'), where('assignedBy', '==', state.currentUsername));
+    } else if (tab === 'shared') {
+      historyQuery = query(collection(db, 'assigned_tasks'), where('sharedWith', 'array-contains', state.currentUsername));
+    }
+    if (!historyQuery) return;
+
+    const snap = await getDocs(historyQuery);
+    recordGetDocsRead(`task.history.${tab}`, `タスク履歴:${tab}`, `assigned_tasks:${state.currentUsername}`, snap.size);
+    const allTasks = _sortTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const historyOnly = allTasks.filter(task => {
+      if (tab === 'received') return !_isReceivedTaskLive(task);
+      if (tab === 'sent') return !_isSentTaskLive(task);
+      return !_isSharedTaskLive(task);
+    });
+
+    state.taskHistoryCache = {
+      ...state.taskHistoryCache,
+      [tab]: historyOnly,
+    };
+    state.taskHistoryLoaded = {
+      ...state.taskHistoryLoaded,
+      [tab]: true,
+    };
+    _syncAllTaskLists();
+  } catch (err) {
+    console.error(`task history load error (${tab}):`, err);
+  } finally {
+    state.taskHistoryLoading = { ...state.taskHistoryLoading, [tab]: false };
+    if (state.taskModalOpen && state.activeTaskTab === tab) {
+      renderTaskTabContent();
+    }
+  }
+}
+
+function _ensureTaskHistoryForActiveTab() {
+  if (state.activeTaskTab === 'received' || state.activeTaskTab === 'sent' || state.activeTaskTab === 'shared') {
+    void _loadTaskHistory(state.activeTaskTab);
+  }
+}
+
 export function startTaskListeners(username) {
   if (!username) return;
-  if (state._receivedTasksUnsub) { state._receivedTasksUnsub(); state._receivedTasksUnsub = null; }
-  if (state._sentTasksUnsub)     { state._sentTasksUnsub();     state._sentTasksUnsub = null; }
-  if (state._sharedTasksUnsub)   { state._sharedTasksUnsub();   state._sharedTasksUnsub = null; }
+  _resetTaskHistoryState();
 
   // orderBy を外してクライアント側でソート（複合インデックス不要）
-  const rQ = query(collection(db, 'assigned_tasks'), where('assignedTo', '==', username));
+  const rQ = query(
+    collection(db, 'assigned_tasks'),
+    where('assignedTo', '==', username),
+    where('status', 'in', ACTIVE_TASK_STATUSES),
+  );
   recordListenerStart('task.received', '受け取ったタスク', `assigned_tasks:${username}`);
   state._receivedTasksUnsub = wrapTrackedListenerUnsubscribe('task.received', onSnapshot(rQ, snap => {
     recordListenerSnapshot('task.received', snap.size, username);
-    state.receivedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+    liveReceivedTasks = _sortTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    _syncReceivedTasks();
     updateTaskBadge();
     deps.renderTodoSection?.();   // 自分のタスクウィジェットも更新
     if (state.taskModalOpen && state.activeTaskTab === 'received') renderTaskTabContent();
   }, err => console.error('receivedTasks listener error:', err)));
 
-  const sQ = query(collection(db, 'assigned_tasks'), where('assignedBy', '==', username));
+  const sQ = query(
+    collection(db, 'assigned_tasks'),
+    where('assignedBy', '==', username),
+    where('status', 'in', ACTIVE_TASK_STATUSES),
+  );
   recordListenerStart('task.sent', '依頼したタスク', `assigned_tasks:${username}`);
   state._sentTasksUnsub = wrapTrackedListenerUnsubscribe('task.sent', onSnapshot(sQ, snap => {
     recordListenerSnapshot('task.sent', snap.size, username);
-    state.sentTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+    liveSentTasks = _sortTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    _syncSentTasks();
     updateTaskBadge();
     if (state.taskModalOpen && state.activeTaskTab === 'sent') renderTaskTabContent();
   }, err => console.error('sentTasks listener error:', err)));
 
   // 共有されたタスク（自分が sharedWith に含まれる）
-  const shareQ = query(collection(db, 'assigned_tasks'), where('sharedWith', 'array-contains', username));
+  const sentDoneNotifyQ = query(
+    collection(db, 'assigned_tasks'),
+    where('assignedBy', '==', username),
+    where('status', '==', 'done'),
+    where('notifiedDone', '==', false),
+  );
+  recordListenerStart('task.sent-done', '未確認の完了タスク', `assigned_tasks:${username}`);
+  state._sentTaskDoneNotifyUnsub = wrapTrackedListenerUnsubscribe('task.sent-done', onSnapshot(sentDoneNotifyQ, snap => {
+    recordListenerSnapshot('task.sent-done', snap.size, username);
+    liveSentDoneNotifyTasks = _sortTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    _syncSentTasks();
+    updateTaskBadge();
+    if (state.taskModalOpen && state.activeTaskTab === 'sent') renderTaskTabContent();
+  }, err => console.error('sentTasks done listener error:', err)));
+
+  const shareQ = query(
+    collection(db, 'assigned_tasks'),
+    where('sharedWith', 'array-contains', username),
+    where(`sharedResponses.${username}`, '==', 'pending'),
+  );
   recordListenerStart('task.shared', '共有されたタスク', `assigned_tasks:${username}`);
   state._sharedTasksUnsub = wrapTrackedListenerUnsubscribe('task.shared', onSnapshot(shareQ, snap => {
     recordListenerSnapshot('task.shared', snap.size, username);
-    state.sharedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+    liveSharedTasks = _sortTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    _syncSharedTasks();
     updateTaskBadge();
     if (state.taskModalOpen && state.activeTaskTab === 'shared') renderTaskTabContent();
   }, err => console.error('sharedTasks listener error:', err)));
@@ -205,6 +393,7 @@ export function openTaskModal() {
   state.taskModalOpen = true;
   document.getElementById('task-modal').classList.add('visible');
   switchTaskTab(state.activeTaskTab);
+  _ensureTaskHistoryForActiveTab();
 }
 
 export function closeTaskModal() {
@@ -216,6 +405,7 @@ export function switchTaskTab(tab) {
   state.activeTaskTab = tab;
   document.querySelectorAll('.task-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   renderTaskTabContent();
+  _ensureTaskHistoryForActiveTab();
 }
 
 export function renderTaskTabContent() {
@@ -232,6 +422,10 @@ export function renderTaskTabContent() {
 }
 
 export function _renderReceivedTasks(container) {
+  if (state.taskHistoryLoading.received && !state.receivedTasks.length) {
+    container.innerHTML = '<div class="task-empty"><span class="spinner"></span><p>履歴を読み込み中です...</p></div>';
+    return;
+  }
   if (!state.receivedTasks.length) {
     container.innerHTML = '<div class="task-empty"><i class="fa-solid fa-inbox"></i><p>受け取ったタスクはありません</p></div>';
     return;
@@ -281,6 +475,10 @@ export function _renderReceivedTasks(container) {
 }
 
 export function _renderSentTasks(container) {
+  if (state.taskHistoryLoading.sent && !state.sentTasks.length) {
+    container.innerHTML = '<div class="task-empty"><span class="spinner"></span><p>履歴を読み込み中です...</p></div>';
+    return;
+  }
   if (!state.sentTasks.length) {
     container.innerHTML = '<div class="task-empty"><i class="fa-solid fa-paper-plane"></i><p>依頼したタスクはありません</p></div>';
     return;
@@ -358,6 +556,10 @@ export function _renderSentTasks(container) {
 }
 
 export function _renderSharedTasks(container) {
+  if (state.taskHistoryLoading.shared && !state.sharedTasks.length) {
+    container.innerHTML = '<div class="task-empty"><span class="spinner"></span><p>履歴を読み込み中です...</p></div>';
+    return;
+  }
   if (!state.sharedTasks.length) {
     container.innerHTML = '<div class="task-empty"><i class="fa-solid fa-share-nodes"></i><p>共有されたタスクはありません</p></div>';
     return;
@@ -512,10 +714,18 @@ export async function acceptTask(taskId) {
 export async function completeTask(taskId) {
   if (!confirm('このタスクを完了として報告しますか？')) return;
   try {
+    const current = state.receivedTasks.find(task => task.id === taskId);
     await updateDoc(doc(db, 'assigned_tasks', taskId), {
       status: 'done',
       doneAt: serverTimestamp(),
     });
+    if (current) {
+      _upsertTaskHistory('received', {
+        ...current,
+        status: 'done',
+        doneAt: { seconds: Math.floor(Date.now() / 1000) },
+      });
+    }
     await syncRequestLink(taskId, {
       linkedTaskStatus: 'done',
       linkedTaskClosedAt: serverTimestamp(),
@@ -525,7 +735,14 @@ export async function completeTask(taskId) {
 
 export async function acknowledgeTask(taskId) {
   try {
+    const current = state.sentTasks.find(task => task.id === taskId);
     await updateDoc(doc(db, 'assigned_tasks', taskId), { notifiedDone: true });
+    if (current) {
+      _upsertTaskHistory('sent', {
+        ...current,
+        notifiedDone: true,
+      });
+    }
   } catch (err) { console.error('タスク確認エラー:', err); }
 }
 
@@ -535,6 +752,7 @@ export async function deleteTask(taskId, confirmMsg) {
     const taskSnap = await getDoc(doc(db, 'assigned_tasks', taskId));
     const task = taskSnap.exists() ? { id: taskSnap.id, ...taskSnap.data() } : null;
     await deleteDoc(doc(db, 'assigned_tasks', taskId));
+    _removeTaskFromAllCaches(taskId);
     if (task?.sourceRequestId) {
       await updateDoc(doc(db, 'cross_dept_requests', task.sourceRequestId), {
         linkedTaskId: null,
@@ -727,16 +945,36 @@ export async function submitTaskShare() {
 
 export async function acceptSharedTask(taskId) {
   try {
+    const current = state.sharedTasks.find(task => task.id === taskId);
     await updateDoc(doc(db, 'assigned_tasks', taskId), {
       [`sharedResponses.${state.currentUsername}`]: 'accepted',
     });
+    if (current) {
+      _upsertTaskHistory('shared', {
+        ...current,
+        sharedResponses: {
+          ...(current.sharedResponses || {}),
+          [state.currentUsername]: 'accepted',
+        },
+      });
+    }
   } catch (err) { console.error('共有タスク承諾エラー:', err); }
 }
 
 export async function declineSharedTask(taskId) {
   try {
+    const current = state.sharedTasks.find(task => task.id === taskId);
     await updateDoc(doc(db, 'assigned_tasks', taskId), {
       [`sharedResponses.${state.currentUsername}`]: 'declined',
     });
+    if (current) {
+      _upsertTaskHistory('shared', {
+        ...current,
+        sharedResponses: {
+          ...(current.sharedResponses || {}),
+          [state.currentUsername]: 'declined',
+        },
+      });
+    }
   } catch (err) { console.error('共有タスク拒否エラー:', err); }
 }

@@ -3,11 +3,15 @@ import { db, doc, getDoc, setDoc, addDoc, deleteDoc, updateDoc, collection, quer
 import { state, REQ_STATUS_LABEL } from './state.js';
 import { esc, escHtml, getUserAvatarColor, normalizeProjectKey, _fmtTs } from './utils.js';
 import {
+  recordGetDocsRead,
   recordListenerStart,
   recordListenerSnapshot,
   wrapTrackedListenerUnsubscribe,
 } from './read-diagnostics.js';
 export const deps = {};
+
+let liveReceivedRequests = [];
+let liveSentRequests = [];
 
 const LINKED_TASK_STATUS_LABEL = {
   pending:   { text: '承諾待ち', cls: 'req-task-link--pending' },
@@ -31,21 +35,157 @@ export async function loadConfigDepartmentsAndViewers() {
   } catch (err) { console.error('config読み込みエラー:', err); }
 }
 
+function _sortRequests(list) {
+  return [...list].sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+}
+
+function _mergeRequestLists(...lists) {
+  const merged = new Map();
+  lists.flat().forEach(req => {
+    if (req?.id) merged.set(req.id, req);
+  });
+  return _sortRequests([...merged.values()]);
+}
+
+function _isReceivedRequestLive(req) {
+  return !req?.archived && req?.status === 'submitted';
+}
+
+function _isSentRequestLive(req) {
+  return !req?.archived && req?.notifyCreator === true;
+}
+
+function _syncReceivedRequests() {
+  state.receivedRequests = _mergeRequestLists(state.reqHistoryCache.received, liveReceivedRequests);
+}
+
+function _syncSentRequests() {
+  state.sentRequests = _mergeRequestLists(state.reqHistoryCache.sent, liveSentRequests);
+}
+
+function _syncAllRequests() {
+  _syncReceivedRequests();
+  _syncSentRequests();
+}
+
+function _resetRequestHistoryState() {
+  if (state._reqReceivedUnsub) { state._reqReceivedUnsub(); state._reqReceivedUnsub = null; }
+  if (state._reqSentUnsub) { state._reqSentUnsub(); state._reqSentUnsub = null; }
+  liveReceivedRequests = [];
+  liveSentRequests = [];
+  state.reqHistoryCache = {
+    received: [],
+    sent: [],
+  };
+  state.reqHistoryLoaded = {
+    received: false,
+    sent: false,
+  };
+  state.reqHistoryLoading = {
+    received: false,
+    sent: false,
+  };
+  _syncAllRequests();
+}
+
+function _upsertRequestHistory(side, req) {
+  if (!req?.id) return;
+  const current = Array.isArray(state.reqHistoryCache[side]) ? state.reqHistoryCache[side] : [];
+  const withoutCurrent = current.filter(item => item.id !== req.id);
+  const shouldStayInHistory = side === 'received' ? !_isReceivedRequestLive(req) : !_isSentRequestLive(req);
+
+  state.reqHistoryCache = {
+    ...state.reqHistoryCache,
+    [side]: shouldStayInHistory ? _sortRequests([...withoutCurrent, req]) : withoutCurrent,
+  };
+  _syncAllRequests();
+}
+
+function _removeRequestFromAllCaches(reqId) {
+  if (!reqId) return;
+  liveReceivedRequests = liveReceivedRequests.filter(req => req.id !== reqId);
+  liveSentRequests = liveSentRequests.filter(req => req.id !== reqId);
+  state.reqHistoryCache = {
+    received: state.reqHistoryCache.received.filter(req => req.id !== reqId),
+    sent: state.reqHistoryCache.sent.filter(req => req.id !== reqId),
+  };
+  _syncAllRequests();
+}
+
+async function _loadRequestHistory(side, force = false) {
+  if (!state.currentUsername) return;
+  if (!force && state.reqHistoryLoaded[side]) return;
+  if (state.reqHistoryLoading[side]) return;
+
+  const myDept = state.userEmailProfile ? state.userEmailProfile.department : '';
+  if (side === 'received' && !myDept) return;
+
+  state.reqHistoryLoading = { ...state.reqHistoryLoading, [side]: true };
+  if (state.reqModalOpen && state.activeReqTab === 'request') {
+    renderReqContent();
+  }
+
+  try {
+    const historyQuery = side === 'received'
+      ? query(collection(db, 'cross_dept_requests'), where('toDept', '==', myDept))
+      : query(collection(db, 'cross_dept_requests'), where('createdBy', '==', state.currentUsername));
+    const snap = await getDocs(historyQuery);
+    recordGetDocsRead(`req.history.${side}`, `部門間依頼履歴:${side}`, side === 'received' ? myDept : state.currentUsername, snap.size);
+    const allRequests = _sortRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const historyOnly = allRequests.filter(req => side === 'received' ? !_isReceivedRequestLive(req) : !_isSentRequestLive(req));
+
+    state.reqHistoryCache = {
+      ...state.reqHistoryCache,
+      [side]: historyOnly,
+    };
+    state.reqHistoryLoaded = {
+      ...state.reqHistoryLoaded,
+      [side]: true,
+    };
+    _syncAllRequests();
+  } catch (err) {
+    console.error(`request history load error (${side}):`, err);
+  } finally {
+    state.reqHistoryLoading = { ...state.reqHistoryLoading, [side]: false };
+    if (state.reqModalOpen && state.activeReqTab === 'request') {
+      renderReqContent();
+    }
+  }
+}
+
+function _ensureRequestHistoryForActiveTab() {
+  if (!state.reqModalOpen || state.activeReqTab !== 'request') return;
+  if (state.activeReqSubTab === 'received') {
+    void _loadRequestHistory('received');
+  } else if (state.activeReqSubTab === 'sent') {
+    void _loadRequestHistory('sent');
+  } else if (state.activeReqSubTab === 'archived') {
+    void Promise.all([
+      _loadRequestHistory('received'),
+      _loadRequestHistory('sent'),
+    ]);
+  }
+}
+
 export function startRequestListeners(username) {
   if (!username) return;
-  if (state._reqReceivedUnsub) { state._reqReceivedUnsub(); state._reqReceivedUnsub = null; }
-  if (state._reqSentUnsub)     { state._reqSentUnsub();     state._reqSentUnsub = null; }
+  _resetRequestHistoryState();
   if (state._suggUnsub)        { state._suggUnsub();         state._suggUnsub = null; }
 
   // 自分の部署宛て依頼を監視
   const myDept = state.userEmailProfile ? state.userEmailProfile.department : null;
   if (myDept) {
-    const rQ = query(collection(db, 'cross_dept_requests'), where('toDept', '==', myDept));
+    const rQ = query(
+      collection(db, 'cross_dept_requests'),
+      where('toDept', '==', myDept),
+      where('status', '==', 'submitted'),
+      where('archived', '==', false),
+    );
     recordListenerStart('req.received', '受信部門間依頼', `cross_dept_requests:${myDept}`);
     state._reqReceivedUnsub = wrapTrackedListenerUnsubscribe('req.received', onSnapshot(rQ, snap => {
       recordListenerSnapshot('req.received', snap.size, myDept);
-      state.receivedRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+      liveReceivedRequests = _sortRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      _syncReceivedRequests();
       updateReqBadge();
       if (state.reqModalOpen && state.activeReqTab === 'request' && state.activeReqSubTab === 'received') renderReqContent();
     }, err => console.error('receivedRequests listener error:', err)));
@@ -53,12 +193,17 @@ export function startRequestListeners(username) {
 
   // 自分が送信した依頼を監視
 
-  const sQ = query(collection(db, 'cross_dept_requests'), where('createdBy', '==', username));
+  const sQ = query(
+    collection(db, 'cross_dept_requests'),
+    where('createdBy', '==', username),
+    where('notifyCreator', '==', true),
+    where('archived', '==', false),
+  );
   recordListenerStart('req.sent', '送信部門間依頼', `cross_dept_requests:${username}`);
   state._reqSentUnsub = wrapTrackedListenerUnsubscribe('req.sent', onSnapshot(sQ, snap => {
     recordListenerSnapshot('req.sent', snap.size, username);
-    state.sentRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+    liveSentRequests = _sortRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    _syncSentRequests();
     updateReqBadge();
     if (state.reqModalOpen && state.activeReqTab === 'request' && state.activeReqSubTab === 'sent') renderReqContent();
   }, err => console.error('sentRequests listener error:', err)));
@@ -81,8 +226,13 @@ export function stopRequestListeners() {
   if (state._reqReceivedUnsub) { state._reqReceivedUnsub(); state._reqReceivedUnsub = null; }
   if (state._reqSentUnsub)     { state._reqSentUnsub();     state._reqSentUnsub = null; }
   if (state._suggUnsub)        { state._suggUnsub();         state._suggUnsub = null; }
+  liveReceivedRequests = [];
+  liveSentRequests = [];
   state.receivedRequests = [];
   state.sentRequests = [];
+  state.reqHistoryCache = { received: [], sent: [] };
+  state.reqHistoryLoaded = { received: false, sent: false };
+  state.reqHistoryLoading = { received: false, sent: false };
   state.suggestionList = [];
 }
 
@@ -125,6 +275,7 @@ export function openReqModal(initialTab) {
   document.getElementById('reqboard-modal').classList.add('visible');
   _syncReqTabUI();
   renderReqContent();
+  _ensureRequestHistoryForActiveTab();
 }
 
 export function closeReqModal() {
@@ -140,6 +291,7 @@ export function switchReqTab(tab) {
   }
   _syncReqTabUI();
   renderReqContent();
+  _ensureRequestHistoryForActiveTab();
 }
 
 export function switchReqSubTab(subtab) {
@@ -150,18 +302,35 @@ export function switchReqSubTab(subtab) {
   }
   _syncReqSubTabUI();
   renderReqContent();
+  _ensureRequestHistoryForActiveTab();
 }
 
 // ===== アーカイブ・削除 =====
 export async function archiveRequest(id) {
   try {
+    const current = _getRequestById(id);
     await updateDoc(doc(db, 'cross_dept_requests', id), { archived: true, updatedAt: serverTimestamp() });
+    if (current) {
+      _removeRequestFromAllCaches(id);
+      const updated = { ...current, archived: true, updatedAt: { seconds: Math.floor(Date.now() / 1000) } };
+      const myDept = state.userEmailProfile ? state.userEmailProfile.department : '';
+      if (current.toDept === myDept) _upsertRequestHistory('received', updated);
+      if (current.createdBy === state.currentUsername) _upsertRequestHistory('sent', updated);
+    }
   } catch (err) { console.error('アーカイブエラー:', err); alert('アーカイブに失敗しました'); }
 }
 
 export async function unarchiveRequest(id) {
   try {
+    const current = _getRequestById(id);
     await updateDoc(doc(db, 'cross_dept_requests', id), { archived: false, updatedAt: serverTimestamp() });
+    if (current) {
+      _removeRequestFromAllCaches(id);
+      const updated = { ...current, archived: false, updatedAt: { seconds: Math.floor(Date.now() / 1000) } };
+      const myDept = state.userEmailProfile ? state.userEmailProfile.department : '';
+      if (current.toDept === myDept) _upsertRequestHistory('received', updated);
+      if (current.createdBy === state.currentUsername) _upsertRequestHistory('sent', updated);
+    }
   } catch (err) { console.error('アーカイブ解除エラー:', err); alert('解除に失敗しました'); }
 }
 
@@ -169,6 +338,7 @@ export async function deleteRequest(id) {
   if (!confirm('この依頼を完全に削除しますか？この操作は取り消せません。')) return;
   try {
     await deleteDoc(doc(db, 'cross_dept_requests', id));
+    _removeRequestFromAllCaches(id);
   } catch (err) { console.error('削除エラー:', err); alert('削除に失敗しました'); }
 }
 
@@ -462,6 +632,10 @@ export async function submitRequestTaskify() {
 }
 
 export function _renderReceivedRequests(container) {
+  if (state.reqHistoryLoading.received && !state.receivedRequests.length) {
+    container.innerHTML = '<div class="req-empty"><span class="spinner"></span><p>履歴を読み込み中です...</p></div>';
+    return;
+  }
   const myDept = state.userEmailProfile ? state.userEmailProfile.department : null;
   if (!myDept) {
     container.innerHTML = `<div class="req-empty"><i class="fa-solid fa-building"></i><p>まず設定から部署を登録してください</p></div>`;
@@ -521,6 +695,10 @@ export function _renderReceivedRequests(container) {
 }
 
 export function _renderSentRequests(container) {
+  if (state.reqHistoryLoading.sent && !state.sentRequests.length) {
+    container.innerHTML = '<div class="req-empty"><span class="spinner"></span><p>履歴を読み込み中です...</p></div>';
+    return;
+  }
   const list = state.sentRequests.filter(r => !r.archived);
   if (list.length === 0) {
     container.innerHTML = `<div class="req-empty"><i class="fa-solid fa-paper-plane"></i><p>投稿した依頼はありません</p></div>`;
@@ -610,6 +788,10 @@ export function _renderNewRequestForm(container) {
 }
 
 function _renderArchivedRequests(container) {
+  if ((state.reqHistoryLoading.received || state.reqHistoryLoading.sent) && !state.receivedRequests.length && !state.sentRequests.length) {
+    container.innerHTML = '<div class="req-empty"><span class="spinner"></span><p>履歴を読み込み中です...</p></div>';
+    return;
+  }
   const archived = [
     ...state.receivedRequests.filter(r => r.archived),
     ...state.sentRequests.filter(r => r.archived),
@@ -745,6 +927,7 @@ export async function updateRequestStatus() {
   const { reqId, status } = state._pendingStatusChange;
   const note = document.getElementById('req-status-note').value.trim();
   try {
+    const current = _getRequestById(reqId);
     const isCreator = state.sentRequests.some(r => r.id === reqId);
     await updateDoc(doc(db, 'cross_dept_requests', reqId), {
       status,
@@ -753,6 +936,20 @@ export async function updateRequestStatus() {
       updatedAt: serverTimestamp(),
       notifyCreator: !isCreator, // 自分以外が変更したら通知
     });
+    if (current) {
+      _removeRequestFromAllCaches(reqId);
+      const updated = {
+        ...current,
+        status,
+        statusNote: note,
+        statusUpdatedBy: state.currentUsername,
+        updatedAt: { seconds: Math.floor(Date.now() / 1000) },
+        notifyCreator: !isCreator,
+      };
+      const myDept = state.userEmailProfile ? state.userEmailProfile.department : '';
+      if (current.toDept === myDept) _upsertRequestHistory('received', updated);
+      if (current.createdBy === state.currentUsername) _upsertRequestHistory('sent', updated);
+    }
     document.getElementById('req-status-modal').classList.remove('visible');
     state._pendingStatusChange = null;
   } catch (err) {
@@ -763,7 +960,15 @@ export async function updateRequestStatus() {
 
 export async function markRequestSeen(reqId) {
   try {
+    const current = state.sentRequests.find(req => req.id === reqId);
     await updateDoc(doc(db, 'cross_dept_requests', reqId), { notifyCreator: false });
+    if (current) {
+      _removeRequestFromAllCaches(reqId);
+      _upsertRequestHistory('sent', {
+        ...current,
+        notifyCreator: false,
+      });
+    }
   } catch (_) { /* silent */ }
 }
 
