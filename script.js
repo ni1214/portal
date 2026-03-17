@@ -70,7 +70,6 @@ import {
 import {
   deps as noticeDeps,
   loadReadNotices, markAllNoticesRead, updateNoticeBadge, setupNoticeObserver,
-  loadAllNoticeReactions, toggleReaction, buildReactionBar,
   subscribeNotices, saveNotice as moduleSaveNotice, addNotice as moduleAddNotice, deleteNotice as moduleDeleteNotice,
   renderNotices, openNoticeModal, closeNoticeModal, refreshNoticeVisibility, handleNoticeTargetScopeChange
 } from './modules/notices.js';
@@ -2360,7 +2359,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderFavorites();
 
   // お知らせリアクションを先行読み込み
-  loadAllNoticeReactions();
 
   // 天気は即時取得（30分ごと更新）
   fetchAndRenderWeather();

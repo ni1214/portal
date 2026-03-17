@@ -164,16 +164,52 @@ export function setupNoticeObserver() {
   state._noticeObserver.observe(board);
 }
 
+function stopNoticeReactionObserver() {
+  if (state._noticeReactionObserver) {
+    state._noticeReactionObserver.disconnect();
+    state._noticeReactionObserver = null;
+  }
+}
+
+export async function ensureNoticeReactionsLoaded(force = false) {
+  if (state.noticeReactionsLoading) return;
+  if (state.noticeReactionsLoaded && !force) return;
+  await loadAllNoticeReactions();
+}
+
+export function setupNoticeReactionLoader() {
+  stopNoticeReactionObserver();
+  if (state.noticeReactionsLoaded || state.noticeReactionsLoading) return;
+  if (!(state.visibleNotices || []).length) return;
+  const board = document.getElementById('notice-board');
+  if (!board) return;
+  state._noticeReactionObserver = new IntersectionObserver(entries => {
+    if (!entries[0]?.isIntersecting) return;
+    stopNoticeReactionObserver();
+    ensureNoticeReactionsLoaded();
+  }, {
+    threshold: 0.1,
+    rootMargin: '240px 0px',
+  });
+  state._noticeReactionObserver.observe(board);
+}
+
 // ========== お知らせリアクション ==========
 export async function loadAllNoticeReactions() {
+  if (state.noticeReactionsLoading) return;
+  state.noticeReactionsLoading = true;
   try {
     const snap = await getDocs(collection(db, 'notice_reactions'));
     recordGetDocsRead('notice.reactions', 'お知らせリアクション', 'notice_reactions', snap.size);
     state.noticeReactions = {};
     snap.docs.forEach(d => { state.noticeReactions[d.id] = d.data(); });
+    state.noticeReactionsLoaded = true;
     renderNotices(state.visibleNotices);
   } catch (err) {
+    state.noticeReactionsLoaded = false;
     console.error('リアクション読み込みエラー:', err);
+  } finally {
+    state.noticeReactionsLoading = false;
   }
 }
 
@@ -300,6 +336,7 @@ export function renderNotices(notices) {
   }
 
   const list = board.querySelector('#notice-list');
+  setupNoticeReactionLoader();
   visibleNotices.forEach(n => {
     const isUnread = state.currentUsername && !state.readNoticeIds.has(n.id);
     const item = document.createElement('div');
@@ -330,11 +367,17 @@ export function renderNotices(notices) {
   });
 
   // リアクションボタン（イベントデリゲーション）
-  list.addEventListener('click', e => {
+  list.addEventListener('click', async e => {
     const btn = e.target.closest('.reaction-btn');
     if (!btn) return;
     if (!state.currentUsername) { alert('リアクションするにはユーザーネームを設定してください'); return; }
-    toggleReaction(btn.dataset.noticeId, btn.dataset.emoji);
+    btn.disabled = true;
+    try {
+      await ensureNoticeReactionsLoaded();
+      await toggleReaction(btn.dataset.noticeId, btn.dataset.emoji);
+    } finally {
+      btn.disabled = false;
+    }
   });
 }
 

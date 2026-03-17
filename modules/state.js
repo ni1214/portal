@@ -103,6 +103,9 @@ export const state = {
 
   // お知らせリアクション
   noticeReactions: {},
+  noticeReactionsLoaded: false,
+  noticeReactionsLoading: false,
+  _noticeReactionObserver: null,
 
   // チャット（DM + グループ）
   chatPanelOpen: false,
