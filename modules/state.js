@@ -80,6 +80,15 @@ export const state = {
 
   // ニックネーム・個人データ
   currentUsername: localStorage.getItem('portal-username') || null,
+  inviteCodeHash: null,
+  inviteCodeRequired: false,
+  inviteCodeVerified: sessionStorage.getItem('portal-invite-ok') === '1',
+  adminInviteConfigured: false,
+  pendingLoginUsername: '',
+  pendingLoginHash: null,
+  pendingLoginFromStored: false,
+  lockRecommendationPending: false,
+  lockRecommendationMessage: '',
   personalSectionOrder: [],
   privateCategories: [],
   privateCards: [],

@@ -13156,3 +13156,96 @@ html.font-xl { font-size: 21px; }
     width: min(96vw, 96vw);
   }
 }
+
+/* ===== auth.js invite / prelogin ===== */
+.auth-access-modal {
+  width: min(420px, 92vw);
+}
+
+.auth-prelogin-user {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  margin: 0 0 14px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-glass);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.security-recommend-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 11px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--accent-orange) 45%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-orange) 10%, transparent);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.security-recommend-box i {
+  color: var(--accent-orange);
+  margin-top: 2px;
+}
+
+.admin-invite-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-invite-row .pin-input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.admin-invite-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-invite-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-glass);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.admin-invite-status.is-configured {
+  color: var(--accent-cyan);
+  border-color: color-mix(in srgb, var(--accent-cyan) 32%, var(--border-glass));
+}
+
+.admin-invite-hint {
+  color: var(--text-secondary);
+  font-size: 0.77rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .admin-invite-row {
+    flex-wrap: wrap;
+  }
+
+  .admin-invite-row .pin-input,
+  .admin-invite-row .btn-modal-primary,
+  .admin-invite-row .btn-modal-danger {
+    width: 100%;
+  }
+}

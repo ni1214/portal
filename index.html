@@ -677,6 +677,24 @@
   </div>
 
   <!-- ==================== ユーザー名設定モーダル ==================== -->
+  <div class="modal-overlay" id="auth-invite-modal">
+    <div class="modal-glass auth-access-modal">
+      <h3 class="modal-title"><i class="fa-solid fa-user-check"></i> 招待コード</h3>
+      <p class="modal-desc">このポータルは招待制です。管理者から共有された4桁の招待コードを入力してください。</p>
+      <div class="form-group">
+        <label class="form-label" for="auth-invite-input">招待コード</label>
+        <input type="password" id="auth-invite-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・" autocomplete="off">
+      </div>
+      <div class="security-error" id="auth-invite-error" hidden></div>
+      <div class="modal-actions">
+        <button class="btn-modal-primary" id="auth-invite-submit">
+          <i class="fa-solid fa-spinner fa-spin" id="auth-invite-spinner" hidden></i>
+          <span>コードを確認する</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="username-modal">
     <div class="modal-glass">
       <h3 class="modal-title" id="username-modal-title"><i class="fa-solid fa-user-circle"></i> ユーザーネームを設定</h3>
@@ -895,6 +913,7 @@
         <div class="guide-section">
           <h4 class="guide-section-title"><span class="guide-icon">🖱️</span> 基本操作</h4>
           <ul class="guide-list">
+            <li><strong>最初の利用時</strong>は <strong>招待コード → ユーザーネーム</strong> の順で進みます。PINロック済みの名前は、ログイン前に4桁PINが必要です。</li>
             <li>カードをクリック（スマホはタップ）すると、登録されたページが<strong>新しいタブ</strong>で開きます。</li>
             <li><strong>PC：</strong>カードを<strong>右クリック</strong>すると「編集」「削除」メニューが表示されます。</li>
             <li><strong>スマホ：</strong>カードを<strong>長押し</strong>すると「編集」「削除」メニューが表示されます。</li>
@@ -1015,6 +1034,26 @@
         </div>
 
         <p class="guide-version">最終更新: 2026年3月</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="auth-prelogin-modal">
+    <div class="modal-glass auth-access-modal">
+      <h3 class="modal-title" id="auth-prelogin-title"><i class="fa-solid fa-lock"></i> ログイン前PIN確認</h3>
+      <p class="modal-desc" id="auth-prelogin-desc">このユーザーはPIN保護されています。4桁のPINを入力するとログインできます。</p>
+      <div class="auth-prelogin-user" id="auth-prelogin-username"></div>
+      <div class="form-group">
+        <label class="form-label" for="auth-prelogin-input">PIN</label>
+        <input type="password" id="auth-prelogin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・" autocomplete="off">
+      </div>
+      <div class="security-error" id="auth-prelogin-error" hidden></div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="auth-prelogin-cancel">別の名前でログイン</button>
+        <button class="btn-modal-primary" id="auth-prelogin-submit">
+          <i class="fa-solid fa-spinner fa-spin" id="auth-prelogin-spinner" hidden></i>
+          <span>PINを確認する</span>
+        </button>
       </div>
     </div>
   </div>
@@ -1147,6 +1186,10 @@
   <div class="modal-overlay" id="security-modal">
     <div class="modal-glass security-modal-inner">
       <h3 class="modal-title"><i class="fa-solid fa-shield-halved"></i> セキュリティ設定</h3>
+      <div class="security-recommend-box" id="security-recommend-box" hidden>
+        <i class="fa-solid fa-circle-info"></i>
+        <span id="security-recommend-text">なりすまし防止のため、PINロック設定をおすすめします。</span>
+      </div>
 
       <!-- ① ロック機能 ON/OFF トグル -->
       <div class="security-row">
@@ -1270,6 +1313,21 @@
           <div style="display:flex;justify-content:flex-end;margin-top:8px;">
             <button class="btn-modal-primary" id="admin-mission-save-btn"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
           </div>
+        </div>
+
+        <div class="admin-section">
+          <span class="admin-panel-subtitle"><i class="fa-solid fa-key"></i> 招待コード設定</span>
+          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">設定すると、URLを開いただけではログイン画面へ進めず、先に4桁の招待コード入力が必要になります。</p>
+          <div class="admin-invite-row">
+            <input type="password" id="admin-invite-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・" autocomplete="off">
+            <button class="btn-modal-primary" id="admin-invite-save-btn">保存</button>
+            <button class="btn-modal-danger" id="admin-invite-clear-btn" hidden>解除</button>
+          </div>
+          <div class="admin-invite-status-row">
+            <span class="admin-invite-status" id="admin-invite-status">未設定</span>
+            <span class="admin-invite-hint" id="admin-invite-hint">未設定の間は招待コードなしでログイン画面へ進みます。</span>
+          </div>
+          <div class="security-error" id="admin-invite-error" hidden></div>
         </div>
 
         <!-- 目安箱 閲覧者管理 -->

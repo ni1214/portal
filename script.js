@@ -22,12 +22,15 @@ import {
   migrateToNewUsername,
   showUsernameModal, closeUsernameModal, showUsernameError, hideUsernameError,
   applyUsername, saveUsername,
+  ensureInviteAccess, submitInviteCode, loadInviteCodeConfig, saveInviteCode, clearInviteCode,
+  loginExistingUsername, restoreStoredUsernameSession,
   loadLockSettings, saveLockSettings,
   startActivityTracking, stopActivityTracking, resetActivityTimer, checkAutoLock,
   setLockPin, removeLockPin,
   lockPortal, updateLockNotifications,
   lockSwitchUser, updateLockClock,
   handleLockKeyPress, handleLockDelete, updateLockDots, verifyLockPin,
+  submitPreloginPin, cancelPreloginPin,
   openSecurityModal, openAdminModal, closeAdminModal, deleteUserData, loadUsersForAdmin,
   closeSecurityModal,
   updateUsernameDisplay, registerUserLogin
@@ -2424,6 +2427,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === e.currentTarget) closeServicePicker();
   });
 
+  // ===== ニックネーム =====
+  document.getElementById('btn-user').addEventListener('click', () => showUsernameModal(true));
+  const storedUsername = state.currentUsername;
+  if (storedUsername) {
+    state.currentUsername = null;
+  }
+  updateUsernameDisplay();
+
+  document.getElementById('auth-invite-submit').addEventListener('click', async () => {
+    await submitInviteCode(document.getElementById('auth-invite-input').value);
+  });
+  document.getElementById('auth-invite-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('auth-invite-submit').click();
+  });
+
+  document.getElementById('auth-prelogin-submit').addEventListener('click', async () => {
+    await submitPreloginPin(document.getElementById('auth-prelogin-input').value);
+  });
+  document.getElementById('auth-prelogin-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('auth-prelogin-submit').click();
+  });
+  document.getElementById('auth-prelogin-cancel').addEventListener('click', async () => {
+    await cancelPreloginPin();
+  });
+
+  document.getElementById('username-submit').addEventListener('click', () => {
+    const name = document.getElementById('username-input').value.trim();
+    if (!name) { document.getElementById('username-input').focus(); return; }
+    saveUsername(name);
+  });
+  document.getElementById('username-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('username-submit').click();
+  });
+  document.getElementById('username-input').addEventListener('input', hideUsernameError);
+  document.getElementById('username-reclaim').addEventListener('click', async () => {
+    const name = document.getElementById('username-input').value.trim();
+    if (name) await loginExistingUsername(name);
+  });
+  document.getElementById('username-skip').addEventListener('click', () => {
+    closeUsernameModal();
+    // スキップ後：ユーザーネーム未設定バナーを表示
+    if (!state.currentUsername) {
+      const hint = document.getElementById('area-personal-hint');
+      if (hint) hint.hidden = false;
+    }
+  });
+
+  const inviteOk = await ensureInviteAccess();
+  if (!inviteOk) return;
+
   // Firestore 読み込み
   try {
     await migrateIfNeeded();
@@ -2439,32 +2492,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // お気に入りのみ表示ボタン
   document.getElementById('btn-favorites-only').addEventListener('click', toggleFavoritesOnly);
   applyFavoritesOnlyMode();
-
-  // ===== ニックネーム =====
-  document.getElementById('btn-user').addEventListener('click', () => showUsernameModal(true));
-  updateUsernameDisplay();
-
-  document.getElementById('username-submit').addEventListener('click', () => {
-    const name = document.getElementById('username-input').value.trim();
-    if (!name) { document.getElementById('username-input').focus(); return; }
-    saveUsername(name);
-  });
-  document.getElementById('username-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('username-submit').click();
-  });
-  document.getElementById('username-input').addEventListener('input', hideUsernameError);
-  document.getElementById('username-reclaim').addEventListener('click', async () => {
-    const name = document.getElementById('username-input').value.trim();
-    if (name) await applyUsername(name);
-  });
-  document.getElementById('username-skip').addEventListener('click', () => {
-    closeUsernameModal();
-    // スキップ後：ユーザーネーム未設定バナーを表示
-    if (!state.currentUsername) {
-      const hint = document.getElementById('area-personal-hint');
-      if (hint) hint.hidden = false;
-    }
-  });
 
   // ===== ロックボタン =====
   document.getElementById('btn-lock-header').addEventListener('click', lockPortal);
@@ -2530,6 +2557,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       state.isAdmin = true;
       document.getElementById('admin-auth-area').hidden  = true;
       document.getElementById('admin-panel-area').hidden = false;
+      await loadInviteCodeConfig();
       loadUsersForAdmin();
       renderAdminSuggBoxSection();
       // ミッションテキストを入力欄に反映
@@ -2554,12 +2582,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     await setPIN(pin);
     document.getElementById('admin-setup-area').hidden = true;
     document.getElementById('admin-panel-area').hidden = false;
+    await loadInviteCodeConfig();
     loadUsersForAdmin();
     renderAdminSuggBoxSection();
     const mInput = document.getElementById('admin-mission-input');
     if (mInput) mInput.value = state.missionText || '';
   });
   document.getElementById('admin-setup-cancel').addEventListener('click', closeAdminModal);
+  document.getElementById('admin-invite-save-btn').addEventListener('click', async () => {
+    const input = document.getElementById('admin-invite-input');
+    const msgEl = document.getElementById('admin-invite-error');
+    msgEl.hidden = true;
+    try {
+      await saveInviteCode(input.value);
+    } catch (err) {
+      msgEl.textContent = err?.message || '招待コードの保存に失敗しました。';
+      msgEl.hidden = false;
+    }
+  });
+  document.getElementById('admin-invite-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('admin-invite-save-btn').click();
+  });
+  document.getElementById('admin-invite-clear-btn').addEventListener('click', async () => {
+    const msgEl = document.getElementById('admin-invite-error');
+    msgEl.hidden = true;
+    if (!confirm('招待コードを解除しますか？')) return;
+    try {
+      await clearInviteCode();
+    } catch (err) {
+      msgEl.textContent = err?.message || '招待コードの解除に失敗しました。';
+      msgEl.hidden = false;
+    }
+  });
 
   // PIN設定
   document.getElementById('btn-set-pin').addEventListener('click', async () => {
@@ -2606,11 +2660,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // 初回訪問時にニックネームモーダル
-  if (!state.currentUsername) {
+  if (!storedUsername) {
     setTimeout(() => showUsernameModal(false), 600);
     renderTodoSection();
   } else {
-    loadPersonalData(state.currentUsername);
+    const restored = await restoreStoredUsernameSession(storedUsername);
+    if (!restored && !state.currentUsername) {
+      renderTodoSection();
+    }
   }
 
   // ===== TODO パネル =====

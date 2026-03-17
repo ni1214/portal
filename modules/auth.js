@@ -5,6 +5,9 @@ import { state } from './state.js';
 // Cross-module function references (set by script.js after all modules load)
 export const deps = {};
 
+let inviteGateResolver = null;
+let preLoginContext = null;
+
 // ========== PIN 認証 ==========
 const PIN_SALT = 'seisan-portal-v1';
 
@@ -27,6 +30,161 @@ export async function setPIN(pin) {
 export async function isPINConfigured() {
   const snap = await getDoc(doc(db, 'portal', 'config'));
   return snap.exists() && !!snap.data().pinHash;
+}
+
+export async function loadInviteCodeConfig() {
+  const snap = await getDoc(doc(db, 'portal', 'config'));
+  const data = snap.exists() ? snap.data() : {};
+  state.inviteCodeHash = data.inviteCodeHash || null;
+  state.inviteCodeRequired = !!state.inviteCodeHash;
+  state.adminInviteConfigured = state.inviteCodeRequired;
+  updateInviteAdminState();
+  return data;
+}
+
+function hideInviteError() {
+  const box = document.getElementById('auth-invite-error');
+  if (box) {
+    box.hidden = true;
+    box.textContent = '';
+  }
+}
+
+function showInviteError(message) {
+  const box = document.getElementById('auth-invite-error');
+  if (!box) return;
+  box.textContent = message;
+  box.hidden = false;
+}
+
+function setInviteSubmitBusy(isBusy) {
+  const submitBtn = document.getElementById('auth-invite-submit');
+  const spinner = document.getElementById('auth-invite-spinner');
+  if (submitBtn) submitBtn.disabled = isBusy;
+  if (spinner) spinner.hidden = !isBusy;
+}
+
+function openInviteModal() {
+  const modal = document.getElementById('auth-invite-modal');
+  const input = document.getElementById('auth-invite-input');
+  if (!modal || !input) return;
+  input.value = '';
+  hideInviteError();
+  setInviteSubmitBusy(false);
+  modal.classList.add('visible');
+  setTimeout(() => input.focus(), 80);
+}
+
+export function closeInviteModal() {
+  document.getElementById('auth-invite-modal')?.classList.remove('visible');
+}
+
+export async function ensureInviteAccess() {
+  try {
+    await loadInviteCodeConfig();
+  } catch (err) {
+    console.error('招待コード設定の読込に失敗しました:', err);
+    openInviteModal();
+    showInviteError('招待コード設定を読めませんでした。再読み込みしてください。');
+    setInviteSubmitBusy(true);
+    return false;
+  }
+
+  if (!state.inviteCodeRequired) {
+    state.inviteCodeVerified = true;
+    sessionStorage.removeItem('portal-invite-ok');
+    closeInviteModal();
+    return true;
+  }
+
+  if (state.inviteCodeVerified) {
+    closeInviteModal();
+    return true;
+  }
+
+  openInviteModal();
+  return new Promise(resolve => {
+    inviteGateResolver = resolve;
+  });
+}
+
+export async function submitInviteCode(code) {
+  const normalized = `${code || ''}`.trim();
+  if (!/^\d{4}$/.test(normalized)) {
+    showInviteError('4桁の招待コードを入力してください。');
+    return false;
+  }
+  if (!state.inviteCodeHash) {
+    showInviteError('招待コード設定が読み込めていません。再読み込みしてください。');
+    return false;
+  }
+
+  setInviteSubmitBusy(true);
+  hideInviteError();
+  try {
+    const hash = await hashPIN(normalized);
+    if (hash !== state.inviteCodeHash) {
+      showInviteError('招待コードが違います。');
+      return false;
+    }
+    state.inviteCodeVerified = true;
+    sessionStorage.setItem('portal-invite-ok', '1');
+    closeInviteModal();
+    if (inviteGateResolver) {
+      inviteGateResolver(true);
+      inviteGateResolver = null;
+    }
+    return true;
+  } finally {
+    setInviteSubmitBusy(false);
+  }
+}
+
+function updateInviteAdminState(message = '') {
+  const statusEl = document.getElementById('admin-invite-status');
+  const hintEl = document.getElementById('admin-invite-hint');
+  const clearBtn = document.getElementById('admin-invite-clear-btn');
+  const input = document.getElementById('admin-invite-input');
+  if (statusEl) {
+    statusEl.textContent = state.adminInviteConfigured ? '設定済み' : '未設定';
+    statusEl.classList.toggle('is-configured', state.adminInviteConfigured);
+  }
+  if (hintEl) {
+    hintEl.textContent = message || (state.adminInviteConfigured
+      ? '現在は招待コード入力後にログイン画面へ進みます。'
+      : '未設定の間は招待コードなしでログイン画面へ進みます。');
+  }
+  if (clearBtn) clearBtn.hidden = !state.adminInviteConfigured;
+  if (input) input.value = '';
+}
+
+export async function saveInviteCode(code) {
+  const normalized = `${code || ''}`.trim();
+  if (!/^\d{4}$/.test(normalized)) {
+    throw new Error('4桁の数字を入力してください。');
+  }
+  const hash = await hashPIN(normalized);
+  await setDoc(doc(db, 'portal', 'config'), {
+    inviteCodeHash: hash,
+    inviteUpdatedAt: serverTimestamp(),
+  }, { merge: true });
+  state.inviteCodeHash = hash;
+  state.inviteCodeRequired = true;
+  state.adminInviteConfigured = true;
+  updateInviteAdminState('招待コードを保存しました。次の新規アクセスから有効です。');
+}
+
+export async function clearInviteCode() {
+  await setDoc(doc(db, 'portal', 'config'), {
+    inviteCodeHash: null,
+    inviteUpdatedAt: serverTimestamp(),
+  }, { merge: true });
+  state.inviteCodeHash = null;
+  state.inviteCodeRequired = false;
+  state.adminInviteConfigured = false;
+  state.inviteCodeVerified = true;
+  sessionStorage.removeItem('portal-invite-ok');
+  updateInviteAdminState('招待コードを解除しました。URLを知っていればログイン画面へ進めます。');
 }
 
 // ========== ユーザー（ニックネーム）管理 ==========
@@ -175,15 +333,21 @@ export function hideUsernameError() {
   document.getElementById('username-reclaim').hidden = true;
 }
 
-export async function applyUsername(name) {
+export async function applyUsername(name, options = {}) {
+  const recommendLockSetup = !!options.recommendLockSetup;
+  const lockPromptMessage = options.lockPromptMessage || 'なりすまし防止のため、PINロック設定をおすすめします。';
   const isSwitch = !!state.currentUsername && state.currentUsername !== name;
   state.currentUsername = name;
   localStorage.setItem('portal-username', name);
   updateUsernameDisplay();
-  registerUserLogin(name);
-  deps.loadPersonalData?.(name, isSwitch); // from personal.js
-  deps.renderAllSections?.(); // from render.js
   closeUsernameModal();
+  await deps.loadPersonalData?.(name, isSwitch); // from personal.js
+  deps.renderAllSections?.(); // from render.js
+  if (recommendLockSetup) {
+    state.lockRecommendationPending = true;
+    state.lockRecommendationMessage = lockPromptMessage;
+    openSecurityModal();
+  }
 }
 
 export async function saveUsername(name) {
@@ -227,7 +391,180 @@ export async function saveUsername(name) {
 
   submitBtn.disabled = false;
   spinner.hidden = true;
-  await applyUsername(name);
+  await applyUsername(name, {
+    recommendLockSetup: !state.currentUsername,
+    lockPromptMessage: 'このユーザーネームを他人に使われないよう、最初にPINロックを設定しておくと安心です。'
+  });
+}
+
+export async function getUserPreloginLockInfo(username) {
+  const normalized = `${username || ''}`.trim();
+  if (!normalized) return { requiresPin: false, hash: null };
+  const snap = await getDoc(doc(db, 'users', normalized, 'data', 'lock_pin'));
+  if (!snap.exists()) return { requiresPin: false, hash: null };
+  const data = snap.data();
+  return {
+    requiresPin: !!data.enabled && !!data.hash,
+    hash: data.hash || null,
+  };
+}
+
+function hidePreloginError() {
+  const errorEl = document.getElementById('auth-prelogin-error');
+  if (!errorEl) return;
+  errorEl.hidden = true;
+  errorEl.textContent = '';
+}
+
+function showPreloginError(message) {
+  const errorEl = document.getElementById('auth-prelogin-error');
+  if (!errorEl) return;
+  errorEl.textContent = message;
+  errorEl.hidden = false;
+}
+
+function setPreloginBusy(isBusy) {
+  const submitBtn = document.getElementById('auth-prelogin-submit');
+  const spinner = document.getElementById('auth-prelogin-spinner');
+  if (submitBtn) submitBtn.disabled = isBusy;
+  if (spinner) spinner.hidden = !isBusy;
+}
+
+function openPreloginPinModal(username, fromStored = false) {
+  const modal = document.getElementById('auth-prelogin-modal');
+  const titleEl = document.getElementById('auth-prelogin-title');
+  const descEl = document.getElementById('auth-prelogin-desc');
+  const userEl = document.getElementById('auth-prelogin-username');
+  const input = document.getElementById('auth-prelogin-input');
+  if (!modal || !input) return;
+
+  state.pendingLoginUsername = username;
+  state.pendingLoginFromStored = fromStored;
+  if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-lock"></i> ログイン前PIN確認';
+  if (descEl) {
+    descEl.textContent = fromStored
+      ? 'この端末に保存されているユーザーはPIN保護されています。4桁のPINを入力してください。'
+      : 'このユーザーはPIN保護されています。4桁のPINを入力するとログインできます。';
+  }
+  if (userEl) userEl.textContent = username;
+  input.value = '';
+  hidePreloginError();
+  setPreloginBusy(false);
+  closeUsernameModal();
+  modal.classList.add('visible');
+  setTimeout(() => input.focus(), 80);
+}
+
+export function closePreloginPinModal() {
+  document.getElementById('auth-prelogin-modal')?.classList.remove('visible');
+}
+
+async function resolvePreloginSuccess() {
+  if (!preLoginContext) return false;
+  const { username, resolve } = preLoginContext;
+  preLoginContext = null;
+  state.pendingLoginHash = null;
+  state.pendingLoginUsername = '';
+  state.pendingLoginFromStored = false;
+  closePreloginPinModal();
+  await applyUsername(username);
+  resolve?.(true);
+  return true;
+}
+
+function restoreUsernameModalForRetry(username, showMissingMessage = false) {
+  showUsernameModal(false);
+  const input = document.getElementById('username-input');
+  if (input) input.value = username || '';
+  if (showMissingMessage) {
+    showUsernameError('保存されていたユーザーネームが見つかりません。確認してからログインしてください。');
+  } else {
+    hideUsernameError();
+  }
+}
+
+export async function cancelPreloginPin() {
+  const context = preLoginContext;
+  preLoginContext = null;
+  state.pendingLoginHash = null;
+  state.pendingLoginUsername = '';
+  state.pendingLoginFromStored = false;
+  closePreloginPinModal();
+  if (context?.fromStored) {
+    localStorage.removeItem('portal-username');
+  }
+  restoreUsernameModalForRetry(context?.username || '');
+  context?.resolve?.(false);
+}
+
+export async function submitPreloginPin(pin) {
+  if (!preLoginContext) return false;
+  const normalized = `${pin || ''}`.trim();
+  if (!/^\d{4}$/.test(normalized)) {
+    showPreloginError('4桁のPINを入力してください。');
+    return false;
+  }
+  setPreloginBusy(true);
+  hidePreloginError();
+  try {
+    const hash = await hashPIN(normalized);
+    if (hash !== preLoginContext.hash) {
+      showPreloginError('PINが違います。');
+      return false;
+    }
+    return await resolvePreloginSuccess();
+  } finally {
+    setPreloginBusy(false);
+  }
+}
+
+export async function loginExistingUsername(name, options = {}) {
+  const normalized = `${name || ''}`.trim();
+  if (!normalized) return false;
+  try {
+    const userSnap = await getDoc(doc(db, 'users_list', normalized));
+    if (!userSnap.exists()) {
+      if (options.fromStored) {
+        localStorage.removeItem('portal-username');
+        restoreUsernameModalForRetry(normalized, true);
+      } else {
+        showUsernameError('このユーザーネームは見つかりません。');
+      }
+      return false;
+    }
+
+    const lockInfo = await getUserPreloginLockInfo(normalized);
+    if (lockInfo.requiresPin && lockInfo.hash) {
+      state.pendingLoginHash = lockInfo.hash;
+      preLoginContext = {
+        username: normalized,
+        hash: lockInfo.hash,
+        fromStored: !!options.fromStored,
+        resolve: options.resolve || null,
+      };
+      openPreloginPinModal(normalized, !!options.fromStored);
+      return new Promise(resolve => {
+        if (preLoginContext) preLoginContext.resolve = resolve;
+      });
+    }
+
+    await applyUsername(normalized);
+    return true;
+  } catch (err) {
+    console.error('既存ユーザーログインに失敗しました:', err);
+    if (options.fromStored) {
+      restoreUsernameModalForRetry(normalized, false);
+    } else {
+      showUsernameError('ログイン確認に失敗しました。時間をおいてもう一度お試しください。');
+    }
+    return false;
+  }
+}
+
+export async function restoreStoredUsernameSession(username) {
+  const normalized = `${username || ''}`.trim();
+  if (!normalized) return false;
+  return await loginExistingUsername(normalized, { fromStored: true });
 }
 
 // ========== PINロック ==========
@@ -295,6 +632,8 @@ export async function setLockPin(newPin) {
     await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), { hash }, { merge: true });
     state.lockPinHash    = hash;
     state.lockPinEnabled = true;
+    state.lockRecommendationPending = false;
+    state.lockRecommendationMessage = '';
     document.getElementById('btn-lock-header').hidden = !(state.lockEnabled && state.currentUsername);
     if (state.lockEnabled) startActivityTracking();
   } catch (err) { console.error('PIN設定エラー:', err); throw err; }
@@ -435,6 +774,15 @@ export async function verifyLockPin(pin) {
 
 // セキュリティ設定モーダル
 export function openSecurityModal() {
+  const recommendBox = document.getElementById('security-recommend-box');
+  const recommendText = document.getElementById('security-recommend-text');
+  if (recommendBox) {
+    recommendBox.hidden = !state.lockRecommendationPending;
+  }
+  if (recommendText) {
+    recommendText.textContent = state.lockRecommendationMessage || 'なりすまし防止のため、PINロック設定をおすすめします。';
+  }
+
   // トグル状態を反映
   document.getElementById('lock-enabled-toggle').checked = state.lockEnabled;
 
@@ -608,6 +956,8 @@ export async function loadUsersForAdmin() {
 }
 
 export function closeSecurityModal() {
+  state.lockRecommendationPending = false;
+  state.lockRecommendationMessage = '';
   document.getElementById('security-modal').classList.remove('visible');
 }
 

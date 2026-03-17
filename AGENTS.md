@@ -136,7 +136,7 @@ export function xxxFunction() { ... }
 | `users/{name}/private_sections/` | マイセクション |
 | `users/{name}/private_cards/` | マイカード |
 | `users_list/{name}` | ログイン記録・ニックネーム重複チェック |
-| `portal/config` | 管理者PIN・Gemini APIキー・departments[]・suggestionBoxViewers[] |
+| `portal/config` | 管理者PIN・招待コード・Gemini APIキー・departments[]・suggestionBoxViewers[] |
 | `cross_dept_requests/` | 部門間依頼（部署→部署の課題・お願い） |
 | `suggestion_box/` | 目安箱（全員投稿可、閲覧は管理者のみ） |
 | `assigned_tasks/` | タスク割り振り（sharedWith/sharedResponses で共有機能あり） |
@@ -228,7 +228,48 @@ export function xxxFunction() { ... }
 ## セキュリティ
 - Firestore セキュリティルールなし（ユーザー名を知らないと個人データにアクセスできない「obscurity」方式）
 - 管理者PIN: `portal/config.pinHash`（SHA-256ハッシュ）
+- 招待コード: `portal/config.inviteCodeHash`（4桁コードの SHA-256 ハッシュ。URL直打ちの覗き見防止用）
 - 個人PINロック: `users/{name}/data/lock_pin.hash`
+- ログイン前PIN確認: `users/{name}/data/lock_pin.enabled === true` かつ `hash` があるユーザーのみ、ユーザー名入力後にログイン前PINを要求する
+
+### `portal/config` フィールドメモ
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `pinHash` | string\|null | 管理者PINの SHA-256 ハッシュ |
+| `inviteCodeHash` | string\|null | 4桁招待コードの SHA-256 ハッシュ |
+| `inviteUpdatedAt` | timestamp\|null | 招待コードの更新日時 |
+| `departments` | string[] | 部署一覧 |
+| `suggestionBoxViewers` | string[] | 目安箱の閲覧許可ユーザー |
+| `missionText` | string | トップの方針テキスト |
+
+## Firestore 読み取り超過 再発防止ルール
+
+> **目的**: Spark 無料枠（読み取り 5万/日）を超えないようにし、30人規模でも無料運用を維持しやすくする。
+
+### ルールA: ログイン前・招待コード前に Firestore の公開読込を始めない
+- `portal/config` の招待設定確認より前に `subscribeNotices()` や `subscribeCards()` などの常時読込を始めない
+- 「URLを知っているだけの未認証状態」で Firestore listener を立てる変更は禁止
+
+### ルールB: 常時 listener は「今日使うもの」だけ
+- ログイン直後に自動起動してよい realtime listener は、ダッシュボードや通知など**常時見る必要がある軽いものだけ**
+- `chat / file-transfer / drive / users_list` のような重い機能は **開いた時だけ** 読む
+- 新機能で `onSnapshot` を使う前に、「本当に realtime 必須か」を先に検討する
+
+### ルールC: 履歴・集計・全社横断は手動実行を基本にする
+- 完了済み履歴、アーカイブ、月次集計、`collectionGroup()` を使う横断集計は初期表示で自動実行しない
+- 「タブを開いた時だけ `getDocs()`」「集計ボタンを押した時だけ実行」を基本にする
+
+### ルールD: 新しい読込は診断対象に含める
+- 新しい `getDocs()` / `onSnapshot()` / 重い `getDoc()` を追加したら、`read-diagnostics` でも追えるようにする
+- 少なくとも「どの画面を開くと何を読むか」は後から見える状態を維持する
+
+### ルールE: 管理画面でも全件読込を安易に増やさない
+- 管理者向け一覧は `getDocs()` 1回読込を基本にし、不要な realtime 化をしない
+- 全ユーザー一覧や重い設定一覧をモーダルを開くたびに複数回読み直さない
+
+### ルールF: 実装後は PC / スマホの両方で確認する
+- 表示確認だけでなく `保存 → 閉じる → 再表示 → 関連画面反映` まで見る
+- 読み取り削減の変更後は `読取診断` を見て、起動直後に不要 listener が立っていないか確認する
 
 ## 🔧 積み残しタスク（優先度順）
 
