@@ -9,6 +9,97 @@ import { esc } from './utils.js';
 // Cross-module function references
 export const deps = {};
 
+function normalizeTargetDepartments(departments) {
+  if (!Array.isArray(departments)) return [];
+  return [...new Set(
+    departments
+      .map(department => typeof department === 'string' ? department.trim() : '')
+      .filter(Boolean)
+  )];
+}
+
+function getNoticeTargetScope(notice) {
+  const targetDepartments = normalizeTargetDepartments(notice?.targetDepartments);
+  return notice?.targetScope === 'departments' && targetDepartments.length > 0 ? 'departments' : 'all';
+}
+
+function isNoticeVisibleForCurrentUser(notice) {
+  if (!notice) return false;
+  if (getNoticeTargetScope(notice) === 'all') return true;
+  const department = state.userEmailProfile?.department?.trim() || '';
+  if (!department) return false;
+  return normalizeTargetDepartments(notice.targetDepartments).includes(department);
+}
+
+function getVisibleNoticesFromList(notices = state.allNotices) {
+  return (Array.isArray(notices) ? notices : [])
+    .filter(isNoticeVisibleForCurrentUser)
+    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+}
+
+function getVisibleUnreadCount() {
+  return (state.visibleNotices || []).filter(n => !state.readNoticeIds.has(n.id)).length;
+}
+
+function buildAudienceBadgeHtml(notice) {
+  const targetScope = getNoticeTargetScope(notice);
+  if (targetScope === 'all') {
+    return '<span class="notice-target-chip notice-target-chip--all">全体</span>';
+  }
+  return normalizeTargetDepartments(notice.targetDepartments).map(department => `
+    <span class="notice-target-chip notice-target-chip--dept">${esc(department)}</span>
+  `).join('');
+}
+
+function renderNoticeTargetDepartments(selectedDepartments = []) {
+  const container = document.getElementById('notice-target-departments');
+  if (!container) return;
+
+  const selected = new Set(normalizeTargetDepartments(selectedDepartments));
+  const departments = Array.isArray(state.currentDepartments) && state.currentDepartments.length > 0
+    ? state.currentDepartments
+    : state.DEFAULT_DEPARTMENTS;
+
+  container.innerHTML = departments.map((department, index) => `
+    <label class="notice-target-option" for="notice-target-dept-${index}">
+      <input
+        type="checkbox"
+        id="notice-target-dept-${index}"
+        class="notice-target-checkbox"
+        value="${esc(department)}"
+        ${selected.has(department) ? 'checked' : ''}
+      >
+      <span>${esc(department)}</span>
+    </label>
+  `).join('');
+}
+
+function getSelectedTargetDepartments() {
+  return Array.from(document.querySelectorAll('.notice-target-checkbox:checked'))
+    .map(input => input.value.trim())
+    .filter(Boolean);
+}
+
+export function handleNoticeTargetScopeChange() {
+  const scope = document.getElementById('notice-target-scope')?.value || 'all';
+  const picker = document.getElementById('notice-target-picker');
+  const hint = document.getElementById('notice-target-hint');
+  if (picker) picker.hidden = scope !== 'departments';
+  if (hint) {
+    hint.textContent = scope === 'departments'
+      ? '選んだ部署のユーザーにだけ表示されます。'
+      : '全体に表示されます。';
+  }
+}
+
+export function refreshNoticeVisibility() {
+  state.visibleNotices = getVisibleNoticesFromList(state.allNotices);
+  renderNotices(state.visibleNotices);
+  updateNoticeBadge();
+  setupNoticeObserver();
+  deps.renderTodayDashboard?.();
+}
+
 // ========== お知らせ未読管理 ==========
 export async function loadReadNotices(username) {
   if (!username) { state.readNoticeIds = new Set(); updateNoticeBadge(); return; }
@@ -16,7 +107,7 @@ export async function loadReadNotices(username) {
     const snap = await getDocs(collection(db, 'users', username, 'read_notices'));
     state.readNoticeIds = new Set(snap.docs.map(d => d.id));
     updateNoticeBadge();
-    renderNotices(state.allNotices);
+    renderNotices(state.visibleNotices);
     deps.renderTodayDashboard?.();
   } catch (err) {
     console.error('既読データ読み込みエラー:', err);
@@ -24,9 +115,9 @@ export async function loadReadNotices(username) {
 }
 
 export async function markAllNoticesRead() {
-  if (!state.currentUsername || !state.allNotices.length) return;
+  if (!state.currentUsername || !state.visibleNotices.length) return;
   const batch = writeBatch(db);
-  state.allNotices.forEach(n => {
+  state.visibleNotices.forEach(n => {
     if (!state.readNoticeIds.has(n.id)) {
       batch.set(doc(db, 'users', state.currentUsername, 'read_notices', n.id), {
         readAt: serverTimestamp()
@@ -34,9 +125,9 @@ export async function markAllNoticesRead() {
     }
   });
   await batch.commit();
-  state.allNotices.forEach(n => state.readNoticeIds.add(n.id));
+  state.visibleNotices.forEach(n => state.readNoticeIds.add(n.id));
   updateNoticeBadge();
-  renderNotices(state.allNotices);
+  renderNotices(state.visibleNotices);
   deps.renderTodayDashboard?.();
 }
 
@@ -44,7 +135,7 @@ export function updateNoticeBadge() {
   const badge = document.getElementById('notice-unread-badge');
   const bell  = document.getElementById('btn-notice-bell');
   if (!badge || !bell) return;
-  const unreadCount = state.allNotices.filter(n => !state.readNoticeIds.has(n.id)).length;
+  const unreadCount = getVisibleUnreadCount();
   if (unreadCount > 0) {
     badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
     badge.hidden = false;
@@ -59,7 +150,7 @@ export function updateNoticeBadge() {
 export function setupNoticeObserver() {
   if (state._noticeObserver) { state._noticeObserver.disconnect(); state._noticeObserver = null; }
   const board = document.getElementById('notice-board');
-  if (!board || !state.currentUsername) return;
+  if (!board || !state.currentUsername || !(state.visibleNotices || []).length) return;
   state._noticeObserver = new IntersectionObserver(entries => {
     if (entries[0].isIntersecting) markAllNoticesRead();
   }, { threshold: 0.3 });
@@ -72,7 +163,7 @@ export async function loadAllNoticeReactions() {
     const snap = await getDocs(collection(db, 'notice_reactions'));
     state.noticeReactions = {};
     snap.docs.forEach(d => { state.noticeReactions[d.id] = d.data(); });
-    renderNotices(state.allNotices);
+    renderNotices(state.visibleNotices);
   } catch (err) {
     console.error('リアクション読み込みエラー:', err);
   }
@@ -90,7 +181,7 @@ export async function toggleReaction(noticeId, emoji) {
   } else {
     state.noticeReactions[noticeId][emoji] = [...current, state.currentUsername];
   }
-  renderNotices(state.allNotices);
+  renderNotices(state.visibleNotices);
   try {
     if (alreadyReacted) {
       await updateDoc(ref, { [emoji]: arrayRemove(state.currentUsername) });
@@ -122,24 +213,35 @@ export function subscribeNotices() {
     snap => {
       state.allNotices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       state.allNotices.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-      renderNotices(state.allNotices);
-      updateNoticeBadge();
-      setupNoticeObserver();
-      deps.renderTodayDashboard?.();
+      refreshNoticeVisibility();
     }
   );
 }
 
 export async function saveNotice(data) {
+  const normalizedData = {
+    ...data,
+    targetScope: data?.targetScope === 'departments' && normalizeTargetDepartments(data?.targetDepartments).length > 0
+      ? 'departments'
+      : 'all',
+    targetDepartments: normalizeTargetDepartments(data?.targetDepartments),
+  };
   if (state.editingNoticeId) {
-    await updateDoc(doc(db, 'notices', state.editingNoticeId), data);
+    await updateDoc(doc(db, 'notices', state.editingNoticeId), normalizedData);
   } else {
-    await addDoc(collection(db, 'notices'), { ...data, createdAt: serverTimestamp() });
+    await addDoc(collection(db, 'notices'), { ...normalizedData, createdAt: serverTimestamp() });
   }
 }
 
 export async function addNotice(data) {
-  await addDoc(collection(db, 'notices'), { ...data, createdAt: serverTimestamp() });
+  await addDoc(collection(db, 'notices'), {
+    ...data,
+    targetScope: data?.targetScope === 'departments' && normalizeTargetDepartments(data?.targetDepartments).length > 0
+      ? 'departments'
+      : 'all',
+    targetDepartments: normalizeTargetDepartments(data?.targetDepartments),
+    createdAt: serverTimestamp()
+  });
 }
 
 export async function deleteNotice(id) {
@@ -151,7 +253,10 @@ export function renderNotices(notices) {
   const board = document.getElementById('notice-board');
   if (!board) return;
 
-  if (!notices.length && !state.isEditMode) {
+  const visibleNotices = getVisibleNoticesFromList(Array.isArray(notices) ? notices : state.allNotices);
+  state.visibleNotices = visibleNotices;
+
+  if (!visibleNotices.length && !state.isEditMode) {
     board.innerHTML = '';
     return;
   }
@@ -160,7 +265,7 @@ export function renderNotices(notices) {
     ? `<button class="btn-add-notice"><i class="fa-solid fa-plus"></i> お知らせを追加</button>`
     : '';
 
-  const unreadCount = state.allNotices.filter(n => !state.readNoticeIds.has(n.id)).length;
+  const unreadCount = getVisibleUnreadCount();
   const readAllBtn = (state.currentUsername && unreadCount > 0)
     ? `<button class="btn-read-all" id="btn-read-all"><i class="fa-solid fa-check-double"></i> 全て既読</button>`
     : '';
@@ -185,7 +290,7 @@ export function renderNotices(notices) {
   }
 
   const list = board.querySelector('#notice-list');
-  notices.forEach(n => {
+  visibleNotices.forEach(n => {
     const isUnread = state.currentUsername && !state.readNoticeIds.has(n.id);
     const item = document.createElement('div');
     item.className = `notice-item${n.priority === 'urgent' ? ' urgent' : ''}${isUnread ? ' notice-unread' : ''}`;
@@ -205,6 +310,7 @@ export function renderNotices(notices) {
         ${editBtns}
       </div>
       ${n.body ? `<div class="notice-body">${esc(n.body)}</div>` : ''}
+      <div class="notice-targets">${buildAudienceBadgeHtml(n)}</div>
       ${buildReactionBar(n.id)}
     `;
     if (state.isEditMode) {
@@ -224,8 +330,13 @@ export function renderNotices(notices) {
 
 export function openNoticeModal(notice) {
   state.editingNoticeId = notice ? notice.id : null;
+  const targetDepartments = normalizeTargetDepartments(notice?.targetDepartments);
+  const targetScope = getNoticeTargetScope(notice);
   document.getElementById('notice-modal-title').textContent = notice ? 'お知らせを編集' : 'お知らせを追加';
   document.getElementById('notice-priority').value = notice?.priority || 'normal';
+  document.getElementById('notice-target-scope').value = targetScope;
+  renderNoticeTargetDepartments(targetDepartments);
+  handleNoticeTargetScopeChange();
   document.getElementById('notice-title').value = notice?.title || '';
   document.getElementById('notice-body').value = notice?.body || '';
   document.getElementById('notice-delete').style.display = notice ? 'inline-flex' : 'none';

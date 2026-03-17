@@ -812,6 +812,19 @@
       </div>
 
       <div class="form-group">
+        <label class="form-label">配信先</label>
+        <select id="notice-target-scope" class="form-input">
+          <option value="all">全体に配信</option>
+          <option value="departments">部署を選んで配信</option>
+        </select>
+        <div class="notice-target-picker" id="notice-target-picker" hidden>
+          <div class="notice-target-picker-label">対象部署</div>
+          <div class="notice-target-grid" id="notice-target-departments"></div>
+        </div>
+        <div class="notice-target-hint" id="notice-target-hint">全体に表示されます。</div>
+      </div>
+
+      <div class="form-group">
         <label class="form-label">タイトル</label>
         <input type="text" id="notice-title" class="form-input" placeholder="例: 明日は工場予定変更">
       </div>
@@ -956,7 +969,7 @@
           <ul class="guide-list">
             <li>部署内のお知らせがカード上部に表示されます。</li>
             <li><strong>「重要」バッジ（赤）</strong>のお知らせは優先度が高い内容です。</li>
-            <li>お知らせ欄の<strong>「＋ お知らせを追加」</strong>で全員に表示されるお知らせを投稿できます。</li>
+            <li>お知らせ欄の<strong>「＋ お知らせを追加」</strong>で全体向けまたは部署向けのお知らせを投稿できます。</li>
             <li>既存のお知らせの<strong>鉛筆アイコン</strong>で編集・削除できます。</li>
           </ul>
         </div>

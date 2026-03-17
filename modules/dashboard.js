@@ -238,7 +238,10 @@ function buildAttendanceCard(todayKey) {
 }
 
 function buildNoticeCard() {
-  const unread = (state.allNotices || []).filter(notice => !state.readNoticeIds.has(notice.id));
+  const noticeSource = Array.isArray(state.visibleNotices)
+    ? state.visibleNotices
+    : (state.allNotices || []);
+  const unread = noticeSource.filter(notice => !state.readNoticeIds.has(notice.id));
   const urgentUnread = unread.filter(notice => notice.priority === 'urgent');
   const listSource = (urgentUnread.length > 0 ? urgentUnread : unread)
     .slice()

@@ -72,7 +72,7 @@ import {
   loadReadNotices, markAllNoticesRead, updateNoticeBadge, setupNoticeObserver,
   loadAllNoticeReactions, toggleReaction, buildReactionBar,
   subscribeNotices, saveNotice as moduleSaveNotice, addNotice as moduleAddNotice, deleteNotice as moduleDeleteNotice,
-  renderNotices, openNoticeModal, closeNoticeModal
+  renderNotices, openNoticeModal, closeNoticeModal, refreshNoticeVisibility, handleNoticeTargetScopeChange
 } from './modules/notices.js';
 
 import {
@@ -219,6 +219,7 @@ initEmail({
   confirmDelete,
   afterUserProfileSaved: async () => {
     if (!state.currentUsername) return;
+    refreshNoticeVisibility();
     stopRequestListeners();
     startRequestListeners(state.currentUsername);
     updateReqBadge();
@@ -519,6 +520,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     await loadDriveContacts(username);
     startDriveListeners(username);
     await loadUserEmailProfile(username);
+    refreshNoticeVisibility();
     await loadConfigDepartmentsAndViewers();
     renderMissionBanner(); // ミッションテキストが読み込まれた後に再描画
     startRequestListeners(username);
@@ -1638,7 +1640,7 @@ function enterEditMode() {
   fab.classList.add('active');
   fab.title = '編集モードを終了';
   renderAllSections();
-  renderNotices(state.allNotices);
+  refreshNoticeVisibility();
 }
 
 function exitEditMode() {
@@ -1650,7 +1652,7 @@ function exitEditMode() {
   fab.classList.remove('active');
   fab.title = '管理者ログイン';
   renderAllSections();
-  renderNotices(state.allNotices);
+  refreshNoticeVisibility();
 }
 
 
@@ -3037,21 +3039,38 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== お知らせモーダル =====
   document.getElementById('notice-cancel').addEventListener('click', closeNoticeModal);
+  document.getElementById('notice-target-scope').addEventListener('change', handleNoticeTargetScopeChange);
 
   document.getElementById('notice-save').addEventListener('click', async () => {
     const title = document.getElementById('notice-title').value.trim();
     const body  = document.getElementById('notice-body').value.trim();
     const priority = document.getElementById('notice-priority').value;
+    const targetScope = document.getElementById('notice-target-scope').value;
+    const targetDepartments = Array.from(document.querySelectorAll('.notice-target-checkbox:checked'))
+      .map(input => input.value.trim())
+      .filter(Boolean);
     if (!title) { document.getElementById('notice-title').focus(); return; }
+    if (targetScope === 'departments' && targetDepartments.length === 0) {
+      alert('配信先部署を1つ以上選んでください。');
+      document.querySelector('.notice-target-checkbox')?.focus();
+      return;
+    }
 
     const btn = document.getElementById('notice-save');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>';
 
     try {
-      await moduleSaveNotice({ title, body, priority, updatedAt: serverTimestamp() });
+      await moduleSaveNotice({
+        title,
+        body,
+        priority,
+        targetScope,
+        targetDepartments,
+        updatedAt: serverTimestamp()
+      });
       closeNoticeModal();
-      renderNotices(state.allNotices);
+      refreshNoticeVisibility();
     } catch (err) {
       console.error('お知らせ保存エラー:', err);
       alert('保存に失敗しました。');
@@ -3067,7 +3086,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (await confirmDelete(`「${n?.title}」を削除しますか？`)) {
       await moduleDeleteNotice(state.editingNoticeId);
       closeNoticeModal();
-      renderNotices(state.allNotices);
+      refreshNoticeVisibility();
     }
   });
 

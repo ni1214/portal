@@ -49,6 +49,7 @@ export const state = {
   allCards: [],
   allCategories: [...DEFAULT_CATEGORIES],
   allNotices: [],
+  visibleNotices: [],
   _noticeUnsub: null,
   isEditMode: true,
   editingDocId: null,

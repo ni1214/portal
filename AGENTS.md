@@ -127,7 +127,7 @@ export function xxxFunction() { ... }
 |---|---|
 | `cards/` | 公開カード |
 | `categories/` | 公開カテゴリ |
-| `notices/` | お知らせ |
+| `notices/` | お知らせ（priority / targetScope / targetDepartments で全体/部署向け配信） |
 | `notice_reactions/{noticeId}` | リアクション |
 | `chat_messages/` | 全社チャット（廃止予定） |
 | `users/{name}/data/preferences` | 個人設定（lastViewedSuggestionsAt を含む） |
