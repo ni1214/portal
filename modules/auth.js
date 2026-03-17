@@ -7,6 +7,8 @@ export const deps = {};
 
 let inviteGateResolver = null;
 let preLoginContext = null;
+const INVITE_SESSION_KEY = 'portal-invite-ok';
+const INVITE_TRUST_KEY = 'portal-invite-trusted';
 
 // ========== PIN 認証 ==========
 const PIN_SALT = 'seisan-portal-v1';
@@ -41,6 +43,24 @@ export async function loadInviteCodeConfig() {
   state.adminInviteConfigured = state.inviteCodeRequired;
   updateInviteAdminState();
   return data;
+}
+
+function hasTrustedInviteAccess() {
+  return localStorage.getItem(INVITE_TRUST_KEY) === '1';
+}
+
+function markInviteSessionVerified() {
+  state.inviteCodeVerified = true;
+  sessionStorage.setItem(INVITE_SESSION_KEY, '1');
+}
+
+function trustInviteAccessForDevice() {
+  markInviteSessionVerified();
+  localStorage.setItem(INVITE_TRUST_KEY, '1');
+}
+
+function refreshInviteVerifiedState() {
+  state.inviteCodeVerified = sessionStorage.getItem(INVITE_SESSION_KEY) === '1' || hasTrustedInviteAccess();
 }
 
 function hideInviteError() {
@@ -91,14 +111,17 @@ export async function ensureInviteAccess() {
     return false;
   }
 
+  refreshInviteVerifiedState();
+
   if (!state.inviteCodeRequired) {
     state.inviteCodeVerified = true;
-    sessionStorage.removeItem('portal-invite-ok');
+    sessionStorage.removeItem(INVITE_SESSION_KEY);
     closeInviteModal();
     return true;
   }
 
   if (state.inviteCodeVerified) {
+    markInviteSessionVerified();
     closeInviteModal();
     return true;
   }
@@ -128,8 +151,7 @@ export async function submitInviteCode(code) {
       showInviteError('招待コードが違います。');
       return false;
     }
-    state.inviteCodeVerified = true;
-    sessionStorage.setItem('portal-invite-ok', '1');
+    markInviteSessionVerified();
     closeInviteModal();
     if (inviteGateResolver) {
       inviteGateResolver(true);
@@ -155,7 +177,7 @@ function updateInviteAdminState(message = '') {
   if (hintEl) {
     hintEl.textContent = message || (state.adminInviteConfigured
       ? (state.inviteCodePlain
-        ? '現在は招待コード入力後にログイン画面へ進みます。'
+        ? '現在は未承認端末のみ、最初に招待コード入力後ログイン画面へ進みます。'
         : '現在のコードは旧設定のため再表示できません。次回保存分からここに表示されます。')
       : '未設定の間は招待コードなしでログイン画面へ進みます。');
   }
@@ -180,7 +202,7 @@ export async function saveInviteCode(code) {
   state.inviteCodePlain = normalized;
   state.inviteCodeRequired = true;
   state.adminInviteConfigured = true;
-  updateInviteAdminState('招待コードを保存しました。次の新規アクセスから有効です。');
+  updateInviteAdminState('招待コードを保存しました。未承認端末の次回アクセスから有効です。');
 }
 
 export async function clearInviteCode() {
@@ -194,7 +216,7 @@ export async function clearInviteCode() {
   state.inviteCodeRequired = false;
   state.adminInviteConfigured = false;
   state.inviteCodeVerified = true;
-  sessionStorage.removeItem('portal-invite-ok');
+  sessionStorage.removeItem(INVITE_SESSION_KEY);
   updateInviteAdminState('招待コードを解除しました。URLを知っていればログイン画面へ進めます。');
 }
 
@@ -350,6 +372,9 @@ export async function applyUsername(name, options = {}) {
   const isSwitch = !!state.currentUsername && state.currentUsername !== name;
   state.currentUsername = name;
   localStorage.setItem('portal-username', name);
+  if (state.inviteCodeRequired && state.inviteCodeVerified) {
+    trustInviteAccessForDevice();
+  }
   updateUsernameDisplay();
   closeUsernameModal();
   await deps.loadPersonalData?.(name, isSwitch); // from personal.js
@@ -532,6 +557,11 @@ export async function submitPreloginPin(pin) {
 export async function loginExistingUsername(name, options = {}) {
   const normalized = `${name || ''}`.trim();
   if (!normalized) return false;
+  const requirePreloginPin = options.requirePreloginPin ?? (
+    !!state.currentUsername &&
+    state.currentUsername !== normalized &&
+    !options.fromStored
+  );
   try {
     const userSnap = await getDoc(doc(db, 'users_list', normalized));
     if (!userSnap.exists()) {
@@ -545,7 +575,7 @@ export async function loginExistingUsername(name, options = {}) {
     }
 
     const lockInfo = await getUserPreloginLockInfo(normalized);
-    if (lockInfo.requiresPin && lockInfo.hash) {
+    if (requirePreloginPin && lockInfo.requiresPin && lockInfo.hash) {
       state.pendingLoginHash = lockInfo.hash;
       preLoginContext = {
         username: normalized,
@@ -575,7 +605,10 @@ export async function loginExistingUsername(name, options = {}) {
 export async function restoreStoredUsernameSession(username) {
   const normalized = `${username || ''}`.trim();
   if (!normalized) return false;
-  return await loginExistingUsername(normalized, { fromStored: true });
+  return await loginExistingUsername(normalized, {
+    fromStored: true,
+    requirePreloginPin: false,
+  });
 }
 
 // ========== PINロック ==========
