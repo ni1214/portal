@@ -270,6 +270,14 @@ export const state = {
   _attendanceSitesSub: null,       // onSnapshot unsubscriber for attendance_sites
   attendanceWorkProjectKeyFilter: '',
   workPeriodAttendance: {},        // { 'YYYY-MM-DD': attendanceDocData }
+  workSummaryPeriodLabel: '',      // 集計対象期間ラベル
+  workSummaryPeriodKey: '',        // 集計済みキャッシュの期間キー
+  workSummaryLoaded: false,        // 現期間で集計実行済みか
+  workSummaryNeedsRefresh: true,   // 再集計が必要か
+  workSummaryLoading: false,       // 集計処理中か
+  workSummaryRows: [],             // 集計表表示用キャッシュ
+  workSummaryNeedsRefresh: true,   // 再集計が必要か
+  workSummaryLoading: false,       // 集計処理中か
   workSummaryRows: [],             // 集計表表示用キャッシュ
   workSummaryUsers: [],            // 集計表ユーザー列
   workSummaryPeriodLabel: '',      // 集計対象期間ラベル

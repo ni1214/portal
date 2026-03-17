@@ -59,6 +59,55 @@ function getWorkPeriod() {
   };
 }
 
+function getWorkSummaryPeriodKey(period = getWorkPeriod()) {
+  return `${period.startStr}__${period.endStr}`;
+}
+
+function hasCurrentWorkSummary(period = getWorkPeriod()) {
+  return (
+    state.workSummaryLoaded === true &&
+    state.workSummaryNeedsRefresh !== true &&
+    state.workSummaryPeriodKey === getWorkSummaryPeriodKey(period)
+  );
+}
+
+function updateSummaryActionButtons(period = getWorkPeriod()) {
+  const refreshBtn = document.getElementById('calw-summary-refresh-btn');
+  const exportBtn = document.getElementById('calw-summary-export-csv-btn');
+  const printBtn = document.getElementById('calw-summary-print-btn');
+  const canUseSnapshot = hasCurrentWorkSummary(period) && state.workSummaryLoading !== true;
+
+  if (refreshBtn) {
+    refreshBtn.disabled = state.workSummaryLoading === true;
+    refreshBtn.innerHTML = state.workSummaryLoading === true
+      ? '<i class="fa-solid fa-spinner fa-spin"></i> 集計中...'
+      : hasCurrentWorkSummary(period)
+        ? '<i class="fa-solid fa-rotate"></i> 再集計'
+        : '<i class="fa-solid fa-play"></i> 集計する';
+  }
+  if (exportBtn) exportBtn.disabled = !canUseSnapshot;
+  if (printBtn) printBtn.disabled = !canUseSnapshot;
+}
+
+function resetWorkSummaryState(period = getWorkPeriod()) {
+  state.workSummaryRows = [];
+  state.workSummaryUsers = [];
+  state.workSummaryPeriodLabel = period.label;
+  state.workSummaryPeriodKey = '';
+  state.workSummaryLoaded = false;
+  state.workSummaryNeedsRefresh = true;
+  state.workSummaryLoading = false;
+}
+
+export function markWorkSummaryStale() {
+  const period = getWorkPeriod();
+  resetWorkSummaryState(period);
+  updateSummaryActionButtons(period);
+  if (state.calTab === 'personal' && state.calPersonalTab === 'summary') {
+    void renderWorkSummary();
+  }
+}
+
 function getPeriodDates(period) {
   const dates = [];
   const cur = new Date(period.start);
@@ -748,7 +797,7 @@ async function renderWorkTable() {
   `;
 }
 
-async function renderWorkSummary() {
+async function renderWorkSummaryLegacy() {
   const containerId = 'calw-summary-table-container';
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -921,6 +970,243 @@ async function renderWorkSummary() {
   }
 }
 
+function renderWorkSummaryPrompt(period, message = '') {
+  const container = document.getElementById('calw-summary-table-container');
+  if (!container) return;
+
+  const sharedHolidayDays = countSharedHolidayDays(period);
+  setText('calw-summary-period-label', period.label);
+  setText('calw-summary-total-hours', `合計工数 0h / 共有休日・計画付与日: ${sharedHolidayDays}日`);
+
+  if (state.workSummaryLoading) {
+    container.innerHTML = '<div class="calw-loading">勤務内容を集計中...</div>';
+    updateSummaryActionButtons(period);
+    return;
+  }
+
+  const promptMessage = message || 'この集計表は必要な時だけ読み込みます。内容を確認するときに集計してください。';
+  container.innerHTML = `
+    <div class="calw-summary-prompt">
+      <div class="calw-summary-prompt-title"><i class="fa-solid fa-chart-column"></i> 勤務内容集計表は手動集計です</div>
+      <div class="calw-summary-prompt-body">${esc(promptMessage)}</div>
+      <div class="calw-summary-prompt-note">CSV出力と印刷は、集計が終わると使えるようになります。</div>
+      <button class="btn-modal-primary calw-summary-run-btn" id="calw-summary-run-btn">
+        <i class="fa-solid fa-play"></i> 集計する
+      </button>
+    </div>
+  `;
+  container.querySelector('#calw-summary-run-btn')?.addEventListener('click', () => {
+    void renderWorkSummary(true);
+  });
+  updateSummaryActionButtons(period);
+}
+
+function renderWorkSummaryFromState(period) {
+  const containerId = 'calw-summary-table-container';
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const sharedHolidayDays = countSharedHolidayDays(period);
+  setText('calw-summary-period-label', period.label);
+
+  const users = Array.isArray(state.workSummaryUsers) ? state.workSummaryUsers : [];
+  const rows = Array.isArray(state.workSummaryRows) ? state.workSummaryRows : [];
+  if (users.length === 0) {
+    setText('calw-summary-total-hours', `合計工数 0h / 共有休日・計画付与日: ${sharedHolidayDays}日`);
+    renderEmpty(containerId, '集計対象ユーザーがいません。');
+    updateSummaryActionButtons(period);
+    return;
+  }
+  if (rows.length === 0) {
+    setText('calw-summary-total-hours', `合計工数 0h / 共有休日・計画付与日: ${sharedHolidayDays}日`);
+    renderEmpty(containerId, 'この期間の勤務内容データはありません。');
+    updateSummaryActionButtons(period);
+    return;
+  }
+
+  const userTotals = {};
+  users.forEach(username => { userTotals[username] = 0; });
+  let grandHours = 0;
+
+  const userCols = users.map(username => `<th>${esc(username)}</th>`).join('');
+  const bodyRows = rows.map((row, idx) => {
+    const userCells = users.map(username => {
+      const hours = Number(row.userHours?.[username]) || 0;
+      userTotals[username] += hours;
+      return `<td class="calw-num">${hours > 0 ? fmtHours(hours) : ''}</td>`;
+    }).join('');
+    grandHours += Number(row.totalHours) || 0;
+    return `<tr>
+      <td class="calw-num">${idx + 1}</td>
+      <td>${esc(row.code || '-')}</td>
+      <td>${esc(row.name || '')}</td>
+      ${userCells}
+      <td class="calw-num calw-strong">${fmtHours(row.totalHours)}</td>
+    </tr>`;
+  }).join('');
+
+  const footerUserCols = users.map(username => (
+    `<th class="calw-num">${fmtHours(userTotals[username] || 0)}</th>`
+  )).join('');
+
+  setText('calw-summary-total-hours', `合計工数 ${fmtHours(grandHours)}h / 共有休日・計画付与日: ${sharedHolidayDays}日`);
+
+  container.innerHTML = `
+    <div class="calw-summary-table-wrap">
+      <table class="calw-summary-table">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>現場コード</th>
+            <th>現場名</th>
+            ${userCols}
+            <th>合計</th>
+          </tr>
+        </thead>
+        <tbody>${bodyRows}</tbody>
+        <tfoot>
+          <tr>
+            <th colspan="3">合計</th>
+            ${footerUserCols}
+            <th class="calw-num">${fmtHours(grandHours)}</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  `;
+  updateSummaryActionButtons(period);
+}
+
+async function renderWorkSummary(force = false) {
+  const container = document.getElementById('calw-summary-table-container');
+  if (!container) return;
+
+  const period = getWorkPeriod();
+  state.workSummaryPeriodLabel = period.label;
+  updateSummaryActionButtons(period);
+
+  if (!force) {
+    if (hasCurrentWorkSummary(period)) {
+      renderWorkSummaryFromState(period);
+    } else {
+      renderWorkSummaryPrompt(period, '対象期間が変わった時だけ、必要なタイミングで集計してください。');
+    }
+    return;
+  }
+
+  state.workSummaryLoading = true;
+  state.workSummaryPeriodLabel = period.label;
+  updateSummaryActionButtons(period);
+  renderWorkSummaryPrompt(period);
+
+  try {
+    const usersSnap = await getDocs(collection(db, 'users_list'));
+    recordGetDocsRead('calw.summary-users', '勤務内容表ユーザー一覧', 'users_list', usersSnap.size);
+    const users = usersSnap.docs.map(d => d.id).filter(Boolean);
+    const yms = getPeriodYearMonths(period);
+
+    let attendanceRows = [];
+    try {
+      const attSnap = await getDocs(
+        query(
+          collectionGroup(db, 'attendance'),
+          where('yearMonth', 'in', yms)
+        )
+      );
+      recordGetDocsRead('calw.summary-attendance', '勤務内容表集計', yms.join(','), attSnap.size);
+      attendanceRows = attSnap.docs
+        .map(d => ({
+          username: d.ref.parent?.parent?.id || '',
+          dateStr: d.id,
+          data: d.data(),
+        }))
+        .filter(row => (
+          !!row.username &&
+          row.dateStr >= period.startStr &&
+          row.dateStr <= period.endStr
+        ));
+    } catch (err) {
+      console.warn('勤務内容集計の collectionGroup 取得に失敗したため、ユーザー別取得へフォールバックします。', err);
+      const userEntries = await Promise.all(
+        users.map(async username => {
+          const map = await loadUserPeriodAttendance(username, period);
+          return { username, map };
+        })
+      );
+      attendanceRows = [];
+      userEntries.forEach(({ username, map }) => {
+        Object.entries(map).forEach(([dateStr, data]) => {
+          attendanceRows.push({ username, dateStr, data });
+        });
+      });
+    }
+
+    const userSet = new Set(users);
+    attendanceRows.forEach(row => {
+      if (row.username && !userSet.has(row.username)) {
+        users.push(row.username);
+        userSet.add(row.username);
+      }
+    });
+
+    users.sort((a, b) => a.localeCompare(b, 'ja'));
+    if (state.currentUsername && users.includes(state.currentUsername)) {
+      users.splice(users.indexOf(state.currentUsername), 1);
+      users.unshift(state.currentUsername);
+    }
+
+    const siteMetaMap = new Map((state.attendanceSites || []).map(site => [site.id, site]));
+    const rowsMap = new Map();
+
+    const ensureRow = siteId => {
+      if (rowsMap.has(siteId)) return rowsMap.get(siteId);
+      const meta = siteMetaMap.get(siteId);
+      const row = {
+        siteId,
+        code: meta?.code || '',
+        name: meta?.name || `未登録現場(${siteId})`,
+        sortOrder: Number(meta?.sortOrder) || 999999,
+        userHours: {},
+        totalHours: 0,
+      };
+      rowsMap.set(siteId, row);
+      return row;
+    };
+
+    attendanceRows.forEach(({ username, data: attendance }) => {
+      const workMap = sanitizeWorkSiteHours(attendance.workSiteHours);
+      Object.entries(workMap).forEach(([siteId, hours]) => {
+        if (hours <= 0) return;
+        const row = ensureRow(siteId);
+        row.userHours[username] = (row.userHours[username] || 0) + hours;
+        row.totalHours += hours;
+      });
+    });
+
+    const rows = [...rowsMap.values()].sort((a, b) => {
+      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+      const codeDiff = (a.code || '').localeCompare(b.code || '', 'ja');
+      if (codeDiff !== 0) return codeDiff;
+      return (a.name || '').localeCompare(b.name || '', 'ja');
+    });
+
+    state.workSummaryUsers = users;
+    state.workSummaryRows = rows;
+    state.workSummaryPeriodKey = getWorkSummaryPeriodKey(period);
+    state.workSummaryPeriodLabel = period.label;
+    state.workSummaryLoaded = true;
+    state.workSummaryNeedsRefresh = false;
+    renderWorkSummaryFromState(period);
+  } catch (err) {
+    console.error('勤務内容集計エラー:', err);
+    resetWorkSummaryState(period);
+    renderWorkSummaryPrompt(period, '勤務内容集計の読み込みに失敗しました。時間をおいて再度お試しください。');
+  } finally {
+    state.workSummaryLoading = false;
+    updateSummaryActionButtons(period);
+  }
+}
+
 function csvEscape(val) {
   const s = String(val ?? '');
   if (/["\r\n,]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
@@ -954,8 +1240,8 @@ function buildSummarySnapshot() {
 
 async function ensureSummarySnapshot() {
   let snapshot = buildSummarySnapshot();
-  if (snapshot) return snapshot;
-  await renderWorkSummary();
+  if (snapshot && hasCurrentWorkSummary(getWorkPeriod())) return snapshot;
+  await renderWorkSummary(true);
   snapshot = buildSummarySnapshot();
   return snapshot;
 }
@@ -1156,6 +1442,7 @@ async function addAttendanceSiteFromForm() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+    markWorkSummaryStale();
     codeEl.value = '';
     nameEl.value = '';
     nameEl.focus();
@@ -1190,6 +1477,7 @@ async function editAttendanceSite(siteId) {
       updatedBy: state.currentUsername || '',
       updatedAt: serverTimestamp(),
     });
+    markWorkSummaryStale();
   } catch (err) {
     console.error('登録現場更新エラー:', err);
     alert('登録現場の更新に失敗しました。');
@@ -1204,6 +1492,7 @@ async function deleteAttendanceSite(siteId) {
 
   try {
     await deleteDoc(doc(db, 'attendance_sites', siteId));
+    markWorkSummaryStale();
   } catch (err) {
     console.error('登録現場削除エラー:', err);
     alert('登録現場の削除に失敗しました。');
@@ -1221,7 +1510,7 @@ function subscribeAttendanceSites() {
       if (state.calTab !== 'personal') return;
       if (state.calPersonalTab === 'sites') renderAttendanceSiteTable();
       if (state.calPersonalTab === 'work') void renderWorkTable();
-      if (state.calPersonalTab === 'summary') void renderWorkSummary();
+      if (state.calPersonalTab === 'summary') markWorkSummaryStale();
     },
     err => {
       console.error('登録現場購読エラー:', err);
@@ -1301,7 +1590,7 @@ export function bindAttendanceWorkEvents() {
   });
 
   document.getElementById('calw-summary-refresh-btn')?.addEventListener('click', () => {
-    void renderWorkSummary();
+    void renderWorkSummary(true);
   });
   document.getElementById('calw-summary-export-csv-btn')?.addEventListener('click', () => {
     void exportSummaryCsv();

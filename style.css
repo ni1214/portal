@@ -12016,6 +12016,34 @@ html.font-xl { font-size: 21px; }
   font-size: 0.85rem;
   font-weight: 700;
 }
+.calw-summary-prompt {
+  border: 1px dashed var(--border-glass-hover);
+  border-radius: var(--radius-sm);
+  background: var(--bg-glass);
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+}
+.calw-summary-prompt-title {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.calw-summary-prompt-body {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.calw-summary-prompt-note {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.calw-summary-run-btn {
+  justify-self: start;
+}
 
 .calw-work-site-summary {
   margin-top: 10px;

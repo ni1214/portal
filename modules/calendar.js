@@ -121,6 +121,7 @@ export async function saveAttendance(dateStr, data) {
     } else {
       await deps.removePublicAttendance?.(dateStr, state.currentUsername);
     }
+    deps.markWorkSummaryStale?.();
     if (dateStr === getTodayDateStr()) {
       syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
       deps.renderTodayDashboard?.();
@@ -143,6 +144,7 @@ export async function deleteAttendance(dateStr) {
     }
     // 公開出席からも削除
     await deps.removePublicAttendance?.(dateStr, state.currentUsername);
+    deps.markWorkSummaryStale?.();
     renderCalendar();
     deps.renderTodayDashboard?.();
   } catch (err) { console.error('勤怠削除エラー:', err); }

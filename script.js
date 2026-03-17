@@ -139,7 +139,8 @@ import {
   switchCalPersonalTab,
   onCalendarModalOpen,
   onCalendarModalClose,
-  onCalendarMonthChanged
+  onCalendarMonthChanged,
+  markWorkSummaryStale
 } from './modules/attendance-work.js';
 
 import { initBottomNav } from './modules/bottom-nav.js';
@@ -256,6 +257,7 @@ initCalendar({
   removePublicAttendance,
   renderSharedCalendar,
   renderTodayDashboard,
+  markWorkSummaryStale,
   subscribeCompanyCalConfig,
   unsubscribeCompanyCalConfig,
   getDateInfo,
