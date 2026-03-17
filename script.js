@@ -3149,6 +3149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const title = document.getElementById('notice-title').value.trim();
     const body  = document.getElementById('notice-body').value.trim();
     const priority = document.getElementById('notice-priority').value;
+    const requireAcknowledgement = document.getElementById('notice-require-ack').checked;
     const targetScope = document.getElementById('notice-target-scope').value;
     const targetDepartments = Array.from(document.querySelectorAll('.notice-target-checkbox:checked'))
       .map(input => input.value.trim())
@@ -3169,6 +3170,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         title,
         body,
         priority,
+        requireAcknowledgement,
         targetScope,
         targetDepartments,
         updatedAt: serverTimestamp()

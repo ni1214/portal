@@ -243,33 +243,41 @@ function buildNoticeCard() {
   const noticeSource = Array.isArray(state.visibleNotices)
     ? state.visibleNotices
     : (state.allNotices || []);
-  const unread = noticeSource.filter(notice => !state.readNoticeIds.has(notice.id));
+  const pendingAck = noticeSource.filter(notice => {
+    if (!notice?.requireAcknowledgement || !state.currentUsername) return false;
+    const acknowledgedBy = Array.isArray(notice.acknowledgedBy) ? notice.acknowledgedBy : [];
+    return !acknowledgedBy.includes(state.currentUsername);
+  });
+  const unread = noticeSource.filter(notice =>
+    !state.readNoticeIds.has(notice.id) && !notice?.requireAcknowledgement
+  );
   const urgentUnread = unread.filter(notice => notice.priority === 'urgent');
-  const listSource = (urgentUnread.length > 0 ? urgentUnread : unread)
+  const listSource = (pendingAck.length > 0 ? pendingAck : (urgentUnread.length > 0 ? urgentUnread : unread))
     .slice()
     .sort((a, b) => compareTimestamp(b.createdAt, a.createdAt));
 
   return {
-    title: '未読の重要通知',
+    title: pendingAck.length > 0 ? '確認待ちのお知らせ' : '未読の重要通知',
     subtitle: 'お知らせ',
     icon: 'fa-solid fa-bell',
-    value: `${urgentUnread.length}件`,
-    meta: unread.length > 0
-      ? `未読全体 ${unread.length}件`
-      : '未読のお知らせはありません',
-    tone: urgentUnread.length > 0 ? 'alert' : (unread.length > 0 ? 'active' : 'clear'),
+    value: `${pendingAck.length > 0 ? pendingAck.length : urgentUnread.length}件`,
+    meta: pendingAck.length > 0
+      ? `未確認 ${pendingAck.length}件 / 未読 ${unread.length}件`
+      : (unread.length > 0 ? `未読全体 ${unread.length}件` : '未読のお知らせはありません'),
+    tone: pendingAck.length > 0 ? 'alert' : (urgentUnread.length > 0 ? 'alert' : (unread.length > 0 ? 'active' : 'clear')),
     chips: [
+      pendingAck.length > 0 ? { text: `確認待ち ${pendingAck.length}件`, tone: 'alert' } : null,
       urgentUnread.length > 0 ? { text: `重要 ${urgentUnread.length}件`, tone: 'alert' } : null,
       unread.length > urgentUnread.length ? { text: `通常 ${unread.length - urgentUnread.length}件`, tone: 'clear' } : null,
     ].filter(Boolean),
     items: listSource.slice(0, DASH_LIST_LIMIT).map(notice => ({
       title: notice.title || '件名未設定',
       meta: [
-        notice.priority === 'urgent' ? '重要' : '通常',
+        notice.requireAcknowledgement ? '確認必須' : (notice.priority === 'urgent' ? '重要' : '通常'),
         formatNoticeDate(notice.createdAt),
       ].filter(Boolean).join(' / '),
     })),
-    emptyText: '重要通知はありません',
+    emptyText: '確認待ちや重要通知はありません',
   };
 }
 

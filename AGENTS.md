@@ -127,7 +127,7 @@ export function xxxFunction() { ... }
 |---|---|
 | `cards/` | 公開カード |
 | `categories/` | 公開カテゴリ |
-| `notices/` | お知らせ（priority / targetScope / targetDepartments で全体/部署向け配信） |
+| `notices/` | お知らせ（priority / targetScope / targetDepartments / requireAcknowledgement / acknowledgedBy で配信・確認管理） |
 | `notice_reactions/{noticeId}` | リアクション |
 | `chat_messages/` | 全社チャット（廃止予定） |
 | `users/{name}/data/preferences` | 個人設定（lastViewedSuggestionsAt を含む） |
@@ -243,6 +243,18 @@ export function xxxFunction() { ... }
 | `departments` | string[] | 部署一覧 |
 | `suggestionBoxViewers` | string[] | 目安箱の閲覧許可ユーザー |
 | `missionText` | string | トップの方針テキスト |
+
+### お知らせフィールド（`notices/{noticeId}`）
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `title` | string | タイトル |
+| `body` | string | 本文 |
+| `priority` | string | `'normal'` / `'urgent'` |
+| `targetScope` | string | `'all'` / `'departments'` |
+| `targetDepartments` | string[] | 配信対象部署 |
+| `requireAcknowledgement` | boolean | `true` の場合は「確認した」操作が必要 |
+| `acknowledgedBy` | string[] | 確認したユーザー名の一覧 |
+| `createdAt` | timestamp | 作成日時 |
 
 ## Firestore 読み取り超過 再発防止ルール
 

@@ -43,8 +43,43 @@ function getVisibleNoticesFromList(notices = state.allNotices) {
     .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 }
 
+function normalizeAcknowledgedUsers(users) {
+  if (!Array.isArray(users)) return [];
+  return [...new Set(
+    users
+      .map(username => typeof username === 'string' ? username.trim() : '')
+      .filter(Boolean)
+  )];
+}
+
+function noticeRequiresAcknowledgement(notice) {
+  return !!notice?.requireAcknowledgement;
+}
+
+function isNoticeAcknowledgedByCurrentUser(notice) {
+  if (!state.currentUsername || !noticeRequiresAcknowledgement(notice)) return false;
+  return normalizeAcknowledgedUsers(notice.acknowledgedBy).includes(state.currentUsername);
+}
+
+function getPendingAcknowledgementNotices(notices = state.visibleNotices) {
+  if (!state.currentUsername) return [];
+  return (Array.isArray(notices) ? notices : []).filter(notice =>
+    noticeRequiresAcknowledgement(notice) && !isNoticeAcknowledgedByCurrentUser(notice)
+  );
+}
+
 function getVisibleUnreadCount() {
   return (state.visibleNotices || []).filter(n => !state.readNoticeIds.has(n.id)).length;
+}
+
+function getVisibleUnreadNoticeCount() {
+  return (state.visibleNotices || []).filter(notice =>
+    !state.readNoticeIds.has(notice.id) && !noticeRequiresAcknowledgement(notice)
+  ).length;
+}
+
+function getVisibleNoticeActionCount() {
+  return getPendingAcknowledgementNotices().length + getVisibleUnreadNoticeCount();
 }
 
 function buildAudienceBadgeHtml(notice) {
@@ -55,6 +90,32 @@ function buildAudienceBadgeHtml(notice) {
   return normalizeTargetDepartments(notice.targetDepartments).map(department => `
     <span class="notice-target-chip notice-target-chip--dept">${esc(department)}</span>
   `).join('');
+}
+
+function buildAcknowledgementHtml(notice) {
+  if (!noticeRequiresAcknowledgement(notice)) return '';
+  const acknowledgedUsers = normalizeAcknowledgedUsers(notice.acknowledgedBy);
+  const acknowledged = isNoticeAcknowledgedByCurrentUser(notice);
+  const statusChip = acknowledged
+    ? '<span class="notice-ack-chip notice-ack-chip--done"><i class="fa-solid fa-circle-check"></i> 確認済み</span>'
+    : '<span class="notice-ack-chip notice-ack-chip--pending"><i class="fa-solid fa-circle-exclamation"></i> 確認必須</span>';
+  const actionButton = state.currentUsername && !acknowledged
+    ? `<button class="btn-notice-ack" data-notice-ack="${notice.id}"><i class="fa-solid fa-check"></i> 確認した</button>`
+    : '';
+  const confirmedBy = acknowledgedUsers.length > 0
+    ? `<div class="notice-ack-users">確認済み: ${acknowledgedUsers.map(username => esc(username)).join(' / ')}</div>`
+    : '<div class="notice-ack-users">まだ確認者はいません</div>';
+
+  return `
+    <div class="notice-ack-row">
+      <div class="notice-ack-head">
+        ${statusChip}
+        <span class="notice-ack-count">${acknowledgedUsers.length}名確認</span>
+        ${actionButton}
+      </div>
+      ${confirmedBy}
+    </div>
+  `;
 }
 
 function renderNoticeTargetDepartments(selectedDepartments = []) {
@@ -138,13 +199,45 @@ export async function markAllNoticesRead() {
   deps.renderTodayDashboard?.();
 }
 
+export async function acknowledgeNotice(noticeId) {
+  if (!state.currentUsername || !noticeId) return;
+  const notice = (state.allNotices || []).find(item => item.id === noticeId);
+  if (!notice || !noticeRequiresAcknowledgement(notice) || isNoticeAcknowledgedByCurrentUser(notice)) return;
+
+  const previousAcknowledgedBy = normalizeAcknowledgedUsers(notice.acknowledgedBy);
+  notice.acknowledgedBy = [...previousAcknowledgedBy, state.currentUsername];
+  state.readNoticeIds.add(noticeId);
+  updateNoticeBadge();
+  renderNotices(state.visibleNotices);
+  deps.renderTodayDashboard?.();
+
+  try {
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'notices', noticeId), {
+      acknowledgedBy: arrayUnion(state.currentUsername),
+    });
+    batch.set(doc(db, 'users', state.currentUsername, 'read_notices', noticeId), {
+      readAt: serverTimestamp(),
+    }, { merge: true });
+    await batch.commit();
+  } catch (err) {
+    notice.acknowledgedBy = previousAcknowledgedBy;
+    state.readNoticeIds.delete(noticeId);
+    updateNoticeBadge();
+    renderNotices(state.visibleNotices);
+    deps.renderTodayDashboard?.();
+    console.error('お知らせ確認の保存に失敗しました:', err);
+    alert('確認の保存に失敗しました。時間をおいてもう一度お試しください。');
+  }
+}
+
 export function updateNoticeBadge() {
   const badge = document.getElementById('notice-unread-badge');
   const bell  = document.getElementById('btn-notice-bell');
   if (!badge || !bell) return;
-  const unreadCount = getVisibleUnreadCount();
-  if (unreadCount > 0) {
-    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+  const actionCount = getVisibleNoticeActionCount();
+  if (actionCount > 0) {
+    badge.textContent = actionCount > 99 ? '99+' : actionCount;
     badge.hidden = false;
     bell.classList.add('has-unread');
   } else {
@@ -265,12 +358,17 @@ export function subscribeNotices() {
 }
 
 export async function saveNotice(data) {
+  const existingNotice = state.editingNoticeId
+    ? (state.allNotices || []).find(notice => notice.id === state.editingNoticeId)
+    : null;
   const normalizedData = {
     ...data,
     targetScope: data?.targetScope === 'departments' && normalizeTargetDepartments(data?.targetDepartments).length > 0
       ? 'departments'
       : 'all',
     targetDepartments: normalizeTargetDepartments(data?.targetDepartments),
+    requireAcknowledgement: !!data?.requireAcknowledgement,
+    acknowledgedBy: normalizeAcknowledgedUsers(existingNotice?.acknowledgedBy),
   };
   if (state.editingNoticeId) {
     await updateDoc(doc(db, 'notices', state.editingNoticeId), normalizedData);
@@ -286,6 +384,8 @@ export async function addNotice(data) {
       ? 'departments'
       : 'all',
     targetDepartments: normalizeTargetDepartments(data?.targetDepartments),
+    requireAcknowledgement: !!data?.requireAcknowledgement,
+    acknowledgedBy: [],
     createdAt: serverTimestamp()
   });
 }
@@ -312,6 +412,8 @@ export function renderNotices(notices) {
     : '';
 
   const unreadCount = getVisibleUnreadCount();
+  const unreadNoticeCount = getVisibleUnreadNoticeCount();
+  const pendingAckCount = getPendingAcknowledgementNotices(visibleNotices).length;
   const readAllBtn = (state.currentUsername && unreadCount > 0)
     ? `<button class="btn-read-all" id="btn-read-all"><i class="fa-solid fa-check-double"></i> 全て既読</button>`
     : '';
@@ -320,7 +422,8 @@ export function renderNotices(notices) {
     <div class="notice-header">
       <i class="fa-solid fa-bullhorn"></i>
       <span>お知らせ</span>
-      ${unreadCount > 0 ? `<span class="notice-unread-label">${unreadCount}件 未読</span>` : ''}
+      ${pendingAckCount > 0 ? `<span class="notice-unread-label notice-unread-label--ack">${pendingAckCount}件 確認待ち</span>` : ''}
+      ${unreadNoticeCount > 0 ? `<span class="notice-unread-label">${unreadNoticeCount}件 未読</span>` : ''}
       ${readAllBtn}
       ${addBtn}
     </div>
@@ -358,6 +461,7 @@ export function renderNotices(notices) {
       </div>
       ${n.body ? `<div class="notice-body">${esc(n.body)}</div>` : ''}
       <div class="notice-targets">${buildAudienceBadgeHtml(n)}</div>
+      ${buildAcknowledgementHtml(n)}
       ${buildReactionBar(n.id)}
     `;
     if (state.isEditMode) {
@@ -368,6 +472,17 @@ export function renderNotices(notices) {
 
   // リアクションボタン（イベントデリゲーション）
   list.addEventListener('click', async e => {
+    const ackBtn = e.target.closest('[data-notice-ack]');
+    if (ackBtn) {
+      if (!state.currentUsername) { alert('確認するにはユーザーネームを設定してください'); return; }
+      ackBtn.disabled = true;
+      try {
+        await acknowledgeNotice(ackBtn.dataset.noticeAck);
+      } finally {
+        ackBtn.disabled = false;
+      }
+      return;
+    }
     const btn = e.target.closest('.reaction-btn');
     if (!btn) return;
     if (!state.currentUsername) { alert('リアクションするにはユーザーネームを設定してください'); return; }
@@ -387,6 +502,7 @@ export function openNoticeModal(notice) {
   const targetScope = getNoticeTargetScope(notice);
   document.getElementById('notice-modal-title').textContent = notice ? 'お知らせを編集' : 'お知らせを追加';
   document.getElementById('notice-priority').value = notice?.priority || 'normal';
+  document.getElementById('notice-require-ack').checked = !!notice?.requireAcknowledgement;
   document.getElementById('notice-target-scope').value = targetScope;
   renderNoticeTargetDepartments(targetDepartments);
   handleNoticeTargetScopeChange();

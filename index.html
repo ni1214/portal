@@ -858,6 +858,14 @@
         <textarea id="notice-body" class="form-input" rows="3" placeholder="詳細メッセージ..."></textarea>
       </div>
 
+      <div class="form-group">
+        <label class="notice-ack-setting" for="notice-require-ack">
+          <input type="checkbox" id="notice-require-ack">
+          <span>確認必須にする</span>
+        </label>
+        <div class="notice-target-hint">オンにすると、対象ユーザーが「確認した」を押した履歴を残せます。</div>
+      </div>
+
       <div class="modal-actions">
         <button class="btn-modal-secondary" id="notice-cancel">キャンセル</button>
         <button class="btn-modal-danger" id="notice-delete" style="display:none">
