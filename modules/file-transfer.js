@@ -12,6 +12,20 @@ import {
 // 他モジュールの関数を遅延注入するための依存オブジェクト
 export const deps = {};
 
+let driveMetaLoadedFor = '';
+
+async function ensureDriveMetaReady(username) {
+  if (!username) return;
+  if (driveMetaLoadedFor === username) return;
+  state._myDriveUrl = '';
+  state._driveContacts = {};
+  driveMetaLoadedFor = username;
+  await Promise.all([
+    loadMyDriveUrl(username),
+    loadDriveContacts(username),
+  ]);
+}
+
 // ===== ユーティリティ =====
 
 export function formatFileSize(bytes) {
@@ -120,8 +134,18 @@ export function openFileTransferPanel() {
   setTimeout(() => panel.classList.add('open'), 10);
   // タブ状態を復元
   switchFtTab(state._ftCurrentTab);
-  renderFtPanel();
   startFtListener();
+  startDriveListeners(state.currentUsername);
+  renderFtPanel();
+  renderDrivePanel();
+  void ensureDriveMetaReady(state.currentUsername)
+    .then(() => {
+      renderFtPanel();
+      renderDrivePanel();
+    })
+    .catch(err => {
+      console.error('Drive初期読込エラー:', err);
+    });
 }
 
 export function closeFileTransferPanel() {
@@ -129,6 +153,8 @@ export function closeFileTransferPanel() {
   const panel = document.getElementById('ft-panel');
   panel.classList.remove('open');
   setTimeout(() => panel.setAttribute('hidden', ''), 200);
+  stopFtListener();
+  stopDriveListeners();
 }
 
 // ===== チャット内ファイル転送ボタンの状態更新 =====
@@ -270,14 +296,12 @@ export function startFtListener() {
     state._ftIncoming = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     updateFtBadge();
     renderFtPanel();
-  });
-  );
+  }));
 }
 
 export function stopFtListener() {
   if (state._ftIncomingSub) { state._ftIncomingSub(); state._ftIncomingSub = null; }
   state._ftIncoming = [];
-  state._ftOutgoing = [];
   updateFtBadge();
 }
 
@@ -320,10 +344,9 @@ export function startDriveListeners(username) {
       state._driveIncoming = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       updateFtBadge();
       renderDrivePanel();
-    });
+    }));
   }
   // 送信リスナー
-  );
   if (!state._driveOutgoingSub) {
     const qOut = query(collection(db, 'drive_shares'), where('from', '==', username));
     recordListenerStart('ft.drive-out', 'Drive送信', `drive_shares:${username}`);
@@ -331,9 +354,8 @@ export function startDriveListeners(username) {
       recordListenerSnapshot('ft.drive-out', snap.size, username);
       state._driveOutgoing = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderDrivePanel();
-    });
+    }));
   }
-  );
 }
 
 export function stopDriveListeners() {
@@ -341,7 +363,7 @@ export function stopDriveListeners() {
   if (state._driveOutgoingSub) { state._driveOutgoingSub(); state._driveOutgoingSub = null; }
   state._driveIncoming = [];
   state._driveOutgoing = [];
-  state._driveContacts = {};
+  updateFtBadge();
 }
 
 // --- Drive 連絡先 読み込み ---

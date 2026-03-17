@@ -145,9 +145,7 @@ export function startTaskListeners(username) {
     updateTaskBadge();
     deps.renderTodoSection?.();   // 自分のタスクウィジェットも更新
     if (state.taskModalOpen && state.activeTaskTab === 'received') renderTaskTabContent();
-  }, err => console.error('receivedTasks listener error:', err));
-
-  );
+  }, err => console.error('receivedTasks listener error:', err)));
 
   const sQ = query(collection(db, 'assigned_tasks'), where('assignedBy', '==', username));
   recordListenerStart('task.sent', '依頼したタスク', `assigned_tasks:${username}`);
@@ -157,11 +155,9 @@ export function startTaskListeners(username) {
       .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
     updateTaskBadge();
     if (state.taskModalOpen && state.activeTaskTab === 'sent') renderTaskTabContent();
-  }, err => console.error('sentTasks listener error:', err));
+  }, err => console.error('sentTasks listener error:', err)));
 
   // 共有されたタスク（自分が sharedWith に含まれる）
-  );
-
   const shareQ = query(collection(db, 'assigned_tasks'), where('sharedWith', 'array-contains', username));
   recordListenerStart('task.shared', '共有されたタスク', `assigned_tasks:${username}`);
   state._sharedTasksUnsub = wrapTrackedListenerUnsubscribe('task.shared', onSnapshot(shareQ, snap => {
@@ -170,7 +166,7 @@ export function startTaskListeners(username) {
       .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
     updateTaskBadge();
     if (state.taskModalOpen && state.activeTaskTab === 'shared') renderTaskTabContent();
-  }, err => console.error('sharedTasks listener error:', err));
+  }, err => console.error('sharedTasks listener error:', err)));
 }
 
 export function updateTaskBadge() {
@@ -203,7 +199,6 @@ export function updateTaskBadge() {
   }
   deps.updateLockNotifications?.();
   deps.renderTodayDashboard?.();
-  );
 }
 
 export function openTaskModal() {

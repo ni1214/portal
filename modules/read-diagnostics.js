@@ -4,6 +4,7 @@ import { esc } from './utils.js';
 const MAX_EVENTS = 80;
 
 let eventsBound = false;
+let bindRetryQueued = false;
 
 function createEmptyDiagnostics() {
   return {
@@ -291,13 +292,34 @@ export function renderReadDiagnostics() {
 
 function bindReadDiagnosticsEvents() {
   if (eventsBound) return;
-  eventsBound = true;
+  const trigger = document.getElementById('btn-read-diagnostics');
+  const closeBtn = document.getElementById('rd-close');
+  const closeBtn2 = document.getElementById('rd-close2');
+  const resetBtn = document.getElementById('rd-reset-btn');
+  const modal = document.getElementById('rd-modal');
 
-  document.getElementById('btn-read-diagnostics')?.addEventListener('click', openReadDiagnosticsModal);
-  document.getElementById('rd-close')?.addEventListener('click', closeReadDiagnosticsModal);
-  document.getElementById('rd-close2')?.addEventListener('click', closeReadDiagnosticsModal);
-  document.getElementById('rd-reset-btn')?.addEventListener('click', resetReadDiagnostics);
-  document.getElementById('rd-modal')?.addEventListener('click', event => {
+  if (!trigger || !closeBtn || !closeBtn2 || !resetBtn || !modal) {
+    if (!bindRetryQueued) {
+      bindRetryQueued = true;
+      const retry = () => {
+        bindRetryQueued = false;
+        bindReadDiagnosticsEvents();
+      };
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', retry, { once: true });
+      } else {
+        setTimeout(retry, 100);
+      }
+    }
+    return;
+  }
+
+  eventsBound = true;
+  trigger.addEventListener('click', openReadDiagnosticsModal);
+  closeBtn.addEventListener('click', closeReadDiagnosticsModal);
+  closeBtn2.addEventListener('click', closeReadDiagnosticsModal);
+  resetBtn.addEventListener('click', resetReadDiagnostics);
+  modal.addEventListener('click', event => {
     if (event.target === event.currentTarget) closeReadDiagnosticsModal();
   });
 }

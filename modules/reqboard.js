@@ -48,11 +48,10 @@ export function startRequestListeners(username) {
         .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
       updateReqBadge();
       if (state.reqModalOpen && state.activeReqTab === 'request' && state.activeReqSubTab === 'received') renderReqContent();
-    }, err => console.error('receivedRequests listener error:', err));
+    }, err => console.error('receivedRequests listener error:', err)));
   }
 
   // 自分が送信した依頼を監視
-  );
 
   const sQ = query(collection(db, 'cross_dept_requests'), where('createdBy', '==', username));
   recordListenerStart('req.sent', '送信部門間依頼', `cross_dept_requests:${username}`);
@@ -62,10 +61,9 @@ export function startRequestListeners(username) {
       .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
     updateReqBadge();
     if (state.reqModalOpen && state.activeReqTab === 'request' && state.activeReqSubTab === 'sent') renderReqContent();
-  }, err => console.error('sentRequests listener error:', err));
+  }, err => console.error('sentRequests listener error:', err)));
 
   // 目安箱（閲覧権限あり）
-  );
 
   if (state.isSuggestionBoxViewer) {
     const suggQ = query(collection(db, 'suggestion_box'), orderBy('createdAt', 'desc'));
@@ -75,7 +73,7 @@ export function startRequestListeners(username) {
       state.suggestionList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       updateReqBadge();
       if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();
-    }, err => console.error('suggestion_box listener error:', err));
+    }, err => console.error('suggestion_box listener error:', err)));
   }
 }
 
@@ -119,7 +117,6 @@ export function updateReqBadge() {
     suggTabBadge.textContent = suggCount > 99 ? '99+' : String(suggCount);
   }
   deps.renderTodayDashboard?.();
-  );
 }
 
 export function openReqModal(initialTab) {

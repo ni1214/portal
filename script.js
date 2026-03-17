@@ -313,8 +313,7 @@ function loadTodos(username) {
     recordListenerSnapshot('todo.personal', snap.size, username);
     state.personalTodos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderTodoSection();
-  }, err => console.error('TODO読み込みエラー:', err));
-  );
+  }, err => console.error('TODO読み込みエラー:', err)));
 }
 
 async function addTodo(text, dueDate) {
@@ -479,6 +478,22 @@ async function loadPersonalData(username, lockOnSwitch = false) {
   if (!username) return;
   try {
     registerUserLogin(username);
+    if (lockOnSwitch) {
+      stopChatListeners();
+      stopFtListener();
+      stopDriveListeners();
+      state.dmRooms = [];
+      state.groupRooms = [];
+      state.chatReadTimes = {};
+      state._ftIncoming = [];
+      state._ftOutgoing = [];
+      state._driveIncoming = [];
+      state._driveOutgoing = [];
+      state._myDriveUrl = '';
+      state._driveContacts = {};
+      updateChatBadge();
+      updateFtBadge();
+    }
 
     const [orderSnap, prefSnap, privSecSnap, privCardSnap] = await Promise.all([
       getDoc(doc(db, 'users', username, 'data', 'section_order')),
@@ -524,13 +539,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     loadTodos(username);
     await loadReadNotices(username);
     setupNoticeObserver();
-    loadChatReadTimes(username);
-    startChatListeners(username);
     startTaskListeners(username);
-    startFtListener();
-    await loadMyDriveUrl(username);
-    await loadDriveContacts(username);
-    startDriveListeners(username);
     await loadUserEmailProfile(username);
     subscribeTodayAttendance(username);
     refreshNoticeVisibility();
@@ -788,8 +797,7 @@ function subscribeCards() {
       .sort((a, b) => (a.categoryOrder ?? 0) - (b.categoryOrder ?? 0) || (a.order ?? 0) - (b.order ?? 0));
     renderAllSections();
     renderFavorites();
-  }, err => console.error('onSnapshot エラー:', err));
-  );
+  }, err => console.error('onSnapshot エラー:', err)));
 }
 
 async function saveCard(docId, data) {

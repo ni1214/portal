@@ -72,11 +72,32 @@ export function initChatResize() {
 }
 
 // ===== チャットパネル開閉 =====
-export function openChatPanel() {
+let chatReadTimesLoadedFor = '';
+
+function ensureChatReadState() {
+  if (chatReadTimesLoadedFor === state.currentUsername) return;
+  state.chatReadTimes = {};
+  chatReadTimesLoadedFor = state.currentUsername || '';
+}
+
+async function ensureChatReady() {
+  if (!state.currentUsername) return;
+  if (!state._dmRoomsUnsubscribe && !state._groupRoomsUnsubscribe) {
+    startChatListeners(state.currentUsername);
+  }
+  if (chatReadTimesLoadedFor !== state.currentUsername) {
+    ensureChatReadState();
+    await loadChatReadTimes(state.currentUsername);
+  }
+}
+
+export async function openChatPanel() {
   state.chatPanelOpen = true;
   const panel = document.getElementById('chat-panel');
   panel.removeAttribute('hidden');
   setTimeout(() => panel.classList.add('open'), 10);
+  renderChatSidebar();
+  await ensureChatReady();
   renderChatSidebar();
 }
 
@@ -92,6 +113,7 @@ export function closeChatPanel() {
     ftPanel.style.right  = '';
     ftPanel.style.bottom = '';
   }
+  stopChatListeners();
 }
 
 // ===== チャットリスナー =====
@@ -107,9 +129,7 @@ export function startChatListeners(username) {
     state.dmRooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     if (state.chatPanelOpen) renderChatSidebar();
     updateChatBadge();
-  });
-
-  );
+  }));
 
   const grpQ = query(collection(db, 'chat_rooms'), where('members', 'array-contains', username));
   recordListenerStart('chat.group-rooms', 'グループ一覧', `chat_rooms:${username}`);
@@ -118,23 +138,18 @@ export function startChatListeners(username) {
     state.groupRooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     if (state.chatPanelOpen) renderChatSidebar();
     updateChatBadge();
-  });
-  );
+  }));
 }
 
 export function stopChatListeners() {
   if (state._dmRoomsUnsubscribe) { state._dmRoomsUnsubscribe(); state._dmRoomsUnsubscribe = null; }
   if (state._groupRoomsUnsubscribe) { state._groupRoomsUnsubscribe(); state._groupRoomsUnsubscribe = null; }
   if (state._roomMsgUnsubscribe) { state._roomMsgUnsubscribe(); state._roomMsgUnsubscribe = null; }
-  state.dmRooms = [];
-  state.groupRooms = [];
   state.currentRoomId = null;
   state.currentRoomType = null;
+  state.currentRoomMessages = [];
   stopUsersListListener();
-  deps.stopFtListener?.();
-  deps.stopDriveListeners?.();
-  state._myDriveUrl = '';
-  state._ftCurrentTab = 'p2p';
+  updateChatBadge();
 }
 
 // ===== ユーザーリスト監視 =====
@@ -159,8 +174,7 @@ export function subscribeUsersList() {
     }
     if (state.chatPanelOpen) renderChatSidebar();
     updateChatBadge(); // バッジとリストの整合性を保つ
-  });
-  );
+  }));
 }
 
 export function stopUsersListListener() {
@@ -522,8 +536,10 @@ export async function openOrCreateDm(targetUser) {
       await updateDoc(roomRef, { members: arrayUnion(state.currentUsername, targetUser) });
     }
   }
-  if (!state.chatPanelOpen) openChatPanel();
-  setTimeout(() => openRoom(roomId, 'dm'), 150);
+  if (!state.chatPanelOpen) {
+    await openChatPanel();
+  }
+  await openRoom(roomId, 'dm');
 }
 
 // ===== グループ作成モーダル =====
@@ -578,8 +594,10 @@ export async function createGroupRoom() {
       lastSender: ''
     });
     document.getElementById('new-group-modal').classList.remove('visible');
-    if (!state.chatPanelOpen) openChatPanel();
-    setTimeout(() => openRoom(roomRef.id, 'group'), 150);
+    if (!state.chatPanelOpen) {
+      await openChatPanel();
+    }
+    await openRoom(roomRef.id, 'group');
   } catch (err) { console.error('グループ作成エラー:', err); alert('作成に失敗しました。'); }
 }
 
@@ -591,6 +609,7 @@ export async function loadUsersForChatPicker(listElId, searchElId, onSelect, exc
   let users = [];
   try {
     const snap = await getDocs(collection(db, 'users_list'));
+    recordGetDocsRead('chat.user-picker', 'ユーザーピッカー', 'users_list', snap.size);
     users = snap.docs.map(d => d.id);
     if (excludeSelf) users = users.filter(u => u !== state.currentUsername);
   } catch (_) {
