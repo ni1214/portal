@@ -36,6 +36,7 @@ export async function loadInviteCodeConfig() {
   const snap = await getDoc(doc(db, 'portal', 'config'));
   const data = snap.exists() ? snap.data() : {};
   state.inviteCodeHash = data.inviteCodeHash || null;
+  state.inviteCodePlain = data.inviteCodePlain || '';
   state.inviteCodeRequired = !!state.inviteCodeHash;
   state.adminInviteConfigured = state.inviteCodeRequired;
   updateInviteAdminState();
@@ -145,17 +146,23 @@ function updateInviteAdminState(message = '') {
   const hintEl = document.getElementById('admin-invite-hint');
   const clearBtn = document.getElementById('admin-invite-clear-btn');
   const input = document.getElementById('admin-invite-input');
+  const currentWrap = document.getElementById('admin-invite-current-wrap');
+  const currentCode = document.getElementById('admin-invite-current-code');
   if (statusEl) {
     statusEl.textContent = state.adminInviteConfigured ? '設定済み' : '未設定';
     statusEl.classList.toggle('is-configured', state.adminInviteConfigured);
   }
   if (hintEl) {
     hintEl.textContent = message || (state.adminInviteConfigured
-      ? '現在は招待コード入力後にログイン画面へ進みます。'
+      ? (state.inviteCodePlain
+        ? '現在は招待コード入力後にログイン画面へ進みます。'
+        : '現在のコードは旧設定のため再表示できません。次回保存分からここに表示されます。')
       : '未設定の間は招待コードなしでログイン画面へ進みます。');
   }
   if (clearBtn) clearBtn.hidden = !state.adminInviteConfigured;
   if (input) input.value = '';
+  if (currentWrap) currentWrap.hidden = !state.adminInviteConfigured;
+  if (currentCode) currentCode.textContent = state.inviteCodePlain || '再表示不可';
 }
 
 export async function saveInviteCode(code) {
@@ -166,9 +173,11 @@ export async function saveInviteCode(code) {
   const hash = await hashPIN(normalized);
   await setDoc(doc(db, 'portal', 'config'), {
     inviteCodeHash: hash,
+    inviteCodePlain: normalized,
     inviteUpdatedAt: serverTimestamp(),
   }, { merge: true });
   state.inviteCodeHash = hash;
+  state.inviteCodePlain = normalized;
   state.inviteCodeRequired = true;
   state.adminInviteConfigured = true;
   updateInviteAdminState('招待コードを保存しました。次の新規アクセスから有効です。');
@@ -177,9 +186,11 @@ export async function saveInviteCode(code) {
 export async function clearInviteCode() {
   await setDoc(doc(db, 'portal', 'config'), {
     inviteCodeHash: null,
+    inviteCodePlain: null,
     inviteUpdatedAt: serverTimestamp(),
   }, { merge: true });
   state.inviteCodeHash = null;
+  state.inviteCodePlain = '';
   state.inviteCodeRequired = false;
   state.adminInviteConfigured = false;
   state.inviteCodeVerified = true;

@@ -229,6 +229,7 @@ export function xxxFunction() { ... }
 - Firestore セキュリティルールなし（ユーザー名を知らないと個人データにアクセスできない「obscurity」方式）
 - 管理者PIN: `portal/config.pinHash`（SHA-256ハッシュ）
 - 招待コード: `portal/config.inviteCodeHash`（4桁コードの SHA-256 ハッシュ。URL直打ちの覗き見防止用）
+- 管理画面表示用招待コード: `portal/config.inviteCodePlain`（管理者が現在コードを見返すための表示値）
 - 個人PINロック: `users/{name}/data/lock_pin.hash`
 - ログイン前PIN確認: `users/{name}/data/lock_pin.enabled === true` かつ `hash` があるユーザーのみ、ユーザー名入力後にログイン前PINを要求する
 
@@ -237,6 +238,7 @@ export function xxxFunction() { ... }
 |---|---|---|
 | `pinHash` | string\|null | 管理者PINの SHA-256 ハッシュ |
 | `inviteCodeHash` | string\|null | 4桁招待コードの SHA-256 ハッシュ |
+| `inviteCodePlain` | string\|null | 管理画面で再表示するための4桁招待コード |
 | `inviteUpdatedAt` | timestamp\|null | 招待コードの更新日時 |
 | `departments` | string[] | 部署一覧 |
 | `suggestionBoxViewers` | string[] | 目安箱の閲覧許可ユーザー |
