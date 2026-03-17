@@ -452,14 +452,16 @@ function renderTodoSection() {
 // ========== 個人設定 Firestore 保存（デバウンス付き） ==========
 let _prefSaveTimer = null;
 function savePreferencesToFirestore() {
-  if (!state.currentUsername) return;
+  const targetUsername = state.currentUsername;
+  if (!targetUsername) return;
   clearTimeout(_prefSaveTimer);
   _prefSaveTimer = setTimeout(async () => {
+    if (state.currentUsername !== targetUsername) return;
     try {
       const theme    = localStorage.getItem('portal-theme')     || 'dark';
       const fontSize = localStorage.getItem('portal-font-size') || 'font-md';
       await setDoc(
-        doc(db, 'users', state.currentUsername, 'data', 'preferences'),
+        doc(db, 'users', targetUsername, 'data', 'preferences'),
         {
           theme,
           fontSize,
