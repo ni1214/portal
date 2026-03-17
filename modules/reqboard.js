@@ -103,6 +103,7 @@ export function updateReqBadge() {
     suggTabBadge.hidden = suggCount === 0;
     suggTabBadge.textContent = suggCount > 99 ? '99+' : String(suggCount);
   }
+  deps.renderTodayDashboard?.();
 }
 
 export function openReqModal(initialTab) {

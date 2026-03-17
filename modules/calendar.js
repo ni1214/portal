@@ -75,6 +75,7 @@ export async function deleteAttendance(dateStr) {
     // 公開出席からも削除
     await deps.removePublicAttendance?.(dateStr, state.currentUsername);
     renderCalendar();
+    deps.renderTodayDashboard?.();
   } catch (err) { console.error('勤怠削除エラー:', err); }
 }
 
@@ -98,12 +99,14 @@ export function subscribeAttendance(username) {
     snap.docs.forEach(d => { state.attendanceData[d.id] = d.data(); });
     renderCalendar();
     updateCalendarSummary();
+    deps.renderTodayDashboard?.();
   });
 }
 
 export function unsubscribeAttendance() {
   if (state._attendanceSub) { state._attendanceSub(); state._attendanceSub = null; }
   state.attendanceData = {};
+  deps.renderTodayDashboard?.();
 }
 
 // ===== 前月データを一回だけ取得（締め計算用） =====

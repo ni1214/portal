@@ -187,6 +187,7 @@ export function updateTaskBadge() {
     btn.classList.remove('has-badge');
   }
   deps.updateLockNotifications?.();
+  deps.renderTodayDashboard?.();
 }
 
 export function openTaskModal() {

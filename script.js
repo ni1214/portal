@@ -155,6 +155,11 @@ import {
   openPropertySummaryModal,
 } from './modules/property-summary.js';
 
+import {
+  initTodayDashboard,
+  renderTodayDashboard,
+} from './modules/dashboard.js';
+
 
 // ========== 依存注入 ==========
 // 各モジュールが必要とするクロスモジュール関数を注入
@@ -180,11 +185,13 @@ Object.assign(ftDeps, {
 });
 
 Object.assign(noticeDeps, {
-  updateLockNotifications
+  updateLockNotifications,
+  renderTodayDashboard
 });
 
 Object.assign(taskDeps, {
   updateLockNotifications,
+  renderTodayDashboard,
   loadUsersForChatPicker,
   renderTodoSection,
   // 共有ピッカー用: users_list を取得して renderSharePickerUsers に渡す
@@ -204,6 +211,7 @@ Object.assign(taskDeps, {
 Object.assign(reqDeps, {
   loadUsersForChatPicker,
   createTaskRecord,
+  renderTodayDashboard,
 });
 
 initEmail({ confirmDelete });
@@ -227,6 +235,7 @@ initCalendar({
   writePublicAttendance,
   removePublicAttendance,
   renderSharedCalendar,
+  renderTodayDashboard,
   subscribeCompanyCalConfig,
   unsubscribeCompanyCalConfig,
   getDateInfo,
@@ -239,6 +248,8 @@ initAttendanceWork({
 });
 
 bindAttendanceWorkEvents();
+
+initTodayDashboard({});
 
 initPropertySummary({
   openRequests: projectKey => {
@@ -500,6 +511,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     renderMissionBanner(); // ミッションテキストが読み込まれた後に再描画
     startRequestListeners(username);
     await loadLockSettings(username, lockOnSwitch);
+    renderTodayDashboard();
   } catch (err) {
     console.error('個人データ読み込みエラー:', err);
   }

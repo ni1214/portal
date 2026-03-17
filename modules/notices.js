@@ -17,6 +17,7 @@ export async function loadReadNotices(username) {
     state.readNoticeIds = new Set(snap.docs.map(d => d.id));
     updateNoticeBadge();
     renderNotices(state.allNotices);
+    deps.renderTodayDashboard?.();
   } catch (err) {
     console.error('既読データ読み込みエラー:', err);
   }
@@ -36,6 +37,7 @@ export async function markAllNoticesRead() {
   state.allNotices.forEach(n => state.readNoticeIds.add(n.id));
   updateNoticeBadge();
   renderNotices(state.allNotices);
+  deps.renderTodayDashboard?.();
 }
 
 export function updateNoticeBadge() {
@@ -123,6 +125,7 @@ export function subscribeNotices() {
       renderNotices(state.allNotices);
       updateNoticeBadge();
       setupNoticeObserver();
+      deps.renderTodayDashboard?.();
     }
   );
 }
