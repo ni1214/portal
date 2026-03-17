@@ -4,6 +4,12 @@ import {
   db, collection, doc, setDoc, deleteDoc, getDocs, query, where, onSnapshot, serverTimestamp, deleteField
 } from './config.js';
 import { esc, normalizeProjectKeys } from './utils.js';
+import {
+  recordGetDocsRead,
+  recordListenerStart,
+  recordListenerSnapshot,
+  wrapTrackedListenerUnsubscribe,
+} from './read-diagnostics.js';
 
 const DOW_LABELS  = ['日','月','火','水','木','金','土'];
 const TYPE_LABELS = {
@@ -73,10 +79,12 @@ export function subscribeTodayAttendance(username) {
 
   const todayStr = getTodayDateStr();
   state.todayAttendanceDate = todayStr;
-  state._todayAttendanceSub = onSnapshot(attendancePath(username, todayStr), snap => {
+  recordListenerStart('cal.today', '今日の勤怠', `attendance:${username}`);
+  state._todayAttendanceSub = wrapTrackedListenerUnsubscribe('cal.today', onSnapshot(attendancePath(username, todayStr), snap => {
+    recordListenerSnapshot('cal.today', snap.exists() ? 1 : 0, todayStr);
     syncTodayAttendanceState(todayStr, snap.exists() ? snap.data() : null);
     deps.renderTodayDashboard?.();
-  });
+  }));
 }
 
 export function unsubscribeTodayAttendance() {
@@ -155,13 +163,15 @@ export function subscribeAttendance(username) {
     collection(db, 'users', username, 'attendance'),
     where('yearMonth', '==', ym)
   );
-  state._attendanceSub = onSnapshot(q, snap => {
+  recordListenerStart('cal.month', '月次勤怠', `attendance:${ym}`);
+  state._attendanceSub = wrapTrackedListenerUnsubscribe('cal.month', onSnapshot(q, snap => {
+    recordListenerSnapshot('cal.month', snap.size, ym);
     state.attendanceData = {};
     snap.docs.forEach(d => { state.attendanceData[d.id] = d.data(); });
     renderCalendar();
     updateCalendarSummary();
     deps.renderTodayDashboard?.();
-  });
+  }));
 }
 
 export function unsubscribeAttendance() {
@@ -183,6 +193,7 @@ async function fetchPrevMonthAttendance() {
       query(collection(db, 'users', state.currentUsername, 'attendance'),
             where('yearMonth', '==', ym))
     );
+    recordGetDocsRead('cal.prev-month', '前月勤怠取得', `attendance:${ym}`, snap.size);
     state.prevMonthAttendance = { _fetched: true };
     snap.docs.forEach(d => { state.prevMonthAttendance[d.id] = d.data(); });
   } catch (err) {
@@ -205,6 +216,7 @@ export async function fetchFiscalYearPaidLeave() {
             where('yearMonth', '>=', fiscalStart),
             where('yearMonth', '<=', fiscalEnd))
     );
+    recordGetDocsRead('cal.fiscal-paid', '年度有給集計', `${fiscalStart}..${fiscalEnd}`, snap.size);
     let total = 0;
     snap.docs.forEach(d => {
       const att = d.data();

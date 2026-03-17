@@ -162,6 +162,13 @@ import {
   renderTodayDashboard,
 } from './modules/dashboard.js';
 
+import {
+  initReadDiagnostics,
+  recordListenerStart,
+  recordListenerSnapshot,
+  wrapTrackedListenerUnsubscribe,
+} from './modules/read-diagnostics.js';
+
 
 // ========== 依存注入 ==========
 // 各モジュールが必要とするクロスモジュール関数を注入
@@ -263,6 +270,7 @@ initAttendanceWork({
 bindAttendanceWorkEvents();
 
 initTodayDashboard({});
+initReadDiagnostics();
 
 initPropertySummary({
   openRequests: projectKey => {
@@ -300,10 +308,13 @@ function loadTodos(username) {
     collection(db, 'users', username, 'todos'),
     orderBy('createdAt', 'asc')
   );
-  state._todoUnsubscribe = onSnapshot(q, snap => {
+  recordListenerStart('todo.personal', '個人TODO', `users/${username}/todos`);
+  state._todoUnsubscribe = wrapTrackedListenerUnsubscribe('todo.personal', onSnapshot(q, snap => {
+    recordListenerSnapshot('todo.personal', snap.size, username);
     state.personalTodos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderTodoSection();
   }, err => console.error('TODO読み込みエラー:', err));
+  );
 }
 
 async function addTodo(text, dueDate) {
@@ -770,12 +781,15 @@ async function loadCategories() {
 function subscribeCards() {
   if (state.unsubscribeCards) state.unsubscribeCards();
   const q = query(collection(db, 'cards'), orderBy('categoryOrder'));
-  state.unsubscribeCards = onSnapshot(q, snapshot => {
+  recordListenerStart('cards.all', '公開カード一覧', 'cards');
+  state.unsubscribeCards = wrapTrackedListenerUnsubscribe('cards.all', onSnapshot(q, snapshot => {
+    recordListenerSnapshot('cards.all', snapshot.size, 'cards');
     state.allCards = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (a.categoryOrder ?? 0) - (b.categoryOrder ?? 0) || (a.order ?? 0) - (b.order ?? 0));
     renderAllSections();
     renderFavorites();
   }, err => console.error('onSnapshot エラー:', err));
+  );
 }
 
 async function saveCard(docId, data) {

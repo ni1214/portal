@@ -5,6 +5,12 @@ import {
   query, where, orderBy, onSnapshot, serverTimestamp
 } from './config.js';
 import { esc, normalizeProjectKey, normalizeProjectKeys } from './utils.js';
+import {
+  recordGetDocsRead,
+  recordListenerStart,
+  recordListenerSnapshot,
+  wrapTrackedListenerUnsubscribe,
+} from './read-diagnostics.js';
 
 let deps = {};
 let eventsBound = false;
@@ -757,6 +763,7 @@ async function renderWorkSummary() {
 
   try {
     const usersSnap = await getDocs(collection(db, 'users_list'));
+    recordGetDocsRead('calw.summary-users', '勤務内容表ユーザー一覧', 'users_list', usersSnap.size);
     const users = usersSnap.docs.map(d => d.id).filter(Boolean);
     const yms = getPeriodYearMonths(period);
 
@@ -768,6 +775,7 @@ async function renderWorkSummary() {
           where('yearMonth', 'in', yms)
         )
       );
+      recordGetDocsRead('calw.summary-attendance', '勤務内容表集計', yms.join(','), attSnap.size);
       attendanceRows = attSnap.docs
         .map(d => ({
           username: d.ref.parent?.parent?.id || '',
@@ -1204,9 +1212,11 @@ async function deleteAttendanceSite(siteId) {
 
 function subscribeAttendanceSites() {
   if (state._attendanceSitesSub) return;
-  state._attendanceSitesSub = onSnapshot(
+  recordListenerStart('calw.sites', '登録現場マスタ', 'attendance_sites');
+  state._attendanceSitesSub = wrapTrackedListenerUnsubscribe('calw.sites', onSnapshot(
     query(collection(db, 'attendance_sites'), orderBy('sortOrder', 'asc')),
     snap => {
+      recordListenerSnapshot('calw.sites', snap.size, 'attendance_sites');
       state.attendanceSites = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       if (state.calTab !== 'personal') return;
       if (state.calPersonalTab === 'sites') renderAttendanceSiteTable();
@@ -1218,7 +1228,7 @@ function subscribeAttendanceSites() {
       state.attendanceSites = [];
       if (state.calPersonalTab === 'sites') renderAttendanceSiteTable();
     }
-  );
+  ));
 }
 
 function unsubscribeAttendanceSites() {

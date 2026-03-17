@@ -3,6 +3,11 @@
 import { db, doc, getDoc, setDoc, addDoc, deleteDoc, updateDoc, collection, query, where, orderBy, serverTimestamp, onSnapshot, arrayUnion } from './config.js';
 import { state, RTC_CONFIG, FILE_CHUNK_SIZE } from './state.js';
 import { esc, getUserAvatarColor } from './utils.js';
+import {
+  recordListenerStart,
+  recordListenerSnapshot,
+  wrapTrackedListenerUnsubscribe,
+} from './read-diagnostics.js';
 
 // 他モジュールの関数を遅延注入するための依存オブジェクト
 export const deps = {};
@@ -259,11 +264,14 @@ export function renderFtPanel() {
 export function startFtListener() {
   if (!state.currentUsername || state._ftIncomingSub) return;
   const q = query(collection(db, 'p2p_signals'), where('to', '==', state.currentUsername));
-  state._ftIncomingSub = onSnapshot(q, snap => {
+  recordListenerStart('ft.p2p', 'P2Pファイル受信', `p2p_signals:${state.currentUsername}`);
+  state._ftIncomingSub = wrapTrackedListenerUnsubscribe('ft.p2p', onSnapshot(q, snap => {
+    recordListenerSnapshot('ft.p2p', snap.size, state.currentUsername);
     state._ftIncoming = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     updateFtBadge();
     renderFtPanel();
   });
+  );
 }
 
 export function stopFtListener() {
@@ -296,7 +304,9 @@ export function startDriveListeners(username) {
   // 受信リスナー
   if (!state._driveIncomingSub) {
     const qIn = query(collection(db, 'drive_shares'), where('to', '==', username));
-    state._driveIncomingSub = onSnapshot(qIn, snap => {
+    recordListenerStart('ft.drive-in', 'Drive受信', `drive_shares:${username}`);
+    state._driveIncomingSub = wrapTrackedListenerUnsubscribe('ft.drive-in', onSnapshot(qIn, snap => {
+      recordListenerSnapshot('ft.drive-in', snap.size, username);
       // 受信した Drive 通知の送信者を「相手の Drive URL」で連絡先に自動保存
       // → これにより「開く」ボタンで相手のフォルダが開けるようになる
       snap.docChanges().forEach(change => {
@@ -313,13 +323,17 @@ export function startDriveListeners(username) {
     });
   }
   // 送信リスナー
+  );
   if (!state._driveOutgoingSub) {
     const qOut = query(collection(db, 'drive_shares'), where('from', '==', username));
-    state._driveOutgoingSub = onSnapshot(qOut, snap => {
+    recordListenerStart('ft.drive-out', 'Drive送信', `drive_shares:${username}`);
+    state._driveOutgoingSub = wrapTrackedListenerUnsubscribe('ft.drive-out', onSnapshot(qOut, snap => {
+      recordListenerSnapshot('ft.drive-out', snap.size, username);
       state._driveOutgoing = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderDrivePanel();
     });
   }
+  );
 }
 
 export function stopDriveListeners() {

@@ -2,6 +2,11 @@
 import { db, doc, getDoc, setDoc, addDoc, deleteDoc, updateDoc, collection, query, where, orderBy, serverTimestamp, onSnapshot } from './config.js';
 import { state, TASK_STATUS_LABEL } from './state.js';
 import { esc, getUserAvatarColor, normalizeProjectKey } from './utils.js';
+import {
+  recordListenerStart,
+  recordListenerSnapshot,
+  wrapTrackedListenerUnsubscribe,
+} from './read-diagnostics.js';
 export const deps = {};
 
 function buildTaskPayload({
@@ -132,7 +137,9 @@ export function startTaskListeners(username) {
 
   // orderBy を外してクライアント側でソート（複合インデックス不要）
   const rQ = query(collection(db, 'assigned_tasks'), where('assignedTo', '==', username));
-  state._receivedTasksUnsub = onSnapshot(rQ, snap => {
+  recordListenerStart('task.received', '受け取ったタスク', `assigned_tasks:${username}`);
+  state._receivedTasksUnsub = wrapTrackedListenerUnsubscribe('task.received', onSnapshot(rQ, snap => {
+    recordListenerSnapshot('task.received', snap.size, username);
     state.receivedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
     updateTaskBadge();
@@ -140,8 +147,12 @@ export function startTaskListeners(username) {
     if (state.taskModalOpen && state.activeTaskTab === 'received') renderTaskTabContent();
   }, err => console.error('receivedTasks listener error:', err));
 
+  );
+
   const sQ = query(collection(db, 'assigned_tasks'), where('assignedBy', '==', username));
-  state._sentTasksUnsub = onSnapshot(sQ, snap => {
+  recordListenerStart('task.sent', '依頼したタスク', `assigned_tasks:${username}`);
+  state._sentTasksUnsub = wrapTrackedListenerUnsubscribe('task.sent', onSnapshot(sQ, snap => {
+    recordListenerSnapshot('task.sent', snap.size, username);
     state.sentTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
     updateTaskBadge();
@@ -149,8 +160,12 @@ export function startTaskListeners(username) {
   }, err => console.error('sentTasks listener error:', err));
 
   // 共有されたタスク（自分が sharedWith に含まれる）
+  );
+
   const shareQ = query(collection(db, 'assigned_tasks'), where('sharedWith', 'array-contains', username));
-  state._sharedTasksUnsub = onSnapshot(shareQ, snap => {
+  recordListenerStart('task.shared', '共有されたタスク', `assigned_tasks:${username}`);
+  state._sharedTasksUnsub = wrapTrackedListenerUnsubscribe('task.shared', onSnapshot(shareQ, snap => {
+    recordListenerSnapshot('task.shared', snap.size, username);
     state.sharedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
     updateTaskBadge();
@@ -188,6 +203,7 @@ export function updateTaskBadge() {
   }
   deps.updateLockNotifications?.();
   deps.renderTodayDashboard?.();
+  );
 }
 
 export function openTaskModal() {

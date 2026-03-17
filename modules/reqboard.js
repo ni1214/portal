@@ -2,6 +2,11 @@
 import { db, doc, getDoc, setDoc, addDoc, deleteDoc, updateDoc, collection, query, where, orderBy, serverTimestamp, onSnapshot, getDocs } from './config.js';
 import { state, REQ_STATUS_LABEL } from './state.js';
 import { esc, escHtml, getUserAvatarColor, normalizeProjectKey, _fmtTs } from './utils.js';
+import {
+  recordListenerStart,
+  recordListenerSnapshot,
+  wrapTrackedListenerUnsubscribe,
+} from './read-diagnostics.js';
 export const deps = {};
 
 const LINKED_TASK_STATUS_LABEL = {
@@ -36,7 +41,9 @@ export function startRequestListeners(username) {
   const myDept = state.userEmailProfile ? state.userEmailProfile.department : null;
   if (myDept) {
     const rQ = query(collection(db, 'cross_dept_requests'), where('toDept', '==', myDept));
-    state._reqReceivedUnsub = onSnapshot(rQ, snap => {
+    recordListenerStart('req.received', '受信部門間依頼', `cross_dept_requests:${myDept}`);
+    state._reqReceivedUnsub = wrapTrackedListenerUnsubscribe('req.received', onSnapshot(rQ, snap => {
+      recordListenerSnapshot('req.received', snap.size, myDept);
       state.receivedRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
       updateReqBadge();
@@ -45,8 +52,12 @@ export function startRequestListeners(username) {
   }
 
   // 自分が送信した依頼を監視
+  );
+
   const sQ = query(collection(db, 'cross_dept_requests'), where('createdBy', '==', username));
-  state._reqSentUnsub = onSnapshot(sQ, snap => {
+  recordListenerStart('req.sent', '送信部門間依頼', `cross_dept_requests:${username}`);
+  state._reqSentUnsub = wrapTrackedListenerUnsubscribe('req.sent', onSnapshot(sQ, snap => {
+    recordListenerSnapshot('req.sent', snap.size, username);
     state.sentRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
     updateReqBadge();
@@ -54,9 +65,13 @@ export function startRequestListeners(username) {
   }, err => console.error('sentRequests listener error:', err));
 
   // 目安箱（閲覧権限あり）
+  );
+
   if (state.isSuggestionBoxViewer) {
     const suggQ = query(collection(db, 'suggestion_box'), orderBy('createdAt', 'desc'));
-    state._suggUnsub = onSnapshot(suggQ, snap => {
+    recordListenerStart('req.suggestion', '目安箱一覧', 'suggestion_box');
+    state._suggUnsub = wrapTrackedListenerUnsubscribe('req.suggestion', onSnapshot(suggQ, snap => {
+      recordListenerSnapshot('req.suggestion', snap.size, 'suggestion_box');
       state.suggestionList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       updateReqBadge();
       if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();
@@ -104,6 +119,7 @@ export function updateReqBadge() {
     suggTabBadge.textContent = suggCount > 99 ? '99+' : String(suggCount);
   }
   deps.renderTodayDashboard?.();
+  );
 }
 
 export function openReqModal(initialTab) {

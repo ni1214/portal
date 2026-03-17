@@ -158,6 +158,17 @@ export const state = {
   propertySummaryError: '',
   propertySummarySiteCandidates: [],
   propertySummaryResolvedSite: null,
+  readDiagModalOpen: false,
+  readDiagnostics: {
+    sessionStartedAt: Date.now(),
+    estimatedReads: 0,
+    listenerStarts: 0,
+    listenerSnapshots: 0,
+    getDocsCalls: 0,
+    activeListenerCount: 0,
+    sources: {},
+    events: [],
+  },
   newTaskAssignee: '',
   _editingTaskId: null,        // 編集中 or 共有操作中のタスクID
 

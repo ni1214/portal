@@ -5,6 +5,12 @@ import {
 } from './config.js';
 import { state, REACTION_EMOJIS } from './state.js';
 import { esc } from './utils.js';
+import {
+  recordGetDocsRead,
+  recordListenerStart,
+  recordListenerSnapshot,
+  wrapTrackedListenerUnsubscribe,
+} from './read-diagnostics.js';
 
 // Cross-module function references
 export const deps = {};
@@ -105,6 +111,7 @@ export async function loadReadNotices(username) {
   if (!username) { state.readNoticeIds = new Set(); updateNoticeBadge(); return; }
   try {
     const snap = await getDocs(collection(db, 'users', username, 'read_notices'));
+    recordGetDocsRead('notice.read-notices', '既読お知らせ', `users/${username}/read_notices`, snap.size);
     state.readNoticeIds = new Set(snap.docs.map(d => d.id));
     updateNoticeBadge();
     renderNotices(state.visibleNotices);
@@ -161,6 +168,7 @@ export function setupNoticeObserver() {
 export async function loadAllNoticeReactions() {
   try {
     const snap = await getDocs(collection(db, 'notice_reactions'));
+    recordGetDocsRead('notice.reactions', 'お知らせリアクション', 'notice_reactions', snap.size);
     state.noticeReactions = {};
     snap.docs.forEach(d => { state.noticeReactions[d.id] = d.data(); });
     renderNotices(state.visibleNotices);
@@ -208,14 +216,16 @@ export function buildReactionBar(noticeId) {
 
 // ========== Firestore CRUD ==========
 export function subscribeNotices() {
-  state._noticeUnsub = onSnapshot(
+  recordListenerStart('notice.list', 'お知らせ一覧', 'notices');
+  state._noticeUnsub = wrapTrackedListenerUnsubscribe('notice.list', onSnapshot(
     collection(db, 'notices'),
     snap => {
+      recordListenerSnapshot('notice.list', snap.size, 'notices');
       state.allNotices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       state.allNotices.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       refreshNoticeVisibility();
     }
-  );
+  ));
 }
 
 export async function saveNotice(data) {

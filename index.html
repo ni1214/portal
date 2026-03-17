@@ -211,6 +211,12 @@
         <!-- 個人TODOパネル -->
         <section id="dash-today-section" class="dash-section" hidden></section>
 
+        <div class="rd-launch-row">
+          <button class="btn-modal-secondary rd-launch-btn" id="btn-read-diagnostics">
+            <i class="fa-solid fa-gauge-high"></i> 読取診断
+          </button>
+        </div>
+
         <section id="todo-section" class="todo-section" hidden>
           <div class="todo-header">
             <div class="todo-header-left">
@@ -2227,6 +2233,31 @@
           <i class="fa-solid fa-magnifying-glass-chart"></i>
           <p>物件Noまたは現場名を入れると、依頼・タスク・鋼材発注・作業記録をまとめて確認できます。</p>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="rd-modal">
+    <div class="modal-glass rd-modal-inner">
+      <div class="modal-header rd-modal-header">
+        <h2 class="modal-title"><i class="fa-solid fa-gauge-high"></i> 読取診断</h2>
+        <button class="modal-close" id="rd-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="rd-note">
+        Firestore の請求 read と完全一致する値ではなく、返却された doc 件数ベースの概算です。どの機能が重いかを見るための診断画面です。
+      </div>
+      <div id="rd-summary"></div>
+      <div class="rd-section">
+        <div class="rd-section-title">ソース別の傾向</div>
+        <div id="rd-source-list" class="rd-source-list"></div>
+      </div>
+      <div class="rd-section">
+        <div class="rd-section-title">最近のイベント</div>
+        <div id="rd-event-list" class="rd-event-list"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="rd-reset-btn"><i class="fa-solid fa-rotate-left"></i> 計測をリセット</button>
+        <button class="btn-modal-primary" id="rd-close2">閉じる</button>
       </div>
     </div>
   </div>

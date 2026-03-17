@@ -3,6 +3,12 @@ import { db, doc, getDoc, setDoc, addDoc, deleteDoc, updateDoc, collection, quer
 import { state, CHAT_MSG_MAX } from './state.js';
 import { getUserAvatarColor } from './auth.js';
 import { esc } from './utils.js';
+import {
+  recordGetDocsRead,
+  recordListenerStart,
+  recordListenerSnapshot,
+  wrapTrackedListenerUnsubscribe,
+} from './read-diagnostics.js';
 
 // 他モジュールへの依存（循環参照回避）
 export const deps = {};
@@ -95,18 +101,25 @@ export function startChatListeners(username) {
   subscribeUsersList();
 
   const dmQ = query(collection(db, 'dm_rooms'), where('members', 'array-contains', username));
-  state._dmRoomsUnsubscribe = onSnapshot(dmQ, snap => {
+  recordListenerStart('chat.dm-rooms', 'DM一覧', `dm_rooms:${username}`);
+  state._dmRoomsUnsubscribe = wrapTrackedListenerUnsubscribe('chat.dm-rooms', onSnapshot(dmQ, snap => {
+    recordListenerSnapshot('chat.dm-rooms', snap.size, username);
     state.dmRooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     if (state.chatPanelOpen) renderChatSidebar();
     updateChatBadge();
   });
 
+  );
+
   const grpQ = query(collection(db, 'chat_rooms'), where('members', 'array-contains', username));
-  state._groupRoomsUnsubscribe = onSnapshot(grpQ, snap => {
+  recordListenerStart('chat.group-rooms', 'グループ一覧', `chat_rooms:${username}`);
+  state._groupRoomsUnsubscribe = wrapTrackedListenerUnsubscribe('chat.group-rooms', onSnapshot(grpQ, snap => {
+    recordListenerSnapshot('chat.group-rooms', snap.size, username);
     state.groupRooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     if (state.chatPanelOpen) renderChatSidebar();
     updateChatBadge();
   });
+  );
 }
 
 export function stopChatListeners() {
@@ -127,7 +140,9 @@ export function stopChatListeners() {
 // ===== ユーザーリスト監視 =====
 export function subscribeUsersList() {
   if (state._usersListUnsub) return;
-  state._usersListUnsub = onSnapshot(collection(db, 'users_list'), snap => {
+  recordListenerStart('chat.users-list', 'ユーザー一覧', 'users_list');
+  state._usersListUnsub = wrapTrackedListenerUnsubscribe('chat.users-list', onSnapshot(collection(db, 'users_list'), snap => {
+    recordListenerSnapshot('chat.users-list', snap.size, 'users_list');
     state._knownUsernames = new Set(snap.docs.map(d => d.id));
     // 現在開いているDMルームの相手が存在しないユーザーならパネルを閉じる
     if (state.currentRoomId && state.currentRoomType === 'dm') {
@@ -145,6 +160,7 @@ export function subscribeUsersList() {
     if (state.chatPanelOpen) renderChatSidebar();
     updateChatBadge(); // バッジとリストの整合性を保つ
   });
+  );
 }
 
 export function stopUsersListListener() {
