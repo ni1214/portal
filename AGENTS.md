@@ -131,6 +131,7 @@ export function xxxFunction() { ... }
 | `notice_reactions/{noticeId}` | リアクション |
 | `chat_messages/` | 全社チャット（廃止予定） |
 | `users/{name}/data/preferences` | 個人設定（lastViewedSuggestionsAt を含む） |
+| `users/{name}/data/email_profile` | 個人プロフィール（署名・所属部署・役割） |
 | `users/{name}/data/lock_pin` | PINロック設定 |
 | `users/{name}/private_sections/` | マイセクション |
 | `users/{name}/private_cards/` | マイカード |
@@ -198,6 +199,17 @@ export function xxxFunction() { ... }
 | `sourceRequestId` | string\|null | 元になった部門間依頼ID |
 | `sourceRequestFromDept` | string\|null | 元依頼の依頼元部署 |
 | `sourceRequestToDept` | string\|null | 元依頼の依頼先部署 |
+
+### 個人プロフィールフィールド（`users/{name}/data/email_profile`）
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `realName` | string | 本名・署名名 |
+| `department` | string | 所属部署 |
+| `roleType` | string | `'member'` / `'leader'` / `'manager'` |
+| `email` | string | メールアドレス |
+| `phone` | string | 電話番号 |
+| `signatureTemplate` | string | メール署名テンプレート |
+| `updatedAt` | timestamp | `serverTimestamp()` |
 
 ### 勤怠データフィールド（`users/{name}/attendance/{YYYY-MM-DD}`）
 | フィールド | 型 | 説明 |

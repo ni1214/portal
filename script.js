@@ -106,6 +106,7 @@ import {
 
 import {
   initEmail,
+  loadUserEmailProfile,
   loadEmailData,
   saveGeminiApiKey, saveNewContact,
   generateEmail, copyEmailOutput, resetEmailOutput,
@@ -214,7 +215,17 @@ Object.assign(reqDeps, {
   renderTodayDashboard,
 });
 
-initEmail({ confirmDelete });
+initEmail({
+  confirmDelete,
+  afterUserProfileSaved: async () => {
+    if (!state.currentUsername) return;
+    stopRequestListeners();
+    startRequestListeners(state.currentUsername);
+    updateReqBadge();
+    if (state.reqModalOpen) renderReqContent();
+    renderTodayDashboard();
+  },
+});
 
 // 鋼材発注モジュール初期化
 initOrder({});
@@ -507,6 +518,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     await loadMyDriveUrl(username);
     await loadDriveContacts(username);
     startDriveListeners(username);
+    await loadUserEmailProfile(username);
     await loadConfigDepartmentsAndViewers();
     renderMissionBanner(); // ミッションテキストが読み込まれた後に再描画
     startRequestListeners(username);

@@ -1,4 +1,4 @@
-import { state, REQ_STATUS_LABEL, TASK_STATUS_LABEL } from './state.js';
+import { state, REQ_STATUS_LABEL, TASK_STATUS_LABEL, USER_ROLE_LABELS } from './state.js';
 import { esc } from './utils.js';
 
 let deps = {};
@@ -123,6 +123,7 @@ function buildTaskCard(todayKey) {
 
 function buildRequestCard() {
   const department = state.userEmailProfile?.department || '';
+  const roleLabel = USER_ROLE_LABELS[state.userEmailProfile?.roleType] || '';
   if (!department) {
     return {
       title: '自分待ちの部門間依頼',
@@ -146,7 +147,7 @@ function buildRequestCard() {
 
   return {
     title: '自分待ちの部門間依頼',
-    subtitle: department,
+    subtitle: [department, roleLabel].filter(Boolean).join(' / '),
     icon: 'fa-solid fa-building-user',
     value: `${openRequests.length}件`,
     meta: openRequests.length > 0

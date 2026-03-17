@@ -31,6 +31,19 @@ export const TASK_STATUS_LABEL = {
   done:     { text: '完了',     cls: 'task-status-done'     },
 };
 
+export const USER_ROLE_OPTIONS = Object.freeze([
+  { value: 'member',  label: '一般' },
+  { value: 'leader',  label: 'リーダー' },
+  { value: 'manager', label: '管理者' },
+]);
+
+export const USER_ROLE_LABELS = Object.freeze(
+  USER_ROLE_OPTIONS.reduce((acc, option) => {
+    acc[option.value] = option.label;
+    return acc;
+  }, {})
+);
+
 export const state = {
   // カード・カテゴリ
   allCards: [],
@@ -173,7 +186,15 @@ export const state = {
   emailProfiles: [],
   selectedEmailProfileId: null,
   geminiApiKey: '',
-  userEmailProfile: { name: '', department: '', position: '' },
+  userEmailProfile: {
+    name: '',
+    realName: '',
+    department: '',
+    roleType: 'member',
+    email: '',
+    phone: '',
+    signatureTemplate: '',
+  },
   DEFAULT_SIGNATURE_TEMPLATE: '',
 
   // カレンダー・勤怠管理

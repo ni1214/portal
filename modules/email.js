@@ -3,7 +3,7 @@ import {
   db, doc, getDoc, getDocs, setDoc, deleteDoc,
   collection, query, orderBy, serverTimestamp
 } from './config.js';
-import { state } from './state.js';
+import { state, USER_ROLE_OPTIONS, USER_ROLE_LABELS } from './state.js';
 import { esc } from './utils.js';
 
 let deps = {};
@@ -28,11 +28,54 @@ E-mail：{email}
 // ===== モジュール内状態 =====
 let geminiApiKey    = null;
 let emailModalLoaded = false;
-let userEmailProfile = { realName: '', department: '', email: '', phone: '', signatureTemplate: '' };
+let userEmailProfile = buildNormalizedProfile();
 let emailContacts   = [];       // [{ id, companyName, personName }]
 let emailMode       = null;     // 'new' | 'reply'
 let selectedTone    = 'business';
 let selectedContactId = null;
+
+function buildNormalizedProfile(raw = {}) {
+  const realName = typeof raw.realName === 'string'
+    ? raw.realName.trim()
+    : (typeof raw.name === 'string' ? raw.name.trim() : '');
+  const department = typeof raw.department === 'string' ? raw.department.trim() : '';
+  const roleType = USER_ROLE_LABELS[raw.roleType] ? raw.roleType : 'member';
+  const email = typeof raw.email === 'string' ? raw.email.trim() : '';
+  const phone = typeof raw.phone === 'string' ? raw.phone.trim() : '';
+  const signatureTemplate = typeof raw.signatureTemplate === 'string' ? raw.signatureTemplate : '';
+
+  return {
+    name: realName,
+    realName,
+    department,
+    roleType,
+    email,
+    phone,
+    signatureTemplate,
+  };
+}
+
+function syncUserEmailProfile(raw = {}) {
+  userEmailProfile = buildNormalizedProfile(raw);
+  state.userEmailProfile = { ...userEmailProfile };
+  return userEmailProfile;
+}
+
+export async function loadUserEmailProfile(username = state.currentUsername) {
+  syncUserEmailProfile();
+  if (!username) return state.userEmailProfile;
+
+  try {
+    const profSnap = await getDoc(doc(db, 'users', username, 'data', 'email_profile'));
+    if (profSnap.exists()) {
+      syncUserEmailProfile(profSnap.data());
+    }
+  } catch (_) {}
+
+  if (emailModalLoaded) renderProfileTab();
+
+  return state.userEmailProfile;
+}
 
 // ===== 初期データ読み込み =====
 export async function loadEmailData() {
@@ -43,10 +86,7 @@ export async function loadEmailData() {
 
   if (state.currentUsername) {
     await loadEmailContacts();
-    try {
-      const profSnap = await getDoc(doc(db, 'users', state.currentUsername, 'data', 'email_profile'));
-      if (profSnap.exists()) userEmailProfile = { ...userEmailProfile, ...profSnap.data() };
-    } catch (_) {}
+    await loadUserEmailProfile(state.currentUsername);
   }
 
   updateApiKeyUI();
@@ -190,7 +230,8 @@ export async function generateEmail() {
 
   const senderName  = userEmailProfile.realName ? `日建フレメックスの${userEmailProfile.realName}` : '日建フレメックスの担当者';
   const sigTemplate = userEmailProfile.signatureTemplate || DEFAULT_SIGNATURE_TEMPLATE;
-  const filledSig   = fillSignature(sigTemplate);
+  const filledSig   = fillSignature(sigTemplate)
+    .replace(/\{roleType\}/g, USER_ROLE_LABELS[userEmailProfile.roleType] || USER_ROLE_LABELS.member);
   const tonePrompt  = TONE_PROMPTS[selectedTone] || TONE_PROMPTS.business;
 
   let fullPrompt = '';
@@ -313,9 +354,36 @@ function fillSignature(template) {
 }
 
 // ===== プロフィールタブ描画 =====
+function renderDepartmentOptions(selectEl, selectedValue) {
+  if (!selectEl) return;
+
+  const currentDepartments = Array.isArray(state.currentDepartments) && state.currentDepartments.length > 0
+    ? state.currentDepartments
+    : state.DEFAULT_DEPARTMENTS;
+  const options = [...currentDepartments];
+  if (selectedValue && !options.includes(selectedValue)) options.unshift(selectedValue);
+
+  selectEl.innerHTML = `
+    <option value="">部署を選択</option>
+    ${options.map(department => `
+      <option value="${esc(department)}">${esc(department)}</option>
+    `).join('')}
+  `;
+  selectEl.value = selectedValue || '';
+}
+
+function renderRoleTypeOptions(selectEl, selectedValue) {
+  if (!selectEl) return;
+  selectEl.innerHTML = USER_ROLE_OPTIONS.map(option => `
+    <option value="${option.value}">${esc(option.label)}</option>
+  `).join('');
+  selectEl.value = USER_ROLE_LABELS[selectedValue] ? selectedValue : 'member';
+}
+
 function renderProfileTab() {
+  renderDepartmentOptions(document.getElementById('ep-department'), userEmailProfile.department || '');
+  renderRoleTypeOptions(document.getElementById('ep-role-type'), userEmailProfile.roleType || 'member');
   document.getElementById('ep-real-name').value   = userEmailProfile.realName   || '';
-  document.getElementById('ep-department').value  = userEmailProfile.department  || '';
   document.getElementById('ep-email').value        = userEmailProfile.email        || '';
   document.getElementById('ep-phone').value        = userEmailProfile.phone        || '';
   const sig = userEmailProfile.signatureTemplate || DEFAULT_SIGNATURE_TEMPLATE;
@@ -325,15 +393,21 @@ function renderProfileTab() {
 
 export function updateSignaturePreview(template) {
   const el = document.getElementById('ep-signature-preview');
-  if (el) el.textContent = fillSignature(template || DEFAULT_SIGNATURE_TEMPLATE);
+  if (el) {
+    el.textContent = fillSignature(template || DEFAULT_SIGNATURE_TEMPLATE)
+      .replace(/\{roleType\}/g, USER_ROLE_LABELS[userEmailProfile.roleType] || USER_ROLE_LABELS.member);
+  }
 }
 
 export async function saveUserEmailProfile() {
-  userEmailProfile.realName          = document.getElementById('ep-real-name').value.trim();
-  userEmailProfile.department        = document.getElementById('ep-department').value.trim();
-  userEmailProfile.email             = document.getElementById('ep-email').value.trim();
-  userEmailProfile.phone             = document.getElementById('ep-phone').value.trim();
-  userEmailProfile.signatureTemplate = document.getElementById('ep-signature').value;
+  syncUserEmailProfile({
+    realName: document.getElementById('ep-real-name').value.trim(),
+    department: document.getElementById('ep-department').value.trim(),
+    roleType: document.getElementById('ep-role-type').value,
+    email: document.getElementById('ep-email').value.trim(),
+    phone: document.getElementById('ep-phone').value.trim(),
+    signatureTemplate: document.getElementById('ep-signature').value,
+  });
 
   if (state.currentUsername) {
     try {
@@ -343,6 +417,7 @@ export async function saveUserEmailProfile() {
       );
     } catch (err) { console.error('プロフィール保存エラー:', err); }
   }
+  await deps.afterUserProfileSaved?.(state.userEmailProfile);
   const btn = document.getElementById('ep-save');
   const orig = btn.innerHTML;
   btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存しました';
@@ -368,7 +443,11 @@ export function switchEmailTab(tabId) {
 // ===== モーダル開閉 =====
 export function openEmailModal() {
   document.getElementById('email-modal').classList.add('visible');
-  if (!emailModalLoaded) loadEmailData();
+  if (!emailModalLoaded) {
+    loadEmailData();
+    return;
+  }
+  renderProfileTab();
 }
 
 export function closeEmailModal() {
