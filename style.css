@@ -12691,6 +12691,13 @@ html.font-xl { font-size: 21px; }
   font-size: 1.12rem;
 }
 
+.dash-section-profile {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .dash-section-date {
   padding: 7px 12px;
   border-radius: 999px;
@@ -12704,7 +12711,7 @@ html.font-xl { font-size: 21px; }
 
 .dash-card-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
 }
 

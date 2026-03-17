@@ -30,18 +30,21 @@ export function renderTodayDashboard() {
 
   const today = new Date();
   const todayKey = buildDateKey(today);
+  const profileChips = buildSectionProfileChips();
   const cards = [
+    buildFocusCard(todayKey),
     buildTaskCard(todayKey),
     buildRequestCard(),
     buildAttendanceCard(todayKey),
     buildNoticeCard(),
-  ];
+  ].filter(Boolean);
 
   section.hidden = false;
   section.innerHTML = `
     <div class="dash-section-header">
       <div>
         <div class="dash-section-kicker">Today</div>
+        ${profileChips}
         <h2 class="dash-section-title">今日の自分ダッシュボード</h2>
       </div>
       <div class="dash-section-date">${esc(formatDateLabel(today))}</div>
@@ -86,10 +89,7 @@ function renderCard(card) {
 }
 
 function buildTaskCard(todayKey) {
-  const activeTasks = (state.receivedTasks || [])
-    .filter(task => task.status === 'pending' || task.status === 'accepted')
-    .sort((a, b) => compareTaskPriority(a, b, todayKey));
-
+  const activeTasks = getActiveReceivedTasks(todayKey);
   const pendingCount = activeTasks.filter(task => task.status === 'pending').length;
   const acceptedCount = activeTasks.filter(task => task.status === 'accepted').length;
   const overdueCount = activeTasks.filter(task => task.dueDate && task.dueDate < todayKey).length;
@@ -138,10 +138,7 @@ function buildRequestCard() {
     };
   }
 
-  const openRequests = (state.receivedRequests || [])
-    .filter(req => !req.archived && (req.status === 'submitted' || req.status === 'reviewing'))
-    .sort((a, b) => compareTimestamp(b.updatedAt || b.createdAt, a.updatedAt || a.createdAt));
-
+  const openRequests = getOpenDepartmentRequests();
   const submittedCount = openRequests.filter(req => req.status === 'submitted').length;
   const reviewingCount = openRequests.filter(req => req.status === 'reviewing').length;
 
@@ -191,24 +188,7 @@ function buildAttendanceCard(todayKey) {
 
   const typeKey = attendance.type || 'normal';
   const typeLabel = ATTENDANCE_TYPE_LABELS[typeKey] || typeKey;
-  const workSiteHours = (attendance.workSiteHours && typeof attendance.workSiteHours === 'object')
-    ? attendance.workSiteHours
-    : {};
-  const siteEntries = Object.entries(workSiteHours)
-    .map(([siteId, hours]) => {
-      const numericHours = Number(hours);
-      if (!Number.isFinite(numericHours) || numericHours <= 0) return null;
-      const site = siteMap.get(siteId);
-      return {
-        siteId,
-        code: site?.code || '',
-        name: site?.name || `未登録現場(${siteId})`,
-        hours: numericHours,
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => b.hours - a.hours);
-
+  const siteEntries = buildAttendanceSiteEntries(attendance, siteMap);
   const totalHours = siteEntries.reduce((sum, entry) => sum + entry.hours, 0);
   const value = typeKey !== 'normal'
     ? typeLabel
@@ -243,11 +223,7 @@ function buildNoticeCard() {
   const noticeSource = Array.isArray(state.visibleNotices)
     ? state.visibleNotices
     : (state.allNotices || []);
-  const pendingAck = noticeSource.filter(notice => {
-    if (!notice?.requireAcknowledgement || !state.currentUsername) return false;
-    const acknowledgedBy = Array.isArray(notice.acknowledgedBy) ? notice.acknowledgedBy : [];
-    return !acknowledgedBy.includes(state.currentUsername);
-  });
+  const pendingAck = getPendingAckNotices();
   const unread = noticeSource.filter(notice =>
     !state.readNoticeIds.has(notice.id) && !notice?.requireAcknowledgement
   );
@@ -279,6 +255,267 @@ function buildNoticeCard() {
     })),
     emptyText: '確認待ちや重要通知はありません',
   };
+}
+
+function buildFocusCard(todayKey) {
+  const profile = getDashboardProfile();
+  if (!profile.department) {
+    return {
+      title: '今日のフォーカス',
+      subtitle: 'プロフィール設定',
+      icon: 'fa-solid fa-compass-drafting',
+      value: '要設定',
+      meta: '所属部署と役割を設定すると、今日優先したい内容を先頭に出します',
+      tone: 'idle',
+      chips: [],
+      items: [],
+      emptyText: 'プロフィールから所属部署と役割を設定してください',
+    };
+  }
+
+  const pendingAck = getPendingAckNotices();
+  const activeTasks = getActiveReceivedTasks(todayKey);
+  const overdueTasks = activeTasks.filter(task => task.dueDate && task.dueDate < todayKey);
+  const todayTasks = activeTasks.filter(task => task.dueDate === todayKey);
+  const openRequests = getOpenDepartmentRequests();
+  const requestReplies = (state.sentRequests || []).filter(req => req.notifyCreator === true && !req.archived);
+  const doneNotifies = (state.sentTasks || []).filter(task => task.status === 'done' && !task.notifiedDone);
+  const attendanceInfo = getAttendanceFocusInfo(todayKey);
+  const departmentKey = resolveDepartmentKey(profile.department);
+  const candidates = [];
+
+  const addCandidate = (priority, title, meta) => {
+    candidates.push({ priority, title, meta });
+  };
+
+  if (profile.roleType === 'leader' || profile.roleType === 'manager') {
+    if (openRequests.length > 0) {
+      addCandidate(0, `自部署待ち依頼 ${openRequests.length}件`, '部署内で優先して確認したい依頼です');
+    }
+    if (doneNotifies.length > 0) {
+      addCandidate(1, `完了報告 ${doneNotifies.length}件`, '依頼したタスクの完了連絡です');
+    }
+  }
+
+  switch (departmentKey) {
+    case 'sales':
+      if (requestReplies.length > 0) addCandidate(0, `返答待ち依頼 ${requestReplies.length}件`, '他部署へ出した依頼の返答待ちです');
+      if (doneNotifies.length > 0) addCandidate(0, `完了連絡 ${doneNotifies.length}件`, '依頼したタスクの完了通知です');
+      if (pendingAck.length > 0) addCandidate(1, `確認待ち通知 ${pendingAck.length}件`, '重要なお知らせがあります');
+      if (todayTasks.length > 0 || overdueTasks.length > 0) {
+        addCandidate(overdueTasks.length > 0 ? 1 : 2, `自分タスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length));
+      }
+      break;
+    case 'design':
+      if (pendingAck.length > 0) addCandidate(0, `確認待ち通知 ${pendingAck.length}件`, '設計変更や重要通知の確認待ちです');
+      if (openRequests.length > 0) addCandidate(0, `未対応依頼 ${openRequests.length}件`, '部署間依頼の確認が必要です');
+      if (todayTasks.length > 0 || overdueTasks.length > 0) {
+        addCandidate(overdueTasks.length > 0 ? 1 : 2, `今日見るタスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length));
+      }
+      break;
+    case 'production':
+      if (openRequests.length > 0) addCandidate(0, `自部署待ち依頼 ${openRequests.length}件`, '段取り確認を優先してください');
+      if (todayTasks.length > 0 || overdueTasks.length > 0) {
+        addCandidate(overdueTasks.length > 0 ? 1 : 2, `進行タスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length));
+      }
+      if (attendanceInfo.summary) addCandidate(attendanceInfo.priority, attendanceInfo.summary, attendanceInfo.meta);
+      if (pendingAck.length > 0) addCandidate(1, `確認待ち通知 ${pendingAck.length}件`, '重要なお知らせがあります');
+      break;
+    case 'factory':
+      if (attendanceInfo.summary) addCandidate(attendanceInfo.priority, attendanceInfo.summary, attendanceInfo.meta);
+      if (todayTasks.length > 0 || overdueTasks.length > 0) {
+        addCandidate(overdueTasks.length > 0 ? 0 : 1, `現場タスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length));
+      }
+      if (openRequests.length > 0) addCandidate(1, `自部署待ち依頼 ${openRequests.length}件`, '確認が必要な依頼があります');
+      if (pendingAck.length > 0) addCandidate(1, `確認待ち通知 ${pendingAck.length}件`, '重要なお知らせがあります');
+      break;
+    case 'construction':
+      if (attendanceInfo.summary) addCandidate(attendanceInfo.priority, attendanceInfo.summary, attendanceInfo.meta);
+      if (todayTasks.length > 0 || overdueTasks.length > 0) {
+        addCandidate(overdueTasks.length > 0 ? 0 : 1, `現場タスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length));
+      }
+      if (pendingAck.length > 0) addCandidate(0, `確認待ち通知 ${pendingAck.length}件`, '施工前に確認したい通知があります');
+      if (openRequests.length > 0) addCandidate(1, `自部署待ち依頼 ${openRequests.length}件`, '部署間依頼の確認が必要です');
+      break;
+    default:
+      if (openRequests.length > 0) addCandidate(0, `自部署待ち依頼 ${openRequests.length}件`, '部署間依頼の確認が必要です');
+      if (todayTasks.length > 0 || overdueTasks.length > 0) {
+        addCandidate(overdueTasks.length > 0 ? 1 : 2, `進行タスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length));
+      }
+      if (pendingAck.length > 0) addCandidate(1, `確認待ち通知 ${pendingAck.length}件`, '重要なお知らせがあります');
+      if (attendanceInfo.summary) addCandidate(attendanceInfo.priority, attendanceInfo.summary, attendanceInfo.meta);
+      break;
+  }
+
+  candidates.sort((a, b) => {
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    return a.title.localeCompare(b.title, 'ja');
+  });
+
+  const topPriority = candidates[0]?.priority ?? 3;
+  const tone = topPriority === 0 ? 'alert' : (topPriority === 1 ? 'active' : (candidates.length > 0 ? 'clear' : 'idle'));
+
+  return {
+    title: profile.roleType === 'manager'
+      ? '部署フォーカス'
+      : (profile.roleType === 'leader' ? 'リーダーフォーカス' : `${profile.department}フォーカス`),
+    subtitle: [profile.department, profile.roleLabel].filter(Boolean).join(' / '),
+    icon: 'fa-solid fa-compass-drafting',
+    value: candidates.length > 0 ? `${candidates.length}項目` : '安定',
+    meta: buildFocusSummary(profile, candidates.length),
+    tone,
+    chips: [
+      openRequests.length > 0 ? { text: `自部署待ち ${openRequests.length}件`, tone: 'alert' } : null,
+      doneNotifies.length > 0 ? { text: `完了連絡 ${doneNotifies.length}件`, tone: 'active' } : null,
+      pendingAck.length > 0 ? { text: `確認待ち ${pendingAck.length}件`, tone: 'alert' } : null,
+      attendanceInfo.chip ? { text: attendanceInfo.chip, tone: attendanceInfo.chipTone } : null,
+    ].filter(Boolean),
+    items: candidates.slice(0, DASH_LIST_LIMIT).map(item => ({
+      title: item.title,
+      meta: item.meta,
+    })),
+    emptyText: '今日は大きな詰まりはありません',
+  };
+}
+
+function buildSectionProfileChips() {
+  const profile = getDashboardProfile();
+  const chips = [profile.department, profile.roleLabel].filter(Boolean);
+  if (!chips.length) return '';
+  return `
+    <div class="dash-section-profile">
+      ${chips.map(chip => `<span class="dash-chip">${esc(chip)}</span>`).join('')}
+    </div>
+  `;
+}
+
+function getDashboardProfile() {
+  const department = `${state.userEmailProfile?.department || ''}`.trim();
+  const roleType = state.userEmailProfile?.roleType || 'member';
+  const roleLabel = USER_ROLE_LABELS[roleType] || '';
+  return { department, roleType, roleLabel };
+}
+
+function getActiveReceivedTasks(todayKey) {
+  return (state.receivedTasks || [])
+    .filter(task => task.status === 'pending' || task.status === 'accepted')
+    .sort((a, b) => compareTaskPriority(a, b, todayKey));
+}
+
+function getOpenDepartmentRequests() {
+  return (state.receivedRequests || [])
+    .filter(req => !req.archived && (req.status === 'submitted' || req.status === 'reviewing'))
+    .sort((a, b) => compareTimestamp(b.updatedAt || b.createdAt, a.updatedAt || a.createdAt));
+}
+
+function getPendingAckNotices() {
+  const noticeSource = Array.isArray(state.visibleNotices)
+    ? state.visibleNotices
+    : (state.allNotices || []);
+  return noticeSource.filter(notice => {
+    if (!notice?.requireAcknowledgement || !state.currentUsername) return false;
+    const acknowledgedBy = Array.isArray(notice.acknowledgedBy) ? notice.acknowledgedBy : [];
+    return !acknowledgedBy.includes(state.currentUsername);
+  });
+}
+
+function getAttendanceFocusInfo(todayKey) {
+  const attendance = state.todayAttendanceDate === todayKey
+    ? (state.todayAttendance || null)
+    : (state.attendanceData?.[todayKey] || null);
+  const siteMap = new Map((state.attendanceSites || []).map(site => [site.id, site]));
+
+  if (!attendance) {
+    return {
+      priority: 0,
+      summary: '今日の勤務が未入力',
+      meta: 'カレンダーから入力してください',
+      chip: '勤務未入力',
+      chipTone: 'alert',
+    };
+  }
+
+  const siteEntries = buildAttendanceSiteEntries(attendance, siteMap);
+  const totalHours = siteEntries.reduce((sum, entry) => sum + entry.hours, 0);
+
+  if (siteEntries.length > 0) {
+    return {
+      priority: 2,
+      summary: [siteEntries[0].code, siteEntries[0].name].filter(Boolean).join(' '),
+      meta: `合計 ${fmtHours(totalHours)}h / ${siteEntries.length}現場`,
+      chip: `${siteEntries.length}現場`,
+      chipTone: 'clear',
+    };
+  }
+
+  const typeKey = attendance.type || 'normal';
+  if (typeKey !== 'normal') {
+    const typeLabel = ATTENDANCE_TYPE_LABELS[typeKey] || typeKey;
+    return {
+      priority: 2,
+      summary: `勤務区分 ${typeLabel}`,
+      meta: attendance.note ? `メモ: ${attendance.note}` : '今日の勤務入力は済んでいます',
+      chip: typeLabel,
+      chipTone: 'active',
+    };
+  }
+
+  return {
+    priority: 3,
+    summary: '今日の勤務入力は済んでいます',
+    meta: '大きな入力漏れはありません',
+    chip: '入力済み',
+    chipTone: 'clear',
+  };
+}
+
+function buildAttendanceSiteEntries(attendance, siteMap) {
+  const workSiteHours = (attendance.workSiteHours && typeof attendance.workSiteHours === 'object')
+    ? attendance.workSiteHours
+    : {};
+
+  return Object.entries(workSiteHours)
+    .map(([siteId, hours]) => {
+      const numericHours = Number(hours);
+      if (!Number.isFinite(numericHours) || numericHours <= 0) return null;
+      const site = siteMap.get(siteId);
+      return {
+        siteId,
+        code: site?.code || '',
+        name: site?.name || `未登録現場(${siteId})`,
+        hours: numericHours,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.hours - a.hours);
+}
+
+function resolveDepartmentKey(department) {
+  const value = `${department || ''}`;
+  if (value.includes('営業')) return 'sales';
+  if (value.includes('設計')) return 'design';
+  if (value.includes('生産管理')) return 'production';
+  if (value.includes('工場')) return 'factory';
+  if (value.includes('工事')) return 'construction';
+  return 'general';
+}
+
+function buildTaskFocusMeta(overdueCount, todayCount) {
+  const parts = [];
+  if (overdueCount > 0) parts.push(`期限超過 ${overdueCount}件`);
+  if (todayCount > 0) parts.push(`今日期限 ${todayCount}件`);
+  return parts.length > 0 ? parts.join(' / ') : '進行中タスク';
+}
+
+function buildFocusSummary(profile, itemCount) {
+  if (itemCount === 0) {
+    return profile.roleType === 'manager' || profile.roleType === 'leader'
+      ? '自部署に大きな詰まりは見えていません'
+      : '今日は大きな詰まりはありません';
+  }
+  if (profile.roleType === 'manager') return '部署全体で先に見ておきたい項目です';
+  if (profile.roleType === 'leader') return '今日の引き継ぎと確認を優先表示しています';
+  return 'あなたの部署で今日優先したい項目です';
 }
 
 function compareTaskPriority(a, b, todayKey) {
