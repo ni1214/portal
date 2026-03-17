@@ -12725,6 +12725,7 @@ html.font-xl { font-size: 21px; }
   border: 1px solid var(--border-glass);
   background: var(--bg-card);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
 .dash-card--alert {
@@ -12872,6 +12873,42 @@ html.font-xl { font-size: 21px; }
   color: var(--text-muted);
   font-size: 0.82rem;
   line-height: 1.5;
+}
+
+.dash-card--interactive {
+  cursor: pointer;
+}
+
+.dash-card--interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-glass-hover);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
+}
+
+.dash-card--interactive:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent-blue) 45%, var(--border-glass));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent-blue) 22%, transparent),
+    0 14px 30px rgba(0, 0, 0, 0.14);
+}
+
+.dash-card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  color: var(--accent-blue);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.dash-card--alert .dash-card-link {
+  color: var(--accent-orange);
+}
+
+.dash-card--clear .dash-card-link {
+  color: var(--accent-cyan);
 }
 
 @media (max-width: 1180px) {

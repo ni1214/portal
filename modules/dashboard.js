@@ -12,6 +12,15 @@ const ATTENDANCE_TYPE_LABELS = {
   半休午後: '半休(午後)',
   欠勤: '欠勤',
 };
+const DASH_TARGETS = Object.freeze({
+  PROFILE: 'profile',
+  TASK_RECEIVED: 'task-received',
+  TASK_SENT: 'task-sent',
+  REQUEST_RECEIVED: 'request-received',
+  REQUEST_SENT: 'request-sent',
+  ATTENDANCE: 'attendance',
+  NOTICE: 'notice',
+});
 
 export function initTodayDashboard(d = {}) {
   deps = d;
@@ -21,6 +30,7 @@ export function initTodayDashboard(d = {}) {
 export function renderTodayDashboard() {
   const section = document.getElementById('dash-today-section');
   if (!section) return;
+  bindDashboardEvents(section);
 
   if (!state.currentUsername) {
     section.hidden = true;
@@ -56,6 +66,12 @@ export function renderTodayDashboard() {
 }
 
 function renderCard(card) {
+  const target = card.target || '';
+  const actionLabel = card.actionLabel || getDashboardActionLabel(target);
+  const isInteractive = !!target;
+  const cardAttrs = isInteractive
+    ? ` data-dash-target="${esc(target)}" tabindex="0" role="button" aria-label="${esc(`${card.title} - ${actionLabel}`)}"`
+    : '';
   const chips = Array.isArray(card.chips) && card.chips.length > 0
     ? `<div class="dash-card-chips">${card.chips.map(chip => `
         <span class="dash-chip ${chip.tone ? `dash-chip--${chip.tone}` : ''}">${esc(chip.text)}</span>
@@ -72,7 +88,7 @@ function renderCard(card) {
     : `<div class="dash-card-empty">${esc(card.emptyText || '対象はありません')}</div>`;
 
   return `
-    <section class="dash-card dash-card--${card.tone || 'idle'}">
+    <section class="dash-card dash-card--${card.tone || 'idle'}${isInteractive ? ' dash-card--interactive' : ''}"${cardAttrs}>
       <div class="dash-card-head">
         <div class="dash-card-icon"><i class="${card.icon}"></i></div>
         <div class="dash-card-heading">
@@ -84,8 +100,81 @@ function renderCard(card) {
       ${card.meta ? `<div class="dash-card-meta">${esc(card.meta)}</div>` : ''}
       ${chips}
       ${items}
+      ${isInteractive ? `<div class="dash-card-link"><span>${esc(actionLabel)}</span><i class="fa-solid fa-arrow-right"></i></div>` : ''}
     </section>
   `;
+}
+
+function bindDashboardEvents(section) {
+  if (!section || section.dataset.dashBound === 'true') return;
+  section.dataset.dashBound = 'true';
+
+  section.addEventListener('click', event => {
+    const card = event.target.closest('[data-dash-target]');
+    if (!card || !section.contains(card)) return;
+    void openDashboardTarget(card.dataset.dashTarget || '');
+  });
+
+  section.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const card = event.target.closest('[data-dash-target]');
+    if (!card || !section.contains(card)) return;
+    event.preventDefault();
+    void openDashboardTarget(card.dataset.dashTarget || '');
+  });
+}
+
+async function openDashboardTarget(target) {
+  try {
+    switch (target) {
+      case DASH_TARGETS.PROFILE:
+        await deps.openProfileSettings?.();
+        return;
+      case DASH_TARGETS.TASK_RECEIVED:
+        await deps.openReceivedTasks?.();
+        return;
+      case DASH_TARGETS.TASK_SENT:
+        await deps.openSentTasks?.();
+        return;
+      case DASH_TARGETS.REQUEST_RECEIVED:
+        await deps.openReceivedRequests?.();
+        return;
+      case DASH_TARGETS.REQUEST_SENT:
+        await deps.openSentRequests?.();
+        return;
+      case DASH_TARGETS.ATTENDANCE:
+        await deps.openTodayAttendance?.();
+        return;
+      case DASH_TARGETS.NOTICE:
+        await deps.openNoticeBoard?.();
+        return;
+      default:
+        return;
+    }
+  } catch (err) {
+    console.error('ダッシュボード遷移エラー:', err);
+  }
+}
+
+function getDashboardActionLabel(target) {
+  switch (target) {
+    case DASH_TARGETS.PROFILE:
+      return 'プロフィールを開く';
+    case DASH_TARGETS.TASK_RECEIVED:
+      return '受け取りタスクを開く';
+    case DASH_TARGETS.TASK_SENT:
+      return '依頼したタスクを開く';
+    case DASH_TARGETS.REQUEST_RECEIVED:
+      return '受け取り依頼を開く';
+    case DASH_TARGETS.REQUEST_SENT:
+      return '自分の依頼を開く';
+    case DASH_TARGETS.ATTENDANCE:
+      return '今日の勤怠を開く';
+    case DASH_TARGETS.NOTICE:
+      return 'お知らせへ移動';
+    default:
+      return '画面を開く';
+  }
 }
 
 function buildTaskCard(todayKey) {
@@ -118,6 +207,8 @@ function buildTaskCard(todayKey) {
       ].filter(Boolean).join(' / '),
     })),
     emptyText: '受け取りタスクはありません',
+    target: DASH_TARGETS.TASK_RECEIVED,
+    actionLabel: getDashboardActionLabel(DASH_TARGETS.TASK_RECEIVED),
   };
 }
 
@@ -135,6 +226,8 @@ function buildRequestCard() {
       chips: [],
       items: [],
       emptyText: '部署設定後に依頼が表示されます',
+      target: DASH_TARGETS.PROFILE,
+      actionLabel: getDashboardActionLabel(DASH_TARGETS.PROFILE),
     };
   }
 
@@ -163,6 +256,8 @@ function buildRequestCard() {
       ].filter(Boolean).join(' / '),
     })),
     emptyText: '自部署待ちの依頼はありません',
+    target: DASH_TARGETS.REQUEST_RECEIVED,
+    actionLabel: getDashboardActionLabel(DASH_TARGETS.REQUEST_RECEIVED),
   };
 }
 
@@ -183,6 +278,8 @@ function buildAttendanceCard(todayKey) {
       chips: [],
       items: [],
       emptyText: 'カレンダーから今日の入力ができます',
+      target: DASH_TARGETS.ATTENDANCE,
+      actionLabel: getDashboardActionLabel(DASH_TARGETS.ATTENDANCE),
     };
   }
 
@@ -216,6 +313,8 @@ function buildAttendanceCard(todayKey) {
     emptyText: attendance.note
       ? `メモ: ${attendance.note}`
       : '今日の現場入力はまだありません',
+    target: DASH_TARGETS.ATTENDANCE,
+    actionLabel: getDashboardActionLabel(DASH_TARGETS.ATTENDANCE),
   };
 }
 
@@ -254,6 +353,8 @@ function buildNoticeCard() {
       ].filter(Boolean).join(' / '),
     })),
     emptyText: '確認待ちや重要通知はありません',
+    target: DASH_TARGETS.NOTICE,
+    actionLabel: getDashboardActionLabel(DASH_TARGETS.NOTICE),
   };
 }
 
@@ -270,6 +371,8 @@ function buildFocusCard(todayKey) {
       chips: [],
       items: [],
       emptyText: 'プロフィールから所属部署と役割を設定してください',
+      target: DASH_TARGETS.PROFILE,
+      actionLabel: getDashboardActionLabel(DASH_TARGETS.PROFILE),
     };
   }
 
@@ -284,66 +387,66 @@ function buildFocusCard(todayKey) {
   const departmentKey = resolveDepartmentKey(profile.department);
   const candidates = [];
 
-  const addCandidate = (priority, title, meta) => {
-    candidates.push({ priority, title, meta });
+  const addCandidate = (priority, title, meta, target) => {
+    candidates.push({ priority, title, meta, target });
   };
 
   if (profile.roleType === 'leader' || profile.roleType === 'manager') {
     if (openRequests.length > 0) {
-      addCandidate(0, `自部署待ち依頼 ${openRequests.length}件`, '部署内で優先して確認したい依頼です');
+      addCandidate(0, `自部署待ち依頼 ${openRequests.length}件`, '部署内で優先して確認したい依頼です', DASH_TARGETS.REQUEST_RECEIVED);
     }
     if (doneNotifies.length > 0) {
-      addCandidate(1, `完了報告 ${doneNotifies.length}件`, '依頼したタスクの完了連絡です');
+      addCandidate(1, `完了報告 ${doneNotifies.length}件`, '依頼したタスクの完了連絡です', DASH_TARGETS.TASK_SENT);
     }
   }
 
   switch (departmentKey) {
     case 'sales':
-      if (requestReplies.length > 0) addCandidate(0, `返答待ち依頼 ${requestReplies.length}件`, '他部署へ出した依頼の返答待ちです');
-      if (doneNotifies.length > 0) addCandidate(0, `完了連絡 ${doneNotifies.length}件`, '依頼したタスクの完了通知です');
-      if (pendingAck.length > 0) addCandidate(1, `確認待ち通知 ${pendingAck.length}件`, '重要なお知らせがあります');
+      if (requestReplies.length > 0) addCandidate(0, `返答待ち依頼 ${requestReplies.length}件`, '他部署へ出した依頼の返答待ちです', DASH_TARGETS.REQUEST_SENT);
+      if (doneNotifies.length > 0) addCandidate(0, `完了連絡 ${doneNotifies.length}件`, '依頼したタスクの完了通知です', DASH_TARGETS.TASK_SENT);
+      if (pendingAck.length > 0) addCandidate(1, `確認待ち通知 ${pendingAck.length}件`, '重要なお知らせがあります', DASH_TARGETS.NOTICE);
       if (todayTasks.length > 0 || overdueTasks.length > 0) {
-        addCandidate(overdueTasks.length > 0 ? 1 : 2, `自分タスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length));
+        addCandidate(overdueTasks.length > 0 ? 1 : 2, `自分タスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length), DASH_TARGETS.TASK_RECEIVED);
       }
       break;
     case 'design':
-      if (pendingAck.length > 0) addCandidate(0, `確認待ち通知 ${pendingAck.length}件`, '設計変更や重要通知の確認待ちです');
-      if (openRequests.length > 0) addCandidate(0, `未対応依頼 ${openRequests.length}件`, '部署間依頼の確認が必要です');
+      if (pendingAck.length > 0) addCandidate(0, `確認待ち通知 ${pendingAck.length}件`, '設計変更や重要通知の確認待ちです', DASH_TARGETS.NOTICE);
+      if (openRequests.length > 0) addCandidate(0, `未対応依頼 ${openRequests.length}件`, '部署間依頼の確認が必要です', DASH_TARGETS.REQUEST_RECEIVED);
       if (todayTasks.length > 0 || overdueTasks.length > 0) {
-        addCandidate(overdueTasks.length > 0 ? 1 : 2, `今日見るタスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length));
+        addCandidate(overdueTasks.length > 0 ? 1 : 2, `今日見るタスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length), DASH_TARGETS.TASK_RECEIVED);
       }
       break;
     case 'production':
-      if (openRequests.length > 0) addCandidate(0, `自部署待ち依頼 ${openRequests.length}件`, '段取り確認を優先してください');
+      if (openRequests.length > 0) addCandidate(0, `自部署待ち依頼 ${openRequests.length}件`, '段取り確認を優先してください', DASH_TARGETS.REQUEST_RECEIVED);
       if (todayTasks.length > 0 || overdueTasks.length > 0) {
-        addCandidate(overdueTasks.length > 0 ? 1 : 2, `進行タスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length));
+        addCandidate(overdueTasks.length > 0 ? 1 : 2, `進行タスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length), DASH_TARGETS.TASK_RECEIVED);
       }
-      if (attendanceInfo.summary) addCandidate(attendanceInfo.priority, attendanceInfo.summary, attendanceInfo.meta);
-      if (pendingAck.length > 0) addCandidate(1, `確認待ち通知 ${pendingAck.length}件`, '重要なお知らせがあります');
+      if (attendanceInfo.summary) addCandidate(attendanceInfo.priority, attendanceInfo.summary, attendanceInfo.meta, DASH_TARGETS.ATTENDANCE);
+      if (pendingAck.length > 0) addCandidate(1, `確認待ち通知 ${pendingAck.length}件`, '重要なお知らせがあります', DASH_TARGETS.NOTICE);
       break;
     case 'factory':
-      if (attendanceInfo.summary) addCandidate(attendanceInfo.priority, attendanceInfo.summary, attendanceInfo.meta);
+      if (attendanceInfo.summary) addCandidate(attendanceInfo.priority, attendanceInfo.summary, attendanceInfo.meta, DASH_TARGETS.ATTENDANCE);
       if (todayTasks.length > 0 || overdueTasks.length > 0) {
-        addCandidate(overdueTasks.length > 0 ? 0 : 1, `現場タスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length));
+        addCandidate(overdueTasks.length > 0 ? 0 : 1, `現場タスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length), DASH_TARGETS.TASK_RECEIVED);
       }
-      if (openRequests.length > 0) addCandidate(1, `自部署待ち依頼 ${openRequests.length}件`, '確認が必要な依頼があります');
-      if (pendingAck.length > 0) addCandidate(1, `確認待ち通知 ${pendingAck.length}件`, '重要なお知らせがあります');
+      if (openRequests.length > 0) addCandidate(1, `自部署待ち依頼 ${openRequests.length}件`, '確認が必要な依頼があります', DASH_TARGETS.REQUEST_RECEIVED);
+      if (pendingAck.length > 0) addCandidate(1, `確認待ち通知 ${pendingAck.length}件`, '重要なお知らせがあります', DASH_TARGETS.NOTICE);
       break;
     case 'construction':
-      if (attendanceInfo.summary) addCandidate(attendanceInfo.priority, attendanceInfo.summary, attendanceInfo.meta);
+      if (attendanceInfo.summary) addCandidate(attendanceInfo.priority, attendanceInfo.summary, attendanceInfo.meta, DASH_TARGETS.ATTENDANCE);
       if (todayTasks.length > 0 || overdueTasks.length > 0) {
-        addCandidate(overdueTasks.length > 0 ? 0 : 1, `現場タスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length));
+        addCandidate(overdueTasks.length > 0 ? 0 : 1, `現場タスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length), DASH_TARGETS.TASK_RECEIVED);
       }
-      if (pendingAck.length > 0) addCandidate(0, `確認待ち通知 ${pendingAck.length}件`, '施工前に確認したい通知があります');
-      if (openRequests.length > 0) addCandidate(1, `自部署待ち依頼 ${openRequests.length}件`, '部署間依頼の確認が必要です');
+      if (pendingAck.length > 0) addCandidate(0, `確認待ち通知 ${pendingAck.length}件`, '施工前に確認したい通知があります', DASH_TARGETS.NOTICE);
+      if (openRequests.length > 0) addCandidate(1, `自部署待ち依頼 ${openRequests.length}件`, '部署間依頼の確認が必要です', DASH_TARGETS.REQUEST_RECEIVED);
       break;
     default:
-      if (openRequests.length > 0) addCandidate(0, `自部署待ち依頼 ${openRequests.length}件`, '部署間依頼の確認が必要です');
+      if (openRequests.length > 0) addCandidate(0, `自部署待ち依頼 ${openRequests.length}件`, '部署間依頼の確認が必要です', DASH_TARGETS.REQUEST_RECEIVED);
       if (todayTasks.length > 0 || overdueTasks.length > 0) {
-        addCandidate(overdueTasks.length > 0 ? 1 : 2, `進行タスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length));
+        addCandidate(overdueTasks.length > 0 ? 1 : 2, `進行タスク ${activeTasks.length}件`, buildTaskFocusMeta(overdueTasks.length, todayTasks.length), DASH_TARGETS.TASK_RECEIVED);
       }
-      if (pendingAck.length > 0) addCandidate(1, `確認待ち通知 ${pendingAck.length}件`, '重要なお知らせがあります');
-      if (attendanceInfo.summary) addCandidate(attendanceInfo.priority, attendanceInfo.summary, attendanceInfo.meta);
+      if (pendingAck.length > 0) addCandidate(1, `確認待ち通知 ${pendingAck.length}件`, '重要なお知らせがあります', DASH_TARGETS.NOTICE);
+      if (attendanceInfo.summary) addCandidate(attendanceInfo.priority, attendanceInfo.summary, attendanceInfo.meta, DASH_TARGETS.ATTENDANCE);
       break;
   }
 
@@ -353,6 +456,7 @@ function buildFocusCard(todayKey) {
   });
 
   const topPriority = candidates[0]?.priority ?? 3;
+  const focusTarget = candidates[0]?.target || resolveFocusFallbackTarget(profile);
   const tone = topPriority === 0 ? 'alert' : (topPriority === 1 ? 'active' : (candidates.length > 0 ? 'clear' : 'idle'));
 
   return {
@@ -375,6 +479,8 @@ function buildFocusCard(todayKey) {
       meta: item.meta,
     })),
     emptyText: '今日は大きな詰まりはありません',
+    target: focusTarget,
+    actionLabel: getDashboardActionLabel(focusTarget),
   };
 }
 
@@ -394,6 +500,16 @@ function getDashboardProfile() {
   const roleType = state.userEmailProfile?.roleType || 'member';
   const roleLabel = USER_ROLE_LABELS[roleType] || '';
   return { department, roleType, roleLabel };
+}
+
+function resolveFocusFallbackTarget(profile) {
+  if (!profile.department) return DASH_TARGETS.PROFILE;
+  if (profile.roleType === 'manager' || profile.roleType === 'leader') return DASH_TARGETS.REQUEST_RECEIVED;
+  const departmentKey = resolveDepartmentKey(profile.department);
+  if (departmentKey === 'production' || departmentKey === 'factory' || departmentKey === 'construction') {
+    return DASH_TARGETS.ATTENDANCE;
+  }
+  return DASH_TARGETS.TASK_RECEIVED;
 }
 
 function getActiveReceivedTasks(todayKey) {

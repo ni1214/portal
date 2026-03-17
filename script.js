@@ -121,7 +121,7 @@ import {
   initCalendar,
   openCalendarModal, closeCalendarModal,
   calPrevMonth, calNextMonth, calGoToday,
-  closeDayPanel, saveDayAttendance, deleteAttendance,
+  openDayPanel, closeDayPanel, saveDayAttendance, deleteAttendance,
   switchCalTab, renderCalendar, updateCalendarSummary,
   subscribeTodayAttendance
 } from './modules/calendar.js';
@@ -274,7 +274,51 @@ initAttendanceWork({
 
 bindAttendanceWorkEvents();
 
-initTodayDashboard({});
+function buildTodayDateKey() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+initTodayDashboard({
+  openProfileSettings: () => {
+    openEmailModal();
+    switchEmailTab('profile');
+  },
+  openReceivedTasks: () => {
+    state.taskProjectKeyFilter = '';
+    state.activeTaskTab = 'received';
+    openTaskModal();
+  },
+  openSentTasks: () => {
+    state.taskProjectKeyFilter = '';
+    state.activeTaskTab = 'sent';
+    openTaskModal();
+  },
+  openReceivedRequests: () => {
+    state.reqProjectKeyFilter = '';
+    state.activeReqTab = 'request';
+    state.activeReqSubTab = 'received';
+    openReqModal('request');
+  },
+  openSentRequests: () => {
+    state.reqProjectKeyFilter = '';
+    state.activeReqTab = 'request';
+    state.activeReqSubTab = 'sent';
+    openReqModal('request');
+  },
+  openTodayAttendance: async () => {
+    await openCalendarModal();
+    if (!document.getElementById('cal-modal')?.classList.contains('visible')) return;
+    await onCalendarModalOpen();
+    openDayPanel(buildTodayDateKey());
+  },
+  openNoticeBoard: () => {
+    document.getElementById('notice-board')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  },
+});
 initReadDiagnostics();
 
 initPropertySummary({
