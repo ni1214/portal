@@ -6,3 +6,6 @@ potal/
 
 # Supabase CLI temporary files
 supabase/.temp/
+
+# Generated migration payloads may contain real user data
+supabase/generated-*.sql

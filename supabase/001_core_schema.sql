@@ -73,6 +73,7 @@ create table if not exists public.user_lock_pins (
   username text primary key references public.user_accounts(username) on delete cascade,
   enabled boolean not null default false,
   hash text,
+  auto_lock_minutes integer not null default 5,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );

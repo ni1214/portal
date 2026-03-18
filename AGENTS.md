@@ -570,10 +570,15 @@ assigned_tasks/{taskId}
 - Supabase project `Portal` に CLI で link 済み
 - `supabase/001_core_schema.sql` は remote に適用済み
 - `supabase/002_fix_core_ids_to_text.sql` で Firestore 由来 ID を text に補正済み
+- `supabase/003_user_lock_pin_auto_lock_minutes.sql` で `user_lock_pins.auto_lock_minutes` を追加済み
 - `portal_config` は Firestore から Supabase へ移行済み
 - `public_categories` は 6 件移行済み
 - `public_cards` は 98 件移行済み
 - `public_cards.parent_id` 付き子カードは 34 件確認済み
+- `users_list` 由来の `user_accounts` は 7 件移行済み
+- `users/{name}/data/preferences` は 7 件移行済み
+- `users/{name}/data/email_profile` は 1 件移行済み
+- `users/{name}/data/lock_pin` は 3 件移行済み
 - 現時点で作成確認できた core tables:
   - `portal_config`
   - `public_categories`
@@ -591,3 +596,5 @@ assigned_tasks/{taskId}
 - 秘密値は repo に書かず、`C:\Users\frx\.codex\memory.md` にのみ保存する
 - `supabase db query --linked` は一時 login role 初期化で不安定になることがある
 - 以後の remote SQL 実行は、基本的に `tools/invoke-supabase-sql.ps1` + Management API を優先する
+- `tools/invoke-supabase-sql.ps1` は UTF-8 body 送信済み。日本語を含む SQL でも remote 実行できる
+- Firestore 実データから生成した一時 SQL は repo に残さない。必要なら `supabase/generated-*.sql` をローカル生成して、その場で実行後に削除する

@@ -30,12 +30,13 @@ if (-not [string]::IsNullOrWhiteSpace($SqlFile)) {
 
 $headers = @{
   Authorization = "Bearer $AccessToken"
-  'Content-Type' = 'application/json'
+  'Content-Type' = 'application/json; charset=utf-8'
 }
 
 $body = @{ query = $Sql } | ConvertTo-Json -Compress -Depth 8
+$bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
 $uri = "https://api.supabase.com/v1/projects/$ProjectRef/database/query"
-$response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body
+$response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $bodyBytes
 
 if ($Raw) {
   $response | ConvertTo-Json -Depth 100
