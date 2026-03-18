@@ -17,6 +17,7 @@ function createEmptyDiagnostics() {
     sessionStartedAt: Date.now(),
     estimatedTransferBytes: 0,
     estimatedItems: 0,
+    apiCalls: 0,
     listenerStarts: 0,
     listenerSnapshots: 0,
     getDocsCalls: 0,
@@ -42,6 +43,9 @@ function ensureDiagnostics() {
   }
   if (!Number.isFinite(diag.estimatedItems)) {
     diag.estimatedItems = 0;
+  }
+  if (!Number.isFinite(diag.apiCalls)) {
+    diag.apiCalls = 0;
   }
   return diag;
 }
@@ -272,8 +276,8 @@ function buildSummaryHtml(diag) {
       </div>
       <div class="rd-stat-card">
         <div class="rd-stat-label">都度取得回数</div>
-        <div class="rd-stat-value">${formatNumber(diag.getDocsCalls)}</div>
-        <div class="rd-stat-note">getDocs や単発取得として見積もった回数</div>
+        <div class="rd-stat-value">${formatNumber(diag.getDocsCalls + diag.apiCalls)}</div>
+        <div class="rd-stat-note">getDocs ${formatNumber(diag.getDocsCalls)} / API ${formatNumber(diag.apiCalls)}</div>
       </div>
     </div>
     <div class="rd-summary-hint">
@@ -301,8 +305,13 @@ function buildSourceListHtml(diag) {
     const sessionShare = (source.totalEstimatedBytes / totalBytes) * 100;
     const quotaShare = (source.totalEstimatedBytes / SUPABASE_FREE_TRANSFER_BYTES_PER_MONTH) * 100;
     const tone = getRatioTone(quotaShare);
-    const statusLabel = source.active ? '稼働中' : (source.mode === 'getDocs' ? '都度取得' : '待機');
-    const statusClass = source.active ? 'is-active' : (source.mode === 'getDocs' ? 'is-passive' : '');
+    const statusLabel = source.active
+      ? '稼働中'
+      : (source.mode === 'getDocs' ? '都度取得' : (source.mode === 'api' ? 'API取得' : '待機'));
+    const statusClass = source.active ? 'is-active' : ((source.mode === 'getDocs' || source.mode === 'api') ? 'is-passive' : '');
+    const modeLabel = source.mode === 'listener'
+      ? 'listener'
+      : (source.mode === 'api' ? 'api' : 'getDocs');
 
     return `
       <div class="rd-source-card rd-source-card--${tone}">
@@ -311,7 +320,7 @@ function buildSourceListHtml(diag) {
             <div class="rd-rank-badge">#${index + 1}</div>
             <div>
               <div class="rd-source-title">${esc(source.label)}</div>
-              <div class="rd-source-meta">${esc(source.scope || 'scope未設定')} / ${source.mode === 'listener' ? 'listener' : 'getDocs'}</div>
+              <div class="rd-source-meta">${esc(source.scope || 'scope未設定')} / ${modeLabel}</div>
             </div>
           </div>
           <span class="rd-source-badge ${statusClass}">${statusLabel}</span>
@@ -321,7 +330,7 @@ function buildSourceListHtml(diag) {
           <span>セッション比 ${formatPercent(sessionShare)}</span>
           <span>無料枠比 ${formatPercent(quotaShare)}</span>
           <span>snapshot ${formatNumber(source.snapshotCount)}</span>
-          <span>getDocs ${formatNumber(source.getDocsCount)}</span>
+          <span>calls ${formatNumber(source.getDocsCount)}</span>
         </div>
         <div class="rd-source-foot">
           <span>累計 ${formatNumber(source.totalEstimatedItems)}件 / 最終 ${formatNumber(source.lastItemCount)}件 / 最終 ${formatBytes(source.lastEstimatedBytes)}</span>
@@ -439,6 +448,24 @@ export function recordGetDocsRead(key, label, scope = '', docCount = 0, payload 
   diag.estimatedItems += items;
   diag.estimatedTransferBytes += bytes;
   pushEvent('getDocs', entry.label, items, bytes, scope);
+  renderIfOpen();
+}
+
+export function recordTransferFetch(key, label, scope = '', itemCount = 0, payload = null) {
+  const diag = ensureDiagnostics();
+  const entry = getSourceEntry(key, { label, scope, mode: 'api' });
+  const items = estimateItemCount(payload, itemCount);
+  const bytes = estimatePayloadBytes(payload, items);
+  entry.getDocsCount += 1;
+  entry.lastItemCount = items;
+  entry.lastEstimatedBytes = bytes;
+  entry.totalEstimatedItems += items;
+  entry.totalEstimatedBytes += bytes;
+  entry.lastAt = Date.now();
+  diag.apiCalls += 1;
+  diag.estimatedItems += items;
+  diag.estimatedTransferBytes += bytes;
+  pushEvent('api', entry.label, items, bytes, scope);
   renderIfOpen();
 }
 

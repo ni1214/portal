@@ -182,6 +182,22 @@ import {
   closeSharedLinksModal,
 } from './modules/shared-space.js';
 
+import {
+  isSupabaseSharedCoreEnabled,
+  renderSupabaseAdminState,
+  saveSupabaseRuntimeConfig,
+  fetchSharedCategoriesFromSupabase,
+  fetchSharedCardsFromSupabase,
+  fetchSharedCardsByIdsFromSupabase,
+  createSharedCategoryInSupabase,
+  updateSharedCategoryInSupabase,
+  deleteSharedCategoryInSupabase,
+  createSharedCardInSupabase,
+  updateSharedCardInSupabase,
+  deleteSharedCardInSupabase,
+  createSupabaseClientId,
+} from './modules/supabase.js';
+
 
 // ========== 依存注入 ==========
 // 各モジュールが必要とするクロスモジュール関数を注入
@@ -907,6 +923,18 @@ async function migrateCategories() {
 }
 
 async function loadCategories() {
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const categories = await fetchSharedCategoriesFromSupabase();
+      if (categories.length > 0) {
+        state.allCategories = categories;
+        return;
+      }
+    } catch (err) {
+      console.error('Supabase category load error:', err);
+    }
+  }
+
   const q = query(collection(db, 'categories'), orderBy('order'));
   const snap = await getDocs(q);
   if (snap.docs.length > 0) {
@@ -918,7 +946,10 @@ async function loadCategories() {
         isExternal: data.isExternal ?? (data.id === 'external')
       };
     });
+    return;
   }
+
+  state.allCategories = [...DEFAULT_CATEGORIES];
 }
 
 function sortCards(cards = []) {
@@ -936,6 +967,22 @@ function rerenderCards() {
   renderSharedLinksBrowser();
 }
 
+async function reloadSharedCoreData() {
+  const hadSharedCards = state.sharedCardsLoaded || (state.allCards || []).length > 0;
+  state.sharedCardsLoaded = false;
+  state.sharedCardsLoading = false;
+  state.allCards = [];
+  await loadCategories();
+  if (hadSharedCards) {
+    await ensureSharedCardsLoaded(true);
+  } else {
+    renderAllSections();
+    renderFavorites();
+    renderSharedHome();
+    renderSharedLinksBrowser();
+  }
+}
+
 async function ensureSharedCardsLoaded(force = false) {
   if (state.sharedCardsLoaded && !force) {
     renderSharedHome();
@@ -949,6 +996,19 @@ async function ensureSharedCardsLoaded(force = false) {
   renderSharedLinksBrowser();
 
   _sharedCardsLoadPromise = (async () => {
+    if (isSupabaseSharedCoreEnabled()) {
+      try {
+        const cards = await fetchSharedCardsFromSupabase();
+        state.allCards = sortCards(cards);
+        state.sharedCardsLoaded = true;
+        rerenderCards();
+        renderSharedHome();
+        return state.allCards;
+      } catch (err) {
+        console.error('Supabase shared card load error:', err);
+      }
+    }
+
     const q = query(collection(db, 'cards'), orderBy('categoryOrder'));
     const snap = await getDocs(q);
     recordGetDocsRead('cards.all', '公開カード一覧', 'cards', snap.size, snap.docs);
@@ -979,12 +1039,21 @@ async function ensureFavoritePublicCardsLoaded() {
   if (!targetIds.length) return;
 
   const loadedCards = [];
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      loadedCards.push(...await fetchSharedCardsByIdsFromSupabase(targetIds));
+    } catch (err) {
+      console.error('Supabase favorite card load error:', err);
+    }
+  }
+  if (!loadedCards.length) {
   for (let i = 0; i < targetIds.length; i += 10) {
     const chunk = targetIds.slice(i, i + 10);
     const favQuery = query(collection(db, 'cards'), where(documentId(), 'in', chunk));
     const snap = await getDocs(favQuery);
     recordGetDocsRead('cards.favorites', 'お気に入り公開カード', 'cards', snap.size, snap.docs);
     loadedCards.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }
   }
 
   if (!loadedCards.length) return;
@@ -993,7 +1062,11 @@ async function ensureFavoritePublicCardsLoaded() {
 }
 
 async function saveCard(docId, data) {
-  await updateDoc(doc(db, 'cards', docId), { ...data, updatedAt: serverTimestamp() });
+  if (isSupabaseSharedCoreEnabled()) {
+    await updateSharedCardInSupabase(docId, data);
+  } else {
+    await updateDoc(doc(db, 'cards', docId), { ...data, updatedAt: serverTimestamp() });
+  }
   const idx = state.allCards.findIndex(c => c.id === docId);
   if (idx !== -1) {
     state.allCards[idx] = { ...state.allCards[idx], ...data };
@@ -1016,13 +1089,24 @@ async function addCard(data) {
     isExternalTool: data.category === 'external',
     updatedAt: serverTimestamp()
   };
-  const ref = await addDoc(collection(db, 'cards'), newData);
-  state.allCards = sortCards([...state.allCards, { id: ref.id, ...newData }]);
+  if (isSupabaseSharedCoreEnabled()) {
+    const { updatedAt, ...supabaseData } = newData;
+    supabaseData.id = createSupabaseClientId('card');
+    await createSharedCardInSupabase(supabaseData);
+    state.allCards = sortCards([...state.allCards, supabaseData]);
+  } else {
+    const ref = await addDoc(collection(db, 'cards'), newData);
+    state.allCards = sortCards([...state.allCards, { id: ref.id, ...newData }]);
+  }
   rerenderCards();
 }
 
 async function deleteCard(docId) {
-  await deleteDoc(doc(db, 'cards', docId));
+  if (isSupabaseSharedCoreEnabled()) {
+    await deleteSharedCardInSupabase(docId);
+  } else {
+    await deleteDoc(doc(db, 'cards', docId));
+  }
   state.allCards = state.allCards.filter(c => c.id !== docId);
   rerenderCards();
 }
@@ -1030,18 +1114,31 @@ async function deleteCard(docId) {
 
 // ========== Firestore CRUD (カテゴリ) ==========
 async function addCategoryToFirestore(data) {
-  const ref = await addDoc(collection(db, 'categories'), { ...data, updatedAt: serverTimestamp() });
-  state.allCategories.push({ docId: ref.id, ...data });
+  if (isSupabaseSharedCoreEnabled()) {
+    await createSharedCategoryInSupabase(data);
+    state.allCategories.push({ docId: data.id, ...data });
+  } else {
+    const ref = await addDoc(collection(db, 'categories'), { ...data, updatedAt: serverTimestamp() });
+    state.allCategories.push({ docId: ref.id, ...data });
+  }
 }
 
 async function updateCategoryInFirestore(docId, data) {
-  await updateDoc(doc(db, 'categories', docId), { ...data, updatedAt: serverTimestamp() });
+  if (isSupabaseSharedCoreEnabled()) {
+    await updateSharedCategoryInSupabase(docId, data);
+  } else {
+    await updateDoc(doc(db, 'categories', docId), { ...data, updatedAt: serverTimestamp() });
+  }
   const idx = state.allCategories.findIndex(c => c.docId === docId);
   if (idx !== -1) state.allCategories[idx] = { ...state.allCategories[idx], ...data };
 }
 
 async function deleteCategoryFromFirestore(docId) {
-  await deleteDoc(doc(db, 'categories', docId));
+  if (isSupabaseSharedCoreEnabled()) {
+    await deleteSharedCategoryInSupabase(docId);
+  } else {
+    await deleteDoc(doc(db, 'categories', docId));
+  }
   state.allCategories = state.allCategories.filter(c => c.docId !== docId);
 }
 
@@ -2750,6 +2847,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // ミッションテキストを入力欄に反映
       const mInput = document.getElementById('admin-mission-input');
       if (mInput) mInput.value = state.missionText || '';
+      renderSupabaseAdminState();
     } else {
       errEl.hidden = false;
     }
@@ -2774,6 +2872,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderAdminSuggBoxSection();
     const mInput = document.getElementById('admin-mission-input');
     if (mInput) mInput.value = state.missionText || '';
+    renderSupabaseAdminState();
   });
   document.getElementById('admin-setup-cancel').addEventListener('click', closeAdminModal);
   document.getElementById('admin-invite-save-btn').addEventListener('click', async () => {
@@ -2803,6 +2902,37 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // PIN設定
+  document.getElementById('admin-supabase-save-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('admin-supabase-save-btn');
+    const errEl = document.getElementById('admin-supabase-error');
+    const modeEl = document.getElementById('admin-supabase-mode');
+    const urlEl = document.getElementById('admin-supabase-url');
+    const keyEl = document.getElementById('admin-supabase-key');
+    errEl.hidden = true;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+
+    try {
+      await saveSupabaseRuntimeConfig({
+        mode: modeEl?.value || 'firebase',
+        url: urlEl?.value || '',
+        apiKey: keyEl?.value || '',
+      });
+      await reloadSharedCoreData();
+      renderSupabaseAdminState('保存しました。共有リンク系の保存先を更新しました。');
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存済み';
+    } catch (err) {
+      errEl.textContent = err?.message || 'Supabase 設定の保存に失敗しました。';
+      errEl.hidden = false;
+      btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存';
+    } finally {
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存';
+      }, errEl.hidden ? 1200 : 0);
+    }
+  });
+
   document.getElementById('btn-set-pin').addEventListener('click', async () => {
     const newPin  = document.getElementById('new-pin-input').value;
     const confirm = document.getElementById('confirm-pin-input').value;

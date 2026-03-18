@@ -99,7 +99,7 @@ export function renderSharedHome() {
           </div>
           <div class="shared-home-card-value">起動時ドン読みを抑制</div>
           <p class="shared-home-card-text">
-            共有リンクは一覧を開いた時だけ Firestore から読み込みます。ホームでは通知と共通導線に絞っています。
+            共有リンクは一覧を開いた時だけ読み込みます。ホームでは通知と共通導線に絞っています。
           </p>
           <ul class="shared-home-list">
             <li>ホーム: 軽い共有ダッシュボード</li>
@@ -173,7 +173,7 @@ export function renderSharedLinksBrowser() {
       <div class="shared-links-empty-state">
         <div class="shared-links-empty-icon"><i class="fa-solid fa-grid-2"></i></div>
         <h3>共有リンクは必要な時だけ読み込みます</h3>
-        <p>この画面を開いた時だけ Firestore から一覧を取得します。</p>
+        <p>この画面を開いた時だけ共有リンク一覧を取得します。</p>
         <button type="button" class="btn-modal-primary" id="shared-links-load-btn">
           <i class="fa-solid fa-download"></i> 共有リンクを読み込む
         </button>

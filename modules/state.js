@@ -85,6 +85,10 @@ export const state = {
 
   // ニックネーム・個人データ
   currentUsername: localStorage.getItem('portal-username') || null,
+  dataBackendMode: 'firebase',
+  supabaseUrl: '',
+  supabaseApiKey: '',
+  supabaseConfigured: false,
   inviteCodeHash: null,
   inviteCodePlain: '',
   inviteCodeRequired: false,
@@ -197,6 +201,7 @@ export const state = {
     sessionStartedAt: Date.now(),
     estimatedTransferBytes: 0,
     estimatedItems: 0,
+    apiCalls: 0,
     listenerStarts: 0,
     listenerSnapshots: 0,
     getDocsCalls: 0,

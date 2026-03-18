@@ -1379,6 +1379,42 @@
         <div class="admin-section">
           <span class="admin-panel-subtitle"><i class="fa-solid fa-box-open"></i> 目安箱 閲覧者管理</span>
           <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">投稿された目安箱の内容を閲覧できるユーザー名を登録してください。</p>
+          <div class="admin-section">
+            <span class="admin-panel-subtitle"><i class="fa-solid fa-database"></i> データ接続設定</span>
+            <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">今の段階では「共有リンク / 公開カテゴリ / 公開カード」だけ切替対象です。普段は Firebase のままでも問題ありません。</p>
+            <div class="form-group">
+              <label class="form-label" for="admin-supabase-mode">共有リンクの保存先</label>
+              <select id="admin-supabase-mode" class="form-input">
+                <option value="firebase">Firebase</option>
+                <option value="supabase">Supabase</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="admin-supabase-url">Supabase URL</label>
+              <input type="url" id="admin-supabase-url" class="form-input" placeholder="https://xxxxx.supabase.co" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="admin-supabase-key">Supabase APIキー（publishable 推奨）</label>
+              <textarea id="admin-supabase-key" class="form-input admin-supabase-key-input" rows="3" placeholder="sb_publishable_..." spellcheck="false"></textarea>
+            </div>
+            <div class="admin-supabase-status-row">
+              <span class="admin-invite-status" id="admin-supabase-status">Firebase 待機</span>
+              <span class="admin-invite-hint" id="admin-supabase-hint">いまは Firebase を使います。切り替えても対象は共有リンク系だけです。</span>
+            </div>
+            <div class="admin-invite-current-wrap">
+              <span class="admin-invite-current-label">現在のキー表示</span>
+              <span class="admin-invite-current-code admin-supabase-key-preview" id="admin-supabase-key-preview">未設定</span>
+            </div>
+            <div class="admin-supabase-actions">
+              <button class="btn-modal-primary" id="admin-supabase-save-btn"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
+            </div>
+            <div class="security-error" id="admin-supabase-error" hidden></div>
+          </div>
+        </div>
+
+        <div class="admin-section">
+          <span class="admin-panel-subtitle"><i class="fa-solid fa-box-open"></i> 逶ｮ螳臥ｮｱ 髢ｲ隕ｧ閠・ｮ｡逅・/span>
+          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">謚慕ｨｿ縺輔ｌ縺溽岼螳臥ｮｱ縺ｮ蜀・ｮｹ繧帝夢隕ｧ縺ｧ縺阪ｋ繝ｦ繝ｼ繧ｶ繝ｼ蜷阪ｒ逋ｻ骭ｲ縺励※縺上□縺輔＞縲・/p>
           <div id="admin-suggbox-viewers" class="admin-suggbox-viewers"></div>
           <div class="admin-suggbox-add-row">
             <input type="text" id="admin-suggbox-add-input" class="form-input" placeholder="ユーザー名を入力" style="flex:1;min-width:0">

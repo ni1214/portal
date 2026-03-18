@@ -553,6 +553,18 @@ assigned_tasks/{taskId}
 - 「記録して」と言われた場合は **AGENTS.md** に記載する（MEMORY.md はローカル専用のため Git 経由で別 PC に引き継がれない）
 - 実機テスト用の招待コード・PIN など**秘密値そのものは AGENTS.md に書かない**。必要な場合はローカル専用の `C:\Users\frx\.codex\memory.md` を参照し、ここには「ローカル専用メモを使う」という運用ルールだけ残す
 
+## 2026-03-18 Supabase runtime config（shared core）
+- `portal/config` に次の runtime 設定を追加して扱う
+  - `dataBackendMode`: `'firebase' | 'supabase'`
+  - `supabaseUrl`: Supabase project URL
+  - `supabasePublishableKey`: フロントで使う API key（publishable 推奨）
+  - `supabaseAnonKey`: 旧メモ互換の fallback。新規保存は `supabasePublishableKey` を優先
+- **この段階で Supabase 切替対象にするのは shared core のみ**
+  - `public_categories`
+  - `public_cards`
+- 管理画面の `データ接続設定` から保存する
+- 実装側は「読込だけ fallback 可 / 保存系は選んだ backend に固定」を守る
+
 ## Supabase 移行追記（2026-03-18 / 個人データ続き）
 - `supabase/004_fix_private_cards_hierarchy.sql` を remote 適用済み
   - `private_cards` は `parent_section_id` ではなく `section_id + parent_id` を持つ形に補正した

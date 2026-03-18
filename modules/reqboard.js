@@ -2,6 +2,7 @@
 import { db, doc, getDoc, setDoc, addDoc, deleteDoc, updateDoc, collection, query, where, orderBy, serverTimestamp, onSnapshot, getDocs } from './config.js';
 import { state, REQ_STATUS_LABEL } from './state.js';
 import { esc, escHtml, getUserAvatarColor, normalizeProjectKey, _fmtTs } from './utils.js';
+import { applySupabaseRuntimeConfig } from './supabase.js';
 import {
   recordGetDocsRead,
   recordListenerStart,
@@ -25,6 +26,7 @@ export async function loadConfigDepartmentsAndViewers() {
     const snap = await getDoc(doc(db, 'portal', 'config'));
     if (snap.exists()) {
       const data = snap.data();
+      applySupabaseRuntimeConfig(data);
       if (Array.isArray(data.departments) && data.departments.length > 0) {
         state.currentDepartments = data.departments;
       }

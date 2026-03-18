@@ -1,6 +1,7 @@
 // ========== 認証・ユーザー管理・ロック画面 ==========
 import { db, doc, getDoc, setDoc, getDocs, deleteDoc, updateDoc, collection, query, where, writeBatch, serverTimestamp, onSnapshot } from './config.js';
 import { state } from './state.js';
+import { applySupabaseRuntimeConfig } from './supabase.js';
 
 // Cross-module function references (set by script.js after all modules load)
 export const deps = {};
@@ -37,6 +38,7 @@ export async function isPINConfigured() {
 export async function loadInviteCodeConfig() {
   const snap = await getDoc(doc(db, 'portal', 'config'));
   const data = snap.exists() ? snap.data() : {};
+  applySupabaseRuntimeConfig(data);
   state.inviteCodeHash = data.inviteCodeHash || null;
   state.inviteCodePlain = data.inviteCodePlain || '';
   state.inviteCodeRequired = !!state.inviteCodeHash;
