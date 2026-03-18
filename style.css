@@ -2944,7 +2944,7 @@ html.font-xl { font-size: 21px; }
 }
 /* ライトモード: 入力欄を白+くっきりボーダーで背景と区別 */
 [data-theme="light"] .form-input {
-  background: #ffffff;
+  background: var(--bg-card-hover);
   border-color: rgba(31, 35, 40, 0.28);
   color: var(--text-primary);
 }
@@ -2956,7 +2956,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-muted);
 }
 [data-theme="light"] select.form-input {
-  background: #ffffff;
+  background: var(--bg-card-hover);
 }
 [data-theme="light"] .footer {
   color: rgba(26, 30, 58, 0.45);
@@ -8031,14 +8031,14 @@ html.font-xl { font-size: 21px; }
 [data-theme="light"] .email-profile-name-input,
 [data-theme="light"] .email-profile-prompt-area,
 [data-theme="light"] .email-received-area {
-  background: #ffffff;
+  background: var(--bg-card-hover);
   border-color: rgba(31, 35, 40, 0.28);
   color: var(--text-primary);
 }
 [data-theme="light"] .ep-input,
 [data-theme="light"] .ep-signature-area,
 [data-theme="light"] .ep-signature-preview {
-  background: #ffffff;
+  background: var(--bg-card-hover);
   border-color: rgba(31, 35, 40, 0.28);
   color: var(--text-primary);
 }
