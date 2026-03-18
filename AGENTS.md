@@ -648,3 +648,18 @@ assigned_tasks/{taskId}
 - 以後の remote SQL 実行は、基本的に `tools/invoke-supabase-sql.ps1` + Management API を優先する
 - `tools/invoke-supabase-sql.ps1` は UTF-8 body 送信済み。日本語を含む SQL でも remote 実行できる
 - Firestore 実データから生成した一時 SQL は repo に残さない。必要なら `supabase/generated-*.sql` をローカル生成して、その場で実行後に削除する
+## 2026-03-18 Supabase 追加進捗（orders）
+- `supabase/007_add_order_tables.sql` を remote 適用済み
+  - `order_suppliers / order_items / orders` を追加
+- `tools/build-firestore-orders-sql.mjs` を追加
+  - 対象: `order_suppliers / order_items / orders`
+- Firestore 実データの移行結果
+  - `order_suppliers`: Supabase 2 件
+  - `order_items`: Supabase 888 件
+  - `orders`: Supabase 10 件
+  - `orders.deleted_at is not null`: 8 件
+  - `orders.email_sent = true`: 6 件
+  - `orders.project_key` が入っている既存データ: 0 件
+- `tools/invoke-supabase-sql-statements.mjs` を更新
+  - `--batch-size=25` を追加
+  - 発注データのように statement 数が多い場合は、小分けバッチで Management API へ流す
