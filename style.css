@@ -19,6 +19,15 @@
   --text-primary:   #e6edf3;
   --text-secondary: rgba(230, 237, 243, 0.65);
   --text-muted:     rgba(230, 237, 243, 0.40);
+  --text-on-accent: #ffffff;
+
+  /* Neutral Surfaces */
+  --surface-solid:             #ffffff;
+  --surface-overlay-soft:      rgba(255, 255, 255, 0.10);
+  --surface-overlay-strong:    rgba(255, 255, 255, 0.30);
+  --surface-overlay-highlight: rgba(255, 255, 255, 0.35);
+  --surface-sheen:             rgba(255, 255, 255, 0.06);
+  --preview-light-card:        rgba(255, 255, 255, 0.90);
 
   /* Accent — ダークモードは明るめ（WCAG AA on dark bg） */
   --accent-blue:   #58a6ff;
@@ -198,7 +207,7 @@ body::after {
   align-items: center;
   justify-content: center;
   font-size: var(--font-size-xl);
-  color: white;
+  color: var(--text-on-accent);
   box-shadow: var(--shadow-glow-blue);
 }
 
@@ -383,7 +392,7 @@ body::after {
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
-  background: #fff;
+  background: var(--surface-solid);
   box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
 
@@ -651,7 +660,7 @@ body::after {
 
 /* Notion */
 .external-notion .external-icon {
-  background: #fff;
+  background: var(--surface-solid);
   border-radius: var(--radius-sm);
 }
 
@@ -660,7 +669,7 @@ body::after {
 }
 
 .external-notion:hover {
-  box-shadow: var(--shadow-md), 0 0 25px rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-md), 0 0 25px var(--surface-overlay-soft);
 }
 
 /* Slack */
@@ -758,7 +767,7 @@ body::after {
   align-items: center;
   justify-content: center;
   font-size: var(--font-size-sm);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .category-1 .category-icon {
@@ -848,7 +857,7 @@ body::after {
   font-size: 0.6rem;
   font-weight: 700;
   background: rgba(255, 140, 0, 0.88);
-  color: #fff;
+  color: var(--text-on-accent);
   padding: 2px 6px;
   border-radius: 4px;
   pointer-events: none;
@@ -1171,7 +1180,7 @@ body::after {
 
 .admin-fab.active {
   background: var(--gradient-accent);
-  color: white;
+  color: var(--text-on-accent);
   border-color: transparent;
   box-shadow: var(--shadow-glow-blue);
 }
@@ -1471,7 +1480,7 @@ body::after {
 .btn-modal-primary {
   padding: var(--space-sm) var(--space-xl);
   background: var(--gradient-accent);
-  color: white;
+  color: var(--text-on-accent);
   border: none;
   border-radius: var(--radius-sm);
   font-family: var(--font-family);
@@ -1530,8 +1539,8 @@ body::after {
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border: 2px solid var(--surface-overlay-strong);
+  border-top-color: var(--surface-solid);
   border-radius: var(--radius-full);
   animation: spin 0.7s linear infinite;
 }
@@ -1574,7 +1583,7 @@ body::after {
   justify-content: center;
   font-size: var(--font-size-sm);
   transition: all var(--transition-base);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .btn-edit-card  { background: var(--accent-blue); }
@@ -1657,7 +1666,7 @@ select option {
 }
 select option:checked {
   background-color: var(--accent-blue);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 /* select 要素自身の背景は bg-glass が透明なため bg-secondary で塗り直す */
 select.form-input,
@@ -2399,9 +2408,9 @@ select.todo-due-select {
 }
 
 .color-swatch.selected {
-  border-color: white;
+  border-color: var(--surface-solid);
   transform: scale(1.15);
-  box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+  box-shadow: 0 0 0 2px var(--surface-overlay-strong);
 }
 
 /* ===========================
@@ -2699,7 +2708,7 @@ select.todo-due-select {
   justify-content: center;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
   flex-shrink: 0;
   transition: transform 0.2s;
 }
@@ -3183,7 +3192,7 @@ html.font-xl { font-size: 21px; }
 .tp-bar {
   height: 5px;
   border-radius: 2px;
-  background: rgba(255,255,255,0.35);
+  background: var(--surface-overlay-highlight);
 }
 
 .tp-cards {
@@ -3210,7 +3219,7 @@ html.font-xl { font-size: 21px; }
   border-color: rgba(100,120,200,0.3);
 }
 .theme-preview--light .tp-bar { background: rgba(74,158,255,0.6); }
-.theme-preview--light .tp-cards > div { background: rgba(255,255,255,0.9); border: 1px solid rgba(100,120,200,0.2); }
+.theme-preview--light .tp-cards > div { background: var(--preview-light-card); border: 1px solid rgba(100,120,200,0.2); }
 
 
 /* フォントサイズグリッド */
@@ -3320,7 +3329,7 @@ html.font-xl { font-size: 21px; }
 }
 .btn-danger.ready {
   background: rgba(220, 38, 38, 0.85);
-  color: #fff;
+  color: var(--text-on-accent);
   box-shadow: 0 2px 10px rgba(220, 38, 38, 0.4);
 }
 .btn-danger.ready:hover {
@@ -3393,7 +3402,7 @@ html.font-xl { font-size: 21px; }
     0 20px 60px rgba(0, 0, 0, 0.6),
     0 4px 16px rgba(0, 0, 0, 0.35),
     0 0 0 1px rgba(0, 200, 255, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    inset 0 1px 0 var(--surface-sheen);
   padding: 0;
   overflow: hidden;
   animation: popupSlideIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
@@ -3592,7 +3601,7 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   justify-content: center;
   font-size: 0.95rem;
-  color: #fff;
+  color: var(--text-on-accent);
   flex-shrink: 0;
 }
 .todo-title {
@@ -3760,7 +3769,7 @@ html.font-xl { font-size: 21px; }
 }
 .todo-open-btn {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
+  color: var(--text-on-accent);
   border: none;
   border-radius: var(--radius-sm);
   padding: 7px 16px;
@@ -3807,7 +3816,7 @@ html.font-xl { font-size: 21px; }
 
 .todo-add-btn {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
+  color: var(--text-on-accent);
   border: none;
   border-radius: var(--radius-sm);
   padding: 7px 12px;
@@ -3879,7 +3888,7 @@ html.font-xl { font-size: 21px; }
   top: -4px;
   right: -4px;
   background: #ef4444;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.6rem;
   font-weight: 700;
   min-width: 16px;
@@ -3903,7 +3912,7 @@ html.font-xl { font-size: 21px; }
 .notice-new-badge {
   display: inline-block;
   background: linear-gradient(135deg, #3b82f6, #6366f1);
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.58rem;
   font-weight: 700;
   padding: 1px 5px;
@@ -4027,7 +4036,7 @@ html.font-xl { font-size: 21px; }
   top: -4px;
   right: -4px;
   background: #ef4444;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.6rem;
   font-weight: 700;
   min-width: 16px;
@@ -4106,7 +4115,7 @@ html.font-xl { font-size: 21px; }
   width: 100%;
   padding: 10px;
   background: linear-gradient(135deg, #10b981, #059669);
-  color: #fff;
+  color: var(--text-on-accent);
   border: none;
   border-radius: 10px;
   cursor: pointer;
@@ -4179,7 +4188,7 @@ html.font-xl { font-size: 21px; }
   flex: 1;
   padding: 6px;
   background: #10b981;
-  color: #fff;
+  color: var(--text-on-accent);
   border: none;
   border-radius: 7px;
   cursor: pointer;
@@ -4203,7 +4212,7 @@ html.font-xl { font-size: 21px; }
   flex: 1;
   padding: 6px;
   background: #3b82f6;
-  color: #fff;
+  color: var(--text-on-accent);
   border: none;
   border-radius: 7px;
   cursor: pointer;
@@ -4264,7 +4273,7 @@ html.font-xl { font-size: 21px; }
 }
 .ft-tab-badge {
   background: #ef4444;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.58rem;
   font-weight: 700;
   min-width: 14px;
@@ -4332,7 +4341,7 @@ html.font-xl { font-size: 21px; }
   flex: 1;
   padding: 6px 10px;
   background: linear-gradient(135deg, #1a73e8, #34a853);
-  color: #fff;
+  color: var(--text-on-accent);
   border: none;
   border-radius: var(--radius-sm);
   font-size: 0.76rem;
@@ -4465,7 +4474,7 @@ html.font-xl { font-size: 21px; }
   width: 28px; height: 28px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 0.7rem; font-weight: 700; color: #fff; flex-shrink: 0;
+  font-size: 0.7rem; font-weight: 700; color: var(--text-on-accent); flex-shrink: 0;
 }
 .ft-contact-name {
   flex: 1; font-size: 0.78rem; font-weight: 600; color: var(--text-primary);
@@ -4474,7 +4483,7 @@ html.font-xl { font-size: 21px; }
 .btn-ft-contact-send {
   padding: 4px 10px;
   background: linear-gradient(135deg, #1a73e8, #34a853);
-  color: #fff; border: none; border-radius: var(--radius-sm);
+  color: var(--text-on-accent); border: none; border-radius: var(--radius-sm);
   font-size: 0.72rem; font-weight: 600; cursor: pointer; white-space: nowrap;
   transition: opacity 0.15s; flex-shrink: 0;
 }
@@ -4599,7 +4608,7 @@ html.font-xl { font-size: 21px; }
   background: linear-gradient(135deg, #34a853, #1e7e34);
   border: none;
   border-radius: var(--radius-md);
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
@@ -4694,7 +4703,7 @@ html.font-xl { font-size: 21px; }
   top: -4px;
   right: -4px;
   background: #ef4444;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.6rem;
   font-weight: 700;
   min-width: 16px;
@@ -4902,7 +4911,7 @@ html.font-xl { font-size: 21px; }
   justify-content: center;
   font-size: 0.7rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-on-accent);
   flex-shrink: 0;
 }
 .chat-room-item-body {
@@ -4927,7 +4936,7 @@ html.font-xl { font-size: 21px; }
 }
 .chat-room-unread {
   background: #ef4444;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.58rem;
   font-weight: 700;
   min-width: 14px;
@@ -5066,7 +5075,7 @@ html.font-xl { font-size: 21px; }
   justify-content: center;
   font-size: 0.7rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-on-accent);
   flex-shrink: 0;
 }
 .chat-msg-body {
@@ -5291,7 +5300,7 @@ html.font-xl { font-size: 21px; }
   border-radius: 50%;
   background: linear-gradient(135deg, #3b82f6, #6366f1);
   border: none;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.8rem;
   cursor: pointer;
   flex-shrink: 0;
@@ -5527,7 +5536,7 @@ html.font-xl { font-size: 21px; }
   top: -4px;
   right: -4px;
   background: #ef4444;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.6rem;
   font-weight: 700;
   min-width: 16px;
@@ -5619,7 +5628,7 @@ html.font-xl { font-size: 21px; }
 }
 .task-tab-badge {
   background: #ef4444;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.58rem;
   font-weight: 700;
   min-width: 14px;
@@ -6229,7 +6238,7 @@ html.font-xl { font-size: 21px; }
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   border: none;
   border-radius: var(--radius-md);
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
@@ -7106,7 +7115,7 @@ html.font-xl { font-size: 21px; }
   width: 20px; height: 20px;
   left: 3px; top: 3px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--surface-solid);
   transition: transform 0.25s;
   box-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
@@ -7153,7 +7162,7 @@ html.font-xl { font-size: 21px; }
   transition: all 0.2s;
 }
 .autolock-time-btn:hover  { background: var(--bg-card); color: var(--text-primary); }
-.autolock-time-btn.active { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; font-weight: 600; }
+.autolock-time-btn.active { background: var(--accent-blue); border-color: var(--accent-blue); color: var(--text-on-accent); font-weight: 600; }
 
 /* ===========================
    管理者パネル モーダル
@@ -7192,7 +7201,7 @@ html.font-xl { font-size: 21px; }
   border-radius: 50%;
   background: linear-gradient(135deg,#6366f1,#8b5cf6);
   display: flex; align-items: center; justify-content: center;
-  font-size: 0.85rem; font-weight: 700; color: #fff;
+  font-size: 0.85rem; font-weight: 700; color: var(--text-on-accent);
   flex-shrink: 0;
 }
 .admin-user-name { font-size: 0.9rem; color: var(--text-primary); font-weight: 500; }
@@ -7280,7 +7289,7 @@ html.font-xl { font-size: 21px; }
   top: -4px;
   right: -4px;
   background: #ef4444;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.6rem;
   font-weight: 700;
   min-width: 16px;
@@ -7378,7 +7387,7 @@ html.font-xl { font-size: 21px; }
 }
 .reqboard-tab-badge {
   background: #ef4444;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.58rem;
   font-weight: 700;
   min-width: 14px;
@@ -8256,7 +8265,7 @@ html.font-xl { font-size: 21px; }
 }
 .cal-today .cal-day-num {
   background: var(--accent-blue);
-  color: #fff;
+  color: var(--text-on-accent);
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -8748,7 +8757,7 @@ html.font-xl { font-size: 21px; }
 }
 .btn-hide-ext-card:hover {
   background: rgba(255,80,80,0.7);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 /* 設定パネル：非表示カード管理 */
@@ -8766,7 +8775,7 @@ html.font-xl { font-size: 21px; }
   height: 18px;
   padding: 0 5px;
   background: var(--accent-blue);
-  color: #fff;
+  color: var(--text-on-accent);
   border-radius: 9px;
   font-size: 0.72rem;
   font-weight: 600;
@@ -10228,7 +10237,7 @@ html.font-xl { font-size: 21px; }
   top: -5px;
   right: -7px;
   background: #ef4444;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.55rem;
   font-weight: 700;
   min-width: 14px;
@@ -10349,7 +10358,7 @@ html.font-xl { font-size: 21px; }
   top: -5px;
   right: -8px;
   background: #ef4444;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.55rem;
   font-weight: 700;
   min-width: 14px;
@@ -10594,7 +10603,7 @@ html.font-xl { font-size: 21px; }
   height: 16px;
   padding: 0 4px;
   background: var(--accent-orange);
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 0.65rem;
   font-weight: 700;
   border-radius: 8px;
@@ -11194,7 +11203,7 @@ html.font-xl { font-size: 21px; }
   white-space: nowrap;
 }
 .ord-material-tab:hover { border-color: var(--border-glass-hover); color: var(--text-primary); }
-.ord-material-tab.active { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; }
+.ord-material-tab.active { background: var(--accent-blue); border-color: var(--accent-blue); color: var(--text-on-accent); }
 
 .ord-cat-group { margin-bottom: 4px; }
 .ord-cat-header {
@@ -11305,7 +11314,7 @@ html.font-xl { font-size: 21px; }
 }
 /* ライトモード */
 [data-theme="light"] .ord-preview-body {
-  background: #ffffff;
+  background: var(--bg-card-hover);
   border-color: rgba(31,35,40,0.2);
 }
 
@@ -11467,7 +11476,7 @@ html.font-xl { font-size: 21px; }
 .ord-cat-filter-tab.active {
   background: var(--accent-blue);
   border-color: var(--accent-blue);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 /* 選択済みトグル行 */
