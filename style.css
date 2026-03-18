@@ -2934,7 +2934,7 @@ html.font-xl { font-size: 21px; }
 }
 [data-theme="light"] .category-section,
 [data-theme="light"] .external-tools {
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--bg-card);
   border-color: rgba(100, 120, 200, 0.2);
   box-shadow: 0 2px 14px rgba(74, 100, 200, 0.07);
 }
@@ -2962,7 +2962,7 @@ html.font-xl { font-size: 21px; }
   color: rgba(26, 30, 58, 0.45);
 }
 [data-theme="light"] .notice-board {
-  background: rgba(255, 255, 255, 0.75);
+  background: var(--bg-card);
   border-color: rgba(100, 120, 200, 0.18);
 }
 /* ライトテーマ: ヘッダーアイコンボタン白飛び防止 */
@@ -5109,7 +5109,7 @@ html.font-xl { font-size: 21px; }
   right: 4px;
   background: none;
   border: none;
-  color: rgba(255,255,255,0.3);
+  color: var(--text-muted);
   font-size: 0.6rem;
   cursor: pointer;
   padding: 2px;
@@ -6629,16 +6629,16 @@ html.font-xl { font-size: 21px; }
   box-shadow: 0 6px 20px rgba(102,57,186,0.12);
 }
 [data-theme="light"] .email-content-area {
-  background: #ffffff;
+  background: var(--bg-card);
   border-color: rgba(31,35,40,0.28);
 }
 [data-theme="light"] .email-content-area:focus {
-  border-color: #6639ba;
+  border-color: var(--accent-purple);
 }
 [data-theme="light"] .email-tone-btn.active {
   background: rgba(102,57,186,0.10);
-  border-color: #6639ba;
-  color: #6639ba;
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
 }
 
 /* ===========================
