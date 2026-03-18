@@ -293,8 +293,7 @@ function bindProfileQuickActions() {
 
 initTodayDashboard({
   openProfileSettings: () => {
-    openEmailModal();
-    switchEmailTab('profile');
+    openEmailModal({ context: 'profile', initialTab: 'profile' });
   },
   openReceivedTasks: () => {
     state.taskProjectKeyFilter = '';
@@ -2485,8 +2484,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ===== ニックネーム / プロフィール =====
   document.getElementById('btn-user').addEventListener('click', () => {
     if (state.currentUsername) {
-      openEmailModal();
-      switchEmailTab('profile');
+      openEmailModal({ context: 'profile', initialTab: 'profile' });
       bindProfileQuickActions();
       return;
     }
@@ -2782,7 +2780,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ===== メールアシスタント =====
-  document.getElementById('btn-email-assist').addEventListener('click', openEmailModal);
+  document.getElementById('btn-email-assist').addEventListener('click', () => {
+    openEmailModal({ context: 'assistant', initialTab: 'compose' });
+  });
   document.getElementById('email-modal-close').addEventListener('click', closeEmailModal);
   // 新規/返信選択
   document.getElementById('email-type-new').addEventListener('click', () => setEmailMode('new'));

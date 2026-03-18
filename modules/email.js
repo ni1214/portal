@@ -25,6 +25,11 @@ TEL：{phone}
 E-mail：{email}
 ━━━━━━━━━━━━━━━━━━━━━━`;
 
+const EMAIL_MODAL_CONTEXTS = Object.freeze({
+  ASSISTANT: 'assistant',
+  PROFILE: 'profile',
+});
+
 // ===== モジュール内状態 =====
 let geminiApiKey    = null;
 let emailModalLoaded = false;
@@ -33,6 +38,7 @@ let emailContacts   = [];       // [{ id, companyName, personName }]
 let emailMode       = null;     // 'new' | 'reply'
 let selectedTone    = 'business';
 let selectedContactId = null;
+let emailModalContext = EMAIL_MODAL_CONTEXTS.ASSISTANT;
 
 function buildNormalizedProfile(raw = {}) {
   const realName = typeof raw.realName === 'string'
@@ -432,17 +438,49 @@ export function resetSignatureTemplate() {
 
 // ===== タブ切替 =====
 export function switchEmailTab(tabId) {
+  const resolvedTabId = emailModalContext === EMAIL_MODAL_CONTEXTS.PROFILE ? 'profile' : tabId;
   document.querySelectorAll('.email-tab').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === tabId);
+    btn.classList.toggle('active', btn.dataset.tab === resolvedTabId);
   });
   document.querySelectorAll('.email-tab-content').forEach(el => {
-    el.hidden = el.id !== `email-tab-${tabId}`;
+    el.hidden = el.id !== `email-tab-${resolvedTabId}`;
   });
 }
 
+function applyEmailModalContext(context = EMAIL_MODAL_CONTEXTS.ASSISTANT) {
+  emailModalContext = context === EMAIL_MODAL_CONTEXTS.PROFILE
+    ? EMAIL_MODAL_CONTEXTS.PROFILE
+    : EMAIL_MODAL_CONTEXTS.ASSISTANT;
+
+  const titleEl = document.getElementById('email-modal-title');
+  const subtitleEl = document.getElementById('email-modal-subtitle');
+  const tabsEl = document.getElementById('email-tabs');
+
+  if (emailModalContext === EMAIL_MODAL_CONTEXTS.PROFILE) {
+    if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-id-card"></i> プロフィール設定';
+    if (subtitleEl) subtitleEl.textContent = '所属部署・役割・署名を設定します。メール作成は左メニューの「メール生成AI」から開けます。';
+    if (tabsEl) tabsEl.hidden = true;
+    return;
+  }
+
+  if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-envelope-open-text"></i> メールアシスタント';
+  if (subtitleEl) subtitleEl.textContent = 'メール作成とプロフィール・署名設定ができます。';
+  if (tabsEl) tabsEl.hidden = false;
+}
+
 // ===== モーダル開閉 =====
-export function openEmailModal() {
+export function openEmailModal(options = {}) {
+  const normalized = typeof options === 'string'
+    ? { context: options }
+    : (options || {});
+  const context = normalized.context === EMAIL_MODAL_CONTEXTS.PROFILE
+    ? EMAIL_MODAL_CONTEXTS.PROFILE
+    : EMAIL_MODAL_CONTEXTS.ASSISTANT;
+  const initialTab = normalized.initialTab || (context === EMAIL_MODAL_CONTEXTS.PROFILE ? 'profile' : 'compose');
+
+  applyEmailModalContext(context);
   document.getElementById('email-modal').classList.add('visible');
+  switchEmailTab(initialTab);
   if (!emailModalLoaded) {
     loadEmailData();
     return;

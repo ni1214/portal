@@ -5932,7 +5932,7 @@ html.font-xl { font-size: 21px; }
 }
 .email-modal-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   padding: 14px 18px;
   border-bottom: 1px solid var(--border-glass);
@@ -5941,7 +5941,20 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
   flex-shrink: 0;
 }
+.email-modal-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
 .email-modal-header i { color: var(--accent-purple); margin-right: 7px; }
+.email-modal-subtitle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
 .email-modal-close {
   background: none;
   border: none;

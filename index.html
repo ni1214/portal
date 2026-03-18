@@ -1362,14 +1362,17 @@
     <div class="email-modal-inner">
 
       <div class="email-modal-header">
-        <span><i class="fa-solid fa-envelope-open-text"></i> メールアシスタント</span>
+        <div class="email-modal-heading">
+          <span id="email-modal-title"><i class="fa-solid fa-envelope-open-text"></i> メールアシスタント</span>
+          <p class="email-modal-subtitle" id="email-modal-subtitle">メール作成とプロフィール・署名設定ができます。</p>
+        </div>
         <button class="email-modal-close" id="email-modal-close" title="閉じる">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
       <!-- タブバー -->
-      <div class="email-tabs">
+      <div class="email-tabs" id="email-tabs">
         <button class="email-tab active" data-tab="compose">
           <i class="fa-solid fa-pen-to-square"></i> メール作成
         </button>
