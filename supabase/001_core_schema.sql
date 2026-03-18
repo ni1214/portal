@@ -119,12 +119,12 @@ create table if not exists public.public_categories (
 );
 
 create table if not exists public.public_cards (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key,
   label text not null,
   icon text not null default 'fa-solid fa-link',
   url text not null default '#',
   category_id text not null references public.public_categories(id) on delete restrict,
-  parent_id uuid references public.public_cards(id) on delete set null,
+  parent_id text references public.public_cards(id) on delete set null,
   order_index integer not null default 0,
   category_order integer not null default 0,
   is_external_tool boolean not null default false,
@@ -133,7 +133,7 @@ create table if not exists public.public_cards (
 );
 
 create table if not exists public.notices (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key,
   title text not null default '',
   body text not null default '',
   priority text not null default 'normal' check (priority in ('normal', 'urgent')),
@@ -147,7 +147,7 @@ create table if not exists public.notices (
 );
 
 create table if not exists public.notice_reactions (
-  notice_id uuid not null references public.notices(id) on delete cascade,
+  notice_id text not null references public.notices(id) on delete cascade,
   emoji text not null,
   username text not null,
   created_at timestamptz not null default timezone('utc', now()),
@@ -156,13 +156,13 @@ create table if not exists public.notice_reactions (
 
 create table if not exists public.user_notice_reads (
   username text not null references public.user_accounts(username) on delete cascade,
-  notice_id uuid not null references public.notices(id) on delete cascade,
+  notice_id text not null references public.notices(id) on delete cascade,
   read_at timestamptz not null default timezone('utc', now()),
   primary key (username, notice_id)
 );
 
 create table if not exists public.private_sections (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key,
   username text not null references public.user_accounts(username) on delete cascade,
   label text not null,
   icon text not null default 'fa-solid fa-star',
@@ -173,19 +173,19 @@ create table if not exists public.private_sections (
 );
 
 create table if not exists public.private_cards (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key,
   username text not null references public.user_accounts(username) on delete cascade,
   label text not null,
   icon text not null default 'fa-solid fa-link',
   url text not null default '#',
-  parent_section_id uuid references public.private_sections(id) on delete set null,
+  parent_section_id text references public.private_sections(id) on delete set null,
   order_index integer not null default 0,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
 
 create table if not exists public.user_todos (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key,
   username text not null references public.user_accounts(username) on delete cascade,
   text text not null,
   done boolean not null default false,

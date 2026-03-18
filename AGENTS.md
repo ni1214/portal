@@ -569,6 +569,11 @@ assigned_tasks/{taskId}
 ### 進捗
 - Supabase project `Portal` に CLI で link 済み
 - `supabase/001_core_schema.sql` は remote に適用済み
+- `supabase/002_fix_core_ids_to_text.sql` で Firestore 由来 ID を text に補正済み
+- `portal_config` は Firestore から Supabase へ移行済み
+- `public_categories` は 6 件移行済み
+- `public_cards` は 98 件移行済み
+- `public_cards.parent_id` 付き子カードは 34 件確認済み
 - 現時点で作成確認できた core tables:
   - `portal_config`
   - `public_categories`
@@ -584,3 +589,5 @@ assigned_tasks/{taskId}
   - `user_todos`
   - `user_email_contacts`
 - 秘密値は repo に書かず、`C:\Users\frx\.codex\memory.md` にのみ保存する
+- `supabase db query --linked` は一時 login role 初期化で不安定になることがある
+- 以後の remote SQL 実行は、基本的に `tools/invoke-supabase-sql.ps1` + Management API を優先する
