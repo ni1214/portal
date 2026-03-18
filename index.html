@@ -992,7 +992,7 @@
           <h4 class="guide-section-title"><span class="guide-icon">👤</span> ユーザーネーム設定</h4>
           <ul class="guide-list">
             <li>初回アクセス時にユーザーネーム設定ダイアログが表示されます。</li>
-            <li>ヘッダー右の<strong>「👤 名前」ボタン</strong>をクリックするといつでも変更できます。</li>
+            <li>ヘッダー右の<strong>「👤 名前」ボタン</strong>をクリックすると、プロフィール設定が開きます。所属部署・役割の設定や、そこからのユーザーネーム変更もできます。</li>
             <li>同じユーザーネームを別のPCで入力すれば、セクション順序やマイカテゴリを引き継げます。</li>
             <li>プロフィールで<strong>所属部署と役割</strong>を入れると、ダッシュボード先頭のフォーカス表示が自分向けに切り替わります。</li>
           </ul>
@@ -1492,6 +1492,7 @@
       <div class="email-tab-content" id="email-tab-profile" hidden>
 
         <div class="ep-section-title"><i class="fa-solid fa-user"></i> 個人情報（メールの書き出しに使用）</div>
+        <p class="ep-profile-note">所属部署・役割はここで設定します。右上の「👤 名前」からいつでも開けます。</p>
         <div class="ep-form-grid">
           <div class="ep-form-row">
             <label class="ep-label">正式名前 <span class="ep-required">*</span></label>
@@ -1532,6 +1533,9 @@
         <div class="ep-actions">
           <button class="btn-save-profile" id="ep-save">
             <i class="fa-solid fa-floppy-disk"></i> 保存する
+          </button>
+          <button class="btn-reset-sig" id="ep-edit-username">
+            <i class="fa-solid fa-user-pen"></i> ユーザーネーム変更
           </button>
           <button class="btn-reset-sig" id="ep-reset-sig">
             <i class="fa-solid fa-rotate-left"></i> 署名をデフォルトに戻す

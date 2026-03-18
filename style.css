@@ -6594,6 +6594,12 @@ html.font-xl { font-size: 21px; }
   gap: 7px;
 }
 .ep-section-title i { color: var(--accent-purple); }
+.ep-profile-note {
+  margin: 6px 0 12px;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
 .ep-hint {
   font-size: 0.68rem;
   color: var(--text-muted);

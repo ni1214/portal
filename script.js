@@ -282,6 +282,15 @@ function buildTodayDateKey() {
   return `${year}-${month}-${day}`;
 }
 
+function bindProfileQuickActions() {
+  const renameBtn = document.getElementById('ep-edit-username');
+  if (!renameBtn) return;
+  renameBtn.onclick = () => {
+    closeEmailModal();
+    showUsernameModal(true);
+  };
+}
+
 initTodayDashboard({
   openProfileSettings: () => {
     openEmailModal();
@@ -2473,8 +2482,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === e.currentTarget) closeServicePicker();
   });
 
-  // ===== ニックネーム =====
-  document.getElementById('btn-user').addEventListener('click', () => showUsernameModal(true));
+  // ===== ニックネーム / プロフィール =====
+  document.getElementById('btn-user').addEventListener('click', () => {
+    if (state.currentUsername) {
+      openEmailModal();
+      switchEmailTab('profile');
+      bindProfileQuickActions();
+      return;
+    }
+    showUsernameModal(true);
+  });
   const storedUsername = state.currentUsername;
   if (storedUsername) {
     state.currentUsername = null;
@@ -2798,6 +2815,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('ep-save').addEventListener('click', saveUserEmailProfile);
   document.getElementById('ep-reset-sig').addEventListener('click', resetSignatureTemplate);
   document.getElementById('ep-signature').addEventListener('input', e => updateSignaturePreview(e.target.value));
+  bindProfileQuickActions();
 
   // ===== チャットFAB =====
   document.getElementById('chat-fab').addEventListener('click', () => {
