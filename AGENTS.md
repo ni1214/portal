@@ -565,3 +565,22 @@ assigned_tasks/{taskId}
 1. `Step 0`: Supabase プロジェクト情報の扱いをローカル秘密値へ固定
 2. `Step 1`: `supabase/001_core_schema.sql` を作成
 3. `Step 2`: shared core 用の DB adapter 設計へ入る
+
+### 進捗
+- Supabase project `Portal` に CLI で link 済み
+- `supabase/001_core_schema.sql` は remote に適用済み
+- 現時点で作成確認できた core tables:
+  - `portal_config`
+  - `public_categories`
+  - `public_cards`
+  - `notices`
+  - `notice_reactions`
+  - `user_accounts`
+  - `user_profiles`
+  - `user_preferences`
+  - `user_lock_pins`
+  - `private_sections`
+  - `private_cards`
+  - `user_todos`
+  - `user_email_contacts`
+- 秘密値は repo に書かず、`C:\Users\frx\.codex\memory.md` にのみ保存する

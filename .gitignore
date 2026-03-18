@@ -3,3 +3,6 @@
 
 # 誤作成された空リポジトリ
 potal/
+
+# Supabase CLI temporary files
+supabase/.temp/
