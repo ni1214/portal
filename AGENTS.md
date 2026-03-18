@@ -567,6 +567,13 @@ assigned_tasks/{taskId}
   - `read_notices`: Firestore 側 11 件あるが、参照先 `notices` が現在 0 件のため孤立データ扱いで保留
 - `read_notices` は `tools/build-firestore-private-data-sql.mjs` が `public.notices` に存在する ID だけ投入する
   - 将来 `notices` を移したあとに同スクリプトを再実行すれば `user_notice_reads` を追加入力できる
+- `tools/build-firestore-user-contacts-sql.mjs` を追加済み
+  - 対象: `email_contacts / drive_link / drive_contacts`
+- Firestore 個人連絡先データの移行状況
+  - `email_contacts`: Supabase 1 件移行済み
+  - `drive_link`: Supabase 1 件移行済み
+  - `drive_contacts`: Supabase 1 件移行済み
+  - 現時点の実データは `髙林` の 1 セットのみ確認
 
 ## Supabase 移行メモ（2026-03-18 追加）
 
