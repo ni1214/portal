@@ -1268,7 +1268,7 @@ body::after {
   flex-direction: column;
   gap: var(--space-lg);
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.15) transparent;
+  scrollbar-color: var(--border-glass-hover) transparent;
 }
 
 .guide-body::-webkit-scrollbar { width: 4px; }
@@ -1381,7 +1381,7 @@ body::after {
   transform: translateY(16px);
   transition: transform var(--transition-slow);
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.15) transparent;
+  scrollbar-color: var(--border-glass-hover) transparent;
 }
 
 .modal-overlay.visible .modal-glass {
@@ -1764,7 +1764,7 @@ select.todo-due-select {
   border-radius: var(--radius-sm);
   margin-bottom: var(--space-sm);
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.15) transparent;
+  scrollbar-color: var(--border-glass-hover) transparent;
 }
 
 .icon-picker::-webkit-scrollbar { width: 4px; }
@@ -2172,7 +2172,7 @@ select.todo-due-select {
   overflow-x: auto;
   padding-bottom: var(--space-sm);
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.15) transparent;
+  scrollbar-color: var(--border-glass-hover) transparent;
 }
 
 .forecast-scroll::-webkit-scrollbar { height: 4px; }
