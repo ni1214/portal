@@ -4,7 +4,7 @@
     {
       "name": "portal-dev",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["-e", "require('http').createServer((req,res)=>{const fs=require('fs'),path=require('path');let f=path.join('C:/portal/.claude/worktrees/determined-leavitt',req.url==='/'?'index.html':req.url);try{const ext=path.extname(f);const t={'html':'text/html','css':'text/css','js':'text/javascript','svg':'image/svg+xml','png':'image/png','ico':'image/x-icon'};res.writeHead(200,{'Content-Type':t[ext.slice(1)]||'text/plain'});res.end(fs.readFileSync(f));}catch(e){res.writeHead(404);res.end('not found');}}).listen(8080)"],
+      "runtimeArgs": ["C:/Users/frx/Desktop/portal/.claude/server.js"],
       "port": 8080
     }
   ]
