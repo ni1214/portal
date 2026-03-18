@@ -3,7 +3,7 @@
 
 // ===== Foundation =====
 import {
-  db, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc,
+  db, doc, documentId, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc,
   collection, query, where, orderBy, limit, writeBatch, serverTimestamp, onSnapshot,
   arrayUnion, arrayRemove,
   WEATHER_API_KEY, WEATHER_LAT, WEATHER_LON,
@@ -173,6 +173,15 @@ import {
   wrapTrackedListenerUnsubscribe,
 } from './modules/read-diagnostics.js';
 
+import {
+  deps as sharedSpaceDeps,
+  initSharedSpace,
+  renderSharedHome,
+  renderSharedLinksBrowser,
+  openSharedLinksModal,
+  closeSharedLinksModal,
+} from './modules/shared-space.js';
+
 
 // ========== 依存注入 ==========
 // 各モジュールが必要とするクロスモジュール関数を注入
@@ -199,7 +208,8 @@ Object.assign(ftDeps, {
 
 Object.assign(noticeDeps, {
   updateLockNotifications,
-  renderTodayDashboard
+  renderTodayDashboard,
+  renderSharedHome,
 });
 
 Object.assign(taskDeps, {
@@ -318,6 +328,19 @@ function focusNoticeBoardFromDashboard() {
   }, 1800);
 }
 
+function focusWeatherWidget() {
+  const widget = document.getElementById('weather-widget');
+  if (!widget) return;
+
+  if (widget.hidden) {
+    widget.hidden = false;
+  }
+
+  const headerOffset = window.innerWidth <= 768 ? 76 : 92;
+  const targetTop = Math.max(0, window.scrollY + widget.getBoundingClientRect().top - headerOffset);
+  window.scrollTo({ top: targetTop, behavior: 'smooth' });
+}
+
 function bindProfileQuickActions() {
   const renameBtn = document.getElementById('ep-edit-username');
   if (!renameBtn) return;
@@ -364,6 +387,21 @@ initTodayDashboard({
   },
 });
 initReadDiagnostics();
+
+Object.assign(sharedSpaceDeps, {
+  ensureSharedCardsLoaded,
+  buildSection,
+  openCategoryModal,
+  normalizeForSearch,
+  focusNoticeBoard: focusNoticeBoardFromDashboard,
+  focusWeatherWidget,
+  openPropertySummary: () => openPropertySummaryModal(),
+  openOrderModal,
+  openReqModal: () => openReqModal(),
+  openEmailModal,
+});
+
+initSharedSpace(sharedSpaceDeps);
 
 initPropertySummary({
   openRequests: projectKey => {
@@ -624,6 +662,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
 
     state.privateCategories = privSecSnap.docs.map(d => ({ docId: d.id, isPrivate: true, ...d.data() }));
     state.privateCards      = privCardSnap.docs.map(d => ({ id: d.id, isPrivate: true, ...d.data() }));
+    await ensureFavoritePublicCardsLoaded();
 
     renderAllSections();
     // 初回ログイン時：全セクションをデフォルト折りたたみにする
@@ -889,21 +928,68 @@ function sortCards(cards = []) {
   );
 }
 
+let _sharedCardsLoadPromise = null;
+
 function rerenderCards() {
   renderAllSections();
   renderFavorites();
+  renderSharedLinksBrowser();
 }
 
-async function subscribeCards() {
-  if (state.unsubscribeCards) {
-    state.unsubscribeCards();
-    state.unsubscribeCards = null;
+async function ensureSharedCardsLoaded(force = false) {
+  if (state.sharedCardsLoaded && !force) {
+    renderSharedHome();
+    renderSharedLinksBrowser();
+    return state.allCards;
   }
-  const q = query(collection(db, 'cards'), orderBy('categoryOrder'));
-  const snap = await getDocs(q);
-  recordGetDocsRead('cards.all', '公開カード一覧', 'cards', snap.size);
-  state.allCards = sortCards(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  rerenderCards();
+  if (_sharedCardsLoadPromise && !force) return _sharedCardsLoadPromise;
+
+  state.sharedCardsLoading = true;
+  renderSharedHome();
+  renderSharedLinksBrowser();
+
+  _sharedCardsLoadPromise = (async () => {
+    const q = query(collection(db, 'cards'), orderBy('categoryOrder'));
+    const snap = await getDocs(q);
+    recordGetDocsRead('cards.all', '公開カード一覧', 'cards', snap.size);
+    state.allCards = sortCards(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    state.sharedCardsLoaded = true;
+    rerenderCards();
+    renderSharedHome();
+    return state.allCards;
+  })();
+
+  try {
+    return await _sharedCardsLoadPromise;
+  } finally {
+    state.sharedCardsLoading = false;
+    _sharedCardsLoadPromise = null;
+    renderSharedHome();
+    renderSharedLinksBrowser();
+  }
+}
+
+async function ensureFavoritePublicCardsLoaded() {
+  const favIds = getFavorites();
+  if (!favIds.length) return;
+
+  const privateCardIds = new Set((state.privateCards || []).map(card => card.id));
+  const knownCardIds = new Set((state.allCards || []).map(card => card.id));
+  const targetIds = favIds.filter(id => !privateCardIds.has(id) && !knownCardIds.has(id));
+  if (!targetIds.length) return;
+
+  const loadedCards = [];
+  for (let i = 0; i < targetIds.length; i += 10) {
+    const chunk = targetIds.slice(i, i + 10);
+    const favQuery = query(collection(db, 'cards'), where(documentId(), 'in', chunk));
+    const snap = await getDocs(favQuery);
+    recordGetDocsRead('cards.favorites', 'お気に入り公開カード', 'cards', snap.size);
+    loadedCards.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }
+
+  if (!loadedCards.length) return;
+  const remainingCards = (state.allCards || []).filter(card => !targetIds.includes(card.id));
+  state.allCards = sortCards([...remainingCards, ...loadedCards]);
 }
 
 async function saveCard(docId, data) {
@@ -1042,23 +1128,6 @@ function renderAllSections() {
     personalBody.appendChild(buildSection(cat, catCards));
   });
 
-  // 公開カテゴリ → 全社共有スペースへ
-  orderedPublic.forEach(cat => {
-    const catCards = state.allCards.filter(c => c.category === cat.id).sort((a, b) => a.order - b.order);
-    sharedBody.appendChild(buildSection(cat, catCards));
-  });
-
-  // 「カテゴリを追加」→ 共有スペース末尾
-  const sharedAddWrap = document.createElement('div');
-  sharedAddWrap.className = 'btn-add-category-wrap';
-  sharedAddWrap.innerHTML = `
-    <div class="add-btn-group">
-      <button class="btn-add-category"><i class="fa-solid fa-plus"></i> カテゴリを追加</button>
-      <p class="add-btn-desc"><i class="fa-solid fa-users"></i> 全社員に共有されます</p>
-    </div>`;
-  sharedAddWrap.querySelector('.btn-add-category').addEventListener('click', () => openCategoryModal(null));
-  sharedBody.appendChild(sharedAddWrap);
-
   // 「マイカテゴリを追加」→ 個人スペース末尾
   if (state.currentUsername) {
     const privateAddWrap = document.createElement('div');
@@ -1071,6 +1140,9 @@ function renderAllSections() {
     privateAddWrap.querySelector('.btn-add-private-section').addEventListener('click', () => openPrivateSectionModal(null));
     personalBody.appendChild(privateAddWrap);
   }
+
+  renderSharedHome();
+  renderSharedLinksBrowser();
 }
 
 // ===== セクション折り畳み =====
@@ -1646,7 +1718,8 @@ function renderFavorites() {
   const grid = document.getElementById('favorites-grid');
   const count = document.getElementById('favorites-count');
 
-  const cards = favIds.map(id => state.allCards.find(c => c.id === id)).filter(Boolean);
+  const cardPool = [...(state.allCards || []), ...(state.privateCards || [])];
+  const cards = favIds.map(id => cardPool.find(c => c.id === id)).filter(Boolean);
 
   if (!cards.length) {
     if (state.favoritesOnlyMode) {
@@ -2262,7 +2335,7 @@ function _clearSearchResults() {
   const noResults      = document.getElementById('no-results');
   if (resultsSection) { resultsSection.hidden = true; resultsSection.innerHTML = ''; }
   if (noResults) noResults.classList.remove('visible');
-  document.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap, .area-header')
+  document.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap, .area-header, .shared-home-shell')
     .forEach(el => el.classList.remove('search-hidden'));
 }
 
@@ -2282,7 +2355,7 @@ function initSearch() {
     }
   });
 
-  searchInput.addEventListener('input', () => {
+  searchInput.addEventListener('input', async () => {
     const raw = searchInput.value.trim();
     const q   = normalizeForSearch(raw);
     container.classList.toggle('has-value', raw.length > 0);
@@ -2293,8 +2366,24 @@ function initSearch() {
     }
 
     // 検索中はすべてのセクションとエリアヘッダーを隠す
-    document.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap, .area-header')
+    document.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap, .area-header, .shared-home-shell')
       .forEach(el => el.classList.add('search-hidden'));
+
+    if (!state.sharedCardsLoaded && !state.sharedCardsLoading) {
+      resultsSection.hidden = false;
+      resultsSection.innerHTML = `
+        <div class="search-results-header">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <span>共有リンクを検索するために一覧を読み込んでいます...</span>
+        </div>
+      `;
+      noResults.classList.remove('visible');
+      try {
+        await ensureSharedCardsLoaded();
+      } catch (err) {
+        console.error('共有リンク検索の読み込みエラー:', err);
+      }
+    }
 
     // 全カードからマッチするものを直接探す（非表示カードは除く）
     const allData = [...(state.allCards || []), ...(state.privateCards || [])];
@@ -2470,8 +2559,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 常に編集モード
   document.body.classList.add('edit-mode');
 
-  // まず初期データで即時描画
-  state.allCards = INITIAL_CARDS.map((c, i) => ({ id: `init-${i}`, ...c }));
+  // 公開リンクは必要な時だけ読み込む。共有ホームは軽い状態で先に描画する。
+  state.allCards = [];
   renderAllSections();
   initSearch();
   renderFavorites();
@@ -2581,7 +2670,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await migrateAddBox();
     await loadCategories();
     subscribeNotices();
-    await subscribeCards();
+    renderAllSections();
+    renderFavorites();
   } catch (err) {
     console.error('Firestore エラー:', err);
   }

@@ -48,6 +48,11 @@ export const state = {
   // カード・カテゴリ
   allCards: [],
   allCategories: [...DEFAULT_CATEGORIES],
+  sharedCardsLoaded: false,
+  sharedCardsLoading: false,
+  sharedLinksModalOpen: false,
+  sharedLinksQuery: '',
+  sharedLinksCategory: 'all',
   allNotices: [],
   visibleNotices: [],
   _noticeUnsub: null,

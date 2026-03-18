@@ -277,6 +277,8 @@
       </div>
       <div class="space-body" id="shared-space-body">
 
+        <section id="shared-home-panel" class="shared-home-panel"></section>
+
         <!-- ==================== お知らせボード（全社共有スペースの先頭） ==================== -->
         <section id="notice-board" class="notice-board"></section>
 
@@ -346,6 +348,36 @@
       <div class="modal-footer" style="margin-top:var(--space-lg)">
         <button id="service-picker-cancel" class="btn-secondary">閉じる</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ==================== 共有リンクモーダル ==================== -->
+  <div class="modal-overlay" id="shared-links-modal">
+    <div class="modal-glass shared-links-glass">
+      <div class="shared-links-header">
+        <div>
+          <div class="shared-links-kicker">Shared Links</div>
+          <h3 class="shared-links-title"><i class="fa-solid fa-grid-2"></i> 共有リンク一覧</h3>
+          <p class="shared-links-desc">起動時の読み取りを抑えるため、この画面を開いた時だけ共有リンクを読み込みます。</p>
+        </div>
+        <button type="button" class="shared-links-close" id="shared-links-close" title="閉じる">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="shared-links-toolbar">
+        <input
+          type="text"
+          id="shared-links-search"
+          class="form-input shared-links-search"
+          placeholder="共有リンク名で検索"
+          autocomplete="off"
+        >
+        <div class="shared-links-status" id="shared-links-status"></div>
+      </div>
+
+      <div class="shared-links-chip-list" id="shared-links-chip-list"></div>
+      <div class="shared-links-browser-body" id="shared-links-browser-body"></div>
     </div>
   </div>
 

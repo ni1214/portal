@@ -165,6 +165,7 @@ export function refreshNoticeVisibility() {
   updateNoticeBadge();
   setupNoticeObserver();
   deps.renderTodayDashboard?.();
+  deps.renderSharedHome?.();
 }
 
 // ========== お知らせ未読管理 ==========
@@ -177,6 +178,7 @@ export async function loadReadNotices(username) {
     updateNoticeBadge();
     renderNotices(state.visibleNotices);
     deps.renderTodayDashboard?.();
+    deps.renderSharedHome?.();
   } catch (err) {
     console.error('既読データ読み込みエラー:', err);
   }
@@ -197,6 +199,7 @@ export async function markAllNoticesRead() {
   updateNoticeBadge();
   renderNotices(state.visibleNotices);
   deps.renderTodayDashboard?.();
+  deps.renderSharedHome?.();
 }
 
 export async function acknowledgeNotice(noticeId) {
@@ -210,6 +213,7 @@ export async function acknowledgeNotice(noticeId) {
   updateNoticeBadge();
   renderNotices(state.visibleNotices);
   deps.renderTodayDashboard?.();
+  deps.renderSharedHome?.();
 
   try {
     const batch = writeBatch(db);
@@ -226,6 +230,7 @@ export async function acknowledgeNotice(noticeId) {
     updateNoticeBadge();
     renderNotices(state.visibleNotices);
     deps.renderTodayDashboard?.();
+    deps.renderSharedHome?.();
     console.error('お知らせ確認の保存に失敗しました:', err);
     alert('確認の保存に失敗しました。時間をおいてもう一度お試しください。');
   }
