@@ -179,7 +179,8 @@ create table if not exists public.private_cards (
   label text not null,
   icon text not null default 'fa-solid fa-link',
   url text not null default '#',
-  parent_section_id text references public.private_sections(id) on delete set null,
+  section_id text not null references public.private_sections(id) on delete cascade,
+  parent_id text references public.private_cards(id) on delete set null,
   order_index integer not null default 0,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
@@ -221,7 +222,7 @@ create index if not exists idx_private_sections_user_order
   on public.private_sections(username, order_index);
 
 create index if not exists idx_private_cards_user_parent_order
-  on public.private_cards(username, parent_section_id, order_index);
+  on public.private_cards(username, section_id, parent_id, order_index);
 
 create index if not exists idx_user_todos_user_created
   on public.user_todos(username, created_at);

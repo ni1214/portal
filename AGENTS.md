@@ -553,6 +553,21 @@ assigned_tasks/{taskId}
 - 「記録して」と言われた場合は **AGENTS.md** に記載する（MEMORY.md はローカル専用のため Git 経由で別 PC に引き継がれない）
 - 実機テスト用の招待コード・PIN など**秘密値そのものは AGENTS.md に書かない**。必要な場合はローカル専用の `C:\Users\frx\.codex\memory.md` を参照し、ここには「ローカル専用メモを使う」という運用ルールだけ残す
 
+## Supabase 移行追記（2026-03-18 / 個人データ続き）
+- `supabase/004_fix_private_cards_hierarchy.sql` を remote 適用済み
+  - `private_cards` は `parent_section_id` ではなく `section_id + parent_id` を持つ形に補正した
+- `tools/build-firestore-private-data-sql.mjs` を追加済み
+  - 対象: `section_order / read_notices / private_sections / private_cards / todos`
+  - 実データ入りの生成 SQL は `supabase/generated-*.sql` としてローカル生成し、実行後に削除する
+- Firestore 個人データの移行状況
+  - `section_order`: Firestore 側 0 件
+  - `private_sections`: Supabase 1 件移行済み
+  - `private_cards`: Supabase 1 件移行済み
+  - `todos`: Supabase 1 件移行済み
+  - `read_notices`: Firestore 側 11 件あるが、参照先 `notices` が現在 0 件のため孤立データ扱いで保留
+- `read_notices` は `tools/build-firestore-private-data-sql.mjs` が `public.notices` に存在する ID だけ投入する
+  - 将来 `notices` を移したあとに同スクリプトを再実行すれば `user_notice_reads` を追加入力できる
+
 ## Supabase 移行メモ（2026-03-18 追加）
 
 ### 方針
