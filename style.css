@@ -5918,7 +5918,8 @@ html.font-xl { font-size: 21px; }
 /* ===========================
    メール返信アシスタント モーダル
    =========================== */
-.email-modal-inner {
+.email-modal-inner,
+.profile-modal-inner {
   background: var(--bg-secondary);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl);
@@ -5930,7 +5931,8 @@ html.font-xl { font-size: 21px; }
   box-shadow: 0 30px 80px rgba(0,0,0,0.5);
   animation: modalSlideUp 0.22s ease;
 }
-.email-modal-header {
+.email-modal-header,
+.profile-modal-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -5955,7 +5957,8 @@ html.font-xl { font-size: 21px; }
   font-weight: 500;
   line-height: 1.5;
 }
-.email-modal-close {
+.email-modal-close,
+.profile-modal-close {
   background: none;
   border: none;
   color: var(--text-muted);
@@ -5965,12 +5968,25 @@ html.font-xl { font-size: 21px; }
   border-radius: var(--radius-sm);
   transition: color 0.15s;
 }
-.email-modal-close:hover { color: var(--text-primary); }
+.email-modal-close:hover,
+.profile-modal-close:hover { color: var(--text-primary); }
 .email-modal-body {
   display: flex;
   flex: 1;
   overflow: hidden;
 }
+.profile-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 18px;
+}
+.profile-modal-body::-webkit-scrollbar { width: 4px; }
+.profile-modal-body::-webkit-scrollbar-track { background: transparent; }
+.profile-modal-body::-webkit-scrollbar-thumb { background: var(--border-glass); border-radius: 2px; }
 
 /* 左サイドバー */
 .email-profile-sidebar {
@@ -6341,6 +6357,14 @@ html.font-xl { font-size: 21px; }
 /* モバイル対応 */
 @media (max-width: 640px) {
   .email-modal-body { flex-direction: column; }
+  .email-compose-info {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .email-compose-info-btn {
+    width: 100%;
+    justify-content: center;
+  }
   .email-profile-sidebar {
     width: 100%;
     border-right: none;
@@ -6400,6 +6424,28 @@ html.font-xl { font-size: 21px; }
 .email-tab-content::-webkit-scrollbar { width: 4px; }
 .email-tab-content::-webkit-scrollbar-track { background: transparent; }
 .email-tab-content::-webkit-scrollbar-thumb { background: var(--border-glass); border-radius: 2px; }
+.email-compose-panel {
+  min-height: 0;
+}
+.email-compose-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+}
+.email-compose-info-text {
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.email-compose-info-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
 
 /* ===========================
    メール作成 新UI
@@ -7963,7 +8009,8 @@ html.font-xl { font-size: 21px; }
    =========================== */
 
 /* メールアシスタント ライト対応 */
-[data-theme="light"] .email-modal-inner {
+[data-theme="light"] .email-modal-inner,
+[data-theme="light"] .profile-modal-inner {
   background: rgba(241, 243, 247, 0.98);
   border-color: rgba(31, 35, 40, 0.15);
 }
@@ -7974,9 +8021,21 @@ html.font-xl { font-size: 21px; }
   border-color: rgba(31, 35, 40, 0.28);
   color: var(--text-primary);
 }
+[data-theme="light"] .ep-input,
+[data-theme="light"] .ep-signature-area,
+[data-theme="light"] .ep-signature-preview {
+  background: #ffffff;
+  border-color: rgba(31, 35, 40, 0.28);
+  color: var(--text-primary);
+}
 [data-theme="light"] .email-profile-name-input:focus,
 [data-theme="light"] .email-profile-prompt-area:focus,
 [data-theme="light"] .email-received-area:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.14);
+}
+[data-theme="light"] .ep-input:focus,
+[data-theme="light"] .ep-signature-area:focus {
   border-color: var(--accent-blue);
   box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.14);
 }

@@ -109,12 +109,12 @@ import {
 import {
   initEmail,
   loadUserEmailProfile,
-  loadEmailData,
   saveGeminiApiKey, saveNewContact,
   generateEmail, copyEmailOutput, resetEmailOutput,
   setEmailMode, resetEmailMode, selectTone,
   saveUserEmailProfile, resetSignatureTemplate, updateSignaturePreview,
-  switchEmailTab, openEmailModal, closeEmailModal
+  openEmailModal, closeEmailModal,
+  openProfileModal, closeProfileModal
 } from './modules/email.js';
 
 import {
@@ -286,14 +286,14 @@ function bindProfileQuickActions() {
   const renameBtn = document.getElementById('ep-edit-username');
   if (!renameBtn) return;
   renameBtn.onclick = () => {
-    closeEmailModal();
+    closeProfileModal();
     showUsernameModal(true);
   };
 }
 
 initTodayDashboard({
   openProfileSettings: () => {
-    openEmailModal({ context: 'profile', initialTab: 'profile' });
+    openProfileModal();
   },
   openReceivedTasks: () => {
     state.taskProjectKeyFilter = '';
@@ -2484,7 +2484,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ===== ニックネーム / プロフィール =====
   document.getElementById('btn-user').addEventListener('click', () => {
     if (state.currentUsername) {
-      openEmailModal({ context: 'profile', initialTab: 'profile' });
+      openProfileModal();
       bindProfileQuickActions();
       return;
     }
@@ -2781,9 +2781,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== メールアシスタント =====
   document.getElementById('btn-email-assist').addEventListener('click', () => {
-    openEmailModal({ context: 'assistant', initialTab: 'compose' });
+    openEmailModal();
   });
   document.getElementById('email-modal-close').addEventListener('click', closeEmailModal);
+  document.getElementById('email-modal').addEventListener('click', e => {
+    if (e.target.id === 'email-modal') closeEmailModal();
+  });
+  document.getElementById('profile-modal-close').addEventListener('click', closeProfileModal);
+  document.getElementById('profile-modal').addEventListener('click', e => {
+    if (e.target.id === 'profile-modal') closeProfileModal();
+  });
+  document.getElementById('email-open-profile-btn').addEventListener('click', () => {
+    closeEmailModal();
+    openProfileModal();
+  });
   // 新規/返信選択
   document.getElementById('email-type-new').addEventListener('click', () => setEmailMode('new'));
   document.getElementById('email-type-reply').addEventListener('click', () => setEmailMode('reply'));
@@ -2808,9 +2819,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-reset-output').addEventListener('click', resetEmailOutput);
   document.getElementById('email-api-key-save').addEventListener('click', saveGeminiApiKey);
   // タブ
-  document.querySelectorAll('.email-tab').forEach(btn => {
-    btn.addEventListener('click', () => switchEmailTab(btn.dataset.tab));
-  });
   // プロフィール
   document.getElementById('ep-save').addEventListener('click', saveUserEmailProfile);
   document.getElementById('ep-reset-sig').addEventListener('click', resetSignatureTemplate);

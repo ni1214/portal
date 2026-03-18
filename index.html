@@ -1364,25 +1364,22 @@
       <div class="email-modal-header">
         <div class="email-modal-heading">
           <span id="email-modal-title"><i class="fa-solid fa-envelope-open-text"></i> メールアシスタント</span>
-          <p class="email-modal-subtitle" id="email-modal-subtitle">メール作成とプロフィール・署名設定ができます。</p>
+          <p class="email-modal-subtitle" id="email-modal-subtitle">メール作成専用です。所属部署・署名の変更はプロフィール設定から行います。</p>
         </div>
         <button class="email-modal-close" id="email-modal-close" title="閉じる">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
-      <!-- タブバー -->
-      <div class="email-tabs" id="email-tabs">
-        <button class="email-tab active" data-tab="compose">
-          <i class="fa-solid fa-pen-to-square"></i> メール作成
-        </button>
-        <button class="email-tab" data-tab="profile">
-          <i class="fa-solid fa-id-card"></i> プロフィール・署名
-        </button>
-      </div>
-
-      <!-- ===== タブ1：メール作成 ===== -->
-      <div class="email-tab-content" id="email-tab-compose">
+      <div class="email-tab-content email-compose-panel" id="email-tab-compose">
+        <div class="email-compose-info">
+          <div class="email-compose-info-text">
+            署名や所属部署はプロフィール設定で変更します。右上の「👤 名前」または下のボタンから開けます。
+          </div>
+          <button class="btn-modal-secondary email-compose-info-btn" id="email-open-profile-btn">
+            <i class="fa-solid fa-id-card"></i> プロフィール設定
+          </button>
+        </div>
 
         <!-- ステップ1：新規/返信選択 -->
         <div class="email-type-select" id="email-type-select">
@@ -1491,9 +1488,22 @@
         </div>
       </div>
 
-      <!-- ===== タブ2：プロフィール・署名設定 ===== -->
-      <div class="email-tab-content" id="email-tab-profile" hidden>
+    </div>
+  </div>
 
+  <div class="modal-overlay" id="profile-modal">
+    <div class="profile-modal-inner">
+      <div class="profile-modal-header">
+        <div class="email-modal-heading">
+          <span><i class="fa-solid fa-id-card"></i> プロフィール設定</span>
+          <p class="email-modal-subtitle">所属部署・役割・署名を設定します。メール作成は左メニューの「メール生成AI」から開けます。</p>
+        </div>
+        <button class="profile-modal-close" id="profile-modal-close" title="閉じる">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="profile-modal-body" id="profile-modal-body">
         <div class="ep-section-title"><i class="fa-solid fa-user"></i> 個人情報（メールの書き出しに使用）</div>
         <p class="ep-profile-note">所属部署・役割はここで設定します。右上の「👤 名前」からいつでも開けます。</p>
         <div class="ep-form-grid">
@@ -1544,9 +1554,7 @@
             <i class="fa-solid fa-rotate-left"></i> 署名をデフォルトに戻す
           </button>
         </div>
-
       </div>
-
     </div>
   </div>
 
