@@ -2,7 +2,7 @@
    Design System & Variables
    =========================== */
 :root {
-  /* ===== Colors (WCAG 2.1 AA準拠 / GitHub Design System ベース) ===== */
+  /* ===== Colors (WCAG 2.1 AA雋・戟萓 / GitHub Design System 郢晏生繝ｻ郢ｧ・ｹ) ===== */
 
   /* Backgrounds */
   --bg-primary:         #0d1117;
@@ -15,7 +15,7 @@
   --border-glass:       rgba(255, 255, 255, 0.10);
   --border-glass-hover: var(--border-glass-hover);
 
-  /* Text — contrast vs bg-primary: primary ~14:1, secondary ~9:1, muted ~5.5:1 */
+  /* Text 遯ｶ繝ｻcontrast vs bg-primary: primary ~14:1, secondary ~9:1, muted ~5.5:1 */
   --text-primary:   #e6edf3;
   --text-secondary: rgba(230, 237, 243, 0.65);
   --text-muted:     rgba(230, 237, 243, 0.40);
@@ -29,7 +29,91 @@
   --surface-sheen:             rgba(255, 255, 255, 0.06);
   --preview-light-card:        rgba(255, 255, 255, 0.90);
 
-  /* Accent — ダークモードは明るめ（WCAG AA on dark bg） */
+  /* Semantic States */
+  --state-primary:        #6366f1;
+  --state-primary-strong: #8b5cf6;
+  --state-primary-rgb:    99, 102, 241;
+  --state-primary-strong-rgb: 139, 92, 246;
+  --state-info:           #60a5fa;
+  --state-info-strong:    #3b82f6;
+  --state-info-soft:      #93c5fd;
+  --state-info-rgb:       96, 165, 250;
+  --state-info-strong-rgb: 59, 130, 246;
+  --state-success:        #10b981;
+  --state-success-strong: #059669;
+  --state-success-soft:   #34d399;
+  --state-success-pale:   #86efac;
+  --state-success-rgb:    16, 185, 129;
+  --state-success-strong-rgb: 5, 150, 105;
+  --state-success-ok:     #22c55e;
+  --state-success-bright: #4ade80;
+  --state-success-mint:   #6ee7b7;
+  --state-success-aqua:   #6ee7d2;
+  --state-success-ok-rgb: 34, 197, 94;
+  --state-success-mint-rgb: 52, 211, 153;
+  --state-danger:         #ef4444;
+  --state-danger-strong:  #dc2626;
+  --state-danger-soft:    #f87171;
+  --state-danger-pale:    #fca5a5;
+  --state-danger-rgb:     239, 68, 68;
+  --state-danger-strong-rgb: 220, 38, 38;
+  --state-warning:        #f59e0b;
+  --state-warning-soft:   #fbbf24;
+  --state-warning-bright: #ffcc00;
+  --state-warning-warm:   #fb923c;
+  --state-warning-rgb:    245, 158, 11;
+  --state-warning-bright-rgb: 255, 204, 0;
+  --state-warning-gold-rgb: 251, 191, 36;
+  --state-warning-google-rgb: 251, 188, 4;
+  --state-danger-google-rgb: 234, 67, 53;
+  --state-task-accent:    #a5b4fc;
+  --state-violet-soft:    #a29bfe;
+  --state-violet-pale:    #c4b5fe;
+  --state-sky-deep:       #0369a1;
+  --state-neutral:        #9ca3af;
+  --state-neutral-strong: #6b7280;
+  --state-neutral-rgb:    107, 114, 128;
+
+  /* Branded Actions */
+  --brand-drive-blue:     #1a73e8;
+  --brand-drive-green:    #34a853;
+  --brand-drive-blue-rgb: 26, 115, 232;
+  --brand-drive-green-rgb: 52, 168, 83;
+  --theme-light-brand-start: #2563eb;
+  --theme-light-brand-end:   #0ea5e9;
+  --theme-light-brand-rgb:   37, 99, 235;
+
+  /* Legacy RGB Tokens */
+  --accent-blue-rgb-legacy:   74, 158, 255;
+  --accent-cyan-rgb-legacy:   0, 212, 170;
+  --accent-purple-rgb-legacy: 124, 92, 255;
+  --accent-pink-rgb-legacy:   255, 94, 160;
+  --accent-aqua-rgb-legacy:   0, 200, 255;
+  --accent-aqua-deep-rgb:     0, 120, 200;
+
+  /* Light Theme Shared RGB */
+  --light-ink-rgb:       26, 30, 58;
+  --light-border-rgb:    31, 35, 40;
+  --light-accent-rgb:    74, 100, 200;
+  --light-preview-rgb:   100, 120, 200;
+  --light-surface-rgb:   241, 243, 247;
+  --shadow-ink-weak:     var(--shadow-ink-weak);
+  --shadow-ink-soft:     var(--shadow-ink-soft);
+  --shadow-ink-medium:   var(--shadow-ink-medium);
+  --shadow-ink-strong:   rgba(0, 0, 0, 0.40);
+  --shadow-ink-heavy:    rgba(0, 0, 0, 0.50);
+  --shadow-ink-stronger: rgba(0, 0, 0, 0.60);
+  --overlay-backdrop:    var(--overlay-backdrop);
+  --overlay-panel-dark:  rgba(10, 14, 39, 0.80);
+  --heat-glow-default:   rgba(255, 100, 100, 0.50);
+
+  /* Common Action Gradients */
+  --gradient-action-primary: linear-gradient(135deg, var(--state-primary), var(--state-primary-strong));
+  --gradient-action-success: linear-gradient(135deg, var(--state-success), var(--state-success-strong));
+  --gradient-action-info: linear-gradient(135deg, var(--state-info-strong), var(--state-primary));
+  --gradient-action-drive: linear-gradient(135deg, var(--brand-drive-blue), var(--brand-drive-green));
+
+  /* Accent 遯ｶ繝ｻ郢敖郢晢ｽｼ郢ｧ・ｯ郢晢ｽ｢郢晢ｽｼ郢晏ｳｨ繝ｻ隴丞ｼｱ・狗ｹｧ繝ｻ・ｼ繝ｻCAG AA on dark bg繝ｻ繝ｻ*/
   --accent-blue:   #58a6ff;
   --accent-cyan:   #39d0b5;
   --accent-purple: #bc8cff;
@@ -44,7 +128,7 @@
   --gradient-card-4: linear-gradient(135deg, rgba(255,166,87,0.15), rgba(255,166,87,0.05));
   --gradient-card-5: linear-gradient(135deg, rgba(255,126,182,0.15), rgba(255,126,182,0.05));
 
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 2px 8px var(--shadow-ink-medium);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
   --shadow-glow-blue:   0 0 20px rgba(88, 166, 255, 0.18);
@@ -102,7 +186,7 @@
   box-sizing: border-box;
 }
 
-/* display:flex/grid など他ルールに [hidden] が打ち消されないよう保証 */
+/* display:flex/grid 邵ｺ・ｪ邵ｺ・ｩ闔画じﾎ晉ｹ晢ｽｼ郢晢ｽｫ邵ｺ・ｫ [hidden] 邵ｺ譴ｧ驕邵ｺ・｡雎ｸ蛹ｻ・・ｹｧ蠕娯・邵ｺ繝ｻ・育ｸｺ繝ｻ・ｿ譎・ｽｨ・ｼ */
 [hidden] { display: none !important; }
 
 html {
@@ -134,7 +218,7 @@ body::after {
 body::before {
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(74, 158, 255, 0.12), transparent 70%);
+  background: radial-gradient(circle, rgba(var(--accent-blue-rgb-legacy), 0.12), transparent 70%);
   top: -200px;
   right: -100px;
 }
@@ -229,7 +313,7 @@ body::after {
 }
 
 /* ===========================
-   Search Bar（折りたたみ式）
+   Search Bar繝ｻ蝓滄∪郢ｧ鄙ｫ笳・ｸｺ貅倪茜陟第得・ｼ繝ｻ
    =========================== */
 .search-container {
   position: relative;
@@ -251,9 +335,9 @@ body::after {
 .search-container.has-value {
   width: min(360px, 38vw);
   cursor: default;
-  background: rgba(74,158,255,0.08);
+  background: rgba(var(--accent-blue-rgb-legacy), 0.08);
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(74,158,255,0.1);
+  box-shadow: 0 0 0 3px rgba(var(--accent-blue-rgb-legacy), 0.10);
 }
 
 .search-container:hover:not(:focus-within):not(.has-value) {
@@ -348,7 +432,7 @@ body::after {
 }
 
 /* ===========================
-   外部ツール アイコン表示
+   陞溷､慚夂ｹ昴・繝ｻ郢晢ｽｫ 郢ｧ・｢郢ｧ・､郢ｧ・ｳ郢晢ｽｳ髯ｦ・ｨ驕会ｽｺ
    =========================== */
 .ext-icon-wrap {
   position: relative;
@@ -376,7 +460,7 @@ body::after {
   transform: translateY(-3px);
   border-color: var(--border-glass-hover);
   background: var(--bg-card);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 6px 20px var(--shadow-ink-medium);
 }
 
 .ext-icon-btn:active {
@@ -393,7 +477,7 @@ body::after {
   overflow: hidden;
   flex-shrink: 0;
   background: var(--surface-solid);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  box-shadow: 0 1px 4px var(--shadow-ink-soft);
 }
 
 .ext-icon-img img {
@@ -404,13 +488,13 @@ body::after {
   border-radius: 13px;
 }
 
-/* 太陽光発電カード: 黄色グラデーション背景 */
+/* 陞滂ｽｪ鬮ｯ・ｽ陷郁・蛹ｱ鬮ｮ・ｻ郢ｧ・ｫ郢晢ｽｼ郢昴・ 魄溘・迚｡郢ｧ・ｰ郢晢ｽｩ郢昴・繝ｻ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ髢ｭ譴ｧ蜍ｹ */
 .ext-icon-solar-img {
   background: linear-gradient(135deg, #fff8e1, #ffe082) !important;
   box-shadow: 0 1px 6px rgba(249,168,37,0.35) !important;
 }
 
-/* 太陽光カード: 枠線で固定感を演出 */
+/* 陞滂ｽｪ鬮ｯ・ｽ陷亥ｳｨ縺咲ｹ晢ｽｼ郢昴・ 隴ｫ・ｰ驍ｱ螢ｹ縲定摎・ｺ陞ｳ螢ｽ笏郢ｧ蜻茨ｽｼ豕後・ */
 .ext-icon-solar-pinned > .ext-icon-btn {
   border-color: rgba(249, 168, 37, 0.4);
 }
@@ -433,7 +517,7 @@ body::after {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 1.5px solid rgba(0, 212, 170, 0.6);
+  border: 1.5px solid rgba(var(--accent-cyan-rgb-legacy), 0.60);
   background: var(--bg-primary);
   color: var(--accent-cyan);
   cursor: pointer;
@@ -446,7 +530,7 @@ body::after {
 }
 
 .ext-icon-edit:hover {
-  background: rgba(0, 212, 170, 0.25);
+  background: rgba(var(--accent-cyan-rgb-legacy), 0.25);
   border-color: var(--accent-cyan);
 }
 
@@ -457,7 +541,7 @@ body::after {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 94, 160, 0.6);
+  border: 1.5px solid rgba(var(--accent-pink-rgb-legacy), 0.60);
   background: var(--bg-primary);
   color: var(--accent-pink);
   cursor: pointer;
@@ -470,7 +554,7 @@ body::after {
 }
 
 .ext-icon-delete:hover {
-  background: rgba(255, 94, 160, 0.25);
+  background: rgba(var(--accent-pink-rgb-legacy), 0.25);
   border-color: var(--accent-pink);
 }
 
@@ -497,7 +581,7 @@ body::after {
 }
 
 /* ===========================
-   サービスピッカーモーダル
+   郢ｧ・ｵ郢晢ｽｼ郢晁侭縺帷ｹ晄鱒繝｣郢ｧ・ｫ郢晢ｽｼ郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ
    =========================== */
 .service-picker-glass {
   max-width: 580px;
@@ -533,7 +617,7 @@ body::after {
 
 .svc-pick-btn:hover:not([disabled]) {
   border-color: var(--accent-blue);
-  background: rgba(74, 158, 255, 0.1);
+  background: rgba(var(--accent-blue-rgb-legacy), 0.10);
   transform: translateY(-2px);
 }
 
@@ -585,7 +669,7 @@ body::after {
   font-size: 0.5rem;
   padding: 1px 4px;
   border-radius: 3px;
-  background: rgba(0, 212, 170, 0.15);
+  background: rgba(var(--accent-cyan-rgb-legacy), 0.15);
   color: var(--accent-cyan);
   white-space: nowrap;
 }
@@ -836,7 +920,7 @@ body::after {
   min-height: 110px;
 }
 
-/* URL未設定カード */
+/* URL隴幢ｽｪ髫ｪ・ｭ陞ｳ螢ｹ縺咲ｹ晢ｽｼ郢昴・*/
 .link-card--no-url {
   border: 1.5px dashed rgba(255, 160, 50, 0.55) !important;
   opacity: 0.72;
@@ -1033,10 +1117,10 @@ body::after {
   display: none;
 }
 
-/* 子カードがヒットした親カードのインジケーター */
+/* 陝・・縺咲ｹ晢ｽｼ郢晏ｳｨ窶ｲ郢晏・繝｣郢晏現・邵ｺ貅ｯ・ｦ・ｪ郢ｧ・ｫ郢晢ｽｼ郢晏ｳｨ繝ｻ郢ｧ・､郢晢ｽｳ郢ｧ・ｸ郢ｧ・ｱ郢晢ｽｼ郢ｧ・ｿ郢晢ｽｼ */
 .link-card.search-child-match {
-  border-color: rgba(99, 102, 241, 0.5) !important;
-  outline: 1px solid rgba(99, 102, 241, 0.2);
+  border-color: rgba(var(--state-primary-rgb), 0.50) !important;
+  outline: 1px solid rgba(var(--state-primary-rgb), 0.20);
 }
 .link-card.search-child-match .card-children-badge {
   animation: pulse-badge 1.2s ease-in-out infinite;
@@ -1124,7 +1208,7 @@ body::after {
    Edit Mode Banner
    =========================== */
 .edit-mode-banner {
-  background: linear-gradient(135deg, rgba(74, 158, 255, 0.15), rgba(124, 92, 255, 0.15));
+  background: linear-gradient(135deg, rgba(var(--accent-blue-rgb-legacy), 0.15), rgba(var(--accent-purple-rgb-legacy), 0.15));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--accent-blue);
@@ -1212,7 +1296,7 @@ body::after {
 .help-fab:hover {
   color: var(--accent-cyan);
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 16px rgba(0, 212, 170, 0.35);
+  box-shadow: 0 0 16px rgba(var(--accent-cyan-rgb-legacy), 0.35);
   transform: scale(1.1);
 }
 
@@ -1264,7 +1348,7 @@ body::after {
 .guide-close:hover {
   color: var(--accent-pink);
   border-color: var(--accent-pink);
-  background: rgba(255, 94, 160, 0.12);
+  background: rgba(var(--accent-pink-rgb-legacy), 0.12);
 }
 
 .guide-body {
@@ -1291,7 +1375,7 @@ body::after {
 }
 
 .guide-section--admin {
-  border-color: rgba(74, 158, 255, 0.3);
+  border-color: rgba(var(--accent-blue-rgb-legacy), 0.30);
   background: rgba(74, 158, 255, 0.04);
 }
 
@@ -1341,7 +1425,7 @@ body::after {
   color: var(--accent-cyan);
   margin: 0 0 var(--space-sm);
   padding: 5px 10px;
-  background: rgba(0, 212, 170, 0.08);
+  background: rgba(var(--accent-cyan-rgb-legacy), 0.08);
   border-radius: 6px;
   border-left: 2px solid var(--accent-cyan);
 }
@@ -1359,7 +1443,7 @@ body::after {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
+  background: var(--overlay-backdrop);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 1000;
@@ -1369,7 +1453,7 @@ body::after {
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--transition-base);
-  overscroll-behavior: contain; /* 背景へのスクロール伝播防止 */
+  overscroll-behavior: contain; /* 髢ｭ譴ｧ蜍ｹ邵ｺ・ｸ邵ｺ・ｮ郢ｧ・ｹ郢ｧ・ｯ郢晢ｽｭ郢晢ｽｼ郢晢ｽｫ闔ｨ譎・惻鬮ｦ・ｲ雎・ｽ｢ */
 }
 
 .modal-overlay.visible {
@@ -1444,7 +1528,7 @@ body::after {
 .pin-digit:focus,
 .pin-digit-confirm:focus {
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(var(--accent-blue-rgb-legacy), 0.15);
 }
 
 .pin-digit.error,
@@ -1515,9 +1599,9 @@ body::after {
 
 .btn-modal-danger {
   padding: var(--space-sm) var(--space-lg);
-  background: rgba(255, 94, 160, 0.12);
+  background: rgba(var(--accent-pink-rgb-legacy), 0.12);
   color: var(--accent-pink);
-  border: 1px solid rgba(255, 94, 160, 0.4);
+  border: 1px solid rgba(var(--accent-pink-rgb-legacy), 0.40);
   border-radius: var(--radius-sm);
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
@@ -1529,7 +1613,7 @@ body::after {
 }
 
 .btn-modal-danger:hover {
-  background: rgba(255, 94, 160, 0.25);
+  background: rgba(var(--accent-pink-rgb-legacy), 0.25);
 }
 
 /* ===========================
@@ -1555,7 +1639,7 @@ body::after {
 .card-edit-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(10, 14, 39, 0.8);
+  background: var(--overlay-panel-dark);
   border-radius: inherit;
   display: flex;
   align-items: center;
@@ -1614,7 +1698,7 @@ body::after {
 .btn-add-card:hover {
   border-color: var(--accent-blue);
   color: var(--accent-blue);
-  background: rgba(74, 158, 255, 0.05);
+  background: rgba(var(--accent-blue-rgb-legacy), 0.05);
 }
 
 /* ===========================
@@ -1647,18 +1731,18 @@ body::after {
 
 .form-input:focus {
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--accent-blue-rgb-legacy), 0.10);
 }
 
 .form-input::placeholder { color: var(--text-muted); }
 
 /* ===========================
-   select / option テーマ対応（白飛び防止）
-   color-scheme でブラウザネイティブ UI も dark に統一し、
-   option に直接 CSS 変数を当てて全テーマで色を一致させる
+   select / option 郢昴・繝ｻ郢晄ｧｫ・ｯ・ｾ陟｢諛ｶ・ｼ閧ｲ蜊鬯溷ｸ吶・鬮ｦ・ｲ雎・ｽ｢繝ｻ繝ｻ
+   color-scheme 邵ｺ・ｧ郢晄じﾎ帷ｹｧ・ｦ郢ｧ・ｶ郢晞亂縺・ｹ昴・縺・ｹ昴・UI 郢ｧ繝ｻdark 邵ｺ・ｫ驍ｨ・ｱ闕ｳﾂ邵ｺ蜉ｱﾂ繝ｻ
+   option 邵ｺ・ｫ騾ｶ・ｴ隰暦ｽ･ CSS 陞溽判辟夂ｹｧ雋橸ｽｽ阮吮ｻ邵ｺ・ｦ陷茨ｽｨ郢昴・繝ｻ郢晄ｧｭ縲呈ｿｶ・ｲ郢ｧ蜑・ｽｸﾂ髢ｾ・ｴ邵ｺ霈披雷郢ｧ繝ｻ
    =========================== */
 select {
-  color-scheme: dark; /* ← ネイティブドロップダウンを dark 表示にする */
+  color-scheme: dark; /* 遶翫・郢晞亂縺・ｹ昴・縺・ｹ晄じ繝ｩ郢晢ｽｭ郢昴・繝ｻ郢敖郢ｧ・ｦ郢晢ｽｳ郢ｧ繝ｻdark 髯ｦ・ｨ驕会ｽｺ邵ｺ・ｫ邵ｺ蜷ｶ・・*/
 }
 select option {
   background-color: var(--bg-secondary);
@@ -1668,12 +1752,12 @@ select option:checked {
   background-color: var(--accent-blue);
   color: var(--text-on-accent);
 }
-/* select 要素自身の背景は bg-glass が透明なため bg-secondary で塗り直す */
+/* select 髫補悪・ｴ・ｰ髢ｾ・ｪ髴・ｽｫ邵ｺ・ｮ髢ｭ譴ｧ蜍ｹ邵ｺ・ｯ bg-glass 邵ｺ遒・荵励・邵ｺ・ｪ邵ｺ貅假ｽ・bg-secondary 邵ｺ・ｧ陜ｪ蜉ｱ・企ｶ・ｴ邵ｺ繝ｻ*/
 select.form-input,
 select.todo-due-select {
   background: var(--bg-secondary);
 }
-/* ライトテーマ：ネイティブ UI を light に戻す */
+/* 郢晢ｽｩ郢ｧ・､郢晏現繝ｦ郢晢ｽｼ郢晄ｩｸ・ｼ螢ｹ繝ｭ郢ｧ・､郢昴・縺・ｹ昴・UI 郢ｧ繝ｻlight 邵ｺ・ｫ隰鯉ｽｻ邵ｺ繝ｻ*/
 [data-theme="light"] select {
   color-scheme: light;
 }
@@ -1685,7 +1769,7 @@ select.todo-due-select {
   margin-top: var(--space-xs);
 }
 
-/* 日付アイコン入力（カレンダーアイコンのみ表示） */
+/* 隴鯉ｽ･闔牙･縺・ｹｧ・､郢ｧ・ｳ郢晢ｽｳ陷茨ｽ･陷牙ｹ｢・ｼ蛹ｻ縺咲ｹ晢ｽｬ郢晢ｽｳ郢敖郢晢ｽｼ郢ｧ・｢郢ｧ・､郢ｧ・ｳ郢晢ｽｳ邵ｺ・ｮ邵ｺ・ｿ髯ｦ・ｨ驕会ｽｺ繝ｻ繝ｻ*/
 .date-icon-only {
   width: 34px;
   height: 34px;
@@ -1721,10 +1805,10 @@ select.todo-due-select {
 .date-icon-only:focus {
   outline: none;
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.15);
+  box-shadow: 0 0 0 2px rgba(var(--accent-blue-rgb-legacy), 0.15);
 }
 
-/* 日付ラベル＋アイコンを横並びにするラッパー */
+/* 隴鯉ｽ･闔牙･ﾎ帷ｹ晏生ﾎ昴・荵昴＞郢ｧ・､郢ｧ・ｳ郢晢ｽｳ郢ｧ蜻茨ｽｨ・ｪ闕ｳ・ｦ邵ｺ・ｳ邵ｺ・ｫ邵ｺ蜷ｶ・狗ｹ晢ｽｩ郢昴・繝ｱ郢晢ｽｼ */
 .form-group-inline {
   display: flex;
   align-items: center;
@@ -1803,12 +1887,12 @@ select.todo-due-select {
 }
 
 .icon-picker-btn.selected {
-  background: rgba(74, 158, 255, 0.18);
+  background: rgba(var(--accent-blue-rgb-legacy), 0.18);
   border-color: var(--accent-blue);
   color: var(--accent-blue);
 }
 
-/* ツールチップ */
+/* 郢昴・繝ｻ郢晢ｽｫ郢昶・繝｣郢昴・*/
 .icon-picker-btn::after {
   content: attr(data-label);
   position: absolute;
@@ -1841,7 +1925,7 @@ select.todo-due-select {
 .icon-manual-row .form-input { flex: 1; }
 
 /* ===========================
-   お気に入りセクション
+   邵ｺ鬆托ｽｰ蜉ｱ竊楢怦・･郢ｧ鄙ｫ縺晉ｹｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ
    =========================== */
 .favorites-section {
   animation: fadeInUp 0.4s ease forwards;
@@ -1874,16 +1958,16 @@ select.todo-due-select {
 
 .btn-favorite.active {
   opacity: 1;
-  color: #ffcc00;
+  color: var(--state-warning-bright);
 }
 
 .btn-favorite:hover {
-  background: rgba(255, 204, 0, 0.15);
-  color: #ffcc00;
+  background: rgba(var(--state-warning-bright-rgb), 0.15);
+  color: var(--state-warning-bright);
 }
 
 /* ===========================
-   お知らせボード
+   邵ｺ鬘碑｡咲ｹｧ蟲ｨ笳狗ｹ晄㈱繝ｻ郢昴・
    =========================== */
 .notice-board {
   margin-bottom: var(--space-xl);
@@ -1906,8 +1990,8 @@ select.todo-due-select {
 .btn-add-notice {
   margin-left: auto;
   padding: 4px 12px;
-  background: rgba(74, 158, 255, 0.1);
-  border: 1px solid rgba(74, 158, 255, 0.3);
+  background: rgba(var(--accent-blue-rgb-legacy), 0.10);
+  border: 1px solid rgba(var(--accent-blue-rgb-legacy), 0.30);
   border-radius: 50px;
   color: var(--accent-blue);
   font-family: var(--font-family);
@@ -1939,7 +2023,7 @@ select.todo-due-select {
 
 .notice-item.urgent {
   border-left-color: var(--accent-pink);
-  background: rgba(255, 94, 160, 0.06);
+  background: rgba(var(--accent-pink-rgb-legacy), 0.06);
 }
 
 .notice-item-header {
@@ -1958,12 +2042,12 @@ select.todo-due-select {
 }
 
 .badge-urgent {
-  background: rgba(255, 94, 160, 0.2);
+  background: rgba(var(--accent-pink-rgb-legacy), 0.20);
   color: var(--accent-pink);
 }
 
 .badge-normal {
-  background: rgba(74, 158, 255, 0.15);
+  background: rgba(var(--accent-blue-rgb-legacy), 0.15);
   color: var(--accent-blue);
 }
 
@@ -1992,7 +2076,7 @@ select.todo-due-select {
 
 .btn-notice-edit:hover {
   color: var(--accent-blue);
-  background: rgba(74, 158, 255, 0.1);
+  background: rgba(var(--accent-blue-rgb-legacy), 0.10);
 }
 
 .notice-body {
@@ -2004,7 +2088,7 @@ select.todo-due-select {
 }
 
 /* ===========================
-   天気ウィジェット
+   陞滂ｽｩ雎悟干縺育ｹｧ・｣郢ｧ・ｸ郢ｧ・ｧ郢昴・繝ｨ
    =========================== */
 .weather-widget {
   background: var(--bg-glass);
@@ -2135,7 +2219,7 @@ select.todo-due-select {
   box-sizing: border-box;
   margin-top: 10px;
   letter-spacing: 0.02em;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 20px var(--shadow-ink-medium);
   transition: box-shadow var(--transition-base);
 }
 
@@ -2163,18 +2247,18 @@ select.todo-due-select {
   line-height: 1.2;
 }
 
-/* 危険・厳重警戒: 脈動アニメーション */
+/* 陷奇ｽｱ鬮ｯ・ｺ郢晢ｽｻ陷ｴ・ｳ鬩･蟠趣ｽｭ・ｦ隰後・ 髢ｼ莠･陌夂ｹｧ・｢郢昜ｹ斟鍋ｹ晢ｽｼ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ */
 .heat-badge.level-danger,
 .heat-badge.level-warning {
   animation: heat-pulse 1.8s ease-in-out infinite;
 }
 
 @keyframes heat-pulse {
-  0%, 100% { transform: scale(1);    box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
-  50%       { transform: scale(1.01); box-shadow: 0 6px 28px var(--heat-glow, rgba(255,100,100,0.5)); }
+  0%, 100% { transform: scale(1);    box-shadow: 0 4px 20px var(--shadow-ink-medium); }
+  50%       { transform: scale(1.01); box-shadow: 0 6px 28px var(--heat-glow, var(--heat-glow-default)); }
 }
 
-/* 予報スクロール */
+/* 闔莠･・ｰ・ｱ郢ｧ・ｹ郢ｧ・ｯ郢晢ｽｭ郢晢ｽｼ郢晢ｽｫ */
 .forecast-scroll {
   display: flex;
   gap: var(--space-sm);
@@ -2227,7 +2311,7 @@ select.todo-due-select {
 }
 
 /* ===========================
-   天気パネル（雨雲レーダー / 太陽光発電 タブ）
+   陞滂ｽｩ雎悟干繝ｱ郢晞亂ﾎ昴・逎ｯ蟯鷹ｫｮ・ｲ郢晢ｽｬ郢晢ｽｼ郢敖郢晢ｽｼ / 陞滂ｽｪ鬮ｯ・ｽ陷郁・蛹ｱ鬮ｮ・ｻ 郢ｧ・ｿ郢晏私・ｼ繝ｻ
    =========================== */
 .weather-panel {
   margin-top: var(--space-md);
@@ -2270,20 +2354,20 @@ select.todo-due-select {
 .wpanel-tab:hover {
   color: var(--accent-cyan);
   border-color: var(--accent-cyan);
-  background: rgba(0, 212, 170, 0.07);
+  background: rgba(var(--accent-cyan-rgb-legacy), 0.07);
 }
 
 .wpanel-tab.active {
   color: var(--accent-cyan);
   border-color: var(--accent-cyan);
-  background: rgba(0, 212, 170, 0.12);
+  background: rgba(var(--accent-cyan-rgb-legacy), 0.12);
 }
 
 .wpanel-external {
   margin-left: auto;
   padding: 5px 12px;
-  background: rgba(74, 158, 255, 0.08);
-  border: 1px solid rgba(74, 158, 255, 0.25);
+  background: rgba(var(--accent-blue-rgb-legacy), 0.08);
+  border: 1px solid rgba(var(--accent-blue-rgb-legacy), 0.25);
   border-radius: var(--radius-sm);
   color: var(--accent-blue);
   text-decoration: none;
@@ -2297,15 +2381,15 @@ select.todo-due-select {
 }
 
 .wpanel-external:hover {
-  background: rgba(74, 158, 255, 0.18);
+  background: rgba(var(--accent-blue-rgb-legacy), 0.18);
 }
 
 .wpanel-close {
   width: 30px;
   height: 30px;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 94, 160, 0.3);
-  background: rgba(255, 94, 160, 0.08);
+  border: 1px solid rgba(var(--accent-pink-rgb-legacy), 0.30);
+  background: rgba(var(--accent-pink-rgb-legacy), 0.08);
   color: var(--accent-pink);
   cursor: pointer;
   display: flex;
@@ -2317,7 +2401,7 @@ select.todo-due-select {
 }
 
 .wpanel-close:hover {
-  background: rgba(255, 94, 160, 0.22);
+  background: rgba(var(--accent-pink-rgb-legacy), 0.22);
 }
 
 .wpanel-content {
@@ -2333,7 +2417,7 @@ select.todo-due-select {
 }
 
 /* ===========================
-   カテゴリ追加ボタン
+   郢ｧ・ｫ郢昴・縺也ｹ晢ｽｪ髴托ｽｽ陷会｣ｰ郢晄㈱縺｡郢晢ｽｳ
    =========================== */
 .btn-add-category-wrap {
   display: flex;
@@ -2361,7 +2445,7 @@ select.todo-due-select {
 .btn-add-category:hover {
   border-color: var(--accent-blue);
   color: var(--accent-blue);
-  background: rgba(74, 158, 255, 0.05);
+  background: rgba(var(--accent-blue-rgb-legacy), 0.05);
 }
 
 .btn-edit-category {
@@ -2384,10 +2468,10 @@ select.todo-due-select {
 .btn-edit-category:hover {
   color: var(--accent-blue);
   border-color: var(--accent-blue);
-  background: rgba(74, 158, 255, 0.08);
+  background: rgba(var(--accent-blue-rgb-legacy), 0.08);
 }
 
-/* カラーピッカー */
+/* 郢ｧ・ｫ郢晢ｽｩ郢晢ｽｼ郢晄鱒繝｣郢ｧ・ｫ郢晢ｽｼ */
 .color-picker-grid {
   display: flex;
   gap: var(--space-sm);
@@ -2414,7 +2498,7 @@ select.todo-due-select {
 }
 
 /* ===========================
-   ドラッグ&ドロップ
+   郢晏ｳｨﾎ帷ｹ昴・縺・郢晏ｳｨﾎ溽ｹ昴・繝ｻ
    =========================== */
 .link-card[draggable="true"] {
   cursor: grab;
@@ -2431,15 +2515,15 @@ select.todo-due-select {
 
 .link-card.drag-over {
   border-color: var(--accent-blue);
-  background: rgba(74, 158, 255, 0.12);
+  background: rgba(var(--accent-blue-rgb-legacy), 0.12);
   transform: translateY(-2px);
 }
 
 /* ===========================
-   スマホ対応改善
+   郢ｧ・ｹ郢晄ｧｭ繝ｻ陝・ｽｾ陟｢諛磯埔陜溘・
    =========================== */
 @media (max-width: 768px) {
-  /* 天気ウィジェット縦積み */
+  /* 陞滂ｽｩ雎悟干縺育ｹｧ・｣郢ｧ・ｸ郢ｧ・ｧ郢昴・繝ｨ驍ｵ・ｦ驕ｨ髦ｪ竏ｩ */
   .weather-body {
     grid-template-columns: 1fr;
     gap: var(--space-md);
@@ -2453,12 +2537,12 @@ select.todo-due-select {
     height: 280px;
   }
 
-  /* モーダル スクロール対応（モバイルは少し小さく） */
+  /* 郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ 郢ｧ・ｹ郢ｧ・ｯ郢晢ｽｭ郢晢ｽｼ郢晢ｽｫ陝・ｽｾ陟｢諛ｶ・ｼ蛹ｻﾎ皮ｹ晁・縺・ｹ晢ｽｫ邵ｺ・ｯ陝・ｻ｣・陝・ｸ奇ｼ・ｸｺ謫ｾ・ｼ繝ｻ*/
   .modal-glass {
     max-height: 85vh;
   }
 
-  /* PIN ボタン大きく */
+  /* PIN 郢晄㈱縺｡郢晢ｽｳ陞滂ｽｧ邵ｺ髦ｪ・･ */
   .pin-digit,
   .pin-digit-confirm {
     width: 46px;
@@ -2466,24 +2550,24 @@ select.todo-due-select {
     font-size: 1.4rem;
   }
 
-  /* 編集ボタン タッチしやすく */
+  /* 驍ｱ・ｨ鬮ｮ繝ｻ繝ｻ郢ｧ・ｿ郢晢ｽｳ 郢ｧ・ｿ郢昴・繝｡邵ｺ蜉ｱ・・ｸｺ蜷ｶ・･ */
   .btn-edit-card,
   .btn-delete-card {
     width: 44px;
     height: 44px;
   }
 
-  /* カード編集オーバーレイ: 常時表示（ホバー不可の端末対策） */
+  /* 郢ｧ・ｫ郢晢ｽｼ郢晁・・ｷ・ｨ鬮ｮ繝ｻ縺檎ｹ晢ｽｼ郢晁・繝ｻ郢晢ｽｬ郢ｧ・､: 陝ｶ・ｸ隴弱ｊ・｡・ｨ驕会ｽｺ繝ｻ蛹ｻ繝ｻ郢晁・繝ｻ闕ｳ讎雁ｺ・ｸｺ・ｮ驕ｶ・ｯ隴幢ｽｫ陝・ｽｾ驕ｲ蜴・ｽｼ繝ｻ*/
   .card-edit-overlay {
     opacity: 0.85;
   }
 
-  /* 外部ツール アイコン */
+  /* 陞溷､慚夂ｹ昴・繝ｻ郢晢ｽｫ 郢ｧ・｢郢ｧ・､郢ｧ・ｳ郢晢ｽｳ */
   .ext-icon-btn { width: 72px; }
   .ext-icon-img { width: 46px; height: 46px; }
   .ext-icon-img svg { width: 46px; height: 46px; }
 
-  /* 天気パネルタブ */
+  /* 陞滂ｽｩ雎悟干繝ｱ郢晞亂ﾎ晉ｹｧ・ｿ郢昴・*/
   .wpanel-tabs {
     gap: 4px;
   }
@@ -2492,17 +2576,17 @@ select.todo-due-select {
     height: 300px;
   }
 
-  /* お知らせ */
+  /* 邵ｺ鬘碑｡咲ｹｧ蟲ｨ笳・*/
   .notice-item-header {
     gap: var(--space-xs);
   }
 
-  /* フッターとFABの被り防止 */
+  /* 郢晁ｼ斐Ε郢ｧ・ｿ郢晢ｽｼ邵ｺ・ｨFAB邵ｺ・ｮ髯ｲ・ｫ郢ｧ莨∽ｺ溯ｱ・ｽ｢ */
   .footer {
     padding-bottom: 5rem;
   }
 
-  /* 天気予報スクロール */
+  /* 陞滂ｽｩ雎悟ｶｺ・ｺ莠･・ｰ・ｱ郢ｧ・ｹ郢ｧ・ｯ郢晢ｽｭ郢晢ｽｼ郢晢ｽｫ */
   .forecast-item {
     min-width: 60px;
     padding: 6px 8px;
@@ -2510,23 +2594,23 @@ select.todo-due-select {
 }
 
 @media (max-width: 480px) {
-  /* 外部ツールグリッド 縦1列 */
+  /* 陞溷､慚夂ｹ昴・繝ｻ郢晢ｽｫ郢ｧ・ｰ郢晢ｽｪ郢昴・繝ｩ 驍ｵ・ｦ1陋ｻ繝ｻ*/
   .external-grid {
     grid-template-columns: 1fr;
   }
 
-  /* カテゴリ追加ボタン */
+  /* 郢ｧ・ｫ郢昴・縺也ｹ晢ｽｪ髴托ｽｽ陷会｣ｰ郢晄㈱縺｡郢晢ｽｳ */
   .btn-add-category {
     font-size: var(--font-size-xs);
     padding: var(--space-xs) var(--space-lg);
   }
 
-  /* 天気情報コンパクト */
+  /* 陞滂ｽｩ雎檎軸繝･陜｣・ｱ郢ｧ・ｳ郢晢ｽｳ郢昜ｻ｣縺醍ｹ昴・*/
   .weather-emoji { font-size: 2rem; }
   .weather-temp  { font-size: 1.8rem; }
 }
 
-/* フォームの textarea */
+/* 郢晁ｼ斐°郢晢ｽｼ郢晢｣ｰ邵ｺ・ｮ textarea */
 .form-input[rows] {
   resize: vertical;
   min-height: 80px;
@@ -2542,7 +2626,7 @@ select.todo-due-select {
   background: var(--bg-secondary);
   border: 1px solid var(--border-glass);
   border-radius: 10px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 8px 32px var(--shadow-ink-stronger);
   overflow: hidden;
   min-width: 160px;
   backdrop-filter: blur(20px);
@@ -2575,12 +2659,12 @@ select.todo-due-select {
   border-top: 1px solid var(--border-glass);
 }
 
-.ctx-edit:hover  { background: rgba(74, 158, 255, 0.15); color: var(--accent-blue); }
+.ctx-edit:hover  { background: rgba(var(--accent-blue-rgb-legacy), 0.15); color: var(--accent-blue); }
 .ctx-hide:hover  { background: rgba(255, 166, 87, 0.15); color: var(--accent-orange); }
-.ctx-delete:hover { background: rgba(255, 94, 160, 0.15); color: var(--accent-pink); }
+.ctx-delete:hover { background: rgba(var(--accent-pink-rgb-legacy), 0.15); color: var(--accent-pink); }
 
 /* ===========================
-   お気に入りのみ表示ボタン（ヘッダー）
+   邵ｺ鬆托ｽｰ蜉ｱ竊楢怦・･郢ｧ鄙ｫ繝ｻ邵ｺ・ｿ髯ｦ・ｨ驕会ｽｺ郢晄㈱縺｡郢晢ｽｳ繝ｻ蛹ｻ繝ｻ郢昴・繝郢晢ｽｼ繝ｻ繝ｻ
    =========================== */
 .btn-favorites-only {
   position: relative;
@@ -2602,20 +2686,20 @@ select.todo-due-select {
 .btn-fav-label { display: none; }
 
 .btn-favorites-only:hover {
-  background: rgba(255, 204, 0, 0.12);
-  border-color: #ffcc00;
-  color: #ffcc00;
+  background: rgba(var(--state-warning-bright-rgb), 0.12);
+  border-color: var(--state-warning-bright);
+  color: var(--state-warning-bright);
 }
 
 .btn-favorites-only.active {
-  background: rgba(255, 204, 0, 0.18);
-  border-color: #ffcc00;
-  color: #ffcc00;
-  box-shadow: 0 0 12px rgba(255, 204, 0, 0.3);
+  background: rgba(var(--state-warning-bright-rgb), 0.18);
+  border-color: var(--state-warning-bright);
+  color: var(--state-warning-bright);
+  box-shadow: 0 0 12px rgba(var(--state-warning-bright-rgb), 0.30);
 }
 
 /* ===========================
-   お気に入りのみ表示モード
+   邵ｺ鬆托ｽｰ蜉ｱ竊楢怦・･郢ｧ鄙ｫ繝ｻ邵ｺ・ｿ髯ｦ・ｨ驕会ｽｺ郢晢ｽ｢郢晢ｽｼ郢昴・
    =========================== */
 .main.favorites-only .category-section:not(#favorites-section),
 .main.favorites-only .external-tools,
@@ -2629,7 +2713,7 @@ select.todo-due-select {
   display: block !important;
 }
 
-/* お気に入り空欄メッセージ */
+/* 邵ｺ鬆托ｽｰ蜉ｱ竊楢怦・･郢ｧ鬘費ｽｩ・ｺ隹ｺ繝ｻﾎ鍋ｹ昴・縺晉ｹ晢ｽｼ郢ｧ・ｸ */
 .fav-empty {
   color: var(--text-secondary);
   font-size: 0.9rem;
@@ -2640,7 +2724,7 @@ select.todo-due-select {
 }
 
 /* ===========================
-   セクションまとめてお気に入りボタン
+   郢ｧ・ｻ郢ｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ邵ｺ・ｾ邵ｺ・ｨ郢ｧ竏壺ｻ邵ｺ鬆托ｽｰ蜉ｱ竊楢怦・･郢ｧ鄙ｫ繝ｻ郢ｧ・ｿ郢晢ｽｳ
    =========================== */
 .btn-section-favorite {
   display: flex;
@@ -2660,19 +2744,19 @@ select.todo-due-select {
 }
 
 .btn-section-favorite:hover {
-  background: rgba(255, 204, 0, 0.15);
-  border-color: #ffcc00;
-  color: #ffcc00;
+  background: rgba(var(--state-warning-bright-rgb), 0.15);
+  border-color: var(--state-warning-bright);
+  color: var(--state-warning-bright);
 }
 
 .btn-section-favorite.active {
-  background: rgba(255, 204, 0, 0.2);
-  border-color: #ffcc00;
-  color: #ffcc00;
+  background: rgba(var(--state-warning-bright-rgb), 0.20);
+  border-color: var(--state-warning-bright);
+  color: var(--state-warning-bright);
 }
 
 /* ===========================
-   ユーザーボタン
+   郢晢ｽｦ郢晢ｽｼ郢ｧ・ｶ郢晢ｽｼ郢晄㈱縺｡郢晢ｽｳ
    =========================== */
 .btn-user {
   display: flex;
@@ -2697,7 +2781,7 @@ select.todo-due-select {
   border-color: var(--border-glass-hover);
 }
 
-/* アバター円 */
+/* 郢ｧ・｢郢晁・縺｡郢晢ｽｼ陷繝ｻ*/
 .user-avatar {
   width: 30px;
   height: 30px;
@@ -2716,7 +2800,7 @@ select.todo-due-select {
   transform: scale(1.08);
 }
 
-/* アバター横のテキスト */
+/* 郢ｧ・｢郢晁・縺｡郢晢ｽｼ隶難ｽｪ邵ｺ・ｮ郢昴・縺冗ｹｧ・ｹ郢昴・*/
 .user-info {
   display: flex;
   flex-direction: column;
@@ -2737,13 +2821,13 @@ select.todo-due-select {
   text-overflow: ellipsis;
 }
 
-/* ユーザー名モーダル：警告ボックス */
+/* 郢晢ｽｦ郢晢ｽｼ郢ｧ・ｶ郢晢ｽｼ陷ｷ髦ｪﾎ皮ｹ晢ｽｼ郢敖郢晢ｽｫ繝ｻ螟奇ｽｭ・ｦ陷ｻ鄙ｫ繝ｻ郢昴・縺醍ｹｧ・ｹ */
 .username-warn-box {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(var(--state-warning-rgb), 0.12);
+  border: 1px solid rgba(var(--state-warning-rgb), 0.35);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   font-size: 0.78rem;
@@ -2752,16 +2836,16 @@ select.todo-due-select {
   line-height: 1.5;
 }
 .username-warn-box i {
-  color: #f59e0b;
+  color: var(--state-warning);
   margin-top: 2px;
   flex-shrink: 0;
 }
 .username-warn-box strong {
-  color: #f59e0b;
+  color: var(--state-warning);
 }
 
 /* ===========================
-   セクション ドラッグハンドル
+   郢ｧ・ｻ郢ｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ 郢晏ｳｨﾎ帷ｹ昴・縺堤ｹ昜ｸ莞ｦ郢晏ｳｨﾎ・
    =========================== */
 .section-drag-handle {
   display: flex;
@@ -2799,14 +2883,14 @@ select.todo-due-select {
 }
 
 /* ===========================
-   プライベートセクション
+   郢晏干ﾎ帷ｹｧ・､郢晏生繝ｻ郢晏現縺晉ｹｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ
    =========================== */
 .private-section {
   position: relative;
 }
 
 .private-section .category-header {
-  border-bottom-color: rgba(124, 92, 255, 0.3);
+  border-bottom-color: rgba(var(--accent-purple-rgb-legacy), 0.30);
 }
 
 .private-badge {
@@ -2815,17 +2899,17 @@ select.todo-due-select {
   justify-content: center;
   width: 16px;
   height: 16px;
-  background: rgba(124, 92, 255, 0.3);
+  background: rgba(var(--accent-purple-rgb-legacy), 0.30);
   border-radius: 50%;
   font-size: 0.6rem;
   margin-left: 6px;
   vertical-align: middle;
-  color: #a29bfe;
+  color: var(--state-violet-soft);
   flex-shrink: 0;
 }
 
 /* ===========================
-   マイセクション追加ボタン
+   郢晄ｧｭ縺・ｹｧ・ｻ郢ｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ髴托ｽｽ陷会｣ｰ郢晄㈱縺｡郢晢ｽｳ
    =========================== */
 .add-btn-group {
   display: flex;
@@ -2845,7 +2929,7 @@ select.todo-due-select {
 }
 
 .add-btn-desc--private {
-  color: #a29bfe;
+  color: var(--state-violet-soft);
   opacity: 0.85;
 }
 
@@ -2854,22 +2938,22 @@ select.todo-due-select {
   align-items: center;
   gap: 8px;
   padding: 12px 20px;
-  background: rgba(124, 92, 255, 0.1);
-  border: 2px dashed rgba(124, 92, 255, 0.4);
+  background: rgba(var(--accent-purple-rgb-legacy), 0.10);
+  border: 2px dashed rgba(var(--accent-purple-rgb-legacy), 0.40);
   border-radius: 12px;
-  color: #a29bfe;
+  color: var(--state-violet-soft);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .btn-add-private-section:hover {
-  background: rgba(124, 92, 255, 0.2);
-  border-color: rgba(124, 92, 255, 0.7);
-  color: #c4b5fe;
+  background: rgba(var(--accent-purple-rgb-legacy), 0.20);
+  border-color: rgba(var(--accent-purple-rgb-legacy), 0.70);
+  color: var(--state-violet-pale);
 }
 
-/* プライベートセクションモーダルの色グリッド */
+/* 郢晏干ﾎ帷ｹｧ・､郢晏生繝ｻ郢晏現縺晉ｹｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ邵ｺ・ｮ豼ｶ・ｲ郢ｧ・ｰ郢晢ｽｪ郢昴・繝ｩ */
 #private-section-color-grid {
   display: flex;
   flex-wrap: wrap;
@@ -2878,7 +2962,7 @@ select.todo-due-select {
 }
 
 /* ===========================
-   文字サイズ クラス
+   隴√・・ｭ蜉ｱ縺礼ｹｧ・､郢ｧ・ｺ 郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｹ
    =========================== */
 html.font-sm { font-size: 14px; }
 html.font-md { font-size: 16px; }
@@ -2886,25 +2970,25 @@ html.font-lg { font-size: 18px; }
 html.font-xl { font-size: 21px; }
 
 /* ===========================
-   テーマ変数
+   郢昴・繝ｻ郢晄ｧｫ・､逕ｻ辟・
    =========================== */
 
-/* ライト（WCAG 2.1 AA準拠 / GitHub Light ベース） */
+/* 郢晢ｽｩ郢ｧ・､郢晁肩・ｼ繝ｻCAG 2.1 AA雋・戟萓 / GitHub Light 郢晏生繝ｻ郢ｧ・ｹ繝ｻ繝ｻ*/
 [data-theme="light"] {
   --bg-primary:         #f6f8fa;
   --bg-secondary:       #eaeef2;
   --bg-card:            rgba(255, 255, 255, 0.95);
   --bg-card-hover:      rgba(255, 255, 255, 1);
   --bg-glass:           rgba(255, 255, 255, 0.90);
-  --border-glass:       rgba(31, 35, 40, 0.25);   /* 0.12→0.25: 入力欄・カードの境界を視認可能に */
-  --border-glass-hover: rgba(31, 35, 40, 0.45);
+  --border-glass:       rgba(var(--light-border-rgb), 0.25);   /* 0.12遶翫・.25: 陷茨ｽ･陷牙ｸｶ・ｬ繝ｻ繝ｻ郢ｧ・ｫ郢晢ｽｼ郢晏ｳｨ繝ｻ陟・・髦懃ｹｧ螳夲ｽｦ蜀ｶ・ｪ讎雁ｺ・妙・ｽ邵ｺ・ｫ */
+  --border-glass-hover: rgba(var(--light-border-rgb), 0.45);
 
-  /* Text — contrast vs bg-primary: primary ~17:1, secondary ~12:1, muted ~7.5:1 */
+  /* Text 遯ｶ繝ｻcontrast vs bg-primary: primary ~17:1, secondary ~12:1, muted ~7.5:1 */
   --text-primary:   #1f2328;
   --text-secondary: rgba(31, 35, 40, 0.70);
   --text-muted:     rgba(31, 35, 40, 0.46);
 
-  /* Accent — ライトモードは暗め（WCAG AA on light bg） */
+  /* Accent 遯ｶ繝ｻ郢晢ｽｩ郢ｧ・､郢晏現ﾎ皮ｹ晢ｽｼ郢晏ｳｨ繝ｻ隴牙干・√・繝ｻCAG AA on light bg繝ｻ繝ｻ*/
   --accent-blue:   #0969da;
   --accent-cyan:   #0a7fc0;
   --accent-purple: #6639ba;
@@ -2913,8 +2997,8 @@ html.font-xl { font-size: 21px; }
 
   --gradient-hero: linear-gradient(160deg, #eef2fa 0%, #f6f8fa 50%, #eef2fa 100%);
   --shadow-sm: 0 1px 3px rgba(31, 35, 40, 0.12);
-  --shadow-md: 0 3px 12px rgba(31, 35, 40, 0.15);
-  --shadow-lg: 0 8px 32px rgba(31, 35, 40, 0.18);
+  --shadow-md: 0 3px 12px rgba(var(--light-border-rgb), 0.15);
+  --shadow-lg: 0 8px 32px rgba(var(--light-border-rgb), 0.18);
   --header-bg: rgba(255, 255, 255, 0.80);
   --date-icon-filter: brightness(0) opacity(0.55);
 }
@@ -2926,35 +3010,35 @@ html.font-xl { font-size: 21px; }
   opacity: 0.12;
 }
 [data-theme="light"] .header {
-  border-bottom-color: rgba(100, 120, 200, 0.2);
+  border-bottom-color: rgba(var(--light-preview-rgb), 0.20);
 }
 [data-theme="light"] .header-title {
-  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  background: linear-gradient(135deg, var(--theme-light-brand-start), var(--theme-light-brand-end));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 [data-theme="light"] .header-logo {
-  background: linear-gradient(135deg, #2563eb, #0ea5e9);
-  box-shadow: 0 0 16px rgba(37, 99, 235, 0.3);
+  background: linear-gradient(135deg, var(--theme-light-brand-start), var(--theme-light-brand-end));
+  box-shadow: 0 0 16px rgba(var(--theme-light-brand-rgb), 0.30);
 }
 [data-theme="light"] .link-card {
-  box-shadow: 0 2px 10px rgba(74, 100, 200, 0.12);
+  box-shadow: 0 2px 10px rgba(var(--light-accent-rgb), 0.12);
 }
 [data-theme="light"] .category-section,
 [data-theme="light"] .external-tools {
   background: var(--bg-card);
-  border-color: rgba(100, 120, 200, 0.2);
-  box-shadow: 0 2px 14px rgba(74, 100, 200, 0.07);
+  border-color: rgba(var(--light-preview-rgb), 0.20);
+  box-shadow: 0 2px 14px rgba(var(--light-accent-rgb), 0.07);
 }
 [data-theme="light"] .modal-glass {
-  background: rgba(241, 243, 247, 0.98); /* 薄いグレー: 白入力欄との差を作る */
-  border-color: rgba(31, 35, 40, 0.15);
+  background: rgba(var(--light-surface-rgb), 0.98); /* 髦ｮ繝ｻ・樒ｹｧ・ｰ郢晢ｽｬ郢晢ｽｼ: 騾具ｽｽ陷茨ｽ･陷牙ｸｶ・ｬ繝ｻ竊堤ｸｺ・ｮ陝ｾ・ｮ郢ｧ蜑・ｽｽ諛奇ｽ・*/
+  border-color: rgba(var(--light-border-rgb), 0.15);
 }
-/* ライトモード: 入力欄を白+くっきりボーダーで背景と区別 */
+/* 郢晢ｽｩ郢ｧ・､郢晏現ﾎ皮ｹ晢ｽｼ郢昴・ 陷茨ｽ･陷牙ｸｶ・ｬ繝ｻ・帝具ｽｽ+邵ｺ荳岩夢邵ｺ髦ｪ・顔ｹ晄㈱繝ｻ郢敖郢晢ｽｼ邵ｺ・ｧ髢ｭ譴ｧ蜍ｹ邵ｺ・ｨ陋ｹ・ｺ陋ｻ・･ */
 [data-theme="light"] .form-input {
   background: var(--bg-card-hover);
-  border-color: rgba(31, 35, 40, 0.28);
+  border-color: rgba(var(--light-border-rgb), 0.28);
   color: var(--text-primary);
 }
 [data-theme="light"] .form-input:focus {
@@ -2968,13 +3052,13 @@ html.font-xl { font-size: 21px; }
   background: var(--bg-card-hover);
 }
 [data-theme="light"] .footer {
-  color: rgba(26, 30, 58, 0.45);
+  color: rgba(var(--light-ink-rgb), 0.45);
 }
 [data-theme="light"] .notice-board {
   background: var(--bg-card);
-  border-color: rgba(100, 120, 200, 0.18);
+  border-color: rgba(var(--light-preview-rgb), 0.18);
 }
-/* ライトテーマ: ヘッダーアイコンボタン白飛び防止 */
+/* 郢晢ｽｩ郢ｧ・､郢晏現繝ｦ郢晢ｽｼ郢昴・ 郢晏･繝｣郢敖郢晢ｽｼ郢ｧ・｢郢ｧ・､郢ｧ・ｳ郢晢ｽｳ郢晄㈱縺｡郢晢ｽｳ騾具ｽｽ鬯溷ｸ吶・鬮ｦ・ｲ雎・ｽ｢ */
 [data-theme="light"] .search-container,
 [data-theme="light"] .btn-favorites-only,
 [data-theme="light"] .btn-task,
@@ -2982,9 +3066,9 @@ html.font-xl { font-size: 21px; }
 [data-theme="light"] .btn-email-assist,
 [data-theme="light"] .btn-calendar,
 [data-theme="light"] .btn-lock-header {
-  background: rgba(26, 30, 58, 0.07);
-  border-color: rgba(26, 30, 58, 0.16);
-  color: rgba(26, 30, 58, 0.6);
+  background: rgba(var(--light-ink-rgb), 0.07);
+  border-color: rgba(var(--light-ink-rgb), 0.16);
+  color: rgba(var(--light-ink-rgb), 0.60);
 }
 [data-theme="light"] .search-container:hover:not(:focus-within):not(.has-value),
 [data-theme="light"] .btn-favorites-only:hover,
@@ -2992,52 +3076,52 @@ html.font-xl { font-size: 21px; }
 [data-theme="light"] .btn-notice-bell:hover,
 [data-theme="light"] .btn-email-assist:hover,
 [data-theme="light"] .btn-calendar:hover {
-  background: rgba(26, 30, 58, 0.13);
-  border-color: rgba(26, 30, 58, 0.3);
-  color: rgba(26, 30, 58, 0.9);
+  background: rgba(var(--light-ink-rgb), 0.13);
+  border-color: rgba(var(--light-ink-rgb), 0.30);
+  color: rgba(var(--light-ink-rgb), 0.90);
 }
-/* ロックボタンはホバー時にアンバー色を維持しつつ背景だけ補正 */
+/* 郢晢ｽｭ郢昴・縺醍ｹ晄㈱縺｡郢晢ｽｳ邵ｺ・ｯ郢晏ｸ吶Σ郢晢ｽｼ隴弱ｅ竊鍋ｹｧ・｢郢晢ｽｳ郢晁・繝ｻ豼ｶ・ｲ郢ｧ蝣､・ｶ・ｭ隰問・・邵ｺ・､邵ｺ・､髢ｭ譴ｧ蜍ｹ邵ｺ・ｰ邵ｺ鬘鯉ｽ｣諛茨ｽｭ・｣ */
 [data-theme="light"] .btn-lock-header:hover {
   background: rgba(251, 191, 36, 0.12);
   border-color: rgba(251, 191, 36, 0.5);
 }
 [data-theme="light"] .lock-screen {
   --lock-key-text: rgba(31, 35, 40, 0.78);
-  --lock-key-border: rgba(31, 35, 40, 0.18);
+  --lock-key-border: rgba(var(--light-border-rgb), 0.18);
   --lock-key-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
   --lock-key-active-bg: rgba(255, 255, 255, 1);
   --lock-key-del-text: rgba(255, 255, 255, 0.82);
 }
 [data-theme="light"] .search-container:focus-within,
 [data-theme="light"] .search-container.has-value {
-  background: rgba(74, 100, 200, 0.08);
-  border-color: rgba(74, 100, 200, 0.35);
-  box-shadow: 0 0 0 3px rgba(74, 100, 200, 0.1);
+  background: rgba(var(--light-accent-rgb), 0.08);
+  border-color: rgba(var(--light-accent-rgb), 0.35);
+  box-shadow: 0 0 0 3px rgba(var(--light-accent-rgb), 0.10);
 }
 [data-theme="light"] .btn-favorites-only.active {
-  background: rgba(74, 158, 255, 0.12);
-  border-color: rgba(74, 158, 255, 0.45);
+  background: rgba(var(--accent-blue-rgb-legacy), 0.12);
+  border-color: rgba(var(--accent-blue-rgb-legacy), 0.45);
   color: var(--accent-blue);
-  box-shadow: 0 0 12px rgba(74, 158, 255, 0.18);
+  box-shadow: 0 0 12px rgba(var(--accent-blue-rgb-legacy), 0.18);
 }
 [data-theme="light"] .btn-notice-bell.has-unread {
-  border-color: rgba(245, 158, 11, 0.5);
+  border-color: rgba(var(--state-warning-rgb), 0.50);
 }
 [data-theme="light"] .btn-user {
-  background: rgba(26, 30, 58, 0.06);
-  border-color: rgba(26, 30, 58, 0.15);
-  color: rgba(26, 30, 58, 0.65);
+  background: rgba(var(--light-ink-rgb), 0.06);
+  border-color: rgba(var(--light-ink-rgb), 0.15);
+  color: rgba(var(--light-ink-rgb), 0.65);
 }
 [data-theme="light"] .btn-user:hover {
-  background: rgba(26, 30, 58, 0.11);
-  border-color: rgba(26, 30, 58, 0.28);
-  color: #1a1e3a;
+  background: rgba(var(--light-ink-rgb), 0.11);
+  border-color: rgba(var(--light-ink-rgb), 0.28);
+  color: rgb(var(--light-ink-rgb));
 }
 
 
 
 /* ===========================
-   設定FABボタン
+   髫ｪ・ｭ陞ｳ蜩･AB郢晄㈱縺｡郢晢ｽｳ
    =========================== */
 .settings-fab {
   position: fixed;
@@ -3064,7 +3148,7 @@ html.font-xl { font-size: 21px; }
 .settings-fab.active {
   color: var(--accent-purple);
   border-color: var(--accent-purple);
-  box-shadow: 0 0 16px rgba(124, 92, 255, 0.4);
+  box-shadow: 0 0 16px rgba(var(--accent-purple-rgb-legacy), 0.40);
   transform: scale(1.1);
 }
 
@@ -3078,7 +3162,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   設定パネル
+   髫ｪ・ｭ陞ｳ螢ｹ繝ｱ郢晞亂ﾎ・
    =========================== */
 .settings-panel {
   position: fixed;
@@ -3090,7 +3174,7 @@ html.font-xl { font-size: 21px; }
   border-radius: 16px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 40px var(--shadow-ink-heavy);
   z-index: 300;
   overflow: hidden;
   transform-origin: bottom right;
@@ -3143,7 +3227,7 @@ html.font-xl { font-size: 21px; }
   margin-bottom: 8px;
 }
 
-/* テーマグリッド */
+/* 郢昴・繝ｻ郢晄ｧｭ縺堤ｹ晢ｽｪ郢昴・繝ｩ */
 .theme-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -3176,7 +3260,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
 }
 
-/* テーマミニプレビュー */
+/* 郢昴・繝ｻ郢晄ｧｭﾎ醍ｹ昜ｹ昴・郢晢ｽｬ郢晁侭ﾎ礼ｹ晢ｽｼ */
 .theme-preview {
   width: 40px;
   height: 30px;
@@ -3206,23 +3290,23 @@ html.font-xl { font-size: 21px; }
   border-radius: 2px;
 }
 
-/* ダーク */
+/* 郢敖郢晢ｽｼ郢ｧ・ｯ */
 .theme-preview--dark {
   background: #0a0e27;
 }
 .theme-preview--dark .tp-bar { background: rgba(74,158,255,0.6); }
 .theme-preview--dark .tp-cards > div { background: var(--bg-card); }
 
-/* ライト */
+/* 郢晢ｽｩ郢ｧ・､郢昴・*/
 .theme-preview--light {
   background: #f0f4ff;
-  border-color: rgba(100,120,200,0.3);
+  border-color: rgba(var(--light-preview-rgb), 0.30);
 }
 .theme-preview--light .tp-bar { background: rgba(74,158,255,0.6); }
-.theme-preview--light .tp-cards > div { background: var(--preview-light-card); border: 1px solid rgba(100,120,200,0.2); }
+.theme-preview--light .tp-cards > div { background: var(--preview-light-card); border: 1px solid rgba(var(--light-preview-rgb), 0.20); }
 
 
-/* フォントサイズグリッド */
+/* 郢晁ｼ斐°郢晢ｽｳ郢晏現縺礼ｹｧ・､郢ｧ・ｺ郢ｧ・ｰ郢晢ｽｪ郢昴・繝ｩ */
 .fontsize-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -3262,23 +3346,23 @@ html.font-xl { font-size: 21px; }
 
 .fontsize-btn.active {
   border-color: var(--accent-cyan);
-  background: rgba(0, 212, 170, 0.08);
+  background: rgba(var(--accent-cyan-rgb-legacy), 0.08);
   color: var(--text-primary);
 }
 
-/* ライトテーマ時のパネル背景調整 */
+/* 郢晢ｽｩ郢ｧ・､郢晏現繝ｦ郢晢ｽｼ郢晄ｨ雁・邵ｺ・ｮ郢昜ｻ｣繝ｭ郢晢ｽｫ髢ｭ譴ｧ蜍ｹ髫ｱ・ｿ隰ｨ・ｴ */
 [data-theme="light"] .settings-panel {
   background: rgba(240, 244, 255, 0.97);
-  border-color: rgba(100, 120, 200, 0.2);
+  border-color: rgba(var(--light-preview-rgb), 0.20);
 }
 [data-theme="light"] .settings-panel-header {
-  border-bottom-color: rgba(100, 120, 200, 0.15);
+  border-bottom-color: rgba(var(--light-preview-rgb), 0.15);
 }
 [data-theme="light"] .fontsize-btn {
   background: var(--bg-card);
 }
 
-/* モバイル対応 */
+/* 郢晢ｽ｢郢晁・縺・ｹ晢ｽｫ陝・ｽｾ陟｢繝ｻ*/
 @media (max-width: 480px) {
   .settings-panel {
     width: calc(100vw - 2 * var(--space-xl));
@@ -3286,7 +3370,7 @@ html.font-xl { font-size: 21px; }
   }
 }
 
-/* ========== 削除確認モーダル ========== */
+/* ========== 陷台ｼ∝求驕抵ｽｺ髫ｱ髦ｪﾎ皮ｹ晢ｽｼ郢敖郢晢ｽｫ ========== */
 .delete-confirm-dialog {
   max-width: 360px;
   text-align: center;
@@ -3295,7 +3379,7 @@ html.font-xl { font-size: 21px; }
 
 .delete-confirm-icon {
   font-size: 2.2rem;
-  color: #f59e0b;
+  color: var(--state-warning);
   margin-bottom: var(--space-md);
   animation: warnPulse 0.6s ease;
 }
@@ -3333,7 +3417,7 @@ html.font-xl { font-size: 21px; }
   box-shadow: 0 2px 10px rgba(220, 38, 38, 0.4);
 }
 .btn-danger.ready:hover {
-  background: rgb(220, 38, 38);
+  background: rgb(var(--state-danger-strong-rgb));
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(220, 38, 38, 0.5);
 }
@@ -3341,9 +3425,9 @@ html.font-xl { font-size: 21px; }
   transform: translateY(0);
 }
 
-/* ========== カード階層（バッジ＋ポップアップ方式） ========== */
+/* ========== 郢ｧ・ｫ郢晢ｽｼ郢晁崟蝴ｴ陞ｻ・､繝ｻ蛹ｻ繝ｰ郢昴・縺壹・荵昴・郢昴・繝ｻ郢ｧ・｢郢昴・繝ｻ隴・ｽｹ陟第得・ｼ繝ｻ========== */
 
-/* 子カードを持つ親カード: 見た目はそのまま、スタック影だけ追加 */
+/* 陝・・縺咲ｹ晢ｽｼ郢晏ｳｨ・定ｬ問・笆ｽ髫包ｽｪ郢ｧ・ｫ郢晢ｽｼ郢昴・ 髫穂ｹ昶螺騾ｶ・ｮ邵ｺ・ｯ邵ｺ譏ｴ繝ｻ邵ｺ・ｾ邵ｺ・ｾ邵ｲ竏壹○郢ｧ・ｿ郢昴・縺題厄ｽｱ邵ｺ・ｰ邵ｺ鬘鯉ｽｿ・ｽ陷会｣ｰ */
 .card-has-children {
   box-shadow:
     4px 4px 0 -1px var(--border-glass),
@@ -3355,7 +3439,7 @@ html.font-xl { font-size: 21px; }
     8px 8px 0 -2px var(--border-glass);
 }
 
-/* 子カード数バッジ */
+/* 陝・・縺咲ｹ晢ｽｼ郢晉判辟夂ｹ晁・繝｣郢ｧ・ｸ */
 .card-children-badge {
   position: absolute;
   bottom: 6px;
@@ -3386,7 +3470,7 @@ html.font-xl { font-size: 21px; }
   font-size: 0.85rem;
 }
 
-/* ポップアップ本体 */
+/* 郢晄亢繝｣郢晏干縺・ｹ昴・繝ｻ隴幢ｽｬ闖ｴ繝ｻ*/
 .card-child-popup {
   position: absolute;
   z-index: 2000;
@@ -3399,9 +3483,9 @@ html.font-xl { font-size: 21px; }
   border-top: 3px solid var(--accent-cyan);
   border-radius: var(--radius-lg);
   box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.6),
+    0 20px 60px var(--shadow-ink-stronger),
     0 4px 16px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(0, 200, 255, 0.08),
+    0 0 0 1px rgba(var(--accent-aqua-rgb-legacy), 0.08),
     inset 0 1px 0 var(--surface-sheen);
   padding: 0;
   overflow: hidden;
@@ -3420,14 +3504,14 @@ html.font-xl { font-size: 21px; }
   to   { opacity: 0; transform: translateY(-6px) scale(0.97); }
 }
 
-/* ポップアップヘッダー */
+/* 郢晄亢繝｣郢晏干縺・ｹ昴・繝ｻ郢晏･繝｣郢敖郢晢ｽｼ */
 .card-child-popup__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   padding: 11px 14px;
-  background: linear-gradient(135deg, rgba(0, 200, 255, 0.1) 0%, transparent 60%);
+  background: linear-gradient(135deg, rgba(var(--accent-aqua-rgb-legacy), 0.10) 0%, transparent 60%);
   border-bottom: 1px solid var(--border-glass);
 }
 .card-child-popup__title {
@@ -3466,7 +3550,7 @@ html.font-xl { font-size: 21px; }
   border-color: rgba(255, 80, 80, 0.4);
 }
 
-/* ポップアップ内カードリスト */
+/* 郢晄亢繝｣郢晏干縺・ｹ昴・繝ｻ陷繝ｻ縺咲ｹ晢ｽｼ郢晏ｳｨﾎ懃ｹｧ・ｹ郢昴・*/
 .card-child-popup__grid {
   display: flex;
   flex-direction: column;
@@ -3474,7 +3558,7 @@ html.font-xl { font-size: 21px; }
   padding: 8px;
 }
 
-/* ポップアップ内 link-card をリスト行スタイルに */
+/* 郢晄亢繝｣郢晏干縺・ｹ昴・繝ｻ陷繝ｻlink-card 郢ｧ蛛ｵﾎ懃ｹｧ・ｹ郢晞メ・｡蠕後○郢ｧ・ｿ郢ｧ・､郢晢ｽｫ邵ｺ・ｫ */
 .card-child-popup__grid .link-card {
   flex-direction: row;
   align-items: center;
@@ -3493,8 +3577,8 @@ html.font-xl { font-size: 21px; }
   display: none;
 }
 .card-child-popup__grid .link-card:hover {
-  background: rgba(0, 200, 255, 0.08);
-  border-color: rgba(0, 200, 255, 0.22);
+  background: rgba(var(--accent-aqua-rgb-legacy), 0.08);
+  border-color: rgba(var(--accent-aqua-rgb-legacy), 0.22);
   transform: translateX(4px);
   box-shadow: inset 3px 0 0 var(--accent-cyan), 0 2px 8px rgba(0, 0, 0, 0.2);
 }
@@ -3516,7 +3600,7 @@ html.font-xl { font-size: 21px; }
   margin: 0;
 }
 
-/* ポップアップ内カードの段階的フェードイン */
+/* 郢晄亢繝｣郢晏干縺・ｹ昴・繝ｻ陷繝ｻ縺咲ｹ晢ｽｼ郢晏ｳｨ繝ｻ隹ｿ・ｵ鬮ｫ螳亥飭郢晁ｼ斐♂郢晢ｽｼ郢晏ｳｨ縺・ｹ晢ｽｳ */
 .card-child-popup__grid .link-card,
 .card-child-popup__grid .btn-add-card {
   animation: cardSlideIn 0.2s ease both;
@@ -3531,7 +3615,7 @@ html.font-xl { font-size: 21px; }
   to   { opacity: 1; transform: none; }
 }
 
-/* ポップアップ内の追加ボタン */
+/* 郢晄亢繝｣郢晏干縺・ｹ昴・繝ｻ陷繝ｻ繝ｻ髴托ｽｽ陷会｣ｰ郢晄㈱縺｡郢晢ｽｳ */
 .card-child-popup__grid .btn-add-card {
   font-size: 0.8rem;
   min-height: 40px;
@@ -3540,37 +3624,37 @@ html.font-xl { font-size: 21px; }
   animation-delay: 0.22s;
 }
 
-/* コンテキストメニュー: 子カード追加 */
+/* 郢ｧ・ｳ郢晢ｽｳ郢昴・縺冗ｹｧ・ｹ郢晏現ﾎ鍋ｹ昜ｹ斟礼ｹ晢ｽｼ: 陝・・縺咲ｹ晢ｽｼ郢晁歓・ｿ・ｽ陷会｣ｰ */
 .ctx-add-child {
   color: var(--accent-cyan);
 }
 .ctx-add-child:hover {
-  background: rgba(0, 200, 255, 0.15);
+  background: rgba(var(--accent-aqua-rgb-legacy), 0.15);
 }
 
 
-/* ライトテーマ: 子カードバッジ */
+/* 郢晢ｽｩ郢ｧ・､郢晏現繝ｦ郢晢ｽｼ郢昴・ 陝・・縺咲ｹ晢ｽｼ郢晏ｳｨ繝ｰ郢昴・縺・*/
 [data-theme="light"] .card-children-badge {
   color: var(--accent-blue);
 }
 
-/* ライトテーマ: ポップアップ */
+/* 郢晢ｽｩ郢ｧ・､郢晏現繝ｦ郢晢ｽｼ郢昴・ 郢晄亢繝｣郢晏干縺・ｹ昴・繝ｻ */
 [data-theme="light"] .card-child-popup {
   background: rgba(240, 244, 255, 0.98);
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.18),
     0 4px 16px rgba(0, 0, 0, 0.1),
-    0 0 0 1px rgba(0, 120, 200, 0.1);
+    0 0 0 1px rgba(var(--accent-aqua-deep-rgb), 0.10);
 }
 [data-theme="light"] .card-child-popup__grid .link-card {
   background: rgba(0, 0, 0, 0.02);
 }
 [data-theme="light"] .card-child-popup__grid .link-card:hover {
-  background: rgba(0, 120, 200, 0.07);
-  border-color: rgba(0, 120, 200, 0.2);
-  box-shadow: inset 3px 0 0 var(--accent-cyan), 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: rgba(var(--accent-aqua-deep-rgb), 0.07);
+  border-color: rgba(var(--accent-aqua-deep-rgb), 0.20);
+  box-shadow: inset 3px 0 0 var(--accent-cyan), 0 2px 8px var(--shadow-ink-weak);
 }
-/* ========== 個人TODOパネル ========== */
+/* ========== 陋溷ｶ・ｺ・ｺTODO郢昜ｻ｣繝ｭ郢晢ｽｫ ========== */
 .todo-section {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
@@ -3596,7 +3680,7 @@ html.font-xl { font-size: 21px; }
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, var(--state-primary), var(--state-primary-strong));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3621,7 +3705,7 @@ html.font-xl { font-size: 21px; }
 .todo-count--all-done {
   background: rgba(16, 185, 129, 0.15);
   border-color: rgba(16, 185, 129, 0.4);
-  color: #10b981;
+  color: var(--state-success);
 }
 .todo-toggle-btn {
   background: none;
@@ -3643,7 +3727,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
 }
 
-/* 折りたたみ */
+/* 隰壼･・顔ｸｺ貅倪螺邵ｺ・ｿ */
 .todo-body {
   padding: 12px 16px;
   transition: all 0.25s ease;
@@ -3652,7 +3736,7 @@ html.font-xl { font-size: 21px; }
   display: none;
 }
 
-/* タスクリスト */
+/* 郢ｧ・ｿ郢ｧ・ｹ郢ｧ・ｯ郢晢ｽｪ郢ｧ・ｹ郢昴・*/
 .todo-list {
   list-style: none;
   padding: 0;
@@ -3672,7 +3756,7 @@ html.font-xl { font-size: 21px; }
   gap: 8px;
 }
 
-/* タスクアイテム */
+/* 郢ｧ・ｿ郢ｧ・ｹ郢ｧ・ｯ郢ｧ・｢郢ｧ・､郢昴・ﾎ・*/
 .todo-item {
   display: flex;
   align-items: center;
@@ -3694,7 +3778,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-muted);
 }
 
-/* チェックボタン */
+/* 郢昶・縺臥ｹ昴・縺醍ｹ晄㈱縺｡郢晢ｽｳ */
 .todo-check {
   background: none;
   border: none;
@@ -3707,8 +3791,8 @@ html.font-xl { font-size: 21px; }
   flex-shrink: 0;
   transition: color 0.15s, transform 0.15s;
 }
-.todo-check:hover { color: #6366f1; transform: scale(1.15); }
-.todo-item--done .todo-check { color: #10b981; }
+.todo-check:hover { color: var(--state-primary); transform: scale(1.15); }
+.todo-item--done .todo-check { color: var(--state-success); }
 
 .todo-text {
   flex: 1;
@@ -3717,7 +3801,7 @@ html.font-xl { font-size: 21px; }
   word-break: break-all;
 }
 
-/* 期限バッジ */
+/* 隴帶ｻ・応郢晁・繝｣郢ｧ・ｸ */
 .todo-due {
   font-size: 0.7rem;
   font-weight: 600;
@@ -3728,18 +3812,18 @@ html.font-xl { font-size: 21px; }
 }
 .todo-due--today {
   background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--state-danger);
+  border: 1px solid rgba(var(--state-danger-rgb), 0.30);
 }
 .todo-due--tomorrow {
   background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: var(--state-warning);
+  border: 1px solid rgba(var(--state-warning-rgb), 0.30);
 }
 .todo-due--overdue {
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(var(--state-danger-rgb), 0.20);
+  color: var(--state-danger-soft);
+  border: 1px solid rgba(var(--state-danger-rgb), 0.40);
 }
 .todo-due--future {
   background: var(--bg-glass);
@@ -3747,7 +3831,7 @@ html.font-xl { font-size: 21px; }
   border: 1px solid var(--border-glass);
 }
 
-/* 削除ボタン */
+/* 陷台ｼ∝求郢晄㈱縺｡郢晢ｽｳ */
 .todo-delete-btn {
   background: none;
   border: none;
@@ -3761,14 +3845,14 @@ html.font-xl { font-size: 21px; }
   flex-shrink: 0;
 }
 .todo-item:hover .todo-delete-btn { opacity: 1; }
-.todo-delete-btn:hover { color: #ef4444; }
+.todo-delete-btn:hover { color: var(--state-danger); }
 
-/* クイック追加フォーム */
+/* 郢ｧ・ｯ郢ｧ・､郢昴・縺鷹恆・ｽ陷会｣ｰ郢晁ｼ斐°郢晢ｽｼ郢晢｣ｰ */
 .todo-add-area {
   margin-top: 8px;
 }
 .todo-open-btn {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, var(--state-primary), var(--state-primary-strong));
   color: var(--text-on-accent);
   border: none;
   border-radius: var(--radius-sm);
@@ -3807,7 +3891,7 @@ html.font-xl { font-size: 21px; }
 }
 .todo-input:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--state-primary);
 }
 .todo-input::placeholder { color: var(--text-muted); }
 
@@ -3815,7 +3899,7 @@ html.font-xl { font-size: 21px; }
 #todo-due-select.date-icon-only { flex-shrink: 0; }
 
 .todo-add-btn {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, var(--state-primary), var(--state-primary-strong));
   color: var(--text-on-accent);
   border: none;
   border-radius: var(--radius-sm);
@@ -3841,14 +3925,14 @@ html.font-xl { font-size: 21px; }
 }
 .todo-cancel-btn:hover { background: var(--bg-card-hover); color: var(--text-secondary); }
 
-/* モバイル対応 */
+/* 郢晢ｽ｢郢晁・縺・ｹ晢ｽｫ陝・ｽｾ陟｢繝ｻ*/
 @media (max-width: 600px) {
   .todo-add-row { flex-wrap: wrap; }
   .todo-input { min-width: 100%; }
 }
 
 /* ===========================
-   ベル通知ボタン
+   郢晏生ﾎ晞ｨｾ螟り｡咲ｹ晄㈱縺｡郢晢ｽｳ
    =========================== */
 .btn-notice-bell {
   position: relative;
@@ -3872,7 +3956,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
 }
 .btn-notice-bell.has-unread {
-  color: #fbbf24;
+  color: var(--state-warning-soft);
   border-color: rgba(251, 191, 36, 0.4);
   animation: bellShake 0.5s ease 0.3s;
 }
@@ -3887,7 +3971,7 @@ html.font-xl { font-size: 21px; }
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #ef4444;
+  background: var(--state-danger);
   color: var(--text-on-accent);
   font-size: 0.6rem;
   font-weight: 700;
@@ -3903,15 +3987,15 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   お知らせ 未読スタイル
+   邵ｺ鬘碑｡咲ｹｧ蟲ｨ笳・隴幢ｽｪ髫ｱ・ｭ郢ｧ・ｹ郢ｧ・ｿ郢ｧ・､郢晢ｽｫ
    =========================== */
 .notice-item.notice-unread {
-  border-left: 3px solid #60a5fa;
+  border-left: 3px solid var(--state-info);
   padding-left: calc(var(--space-md) - 3px);
 }
 .notice-new-badge {
   display: inline-block;
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  background: linear-gradient(135deg, var(--state-info-strong), var(--state-primary));
   color: var(--text-on-accent);
   font-size: 0.58rem;
   font-weight: 700;
@@ -3930,7 +4014,7 @@ html.font-xl { font-size: 21px; }
 .btn-read-all {
   background: rgba(96, 165, 250, 0.1);
   border: 1px solid rgba(96, 165, 250, 0.3);
-  color: #60a5fa;
+  color: var(--state-info);
   border-radius: var(--radius-sm);
   padding: 4px 10px;
   font-size: 0.75rem;
@@ -3944,7 +4028,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   お知らせリアクション
+   邵ｺ鬘碑｡咲ｹｧ蟲ｨ笳狗ｹ晢ｽｪ郢ｧ・｢郢ｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ
    =========================== */
 .notice-reactions {
   display: flex;
@@ -3975,12 +4059,12 @@ html.font-xl { font-size: 21px; }
   transform: scale(1.08);
 }
 .reaction-btn.active {
-  background: rgba(99, 102, 241, 0.2);
-  border-color: rgba(99, 102, 241, 0.5);
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.3);
+  background: rgba(var(--state-primary-rgb), 0.20);
+  border-color: rgba(var(--state-primary-rgb), 0.50);
+  box-shadow: 0 0 0 1px rgba(var(--state-primary-rgb), 0.30);
 }
 .reaction-btn.active:hover {
-  background: rgba(99, 102, 241, 0.3);
+  background: rgba(var(--state-primary-rgb), 0.30);
 }
 .reaction-count {
   font-size: 0.72rem;
@@ -3989,13 +4073,13 @@ html.font-xl { font-size: 21px; }
   min-width: 10px;
 }
 .reaction-btn.active .reaction-count {
-  color: #a5b4fc;
+  color: var(--state-task-accent);
 }
 
 /* ===========================
-   全社チャット FAB
+   陷茨ｽｨ驕会ｽｾ郢昶・ﾎ慕ｹ昴・繝ｨ FAB
    =========================== */
-/* ========== ファイル転送FAB ========== */
+/* ========== 郢晁ｼ斐＜郢ｧ・､郢晢ｽｫ髴・ｽ｢鬨ｾ・哂B ========== */
 .ft-fab {
   position: fixed;
   bottom: var(--space-xl);
@@ -4017,25 +4101,25 @@ html.font-xl { font-size: 21px; }
   font-size: var(--font-size-base);
 }
 .ft-fab:hover {
-  color: #34d399;
-  border-color: #34d399;
-  box-shadow: 0 0 16px rgba(52, 211, 153, 0.4);
+  color: var(--state-success-soft);
+  border-color: var(--state-success-soft);
+  box-shadow: 0 0 16px rgba(var(--state-success-mint-rgb), 0.40);
   transform: scale(1.1);
 }
 .ft-fab.has-pending {
-  color: #34d399;
+  color: var(--state-success-soft);
   border-color: rgba(52, 211, 153, 0.5);
   animation: ftPulse 2s ease-in-out infinite;
 }
 @keyframes ftPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4); }
-  50%       { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--state-success-mint-rgb), 0.40); }
+  50%       { box-shadow: 0 0 0 8px rgba(var(--state-success-mint-rgb), 0.00); }
 }
 .ft-badge {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #ef4444;
+  background: var(--state-danger);
   color: var(--text-on-accent);
   font-size: 0.6rem;
   font-weight: 700;
@@ -4048,7 +4132,7 @@ html.font-xl { font-size: 21px; }
   padding: 0 3px;
 }
 
-/* ========== ファイル転送パネル ========== */
+/* ========== 郢晁ｼ斐＜郢ｧ・､郢晢ｽｫ髴・ｽ｢鬨ｾ竏壹Τ郢晞亂ﾎ・========== */
 .ft-panel {
   position: fixed;
   bottom: calc(var(--space-xl) + 48px + 12px);
@@ -4114,7 +4198,7 @@ html.font-xl { font-size: 21px; }
 .btn-ft-new {
   width: 100%;
   padding: 10px;
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: linear-gradient(135deg, var(--state-success), var(--state-success-strong));
   color: var(--text-on-accent);
   border: none;
   border-radius: 10px;
@@ -4142,7 +4226,7 @@ html.font-xl { font-size: 21px; }
   text-align: center;
   padding: 16px 0;
 }
-/* 転送アイテム */
+/* 髴・ｽ｢鬨ｾ竏壹＞郢ｧ・､郢昴・ﾎ・*/
 .ft-item {
   background: var(--bg-hover);
   border-radius: 10px;
@@ -4187,7 +4271,7 @@ html.font-xl { font-size: 21px; }
 .btn-ft-accept {
   flex: 1;
   padding: 6px;
-  background: #10b981;
+  background: var(--state-success);
   color: var(--text-on-accent);
   border: none;
   border-radius: 7px;
@@ -4207,11 +4291,11 @@ html.font-xl { font-size: 21px; }
   font-size: 0.78rem;
   transition: background 0.15s, color 0.15s;
 }
-.btn-ft-reject:hover { background: #fee2e2; color: #ef4444; }
+.btn-ft-reject:hover { background: #fee2e2; color: var(--state-danger); }
 .btn-ft-download {
   flex: 1;
   padding: 6px;
-  background: #3b82f6;
+  background: var(--state-info-strong);
   color: var(--text-on-accent);
   border: none;
   border-radius: 7px;
@@ -4229,7 +4313,7 @@ html.font-xl { font-size: 21px; }
 }
 .ft-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #10b981, #34d399);
+  background: linear-gradient(90deg, var(--state-success), var(--state-success-soft));
   border-radius: 2px;
   transition: width 0.3s;
 }
@@ -4238,10 +4322,10 @@ html.font-xl { font-size: 21px; }
   color: var(--text-muted);
 }
 .ft-item-status.offline { color: #f97316; }
-.ft-item-status.done    { color: #10b981; }
-.ft-item-status.rejected { color: #9ca3af; }
+.ft-item-status.done    { color: var(--state-success); }
+.ft-item-status.rejected { color: var(--state-neutral); }
 
-/* ========== ft-panel タブ ========== */
+/* ========== ft-panel 郢ｧ・ｿ郢昴・========== */
 .ft-tabs {
   display: flex;
   border-bottom: 1px solid var(--border-glass);
@@ -4268,11 +4352,11 @@ html.font-xl { font-size: 21px; }
 }
 .ft-tab:hover { color: var(--text-primary); }
 .ft-tab.active {
-  color: #10b981;
-  border-bottom-color: #10b981;
+  color: var(--state-success);
+  border-bottom-color: var(--state-success);
 }
 .ft-tab-badge {
-  background: #ef4444;
+  background: var(--state-danger);
   color: var(--text-on-accent);
   font-size: 0.58rem;
   font-weight: 700;
@@ -4285,9 +4369,9 @@ html.font-xl { font-size: 21px; }
   padding: 0 3px;
 }
 
-/* ========== Drive エリア ========== */
+/* ========== Drive 郢ｧ・ｨ郢晢ｽｪ郢ｧ・｢ ========== */
 .btn-ft-drive-new {
-  background: linear-gradient(135deg, #1a73e8, #34a853) !important;
+  background: linear-gradient(135deg, var(--brand-drive-blue), var(--brand-drive-green)) !important;
 }
 .ft-drive-item {
   background: var(--bg-glass);
@@ -4305,7 +4389,7 @@ html.font-xl { font-size: 21px; }
 }
 .ft-drive-item-icon {
   font-size: 1.1rem;
-  color: #34a853;
+  color: var(--brand-drive-green);
   flex-shrink: 0;
 }
 .ft-drive-item-meta {
@@ -4340,7 +4424,7 @@ html.font-xl { font-size: 21px; }
 .btn-ft-drive-open {
   flex: 1;
   padding: 6px 10px;
-  background: linear-gradient(135deg, #1a73e8, #34a853);
+  background: linear-gradient(135deg, var(--brand-drive-blue), var(--brand-drive-green));
   color: var(--text-on-accent);
   border: none;
   border-radius: var(--radius-sm);
@@ -4366,10 +4450,10 @@ html.font-xl { font-size: 21px; }
   cursor: pointer;
   transition: all 0.15s;
 }
-.btn-ft-drive-dismiss:hover { background: rgba(239,68,68,0.1); color: #ef4444; border-color: rgba(239,68,68,0.3); }
+.btn-ft-drive-dismiss:hover { background: rgba(var(--state-danger-rgb), 0.10); color: var(--state-danger); border-color: rgba(var(--state-danger-rgb), 0.30); }
 .ft-drive-status-viewed {
   font-size: 0.72rem;
-  color: #10b981;
+  color: var(--state-success);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -4403,9 +4487,9 @@ html.font-xl { font-size: 21px; }
   gap: 5px;
   align-items: flex-start;
 }
-.ft-drive-url-hint i { color: #60a5fa; margin-top: 2px; flex-shrink: 0; }
+.ft-drive-url-hint i { color: var(--state-info); margin-top: 2px; flex-shrink: 0; }
 
-/* ========== 仕組み説明ボックス ========== */
+/* ========== 闔画・・ｵ繝ｻ竏ｩ髫ｱ・ｬ隴丞ｼｱ繝ｻ郢昴・縺醍ｹｧ・ｹ ========== */
 .ft-how-it-works {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
@@ -4419,11 +4503,11 @@ html.font-xl { font-size: 21px; }
   align-items: flex-start;
 }
 .ft-how-it-works b { color: var(--text-primary); }
-.ft-how-drive { border-color: rgba(52,168,83,0.25); background: rgba(52,168,83,0.05); }
+.ft-how-drive { border-color: rgba(var(--brand-drive-green-rgb), 0.25); background: rgba(var(--brand-drive-green-rgb), 0.05); }
 .ft-how-icon { font-size: 1.1rem; margin-top: 1px; flex-shrink: 0; color: var(--text-muted); }
 [data-theme="light"] .ft-how-it-works { background: rgba(0,0,0,0.04); }
 
-/* 折りたたみ */
+/* 隰壼･・顔ｸｺ貅倪螺邵ｺ・ｿ */
 .ft-how-content { flex: 1; min-width: 0; }
 .ft-how-header {
   display: flex;
@@ -4458,7 +4542,7 @@ html.font-xl { font-size: 21px; }
   transform: rotate(180deg);
 }
 
-/* ========== Drive 登録済み連絡先（パネル内） ========== */
+/* ========== Drive 騾具ｽｻ鬪ｭ・ｲ雋ょ現竏ｩ鬨ｾ・｣驍ｨ・｡陷郁肩・ｼ蛹ｻ繝ｱ郢晞亂ﾎ晁怙繝ｻ・ｼ繝ｻ========== */
 .ft-contact-item {
   display: flex;
   align-items: center;
@@ -4482,7 +4566,7 @@ html.font-xl { font-size: 21px; }
 }
 .btn-ft-contact-send {
   padding: 4px 10px;
-  background: linear-gradient(135deg, #1a73e8, #34a853);
+  background: linear-gradient(135deg, var(--brand-drive-blue), var(--brand-drive-green));
   color: var(--text-on-accent); border: none; border-radius: var(--radius-sm);
   font-size: 0.72rem; font-weight: 600; cursor: pointer; white-space: nowrap;
   transition: opacity 0.15s; flex-shrink: 0;
@@ -4494,15 +4578,15 @@ html.font-xl { font-size: 21px; }
   color: var(--text-muted); font-size: 0.72rem; cursor: pointer;
   transition: all 0.15s; flex-shrink: 0;
 }
-.btn-ft-contact-del:hover { background: rgba(239,68,68,0.1); color: #ef4444; border-color: rgba(239,68,68,0.3); }
+.btn-ft-contact-del:hover { background: rgba(var(--state-danger-rgb), 0.10); color: var(--state-danger); border-color: rgba(var(--state-danger-rgb), 0.30); }
 
-/* ========== Drive 送信モーダル追加要素 ========== */
+/* ========== Drive 鬨ｾ竏ｽ・ｿ・｡郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ髴托ｽｽ陷会｣ｰ髫補悪・ｴ・ｰ ========== */
 .ft-drive-quick-label {
   font-size: 0.72rem; font-weight: 700; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: 0.05em;
   margin-bottom: 8px; display: flex; align-items: center; gap: 5px;
 }
-.ft-drive-quick-label i { color: #f59e0b; }
+.ft-drive-quick-label i { color: var(--state-warning); }
 .ft-drive-quick-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
 .ft-drive-quick-item {
   display: flex; align-items: center; gap: 8px;
@@ -4511,7 +4595,7 @@ html.font-xl { font-size: 21px; }
   border-radius: var(--radius-md); cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
-.ft-drive-quick-item:hover { border-color: #34a853; background: rgba(52,168,83,0.06); }
+.ft-drive-quick-item:hover { border-color: var(--brand-drive-green); background: rgba(var(--brand-drive-green-rgb), 0.06); }
 .ft-drive-quick-item-name { flex: 1; font-size: 0.78rem; font-weight: 600; color: var(--text-primary); }
 .ft-drive-quick-item-url {
   font-size: 0.66rem; color: var(--text-muted);
@@ -4530,8 +4614,8 @@ html.font-xl { font-size: 21px; }
 .ft-drive-quick-or::after  { right: 0; }
 .ft-drive-saved-badge {
   display: inline-flex; align-items: center; gap: 3px;
-  font-size: 0.65rem; font-weight: 600; color: #f59e0b;
-  background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3);
+  font-size: 0.65rem; font-weight: 600; color: var(--state-warning);
+  background: rgba(var(--state-warning-rgb), 0.12); border: 1px solid rgba(var(--state-warning-rgb), 0.30);
   border-radius: 20px; padding: 1px 7px; margin-left: 6px; vertical-align: middle;
 }
 .ft-drive-save-contact-row {
@@ -4540,19 +4624,19 @@ html.font-xl { font-size: 21px; }
   cursor: pointer; margin-bottom: 4px; user-select: none;
 }
 .ft-drive-save-contact-row input[type="checkbox"] {
-  accent-color: #34a853; width: 14px; height: 14px; cursor: pointer;
+  accent-color: var(--brand-drive-green); width: 14px; height: 14px; cursor: pointer;
 }
 
-/* ========== 仕組み説明 メリット/デメリットテキスト ========== */
-.ft-how-merit  { font-size: 0.74rem; color: #10b981; }
-.ft-how-demerit{ font-size: 0.74rem; color: #f59e0b; }
+/* ========== 闔画・・ｵ繝ｻ竏ｩ髫ｱ・ｬ隴上・郢晢ｽ｡郢晢ｽｪ郢昴・繝ｨ/郢昴・ﾎ鍋ｹ晢ｽｪ郢昴・繝ｨ郢昴・縺冗ｹｧ・ｹ郢昴・========== */
+.ft-how-merit  { font-size: 0.74rem; color: var(--state-success); }
+.ft-how-demerit{ font-size: 0.74rem; color: var(--state-warning); }
 .ft-how-best   { font-size: 0.74rem; color: var(--text-muted); font-style: italic; }
 
-/* ========== 自分のDriveリンク表示（パネル内） ========== */
-/* ========== インライン Drive リンクウィジェット ========== */
+/* ========== 髢ｾ・ｪ陋ｻ繝ｻ繝ｻDrive郢晢ｽｪ郢晢ｽｳ郢ｧ・ｯ髯ｦ・ｨ驕会ｽｺ繝ｻ蛹ｻ繝ｱ郢晞亂ﾎ晁怙繝ｻ・ｼ繝ｻ========== */
+/* ========== 郢ｧ・､郢晢ｽｳ郢晢ｽｩ郢ｧ・､郢晢ｽｳ Drive 郢晢ｽｪ郢晢ｽｳ郢ｧ・ｯ郢ｧ・ｦ郢ｧ・｣郢ｧ・ｸ郢ｧ・ｧ郢昴・繝ｨ ========== */
 .ft-my-link-widget {
-  background: rgba(52,168,83,0.06);
-  border: 1px solid rgba(52,168,83,0.25);
+  background: rgba(var(--brand-drive-green-rgb), 0.06);
+  border: 1px solid rgba(var(--brand-drive-green-rgb), 0.25);
   border-radius: var(--radius-md);
   padding: 10px 12px;
   margin-bottom: 10px;
@@ -4563,7 +4647,7 @@ html.font-xl { font-size: 21px; }
 .ft-my-link-label {
   font-size: 0.71rem;
   font-weight: 700;
-  color: #34a853;
+  color: var(--brand-drive-green);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -4600,12 +4684,12 @@ html.font-xl { font-size: 21px; }
   transition: all 0.15s;
 }
 .ft-my-link-icon-btn:hover { background: var(--bg-card); color: var(--text-primary); }
-.ft-my-link-icon-open:hover { background: rgba(52,168,83,0.1); color: #34a853; border-color: rgba(52,168,83,0.35); }
-/* 共有ボタン */
+.ft-my-link-icon-open:hover { background: rgba(var(--brand-drive-green-rgb), 0.10); color: var(--brand-drive-green); border-color: rgba(52,168,83,0.35); }
+/* 陷茨ｽｱ隴帛ｳｨ繝ｻ郢ｧ・ｿ郢晢ｽｳ */
 .btn-ft-drive-share {
   width: 100%;
   padding: 9px;
-  background: linear-gradient(135deg, #34a853, #1e7e34);
+  background: linear-gradient(135deg, var(--brand-drive-green), #1e7e34);
   border: none;
   border-radius: var(--radius-md);
   color: var(--text-on-accent);
@@ -4629,7 +4713,7 @@ html.font-xl { font-size: 21px; }
 }
 [data-theme="light"] .ft-my-link-input { background: var(--bg-card); }
 
-/* ========== ファイル送信モーダル ========== */
+/* ========== 郢晁ｼ斐＜郢ｧ・､郢晢ｽｫ鬨ｾ竏ｽ・ｿ・｡郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ ========== */
 .ft-file-drop {
   position: relative;
   border: 2px dashed var(--border-glass);
@@ -4646,9 +4730,9 @@ html.font-xl { font-size: 21px; }
   gap: 6px;
 }
 .ft-file-drop:hover, .ft-file-drop.drag-over {
-  border-color: #10b981;
+  border-color: var(--state-success);
   background: rgba(16, 185, 129, 0.06);
-  color: #10b981;
+  color: var(--state-success);
 }
 .ft-file-drop i { font-size: 1.6rem; }
 .ft-selected-file {
@@ -4684,13 +4768,13 @@ html.font-xl { font-size: 21px; }
   font-size: var(--font-size-base);
 }
 .chat-fab:hover {
-  color: #60a5fa;
-  border-color: #60a5fa;
+  color: var(--state-info);
+  border-color: var(--state-info);
   box-shadow: 0 0 16px rgba(96, 165, 250, 0.4);
   transform: scale(1.1);
 }
 .chat-fab.has-unread {
-  color: #60a5fa;
+  color: var(--state-info);
   border-color: rgba(96, 165, 250, 0.5);
   animation: chatPulse 2s ease-in-out infinite;
 }
@@ -4702,7 +4786,7 @@ html.font-xl { font-size: 21px; }
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #ef4444;
+  background: var(--state-danger);
   color: var(--text-on-accent);
   font-size: 0.6rem;
   font-weight: 700;
@@ -4717,7 +4801,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   チャットパネル（DM + グループ）
+   郢昶・ﾎ慕ｹ昴・繝ｨ郢昜ｻ｣繝ｭ郢晢ｽｫ繝ｻ繝ｻM + 郢ｧ・ｰ郢晢ｽｫ郢晢ｽｼ郢晄圜・ｼ繝ｻ
    =========================== */
 .chat-panel {
   position: fixed;
@@ -4732,7 +4816,7 @@ html.font-xl { font-size: 21px; }
   border-radius: var(--radius-lg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  box-shadow: 0 20px 60px var(--shadow-ink-strong);
   display: flex;
   flex-direction: row;
   z-index: 300;
@@ -4742,7 +4826,7 @@ html.font-xl { font-size: 21px; }
   pointer-events: none;
   overflow: hidden;
 }
-/* リサイズハンドル（左下コーナー） */
+/* 郢晢ｽｪ郢ｧ・ｵ郢ｧ・､郢ｧ・ｺ郢昜ｸ莞ｦ郢晏ｳｨﾎ昴・莠･・ｷ・ｦ闕ｳ荵昴＆郢晢ｽｼ郢晉ｿｫ繝ｻ繝ｻ繝ｻ*/
 .chat-resize-handle {
   position: absolute;
   bottom: 0;
@@ -4772,7 +4856,7 @@ html.font-xl { font-size: 21px; }
   pointer-events: all;
 }
 
-/* ---- 左サイドバー ---- */
+/* ---- 陝ｾ・ｦ郢ｧ・ｵ郢ｧ・､郢晏ｳｨ繝ｰ郢晢ｽｼ ---- */
 .chat-sidebar {
   width: 210px;
   flex-shrink: 0;
@@ -4792,7 +4876,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
   flex-shrink: 0;
 }
-.chat-sidebar-header i { color: #60a5fa; margin-right: 5px; }
+.chat-sidebar-header i { color: var(--state-info); margin-right: 5px; }
 .chat-panel-close {
   background: none;
   border: none;
@@ -4804,7 +4888,7 @@ html.font-xl { font-size: 21px; }
   transition: color 0.15s;
 }
 .chat-panel-close:hover { color: var(--text-primary); }
-/* ---- サイドバー タブ ---- */
+/* ---- 郢ｧ・ｵ郢ｧ・､郢晏ｳｨ繝ｰ郢晢ｽｼ 郢ｧ・ｿ郢昴・---- */
 .chat-sidebar-tabs {
   display: flex;
   flex-shrink: 0;
@@ -4825,9 +4909,9 @@ html.font-xl { font-size: 21px; }
   margin-bottom: -1px;
 }
 .chat-sidebar-tab i { margin-right: 3px; }
-.chat-sidebar-tab.active { color: #60a5fa; border-bottom-color: #60a5fa; }
+.chat-sidebar-tab.active { color: var(--state-info); border-bottom-color: var(--state-info); }
 .chat-sidebar-tab:hover:not(.active) { color: var(--text-secondary); }
-/* ---- サイドバー パネル ---- */
+/* ---- 郢ｧ・ｵ郢ｧ・､郢晏ｳｨ繝ｰ郢晢ｽｼ 郢昜ｻ｣繝ｭ郢晢ｽｫ ---- */
 .chat-sidebar-panel {
   display: flex;
   flex-direction: column;
@@ -4935,7 +5019,7 @@ html.font-xl { font-size: 21px; }
   margin-top: 1px;
 }
 .chat-room-unread {
-  background: #ef4444;
+  background: var(--state-danger);
   color: var(--text-on-accent);
   font-size: 0.58rem;
   font-weight: 700;
@@ -4957,13 +5041,13 @@ html.font-xl { font-size: 21px; }
   font-size: 0.85rem;
   padding: 2px 4px;
   border-radius: 4px;
-  color: #9ca3af;
+  color: var(--state-neutral);
   flex-shrink: 0;
   line-height: 1;
   transition: color 0.15s, background 0.15s;
 }
 .chat-room-delete-btn:hover {
-  color: #ef4444;
+  color: var(--state-danger);
   background: #fee2e2;
 }
 .chat-room-item:hover .chat-room-delete-btn {
@@ -4971,7 +5055,7 @@ html.font-xl { font-size: 21px; }
   align-items: center;
 }
 
-/* ---- 右メインエリア ---- */
+/* ---- 陷ｿ・ｳ郢晢ｽ｡郢ｧ・､郢晢ｽｳ郢ｧ・ｨ郢晢ｽｪ郢ｧ・｢ ---- */
 .chat-main {
   flex: 1;
   display: flex;
@@ -5021,7 +5105,7 @@ html.font-xl { font-size: 21px; }
   text-overflow: ellipsis;
 }
 
-/* メッセージリスト */
+/* 郢晢ｽ｡郢昴・縺晉ｹ晢ｽｼ郢ｧ・ｸ郢晢ｽｪ郢ｧ・ｹ郢昴・*/
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -5058,7 +5142,7 @@ html.font-xl { font-size: 21px; }
 .chat-date-sep::before { left: 0; }
 .chat-date-sep::after  { right: 0; }
 
-/* メッセージ行 */
+/* 郢晢ｽ｡郢昴・縺晉ｹ晢ｽｼ郢ｧ・ｸ髯ｦ繝ｻ*/
 .chat-msg {
   display: flex;
   align-items: flex-end;
@@ -5104,7 +5188,7 @@ html.font-xl { font-size: 21px; }
 }
 .chat-msg--own .chat-bubble {
   background: rgba(99,102,241,0.25);
-  border-color: rgba(99,102,241,0.35);
+  border-color: rgba(var(--state-primary-rgb), 0.35);
   border-radius: 14px 14px 4px 14px;
 }
 .chat-msg-delete {
@@ -5121,7 +5205,7 @@ html.font-xl { font-size: 21px; }
   transition: color 0.15s;
 }
 .chat-bubble:hover .chat-msg-delete { display: block; }
-.chat-msg-delete:hover { color: #ef4444; }
+.chat-msg-delete:hover { color: var(--state-danger); }
 .chat-msg-time {
   font-size: 0.62rem;
   color: var(--text-muted);
@@ -5129,7 +5213,7 @@ html.font-xl { font-size: 21px; }
   padding: 0 2px;
 }
 
-/* ===== P2P ファイル転送バブル ===== */
+/* ===== P2P 郢晁ｼ斐＜郢ｧ・､郢晢ｽｫ髴・ｽ｢鬨ｾ竏壹Σ郢晄じﾎ・===== */
 .chat-bubble--file,
 .chat-msg--own .chat-bubble--file {
   background: rgba(99, 102, 241, 0.08);
@@ -5150,7 +5234,7 @@ html.font-xl { font-size: 21px; }
 }
 .file-transfer-icon {
   font-size: 1.5rem;
-  color: #a5b4fc;
+  color: var(--state-task-accent);
   flex-shrink: 0;
   line-height: 1;
 }
@@ -5176,7 +5260,7 @@ html.font-xl { font-size: 21px; }
 }
 .file-transfer-bar__fill {
   height: 100%;
-  background: linear-gradient(90deg, #6366f1, #06b6d4);
+  background: linear-gradient(90deg, var(--state-primary), #06b6d4);
   border-radius: 2px;
   transition: width 0.2s ease;
   width: 0%;
@@ -5188,8 +5272,8 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   gap: 5px;
 }
-.file-transfer-footer.file-transfer-done    { color: #4ade80; }
-.file-transfer-footer.file-transfer-rejected { color: #6b7280; }
+.file-transfer-footer.file-transfer-done    { color: var(--state-success-bright); }
+.file-transfer-footer.file-transfer-rejected { color: var(--state-neutral-strong); }
 .file-transfer-actions {
   display: flex;
   gap: 6px;
@@ -5200,30 +5284,30 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   gap: 5px;
   padding: 5px 12px;
-  background: rgba(99, 102, 241, 0.2);
+  background: rgba(var(--state-primary-rgb), 0.20);
   border: 1px solid rgba(99, 102, 241, 0.45);
   border-radius: 6px;
-  color: #a5b4fc;
+  color: var(--state-task-accent);
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
 }
-.btn-file-accept:hover { background: rgba(99, 102, 241, 0.35); }
+.btn-file-accept:hover { background: rgba(var(--state-primary-rgb), 0.35); }
 .btn-file-reject {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   padding: 5px 10px;
-  background: rgba(107,114,128,0.1);
-  border: 1px solid rgba(107,114,128,0.25);
+  background: rgba(var(--state-neutral-rgb), 0.10);
+  border: 1px solid rgba(var(--state-neutral-rgb), 0.25);
   border-radius: 6px;
-  color: #9ca3af;
+  color: var(--state-neutral);
   font-size: 0.78rem;
   cursor: pointer;
   transition: background 0.15s;
 }
-.btn-file-reject:hover { background: rgba(107,114,128,0.2); }
+.btn-file-reject:hover { background: rgba(var(--state-neutral-rgb), 0.20); }
 .btn-file-download {
   display: inline-flex;
   align-items: center;
@@ -5232,7 +5316,7 @@ html.font-xl { font-size: 21px; }
   background: rgba(16, 185, 129, 0.15);
   border: 1px solid rgba(16, 185, 129, 0.4);
   border-radius: 6px;
-  color: #4ade80;
+  color: var(--state-success-bright);
   font-size: 0.78rem;
   font-weight: 600;
   text-decoration: none;
@@ -5241,7 +5325,7 @@ html.font-xl { font-size: 21px; }
 }
 .btn-file-download:hover { background: rgba(16, 185, 129, 0.28); }
 
-/* ファイル添付ボタン（入力欄） */
+/* 郢晁ｼ斐＜郢ｧ・､郢晢ｽｫ雎ｺ・ｻ闔牙･繝ｻ郢ｧ・ｿ郢晢ｽｳ繝ｻ莠･繝ｻ陷牙ｸｶ・ｬ繝ｻ・ｼ繝ｻ*/
 .chat-file-btn {
   display: flex;
   align-items: center;
@@ -5263,7 +5347,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
 }
 
-/* 入力エリア */
+/* 陷茨ｽ･陷牙ｸ吶♀郢晢ｽｪ郢ｧ・｢ */
 .chat-input-area {
   padding: 10px;
   border-top: 1px solid var(--border-glass);
@@ -5298,7 +5382,7 @@ html.font-xl { font-size: 21px; }
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  background: linear-gradient(135deg, var(--state-info-strong), var(--state-primary));
   border: none;
   color: var(--text-on-accent);
   font-size: 0.8rem;
@@ -5312,7 +5396,7 @@ html.font-xl { font-size: 21px; }
 .chat-send-btn:hover { opacity: 0.9; transform: scale(1.08); }
 .chat-send-btn:active { transform: scale(0.95); }
 
-/* チャットパネル: アクションバー（タスク割振・ファイル転送ショートカット） */
+/* 郢昶・ﾎ慕ｹ昴・繝ｨ郢昜ｻ｣繝ｭ郢晢ｽｫ: 郢ｧ・｢郢ｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ郢晁・繝ｻ繝ｻ蛹ｻ縺｡郢ｧ・ｹ郢ｧ・ｯ陷托ｽｲ隰厄ｽｯ郢晢ｽｻ郢晁ｼ斐＜郢ｧ・､郢晢ｽｫ髴・ｽ｢鬨ｾ竏壹☆郢晢ｽｧ郢晢ｽｼ郢晏現縺咲ｹ昴・繝ｨ繝ｻ繝ｻ*/
 .chat-action-bar {
   display: flex;
   gap: 6px;
@@ -5339,7 +5423,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
 }
 
-/* ---- DM/グループピッカー ---- */
+/* ---- DM/郢ｧ・ｰ郢晢ｽｫ郢晢ｽｼ郢晏干繝ｴ郢昴・縺咲ｹ晢ｽｼ ---- */
 .new-dm-user-list {
   max-height: 220px;
   overflow-y: auto;
@@ -5387,7 +5471,7 @@ html.font-xl { font-size: 21px; }
   border-radius: 20px;
   padding: 2px 8px 2px 10px;
   font-size: 0.76rem;
-  color: #93c5fd;
+  color: var(--state-info-soft);
 }
 .group-chip-rm {
   background: none;
@@ -5399,10 +5483,10 @@ html.font-xl { font-size: 21px; }
   line-height: 1;
   transition: color 0.15s;
 }
-.group-chip-rm:hover { color: #ef4444; }
+.group-chip-rm:hover { color: var(--state-danger); }
 
 /* ===========================
-   スマホ Bottom Sheet（共通）
+   郢ｧ・ｹ郢晄ｧｭ繝ｻ Bottom Sheet繝ｻ莠･繝ｻ鬨ｾ螟ｲ・ｼ繝ｻ
    =========================== */
 @media (max-width: 768px) {
   /* ---- ft-panel ---- */
@@ -5504,7 +5588,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   タスク割り振り ヘッダーボタン
+   郢ｧ・ｿ郢ｧ・ｹ郢ｧ・ｯ陷托ｽｲ郢ｧ鬆鷹匱郢ｧ繝ｻ郢晏･繝｣郢敖郢晢ｽｼ郢晄㈱縺｡郢晢ｽｳ
    =========================== */
 .btn-task {
   position: relative;
@@ -5523,19 +5607,19 @@ html.font-xl { font-size: 21px; }
   flex-shrink: 0;
 }
 .btn-task:hover {
-  background: rgba(99,102,241,0.15);
-  border-color: rgba(99,102,241,0.4);
-  color: #a5b4fc;
+  background: rgba(var(--state-primary-rgb), 0.15);
+  border-color: rgba(var(--state-primary-rgb), 0.40);
+  color: var(--state-task-accent);
 }
 .btn-task.has-badge {
-  color: #a5b4fc;
-  border-color: rgba(99,102,241,0.4);
+  color: var(--state-task-accent);
+  border-color: rgba(var(--state-primary-rgb), 0.40);
 }
 .task-badge {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #ef4444;
+  background: var(--state-danger);
   color: var(--text-on-accent);
   font-size: 0.6rem;
   font-weight: 700;
@@ -5550,7 +5634,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   タスク割り振り モーダル
+   郢ｧ・ｿ郢ｧ・ｹ郢ｧ・ｯ陷托ｽｲ郢ｧ鬆鷹匱郢ｧ繝ｻ郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ
    =========================== */
 .task-modal-inner {
   position: fixed;
@@ -5564,7 +5648,7 @@ html.font-xl { font-size: 21px; }
   border-radius: var(--radius-lg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  box-shadow: 0 24px 80px var(--shadow-ink-heavy);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -5581,7 +5665,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
   flex-shrink: 0;
 }
-.task-modal-header i { color: #a5b4fc; margin-right: 6px; }
+.task-modal-header i { color: var(--state-task-accent); margin-right: 6px; }
 .task-modal-close {
   background: none;
   border: none;
@@ -5594,7 +5678,7 @@ html.font-xl { font-size: 21px; }
 }
 .task-modal-close:hover { color: var(--text-primary); }
 
-/* タブバー */
+/* 郢ｧ・ｿ郢晄じ繝ｰ郢晢ｽｼ */
 .task-tabs {
   display: flex;
   border-bottom: 1px solid var(--border-glass);
@@ -5623,11 +5707,11 @@ html.font-xl { font-size: 21px; }
 }
 .task-tab:hover { color: var(--text-primary); }
 .task-tab.active {
-  color: #a5b4fc;
-  border-bottom-color: #a5b4fc;
+  color: var(--state-task-accent);
+  border-bottom-color: var(--state-task-accent);
 }
 .task-tab-badge {
-  background: #ef4444;
+  background: var(--state-danger);
   color: var(--text-on-accent);
   font-size: 0.58rem;
   font-weight: 700;
@@ -5640,7 +5724,7 @@ html.font-xl { font-size: 21px; }
   padding: 0 3px;
 }
 
-/* タブコンテンツ */
+/* 郢ｧ・ｿ郢晄じ縺慕ｹ晢ｽｳ郢昴・ﾎｦ郢昴・*/
 .task-tab-content {
   flex: 1;
   overflow-y: auto;
@@ -5650,7 +5734,7 @@ html.font-xl { font-size: 21px; }
 .task-tab-content::-webkit-scrollbar { width: 4px; }
 .task-tab-content::-webkit-scrollbar-thumb { background: var(--bg-card); border-radius: 2px; }
 
-/* 空表示 */
+/* 驕ｨ・ｺ髯ｦ・ｨ驕会ｽｺ */
 .task-empty {
   display: flex;
   flex-direction: column;
@@ -5664,7 +5748,7 @@ html.font-xl { font-size: 21px; }
 .task-empty i { font-size: 2rem; opacity: 0.25; }
 .task-empty p { margin: 0; opacity: 0.6; }
 
-/* 案件キー絞り込み */
+/* 隴ｯ莠包ｽｻ・ｶ郢ｧ・ｭ郢晢ｽｼ驍ｨ讒ｭ・企恷・ｼ邵ｺ・ｿ */
 .task-project-filter-row {
   display: flex;
   align-items: center;
@@ -5718,7 +5802,7 @@ html.font-xl { font-size: 21px; }
   white-space: nowrap;
 }
 
-/* タスクアイテム */
+/* 郢ｧ・ｿ郢ｧ・ｹ郢ｧ・ｯ郢ｧ・｢郢ｧ・､郢昴・ﾎ・*/
 .task-item {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
@@ -5728,16 +5812,16 @@ html.font-xl { font-size: 21px; }
   transition: border-color 0.15s;
 }
 .task-item:last-child { margin-bottom: 0; }
-.task-item--pending { border-left: 3px solid #f59e0b; }
-.task-item--accepted { border-left: 3px solid #3b82f6; }
-.task-item--done { border-left: 3px solid #22c55e; opacity: 0.75; }
+.task-item--pending { border-left: 3px solid var(--state-warning); }
+.task-item--accepted { border-left: 3px solid var(--state-info-strong); }
+.task-item--done { border-left: 3px solid var(--state-success-ok); opacity: 0.75; }
 .task-item--alert {
-  border-color: rgba(99,102,241,0.4);
+  border-color: rgba(var(--state-primary-rgb), 0.40);
   background: rgba(99,102,241,0.06);
   animation: taskAlertPulse 2.5s ease-in-out infinite;
 }
 @keyframes taskAlertPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.3); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--state-primary-rgb), 0.30); }
   50%       { box-shadow: 0 0 0 6px rgba(99,102,241,0); }
 }
 .task-item-meta {
@@ -5753,9 +5837,9 @@ html.font-xl { font-size: 21px; }
   padding: 2px 8px;
   border-radius: 20px;
 }
-.status-pending  { background: rgba(245,158,11,0.2);  color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
-.status-accepted { background: rgba(59,130,246,0.2);  color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
-.status-done     { background: rgba(34,197,94,0.2);   color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+.status-pending  { background: rgba(245,158,11,0.2);  color: var(--state-warning-soft); border: 1px solid rgba(var(--state-warning-rgb), 0.30); }
+.status-accepted { background: rgba(59,130,246,0.2);  color: var(--state-info-soft); border: 1px solid rgba(59,130,246,0.3); }
+.status-done     { background: rgba(var(--state-success-ok-rgb), 0.20);   color: var(--state-success-pale); border: 1px solid rgba(var(--state-success-ok-rgb), 0.30); }
 .task-partner {
   font-size: 0.72rem;
   color: var(--text-muted);
@@ -5822,42 +5906,42 @@ html.font-xl { font-size: 21px; }
 .task-action-accept {
   background: rgba(245,158,11,0.15);
   border-color: rgba(245,158,11,0.4);
-  color: #fbbf24;
+  color: var(--state-warning-soft);
 }
 .task-action-accept:hover { background: rgba(245,158,11,0.28); }
 .task-action-done {
-  background: rgba(34,197,94,0.15);
-  border-color: rgba(34,197,94,0.4);
-  color: #86efac;
+  background: rgba(var(--state-success-ok-rgb), 0.15);
+  border-color: rgba(var(--state-success-ok-rgb), 0.40);
+  color: var(--state-success-pale);
 }
-.task-action-done:hover { background: rgba(34,197,94,0.28); }
+.task-action-done:hover { background: rgba(var(--state-success-ok-rgb), 0.28); }
 .task-action-ack {
-  background: rgba(99,102,241,0.15);
-  border-color: rgba(99,102,241,0.4);
-  color: #a5b4fc;
+  background: rgba(var(--state-primary-rgb), 0.15);
+  border-color: rgba(var(--state-primary-rgb), 0.40);
+  color: var(--state-task-accent);
 }
 .task-action-ack:hover { background: rgba(99,102,241,0.28); }
 .task-action-delete {
-  background: rgba(239,68,68,0.1);
-  border-color: rgba(239,68,68,0.35);
-  color: #fca5a5;
+  background: rgba(var(--state-danger-rgb), 0.10);
+  border-color: rgba(var(--state-danger-rgb), 0.35);
+  color: var(--state-danger-pale);
 }
 .task-action-delete:hover { background: rgba(239,68,68,0.24); border-color: rgba(239,68,68,0.6); }
 .task-action-cancel {
-  background: rgba(107,114,128,0.12);
-  border-color: rgba(107,114,128,0.35);
-  color: #9ca3af;
+  background: rgba(var(--state-neutral-rgb), 0.12);
+  border-color: rgba(var(--state-neutral-rgb), 0.35);
+  color: var(--state-neutral);
 }
-.task-action-cancel:hover { background: rgba(107,114,128,0.24); border-color: rgba(107,114,128,0.55); }
+.task-action-cancel:hover { background: rgba(107,114,128,0.24); border-color: rgba(var(--state-neutral-rgb), 0.55); }
 .task-done-stamp {
   font-size: 0.75rem;
-  color: #86efac;
+  color: var(--state-success-pale);
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-/* 新規依頼フォーム */
+/* 隴・ｽｰ髫穂ｸ茨ｽｾ譎橸｣ｰ・ｼ郢晁ｼ斐°郢晢ｽｼ郢晢｣ｰ */
 .task-new-form {
   padding: 4px 0;
 }
@@ -5881,10 +5965,10 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   gap: 5px;
   padding: 7px 12px;
-  background: rgba(99,102,241,0.15);
-  border: 1px solid rgba(99,102,241,0.35);
+  background: rgba(var(--state-primary-rgb), 0.15);
+  border: 1px solid rgba(var(--state-primary-rgb), 0.35);
   border-radius: var(--radius-sm);
-  color: #a5b4fc;
+  color: var(--state-task-accent);
   font-size: 0.8rem;
   font-family: var(--font-family);
   cursor: pointer;
@@ -5892,10 +5976,10 @@ html.font-xl { font-size: 21px; }
   white-space: nowrap;
 }
 .task-pick-btn:hover { background: rgba(99,102,241,0.28); }
-.required-mark { color: #ef4444; }
+.required-mark { color: var(--state-danger); }
 
 /* ===========================
-   メール返信アシスタント ヘッダーボタン
+   郢晢ｽ｡郢晢ｽｼ郢晢ｽｫ髴第ｯ費ｽｿ・｡郢ｧ・｢郢ｧ・ｷ郢ｧ・ｹ郢ｧ・ｿ郢晢ｽｳ郢昴・郢晏･繝｣郢敖郢晢ｽｼ郢晄㈱縺｡郢晢ｽｳ
    =========================== */
 .btn-email-assist {
   position: relative;
@@ -5915,13 +5999,13 @@ html.font-xl { font-size: 21px; }
 }
 .btn-email-assist:hover {
   background: var(--bg-card-hover);
-  border-color: rgba(124, 92, 255, 0.5);
+  border-color: rgba(var(--accent-purple-rgb-legacy), 0.50);
   color: var(--accent-purple);
   box-shadow: 0 0 10px rgba(124, 92, 255, 0.25);
 }
 
 /* ===========================
-   メール返信アシスタント モーダル
+   郢晢ｽ｡郢晢ｽｼ郢晢ｽｫ髴第ｯ費ｽｿ・｡郢ｧ・｢郢ｧ・ｷ郢ｧ・ｹ郢ｧ・ｿ郢晢ｽｳ郢昴・郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ
    =========================== */
 .email-modal-inner,
 .profile-modal-inner {
@@ -5933,7 +6017,7 @@ html.font-xl { font-size: 21px; }
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+  box-shadow: 0 30px 80px var(--shadow-ink-heavy);
   animation: modalSlideUp 0.22s ease;
 }
 .email-modal-header,
@@ -5993,7 +6077,7 @@ html.font-xl { font-size: 21px; }
 .profile-modal-body::-webkit-scrollbar-track { background: transparent; }
 .profile-modal-body::-webkit-scrollbar-thumb { background: var(--border-glass); border-radius: 2px; }
 
-/* 左サイドバー */
+/* 陝ｾ・ｦ郢ｧ・ｵ郢ｧ・､郢晏ｳｨ繝ｰ郢晢ｽｼ */
 .email-profile-sidebar {
   width: 180px;
   flex-shrink: 0;
@@ -6039,7 +6123,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
 }
 .email-profile-item.active {
-  background: rgba(124, 92, 255, 0.15);
+  background: rgba(var(--accent-purple-rgb-legacy), 0.15);
   border-color: rgba(124, 92, 255, 0.35);
   color: var(--accent-purple);
   font-weight: 600;
@@ -6104,7 +6188,7 @@ html.font-xl { font-size: 21px; }
   border-color: var(--border-glass-hover);
 }
 
-/* 右メインエリア */
+/* 陷ｿ・ｳ郢晢ｽ｡郢ｧ・､郢晢ｽｳ郢ｧ・ｨ郢晢ｽｪ郢ｧ・｢ */
 .email-main-area {
   flex: 1;
   overflow-y: auto;
@@ -6115,7 +6199,7 @@ html.font-xl { font-size: 21px; }
   gap: 12px;
 }
 
-/* プロンプト編集（details/summary） */
+/* 郢晏干ﾎ溽ｹ晢ｽｳ郢晏干繝ｨ驍ｱ・ｨ鬮ｮ繝ｻ・ｼ繝ｻetails/summary繝ｻ繝ｻ*/
 .email-prompt-details {
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-sm);
@@ -6189,8 +6273,8 @@ html.font-xl { font-size: 21px; }
 }
 .btn-save-profile {
   padding: 7px 14px;
-  background: rgba(124, 92, 255, 0.2);
-  border: 1px solid rgba(124, 92, 255, 0.4);
+  background: rgba(var(--accent-purple-rgb-legacy), 0.20);
+  border: 1px solid rgba(var(--accent-purple-rgb-legacy), 0.40);
   border-radius: var(--radius-sm);
   color: var(--accent-purple);
   font-size: 0.78rem;
@@ -6198,13 +6282,13 @@ html.font-xl { font-size: 21px; }
   cursor: pointer;
   transition: all 0.15s;
 }
-.btn-save-profile:hover { background: rgba(124, 92, 255, 0.3); }
+.btn-save-profile:hover { background: rgba(var(--accent-purple-rgb-legacy), 0.30); }
 .btn-danger-sm {
   padding: 7px 12px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(var(--state-danger-rgb), 0.10);
+  border: 1px solid rgba(var(--state-danger-rgb), 0.30);
   border-radius: var(--radius-sm);
-  color: #f87171;
+  color: var(--state-danger-soft);
   font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.15s;
@@ -6212,9 +6296,9 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   gap: 5px;
 }
-.btn-danger-sm:hover { background: rgba(239, 68, 68, 0.2); }
+.btn-danger-sm:hover { background: rgba(var(--state-danger-rgb), 0.20); }
 
-/* 受信メール */
+/* 陷ｿ蠍ｺ・ｿ・｡郢晢ｽ｡郢晢ｽｼ郢晢ｽｫ */
 .email-received-area {
   background: var(--bg-card);
   border: 1px solid var(--border-glass);
@@ -6232,10 +6316,10 @@ html.font-xl { font-size: 21px; }
 .email-received-area:focus { border-color: var(--accent-blue); }
 .email-received-area::placeholder { color: var(--text-muted); }
 
-/* 生成ボタン */
+/* 騾墓ｻ薙・郢晄㈱縺｡郢晢ｽｳ */
 .btn-generate {
   padding: 11px 20px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, var(--state-primary), var(--state-primary-strong));
   border: none;
   border-radius: var(--radius-md);
   color: var(--text-on-accent);
@@ -6253,9 +6337,9 @@ html.font-xl { font-size: 21px; }
 .btn-generate:active:not(:disabled) { transform: translateY(0); }
 .btn-generate:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* 出力エリア */
+/* 陷・ｽｺ陷牙ｸ吶♀郢晢ｽｪ郢ｧ・｢ */
 .email-output-area {
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(var(--state-primary-rgb), 0.30);
   border-radius: var(--radius-sm);
   overflow: hidden;
   background: rgba(99, 102, 241, 0.05);
@@ -6265,10 +6349,10 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   justify-content: space-between;
   padding: 9px 14px;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+  border-bottom: 1px solid rgba(var(--state-primary-rgb), 0.20);
   font-size: 0.78rem;
   font-weight: 600;
-  color: #a5b4fc;
+  color: var(--state-task-accent);
 }
 .email-output {
   padding: 14px;
@@ -6283,16 +6367,16 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   gap: 5px;
   padding: 5px 10px;
-  background: rgba(99, 102, 241, 0.2);
-  border: 1px solid rgba(99, 102, 241, 0.4);
+  background: rgba(var(--state-primary-rgb), 0.20);
+  border: 1px solid rgba(var(--state-primary-rgb), 0.40);
   border-radius: 6px;
-  color: #a5b4fc;
+  color: var(--state-task-accent);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
 }
-.btn-copy-output:hover { background: rgba(99, 102, 241, 0.35); }
+.btn-copy-output:hover { background: rgba(var(--state-primary-rgb), 0.35); }
 .email-output-header-btns {
   display: flex;
   align-items: center;
@@ -6303,10 +6387,10 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   gap: 5px;
   padding: 5px 10px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(var(--state-danger-rgb), 0.10);
+  border: 1px solid rgba(var(--state-danger-rgb), 0.30);
   border-radius: 6px;
-  color: #fca5a5;
+  color: var(--state-danger-pale);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
@@ -6314,7 +6398,7 @@ html.font-xl { font-size: 21px; }
 }
 .btn-reset-output:hover { background: rgba(239, 68, 68, 0.22); }
 
-/* APIキー設定 */
+/* API郢ｧ・ｭ郢晢ｽｼ髫ｪ・ｭ陞ｳ繝ｻ*/
 .email-api-key-area {
   background: rgba(245, 158, 11, 0.08);
   border: 1px solid rgba(245, 158, 11, 0.25);
@@ -6323,7 +6407,7 @@ html.font-xl { font-size: 21px; }
 }
 .email-api-key-label {
   font-size: 0.8rem;
-  color: #fbbf24;
+  color: var(--state-warning-soft);
   font-weight: 600;
   margin-bottom: 8px;
 }
@@ -6350,16 +6434,16 @@ html.font-xl { font-size: 21px; }
   background: rgba(245, 158, 11, 0.2);
   border: 1px solid rgba(245, 158, 11, 0.4);
   border-radius: var(--radius-sm);
-  color: #fbbf24;
+  color: var(--state-warning-soft);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s;
 }
-.btn-save-apikey:hover { background: rgba(245, 158, 11, 0.3); }
+.btn-save-apikey:hover { background: rgba(var(--state-warning-rgb), 0.30); }
 
-/* モバイル対応 */
+/* 郢晢ｽ｢郢晁・縺・ｹ晢ｽｫ陝・ｽｾ陟｢繝ｻ*/
 @media (max-width: 640px) {
   .email-modal-body { flex-direction: column; }
   .email-compose-info {
@@ -6387,7 +6471,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   メールモーダル タブ
+   郢晢ｽ｡郢晢ｽｼ郢晢ｽｫ郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ 郢ｧ・ｿ郢昴・
    =========================== */
 .email-tabs {
   display: flex;
@@ -6453,10 +6537,10 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   メール作成 新UI
+   郢晢ｽ｡郢晢ｽｼ郢晢ｽｫ闖ｴ諛医・ 隴・ｽｰUI
    =========================== */
 
-/* 新規/返信選択 */
+/* 隴・ｽｰ髫輔・髴第ｯ費ｽｿ・｡鬩包ｽｸ隰壹・*/
 .email-type-select {
   display: flex;
   flex-direction: column;
@@ -6502,7 +6586,7 @@ html.font-xl { font-size: 21px; }
   box-shadow: 0 6px 20px rgba(167,139,250,0.15);
 }
 
-/* 戻るボタン */
+/* 隰鯉ｽｻ郢ｧ荵昴・郢ｧ・ｿ郢晢ｽｳ */
 .email-back-btn {
   background: none;
   border: none;
@@ -6518,7 +6602,7 @@ html.font-xl { font-size: 21px; }
 }
 .email-back-btn:hover { color: var(--text-primary); }
 
-/* フォームセクション */
+/* 郢晁ｼ斐°郢晢ｽｼ郢晢｣ｰ郢ｧ・ｻ郢ｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ */
 .email-compose-form {
   display: flex;
   flex-direction: column;
@@ -6538,7 +6622,7 @@ html.font-xl { font-size: 21px; }
   gap: 5px;
 }
 
-/* 連絡先行 */
+/* 鬨ｾ・｣驍ｨ・｡陷磯メ・｡繝ｻ*/
 .email-contact-row {
   display: flex;
   gap: 8px;
@@ -6565,7 +6649,7 @@ html.font-xl { font-size: 21px; }
   color: var(--accent-purple);
 }
 
-/* 新規連絡先フォーム */
+/* 隴・ｽｰ髫募沁ﾂ・｣驍ｨ・｡陷亥現繝ｵ郢ｧ・ｩ郢晢ｽｼ郢晢｣ｰ */
 .email-new-contact {
   display: flex;
   flex-direction: column;
@@ -6581,7 +6665,7 @@ html.font-xl { font-size: 21px; }
   flex-wrap: wrap;
 }
 
-/* 伝えたいこと・受信メール入力 */
+/* 闔ｨ譏ｴ竏ｴ邵ｺ貅假ｼ樒ｸｺ阮吮・郢晢ｽｻ陷ｿ蠍ｺ・ｿ・｡郢晢ｽ｡郢晢ｽｼ郢晢ｽｫ陷茨ｽ･陷峨・*/
 .email-content-area {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
@@ -6602,7 +6686,7 @@ html.font-xl { font-size: 21px; }
 }
 .email-content-area::placeholder { color: var(--text-muted); }
 
-/* 文体ボタン */
+/* 隴√・・ｽ阮吶・郢ｧ・ｿ郢晢ｽｳ */
 .email-tone-btns {
   display: flex;
   gap: 6px;
@@ -6629,13 +6713,13 @@ html.font-xl { font-size: 21px; }
   color: var(--accent-purple);
 }
 
-/* ライトモード */
+/* 郢晢ｽｩ郢ｧ・､郢晏現ﾎ皮ｹ晢ｽｼ郢昴・*/
 [data-theme="light"] .email-type-btn:hover {
   box-shadow: 0 6px 20px rgba(102,57,186,0.12);
 }
 [data-theme="light"] .email-content-area {
   background: var(--bg-card);
-  border-color: rgba(31,35,40,0.28);
+  border-color: rgba(var(--light-border-rgb), 0.28);
 }
 [data-theme="light"] .email-content-area:focus {
   border-color: var(--accent-purple);
@@ -6647,7 +6731,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   プロフィール・署名タブ
+   郢晏干ﾎ溽ｹ晁ｼ斐≦郢晢ｽｼ郢晢ｽｫ郢晢ｽｻ驗ゑｽｲ陷ｷ髦ｪ縺｡郢昴・
    =========================== */
 .ep-section-title {
   font-size: 0.8rem;
@@ -6685,7 +6769,7 @@ html.font-xl { font-size: 21px; }
   font-weight: 600;
   color: var(--text-muted);
 }
-.ep-required { color: #f87171; }
+.ep-required { color: var(--state-danger-soft); }
 .ep-input {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
@@ -6697,7 +6781,7 @@ html.font-xl { font-size: 21px; }
   font-family: inherit;
   transition: border-color 0.15s;
 }
-.ep-input:focus { border-color: rgba(124, 92, 255, 0.5); }
+.ep-input:focus { border-color: rgba(var(--accent-purple-rgb-legacy), 0.50); }
 .ep-input::placeholder { color: var(--text-muted); }
 .ep-signature-area {
   background: var(--bg-glass);
@@ -6757,18 +6841,18 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   ニックネーム重複エラー
+   郢昜ｹ昴Ε郢ｧ・ｯ郢晞亂繝ｻ郢晢｣ｰ鬩･蟠趣ｽ､繝ｻ縺顔ｹ晢ｽｩ郢晢ｽｼ
    =========================== */
 .username-error-box {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(var(--state-danger-rgb), 0.10);
+  border: 1px solid rgba(var(--state-danger-rgb), 0.35);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   font-size: 0.78rem;
-  color: #f87171;
+  color: var(--state-danger-soft);
   margin-bottom: var(--space-md);
   line-height: 1.5;
   animation: fadeIn 0.2s ease;
@@ -6780,14 +6864,14 @@ html.font-xl { font-size: 21px; }
   width: 100%;
   padding: 5px 10px;
   border-radius: var(--radius-sm);
-  background: rgba(239,68,68,0.2);
-  border: 1px solid rgba(239,68,68,0.4);
-  color: #fca5a5;
+  background: rgba(var(--state-danger-rgb), 0.20);
+  border: 1px solid rgba(var(--state-danger-rgb), 0.40);
+  color: var(--state-danger-pale);
   font-size: 0.8rem;
   cursor: pointer;
   transition: background 0.2s;
 }
-.btn-reclaim:hover { background: rgba(239,68,68,0.35); }
+.btn-reclaim:hover { background: rgba(var(--state-danger-rgb), 0.35); }
 .username-security-row {
   display: flex;
   justify-content: center;
@@ -6808,10 +6892,10 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   gap: 6px;
 }
-.btn-open-security:hover { border-color: rgba(124,92,255,0.4); color: var(--accent-purple); }
+.btn-open-security:hover { border-color: rgba(var(--accent-purple-rgb-legacy), 0.40); color: var(--accent-purple); }
 
 /* ===========================
-   ロックヘッダーボタン
+   郢晢ｽｭ郢昴・縺醍ｹ晏･繝｣郢敖郢晢ｽｼ郢晄㈱縺｡郢晢ｽｳ
    =========================== */
 .btn-lock-header {
   position: relative;
@@ -6832,17 +6916,17 @@ html.font-xl { font-size: 21px; }
 .btn-lock-header:hover {
   background: var(--bg-card-hover);
   border-color: rgba(251,191,36,0.5);
-  color: #fbbf24;
+  color: var(--state-warning-soft);
   box-shadow: 0 0 10px rgba(251,191,36,0.2);
 }
 .lock-set-flash { animation: lockFlash 0.6s ease; }
 @keyframes lockFlash {
   0%, 100% { box-shadow: none; }
-  50% { box-shadow: 0 0 20px rgba(34,197,94,0.6); border-color: #4ade80; color: #4ade80; }
+  50% { box-shadow: 0 0 20px rgba(var(--state-success-ok-rgb), 0.60); border-color: var(--state-success-bright); color: var(--state-success-bright); }
 }
 
 /* ===========================
-   ロック画面
+   郢晢ｽｭ郢昴・縺鷹包ｽｻ鬮ｱ・｢
    =========================== */
 .lock-screen {
   --lock-screen-bg: rgba(5, 7, 20, 0.92);
@@ -6893,7 +6977,7 @@ html.font-xl { font-size: 21px; }
   font-size: 1.8rem;
   font-weight: 700;
   color: var(--lock-dot-fill);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 20px var(--shadow-ink-strong);
   margin-bottom: 10px;
 }
 .lock-username {
@@ -6929,7 +7013,7 @@ html.font-xl { font-size: 21px; }
 }
 .lock-pin-error {
   font-size: 0.78rem;
-  color: #f87171;
+  color: var(--state-danger-soft);
   margin-bottom: 4px;
   min-height: 18px;
   animation: fadeIn 0.2s ease;
@@ -6995,7 +7079,7 @@ html.font-xl { font-size: 21px; }
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #ef4444;
+  background: var(--state-danger);
   color: var(--lock-dot-fill);
   font-size: 0.65rem;
   font-weight: 700;
@@ -7044,7 +7128,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   セキュリティ設定モーダル
+   郢ｧ・ｻ郢ｧ・ｭ郢晢ｽ･郢晢ｽｪ郢昴・縺・坎・ｭ陞ｳ螢ｹﾎ皮ｹ晢ｽｼ郢敖郢晢ｽｫ
    =========================== */
 .security-modal-inner { max-width: 360px; width: 100%; }
 .pin-input {
@@ -7054,30 +7138,30 @@ html.font-xl { font-size: 21px; }
   font-family: monospace !important;
 }
 .security-error {
-  background: rgba(239,68,68,0.1);
-  border: 1px solid rgba(239,68,68,0.3);
+  background: rgba(var(--state-danger-rgb), 0.10);
+  border: 1px solid rgba(var(--state-danger-rgb), 0.30);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
   font-size: 0.78rem;
-  color: #f87171;
+  color: var(--state-danger-soft);
   margin-bottom: 8px;
 }
 .security-pin-set-badge {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(34,197,94,0.1);
-  border: 1px solid rgba(34,197,94,0.3);
+  background: rgba(var(--state-success-ok-rgb), 0.10);
+  border: 1px solid rgba(var(--state-success-ok-rgb), 0.30);
   border-radius: var(--radius-sm);
   padding: 10px 14px;
-  color: #4ade80;
+  color: var(--state-success-bright);
   font-size: 0.85rem;
   font-weight: 600;
   margin-bottom: 4px;
 }
 
 /* ===========================
-   セキュリティ モーダル 新UI
+   郢ｧ・ｻ郢ｧ・ｭ郢晢ｽ･郢晢ｽｪ郢昴・縺・郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ 隴・ｽｰUI
    =========================== */
 .security-row {
   display: flex;
@@ -7165,7 +7249,7 @@ html.font-xl { font-size: 21px; }
 .autolock-time-btn.active { background: var(--accent-blue); border-color: var(--accent-blue); color: var(--text-on-accent); font-weight: 600; }
 
 /* ===========================
-   管理者パネル モーダル
+   驍ゑｽ｡騾・・ﾂ繝ｻ繝ｱ郢晞亂ﾎ・郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ
    =========================== */
 .admin-modal-inner { max-width: 420px; width: 100%; }
 .admin-panel-header {
@@ -7199,7 +7283,7 @@ html.font-xl { font-size: 21px; }
 .admin-user-avatar {
   width: 32px; height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg,#6366f1,#8b5cf6);
+  background: linear-gradient(135deg,var(--state-primary),var(--state-primary-strong));
   display: flex; align-items: center; justify-content: center;
   font-size: 0.85rem; font-weight: 700; color: var(--text-on-accent);
   flex-shrink: 0;
@@ -7209,14 +7293,14 @@ html.font-xl { font-size: 21px; }
   padding: 5px 12px;
   border-radius: var(--radius-sm);
   background: rgba(239,68,68,0.15);
-  border: 1px solid rgba(239,68,68,0.3);
-  color: #f87171;
+  border: 1px solid rgba(var(--state-danger-rgb), 0.30);
+  color: var(--state-danger-soft);
   font-size: 0.78rem;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.2s;
 }
-.btn-admin-reset-pin:hover    { background: rgba(239,68,68,0.25); }
+.btn-admin-reset-pin:hover    { background: rgba(var(--state-danger-rgb), 0.25); }
 .btn-admin-reset-pin:disabled { opacity: 0.5; cursor: default; }
 .admin-user-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .btn-admin-delete-user {
@@ -7225,9 +7309,9 @@ html.font-xl { font-size: 21px; }
   gap: 4px;
   padding: 5px 10px;
   border-radius: var(--radius-sm);
-  background: rgba(107,114,128,0.12);
-  border: 1px solid rgba(107,114,128,0.3);
-  color: #9ca3af;
+  background: rgba(var(--state-neutral-rgb), 0.12);
+  border: 1px solid rgba(var(--state-neutral-rgb), 0.30);
+  color: var(--state-neutral);
   font-size: 0.78rem;
   cursor: pointer;
   white-space: nowrap;
@@ -7235,22 +7319,22 @@ html.font-xl { font-size: 21px; }
 }
 .btn-admin-delete-user:hover {
   background: rgba(239,68,68,0.15);
-  border-color: rgba(239,68,68,0.4);
-  color: #f87171;
+  border-color: rgba(var(--state-danger-rgb), 0.40);
+  color: var(--state-danger-soft);
 }
 .btn-admin-delete-user:disabled { opacity: 0.5; cursor: default; }
 
 /* ===========================
-   設定パネル 管理者セクション
+   髫ｪ・ｭ陞ｳ螢ｹ繝ｱ郢晞亂ﾎ・驍ゑｽ｡騾・・ﾂ繝ｻ縺晉ｹｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ
    =========================== */
 .settings-section-admin { margin-top: 4px; }
 .btn-open-admin {
   width: 100%;
   padding: 10px 14px;
   border-radius: var(--radius-sm);
-  background: rgba(239,68,68,0.12);
-  border: 1px solid rgba(239,68,68,0.25);
-  color: #f87171;
+  background: rgba(var(--state-danger-rgb), 0.12);
+  border: 1px solid rgba(var(--state-danger-rgb), 0.25);
+  color: var(--state-danger-soft);
   font-size: 0.85rem;
   cursor: pointer;
   display: flex;
@@ -7258,10 +7342,10 @@ html.font-xl { font-size: 21px; }
   gap: 8px;
   transition: background 0.2s;
 }
-.btn-open-admin:hover { background: rgba(239,68,68,0.2); }
+.btn-open-admin:hover { background: rgba(var(--state-danger-rgb), 0.20); }
 
 /* ===========================
-   ヘッダー：部門間依頼・目安箱ボタン
+   郢晏･繝｣郢敖郢晢ｽｼ繝ｻ螟石夐ｫ｢ﾂ鬮｢隰趣ｽｾ譎橸｣ｰ・ｼ郢晢ｽｻ騾ｶ・ｮ陞ｳ閾･・ｮ・ｱ郢晄㈱縺｡郢晢ｽｳ
    =========================== */
 .btn-reqboard {
   position: relative;
@@ -7280,15 +7364,15 @@ html.font-xl { font-size: 21px; }
   flex-shrink: 0;
 }
 .btn-reqboard:hover {
-  background: rgba(0,200,255,0.12);
-  border-color: rgba(0,200,255,0.35);
+  background: rgba(var(--accent-aqua-rgb-legacy), 0.12);
+  border-color: rgba(var(--accent-aqua-rgb-legacy), 0.35);
   color: var(--accent-cyan);
 }
 .req-badge {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #ef4444;
+  background: var(--state-danger);
   color: var(--text-on-accent);
   font-size: 0.6rem;
   font-weight: 700;
@@ -7302,18 +7386,18 @@ html.font-xl { font-size: 21px; }
   border: 1.5px solid var(--bg-primary);
 }
 [data-theme="light"] .btn-reqboard {
-  background: rgba(26, 30, 58, 0.07);
-  border-color: rgba(26, 30, 58, 0.16);
-  color: rgba(26, 30, 58, 0.6);
+  background: rgba(var(--light-ink-rgb), 0.07);
+  border-color: rgba(var(--light-ink-rgb), 0.16);
+  color: rgba(var(--light-ink-rgb), 0.60);
 }
 [data-theme="light"] .btn-reqboard:hover {
-  background: rgba(26, 30, 58, 0.13);
-  border-color: rgba(26, 30, 58, 0.3);
-  color: rgba(26, 30, 58, 0.9);
+  background: rgba(var(--light-ink-rgb), 0.13);
+  border-color: rgba(var(--light-ink-rgb), 0.30);
+  color: rgba(var(--light-ink-rgb), 0.90);
 }
 
 /* ===========================
-   部門間依頼・目安箱 モーダル
+   鬩幢ｽｨ鬮｢ﾂ鬮｢隰趣ｽｾ譎橸｣ｰ・ｼ郢晢ｽｻ騾ｶ・ｮ陞ｳ閾･・ｮ・ｱ 郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ
    =========================== */
 .reqboard-modal-inner {
   position: fixed;
@@ -7327,7 +7411,7 @@ html.font-xl { font-size: 21px; }
   border-radius: var(--radius-lg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  box-shadow: 0 24px 80px var(--shadow-ink-heavy);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -7357,7 +7441,7 @@ html.font-xl { font-size: 21px; }
 }
 .reqboard-modal-close:hover { color: var(--text-primary); }
 
-/* メインタブ */
+/* 郢晢ｽ｡郢ｧ・､郢晢ｽｳ郢ｧ・ｿ郢昴・*/
 .reqboard-tabs {
   display: flex;
   border-bottom: 1px solid var(--border-glass);
@@ -7386,7 +7470,7 @@ html.font-xl { font-size: 21px; }
   border-bottom-color: var(--accent-cyan);
 }
 .reqboard-tab-badge {
-  background: #ef4444;
+  background: var(--state-danger);
   color: var(--text-on-accent);
   font-size: 0.58rem;
   font-weight: 700;
@@ -7399,7 +7483,7 @@ html.font-xl { font-size: 21px; }
   padding: 0 3px;
 }
 
-/* サブタブ */
+/* 郢ｧ・ｵ郢晄じ縺｡郢昴・*/
 .reqboard-subtabs {
   display: flex;
   gap: 4px;
@@ -7425,12 +7509,12 @@ html.font-xl { font-size: 21px; }
 }
 .reqboard-subtab:hover { color: var(--text-primary); background: var(--bg-glass); }
 .reqboard-subtab.active {
-  background: rgba(0,200,255,0.12);
-  border-color: rgba(0,200,255,0.3);
+  background: rgba(var(--accent-aqua-rgb-legacy), 0.12);
+  border-color: rgba(var(--accent-aqua-rgb-legacy), 0.30);
   color: var(--accent-cyan);
 }
 
-/* エリアラッパー（flex:1 を受け取りスクロール境界を確定させる） */
+/* 郢ｧ・ｨ郢晢ｽｪ郢ｧ・｢郢晢ｽｩ郢昴・繝ｱ郢晢ｽｼ繝ｻ繝ｻlex:1 郢ｧ雋槫･ｳ邵ｺ螟ｧ蜿咏ｹｧ鄙ｫ縺帷ｹｧ・ｯ郢晢ｽｭ郢晢ｽｼ郢晢ｽｫ陟・・髦懃ｹｧ蝣､・｢・ｺ陞ｳ螢ｹ・・ｸｺ蟶呻ｽ九・繝ｻ*/
 #reqboard-request-area,
 #reqboard-suggestion-area {
   flex: 1;
@@ -7440,7 +7524,7 @@ html.font-xl { font-size: 21px; }
   flex-direction: column;
 }
 
-/* コンテンツエリア */
+/* 郢ｧ・ｳ郢晢ｽｳ郢昴・ﾎｦ郢昴・縺顔ｹ晢ｽｪ郢ｧ・｢ */
 .reqboard-content {
   flex: 1;
   overflow-y: auto;
@@ -7453,7 +7537,7 @@ html.font-xl { font-size: 21px; }
 .reqboard-content::-webkit-scrollbar { width: 4px; }
 .reqboard-content::-webkit-scrollbar-thumb { background: var(--bg-card); border-radius: 2px; }
 
-/* 空表示 */
+/* 驕ｨ・ｺ髯ｦ・ｨ驕会ｽｺ */
 .req-empty {
   display: flex;
   flex-direction: column;
@@ -7467,7 +7551,7 @@ html.font-xl { font-size: 21px; }
 }
 .req-empty i { font-size: 2rem; opacity: 0.4; }
 
-/* 案件キー絞り込み */
+/* 隴ｯ莠包ｽｻ・ｶ郢ｧ・ｭ郢晢ｽｼ驍ｨ讒ｭ・企恷・ｼ邵ｺ・ｿ */
 .req-project-filter-row {
   display: flex;
   align-items: center;
@@ -7521,7 +7605,7 @@ html.font-xl { font-size: 21px; }
   white-space: nowrap;
 }
 
-/* ステータスバッジ */
+/* 郢ｧ・ｹ郢昴・繝ｻ郢ｧ・ｿ郢ｧ・ｹ郢晁・繝｣郢ｧ・ｸ */
 .req-status-badge {
   display: inline-flex;
   align-items: center;
@@ -7532,18 +7616,18 @@ html.font-xl { font-size: 21px; }
 }
 .req-status-badge.status-submitted {
   background: rgba(251,191,36,0.18);
-  color: #fbbf24;
+  color: var(--state-warning-soft);
   border: 1px solid rgba(251,191,36,0.3);
 }
 .req-status-badge.status-reviewing {
   background: rgba(99,102,241,0.18);
-  color: #a5b4fc;
-  border: 1px solid rgba(99,102,241,0.3);
+  color: var(--state-task-accent);
+  border: 1px solid rgba(var(--state-primary-rgb), 0.30);
 }
 .req-status-badge.status-accepted {
-  background: rgba(52,211,153,0.18);
-  color: #6ee7b7;
-  border: 1px solid rgba(52,211,153,0.3);
+  background: rgba(var(--state-success-mint-rgb), 0.18);
+  color: var(--state-success-mint);
+  border: 1px solid rgba(var(--state-success-mint-rgb), 0.30);
 }
 .req-status-badge.status-rejected {
   background: rgba(156,163,175,0.15);
@@ -7551,7 +7635,7 @@ html.font-xl { font-size: 21px; }
   border: 1px solid rgba(156,163,175,0.2);
 }
 
-/* 依頼アイテム */
+/* 關捺辨・ｰ・ｼ郢ｧ・｢郢ｧ・､郢昴・ﾎ・*/
 .req-item {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
@@ -7563,8 +7647,8 @@ html.font-xl { font-size: 21px; }
   transition: border-color 0.15s;
 }
 .req-item--notify {
-  border-color: rgba(0,200,255,0.35);
-  box-shadow: 0 0 0 1px rgba(0,200,255,0.1);
+  border-color: rgba(var(--accent-aqua-rgb-legacy), 0.35);
+  box-shadow: 0 0 0 1px rgba(var(--accent-aqua-rgb-legacy), 0.10);
 }
 .req-item-header {
   display: flex;
@@ -7585,7 +7669,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-secondary);
 }
 .req-dept-badge.to {
-  background: rgba(0,200,255,0.12);
+  background: rgba(var(--accent-aqua-rgb-legacy), 0.12);
   color: var(--accent-cyan);
 }
 .req-arrow {
@@ -7672,12 +7756,12 @@ html.font-xl { font-size: 21px; }
   color: var(--accent-orange);
 }
 .req-task-link--accepted {
-  background: rgba(0, 200, 255, 0.12);
+  background: rgba(var(--accent-aqua-rgb-legacy), 0.12);
   color: var(--accent-cyan);
 }
 .req-task-link--done {
   background: rgba(57, 208, 181, 0.12);
-  color: #6ee7d2;
+  color: var(--state-success-aqua);
 }
 .req-task-link--cancelled {
   background: rgba(255, 126, 182, 0.12);
@@ -7722,8 +7806,8 @@ html.font-xl { font-size: 21px; }
   gap: 5px;
 }
 .btn-req-status:hover {
-  background: rgba(0,200,255,0.1);
-  border-color: rgba(0,200,255,0.3);
+  background: rgba(var(--accent-aqua-rgb-legacy), 0.10);
+  border-color: rgba(var(--accent-aqua-rgb-legacy), 0.30);
   color: var(--accent-cyan);
 }
 .btn-req-archive, .btn-req-unarchive {
@@ -7741,14 +7825,14 @@ html.font-xl { font-size: 21px; }
   gap: 5px;
 }
 .btn-req-archive:hover {
-  background: rgba(0,200,255,0.1);
-  border-color: rgba(0,200,255,0.3);
+  background: rgba(var(--accent-aqua-rgb-legacy), 0.10);
+  border-color: rgba(var(--accent-aqua-rgb-legacy), 0.30);
   color: var(--accent-cyan);
 }
 .btn-req-unarchive:hover {
   background: rgba(99,102,241,0.12);
-  border-color: rgba(99,102,241,0.35);
-  color: #a5b4fc;
+  border-color: rgba(var(--state-primary-rgb), 0.35);
+  color: var(--state-task-accent);
 }
 .btn-req-delete {
   padding: 5px 10px;
@@ -7765,19 +7849,19 @@ html.font-xl { font-size: 21px; }
   gap: 5px;
 }
 .btn-req-delete:hover {
-  background: rgba(239,68,68,0.12);
-  border-color: rgba(239,68,68,0.35);
-  color: #f87171;
+  background: rgba(var(--state-danger-rgb), 0.12);
+  border-color: rgba(var(--state-danger-rgb), 0.35);
+  color: var(--state-danger-soft);
 }
 
-/* 新規投稿フォーム */
+/* 隴・ｽｰ髫穂ｹ怜・驕橸ｽｿ郢晁ｼ斐°郢晢ｽｼ郢晢｣ｰ */
 .req-form {
   display: flex;
   flex-direction: column;
   gap: 14px;
   padding-bottom: 8px;
 }
-.req-required { color: #ef4444; font-size: 0.75rem; }
+.req-required { color: var(--state-danger); font-size: 0.75rem; }
 .req-form-footer {
   display: flex;
   align-items: center;
@@ -7790,7 +7874,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-muted);
 }
 
-/* ステータス変更モーダル */
+/* 郢ｧ・ｹ郢昴・繝ｻ郢ｧ・ｿ郢ｧ・ｹ陞溽判蟲ｩ郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ */
 .req-status-select-group {
   display: flex;
   flex-wrap: wrap;
@@ -7854,14 +7938,14 @@ html.font-xl { font-size: 21px; }
   border-color: var(--border-glass-hover);
 }
 .req-status-option.selected {
-  background: rgba(0,200,255,0.12);
+  background: rgba(var(--accent-aqua-rgb-legacy), 0.12);
   border-color: rgba(0,200,255,0.4);
-  box-shadow: 0 0 0 1px rgba(0,200,255,0.2);
+  box-shadow: 0 0 0 1px rgba(var(--accent-aqua-rgb-legacy), 0.20);
 }
 .req-status-option:hover { background: var(--bg-card); }
 
 /* ===========================
-   目安箱
+   騾ｶ・ｮ陞ｳ閾･・ｮ・ｱ
    =========================== */
 .sugg-form-section {
   background: var(--bg-glass);
@@ -7899,8 +7983,8 @@ html.font-xl { font-size: 21px; }
 }
 .sugg-cat-btn:hover { background: var(--bg-card); color: var(--text-primary); }
 .sugg-cat-btn.active {
-  background: rgba(0,200,255,0.13);
-  border-color: rgba(0,200,255,0.35);
+  background: rgba(var(--accent-aqua-rgb-legacy), 0.13);
+  border-color: rgba(var(--accent-aqua-rgb-legacy), 0.35);
   color: var(--accent-cyan);
 }
 .sugg-form-footer {
@@ -7945,9 +8029,9 @@ html.font-xl { font-size: 21px; }
   font-size: 0.7rem;
   font-weight: 700;
 }
-.req-category-badge.cat-work     { background: rgba(99,102,241,0.18); color: #a5b4fc; }
-.req-category-badge.cat-facility { background: rgba(251,191,36,0.18); color: #fbbf24; }
-.req-category-badge.cat-safety   { background: rgba(52,211,153,0.18); color: #6ee7b7; }
+.req-category-badge.cat-work     { background: rgba(99,102,241,0.18); color: var(--state-task-accent); }
+.req-category-badge.cat-facility { background: rgba(251,191,36,0.18); color: var(--state-warning-soft); }
+.req-category-badge.cat-safety   { background: rgba(var(--state-success-mint-rgb), 0.18); color: var(--state-success-mint); }
 .req-category-badge.cat-other    { background: var(--bg-card); color: var(--text-muted); }
 .sugg-author {
   font-size: 0.75rem;
@@ -7961,7 +8045,7 @@ html.font-xl { font-size: 21px; }
   line-height: 1.5;
 }
 .sugg-reply-box {
-  background: rgba(0,200,255,0.06);
+  background: rgba(var(--accent-aqua-rgb-legacy), 0.06);
   border: 1px solid rgba(0,200,255,0.18);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
@@ -7990,13 +8074,13 @@ html.font-xl { font-size: 21px; }
   gap: 5px;
 }
 .btn-sugg-reply:hover {
-  background: rgba(0,200,255,0.1);
-  border-color: rgba(0,200,255,0.3);
+  background: rgba(var(--accent-aqua-rgb-legacy), 0.10);
+  border-color: rgba(var(--accent-aqua-rgb-legacy), 0.30);
   color: var(--accent-cyan);
 }
 
 /* ===========================
-   管理者パネル：目安箱閲覧者管理
+   驍ゑｽ｡騾・・ﾂ繝ｻ繝ｱ郢晞亂ﾎ昴・螟ょｲｼ陞ｳ閾･・ｮ・ｱ鬮｢・ｲ髫包ｽｧ髢繝ｻ・ｮ・｡騾・・
    =========================== */
 .admin-section {
   margin-top: 20px;
@@ -8028,27 +8112,27 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   ライトテーマ 調整
+   郢晢ｽｩ郢ｧ・､郢晏現繝ｦ郢晢ｽｼ郢昴・髫ｱ・ｿ隰ｨ・ｴ
    =========================== */
 
-/* メールアシスタント ライト対応 */
+/* 郢晢ｽ｡郢晢ｽｼ郢晢ｽｫ郢ｧ・｢郢ｧ・ｷ郢ｧ・ｹ郢ｧ・ｿ郢晢ｽｳ郢昴・郢晢ｽｩ郢ｧ・､郢昜ｺ･・ｯ・ｾ陟｢繝ｻ*/
 [data-theme="light"] .email-modal-inner,
 [data-theme="light"] .profile-modal-inner {
-  background: rgba(241, 243, 247, 0.98);
-  border-color: rgba(31, 35, 40, 0.15);
+  background: rgba(var(--light-surface-rgb), 0.98);
+  border-color: rgba(var(--light-border-rgb), 0.15);
 }
 [data-theme="light"] .email-profile-name-input,
 [data-theme="light"] .email-profile-prompt-area,
 [data-theme="light"] .email-received-area {
   background: var(--bg-card-hover);
-  border-color: rgba(31, 35, 40, 0.28);
+  border-color: rgba(var(--light-border-rgb), 0.28);
   color: var(--text-primary);
 }
 [data-theme="light"] .ep-input,
 [data-theme="light"] .ep-signature-area,
 [data-theme="light"] .ep-signature-preview {
   background: var(--bg-card-hover);
-  border-color: rgba(31, 35, 40, 0.28);
+  border-color: rgba(var(--light-border-rgb), 0.28);
   color: var(--text-primary);
 }
 [data-theme="light"] .email-profile-name-input:focus,
@@ -8076,20 +8160,20 @@ html.font-xl { font-size: 21px; }
   background: rgba(0,0,0,0.03);
 }
 [data-theme="light"] .req-status-badge.status-reviewing { color: #4f46e5; }
-[data-theme="light"] .req-status-badge.status-accepted  { color: #059669; }
-[data-theme="light"] .reqboard-tab.active { color: #0369a1; border-bottom-color: #0369a1; }
+[data-theme="light"] .req-status-badge.status-accepted  { color: var(--state-success-strong); }
+[data-theme="light"] .reqboard-tab.active { color: var(--state-sky-deep); border-bottom-color: var(--state-sky-deep); }
 [data-theme="light"] .reqboard-subtab.active {
   background: rgba(3,105,161,0.1);
   border-color: rgba(3,105,161,0.25);
-  color: #0369a1;
+  color: var(--state-sky-deep);
 }
 
 
 /* ===========================
-   カレンダー・勤怠管理
+   郢ｧ・ｫ郢晢ｽｬ郢晢ｽｳ郢敖郢晢ｽｼ郢晢ｽｻ陷搾ｽ､隲､・ｰ驍ゑｽ｡騾・・
    =========================== */
 
-/* ヘッダーボタン */
+/* 郢晏･繝｣郢敖郢晢ｽｼ郢晄㈱縺｡郢晢ｽｳ */
 .btn-calendar {
   position: relative;
   display: flex;
@@ -8107,12 +8191,12 @@ html.font-xl { font-size: 21px; }
   flex-shrink: 0;
 }
 .btn-calendar:hover {
-  background: rgba(99,102,241,0.15);
-  border-color: rgba(99,102,241,0.4);
-  color: #a5b4fc;
+  background: rgba(var(--state-primary-rgb), 0.15);
+  border-color: rgba(var(--state-primary-rgb), 0.40);
+  color: var(--state-task-accent);
 }
 
-/* モーダル */
+/* 郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ */
 .cal-modal-glass {
   background: var(--bg-secondary);
   border: 1px solid var(--border-glass);
@@ -8120,12 +8204,12 @@ html.font-xl { font-size: 21px; }
   width: min(700px, 96vw);
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+  box-shadow: 0 16px 48px var(--shadow-ink-strong);
   display: flex;
   flex-direction: column;
 }
 
-/* ヘッダー */
+/* 郢晏･繝｣郢敖郢晢ｽｼ */
 .cal-modal-header {
   display: flex;
   align-items: center;
@@ -8183,7 +8267,7 @@ html.font-xl { font-size: 21px; }
 }
 .cal-close-btn:hover { color: var(--text-primary); background: var(--bg-glass); }
 
-/* 月間サマリー */
+/* 隴帷｣ｯ菫｣郢ｧ・ｵ郢晄ｧｭﾎ懃ｹ晢ｽｼ */
 .cal-summary {
   display: flex;
   gap: 6px;
@@ -8208,13 +8292,13 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
 }
 
-/* グリッドコンテナ */
+/* 郢ｧ・ｰ郢晢ｽｪ郢昴・繝ｩ郢ｧ・ｳ郢晢ｽｳ郢昴・繝ｪ */
 #cal-grid-container {
   padding: 12px 20px;
   flex-shrink: 0;
 }
 
-/* 曜日ヘッダー */
+/* 隴匁㊧蠕狗ｹ晏･繝｣郢敖郢晢ｽｼ */
 .cal-dow-row {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -8227,10 +8311,10 @@ html.font-xl { font-size: 21px; }
   color: var(--text-muted);
   padding: 4px 0;
 }
-.cal-sun-label { color: #f87171; }
-.cal-sat-label { color: #60a5fa; }
+.cal-sun-label { color: var(--state-danger-soft); }
+.cal-sat-label { color: var(--state-info); }
 
-/* 日付グリッド */
+/* 隴鯉ｽ･闔牙･縺堤ｹ晢ｽｪ郢昴・繝ｩ */
 .cal-cells {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -8254,8 +8338,8 @@ html.font-xl { font-size: 21px; }
   border-color: var(--accent-blue);
   background: rgba(96,165,250,0.08);
 }
-.cal-sun .cal-day-num { color: #f87171; }
-.cal-sat .cal-day-num { color: #60a5fa; }
+.cal-sun .cal-day-num { color: var(--state-danger-soft); }
+.cal-sat .cal-day-num { color: var(--state-info); }
 .cal-day-num {
   font-size: 0.82rem;
   font-weight: 600;
@@ -8281,12 +8365,12 @@ html.font-xl { font-size: 21px; }
   flex: 1;
 }
 
-/* 勤怠背景色 */
-.cal-att-yukyu  { background: rgba(52,168,83,0.1) !important; }
+/* 陷搾ｽ､隲､・ｰ髢ｭ譴ｧ蜍ｹ豼ｶ・ｲ */
+.cal-att-yukyu  { background: rgba(var(--brand-drive-green-rgb), 0.10) !important; }
 .cal-att-hankyu { background: rgba(251,188,4,0.1) !important; }
 .cal-att-kekkin { background: rgba(234,67,53,0.1)  !important; }
 
-/* 勤怠バッジ */
+/* 陷搾ｽ､隲､・ｰ郢晁・繝｣郢ｧ・ｸ */
 .cal-att-badge {
   font-size: 0.65rem;
   font-weight: 600;
@@ -8297,13 +8381,13 @@ html.font-xl { font-size: 21px; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.cal-att-yukyu  { color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+.cal-att-yukyu  { color: var(--state-success-ok); border: 1px solid rgba(var(--state-success-ok-rgb), 0.30); }
 .cal-att-hankyu { color: #eab308; border: 1px solid rgba(234,179,8,0.3); }
-.cal-att-kekkin { color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+.cal-att-kekkin { color: var(--state-danger); border: 1px solid rgba(var(--state-danger-rgb), 0.30); }
 .cal-att-hayade { color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
-.cal-att-zangyo { color: #fb923c; border: 1px solid rgba(251,146,60,0.3); }
+.cal-att-zangyo { color: var(--state-warning-warm); border: 1px solid rgba(251,146,60,0.3); }
 
-/* タスクドット */
+/* 郢ｧ・ｿ郢ｧ・ｹ郢ｧ・ｯ郢晏ｳｨ繝｣郢昴・*/
 .cal-task-dots {
   display: flex;
   gap: 3px;
@@ -8320,10 +8404,10 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   justify-content: center;
 }
-.cal-task-received { background: rgba(96,165,250,0.2); color: #60a5fa; }
+.cal-task-received { background: rgba(96,165,250,0.2); color: var(--state-info); }
 .cal-task-sent     { background: rgba(167,139,250,0.2); color: #a78bfa; }
 
-/* 日付詳細パネル */
+/* 隴鯉ｽ･闔牙ｩ・ｩ・ｳ驍擾ｽｰ郢昜ｻ｣繝ｭ郢晢ｽｫ */
 .cal-day-panel {
   margin: 0 20px 20px;
   border: 1px solid var(--border-glass);
@@ -8363,7 +8447,7 @@ html.font-xl { font-size: 21px; }
 }
 #cal-day-cancel-btn:hover { color: var(--text-primary); background: var(--bg-card-hover); }
 
-/* 勤務区分ボタン */
+/* 陷搾ｽ､陷榊雀邇・崕繝ｻ繝ｻ郢ｧ・ｿ郢晢ｽｳ */
 .cal-section-label {
   font-size: 0.75rem;
   font-weight: 600;
@@ -8396,7 +8480,7 @@ html.font-xl { font-size: 21px; }
   font-weight: 600;
 }
 
-/* 早出・残業 */
+/* 隴鯉ｽｩ陷・ｽｺ郢晢ｽｻ隹ｿ蛹ｺ・･・ｭ */
 .cal-time-row {
   display: flex;
   gap: 12px;
@@ -8424,7 +8508,7 @@ html.font-xl { font-size: 21px; }
 }
 .cal-time-input:focus { outline: none; border-color: var(--accent-blue); }
 
-/* 早出・残業合計 */
+/* 隴鯉ｽｩ陷・ｽｺ郢晢ｽｻ隹ｿ蛹ｺ・･・ｭ陷ｷ驛・ｽｨ繝ｻ*/
 .cal-time-total {
   display: flex;
   align-items: center;
@@ -8478,7 +8562,7 @@ html.font-xl { font-size: 21px; }
   white-space: nowrap;
 }
 
-/* 日付詳細: 作業現場入力 */
+/* 隴鯉ｽ･闔牙ｩ・ｩ・ｳ驍擾ｽｰ: 闖ｴ諛茨ｽ･・ｭ霑ｴ・ｾ陜｣・ｴ陷茨ｽ･陷峨・*/
 .cal-day-worksites {
   display: flex;
   flex-direction: column;
@@ -8597,7 +8681,7 @@ html.font-xl { font-size: 21px; }
   line-height: 1.2;
 }
 
-/* メモ */
+/* 郢晢ｽ｡郢晢ｽ｢ */
 .cal-note-input {
   width: 100%;
   background: var(--bg-card);
@@ -8613,14 +8697,14 @@ html.font-xl { font-size: 21px; }
 }
 .cal-note-input:focus { outline: none; border-color: var(--accent-blue); }
 
-/* アクションボタン */
+/* 郢ｧ・｢郢ｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ郢晄㈱縺｡郢晢ｽｳ */
 .cal-day-actions {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
 }
 
-/* タスク一覧（日別） */
+/* 郢ｧ・ｿ郢ｧ・ｹ郢ｧ・ｯ闕ｳﾂ髫包ｽｧ繝ｻ蝓溷ｾ玖崕・･繝ｻ繝ｻ*/
 .cal-day-tasks {
   margin-top: 14px;
   padding-top: 12px;
@@ -8668,9 +8752,9 @@ html.font-xl { font-size: 21px; }
 .cal-task-accepted { border-left: 3px solid var(--accent-blue); }
 .cal-task-pending  { border-left: 3px solid #eab308; }
 
-/* ライトテーマ調整 */
+/* 郢晢ｽｩ郢ｧ・､郢晏現繝ｦ郢晢ｽｼ郢晄ｫ・ｽｪ・ｿ隰ｨ・ｴ */
 [data-theme="light"] .cal-modal-glass {
-  background: rgba(241, 243, 247, 0.98); /* modal-glass と統一 */
+  background: rgba(var(--light-surface-rgb), 0.98); /* modal-glass 邵ｺ・ｨ驍ｨ・ｱ闕ｳﾂ */
 }
 [data-theme="light"] .cal-cell {
   background: var(--bg-card);
@@ -8687,9 +8771,9 @@ html.font-xl { font-size: 21px; }
 
 
 
-/* ===== セクション折り畳み・カード非表示 ===== */
+/* ===== 郢ｧ・ｻ郢ｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ隰壼･・企｡・ｳ邵ｺ・ｿ郢晢ｽｻ郢ｧ・ｫ郢晢ｽｼ郢晁崟謦ｼ髯ｦ・ｨ驕会ｽｺ ===== */
 
-/* 折り畳みボタン */
+/* 隰壼･・企｡・ｳ邵ｺ・ｿ郢晄㈱縺｡郢晢ｽｳ */
 .btn-collapse-section {
   display: inline-flex;
   align-items: center;
@@ -8717,20 +8801,20 @@ html.font-xl { font-size: 21px; }
   transform: rotate(180deg);
 }
 
-/* 折り畳まれたセクション */
+/* 隰壼･・企｡・ｳ邵ｺ・ｾ郢ｧ蠕娯螺郢ｧ・ｻ郢ｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ */
 .category-section.collapsed .card-grid,
 .external-tools.collapsed .external-grid,
 .category-section.collapsed .btn-add-card {
   display: none;
 }
 
-/* カード非表示ボタン（link-card 用） */
+/* 郢ｧ・ｫ郢晢ｽｼ郢晁崟謦ｼ髯ｦ・ｨ驕会ｽｺ郢晄㈱縺｡郢晢ｽｳ繝ｻ繝ｻink-card 騾包ｽｨ繝ｻ繝ｻ*/
 .link-card {
   position: relative;
 }
-/* .btn-hide-card は廃止 → 右クリック/長押しメニューの「非表示にする」に統合 */
+/* .btn-hide-card 邵ｺ・ｯ陝偵・・ｭ・｢ 遶翫・陷ｿ・ｳ郢ｧ・ｯ郢晢ｽｪ郢昴・縺・鬮滂ｽｷ隰夲ｽｼ邵ｺ蜉ｱﾎ鍋ｹ昜ｹ斟礼ｹ晢ｽｼ邵ｺ・ｮ邵ｲ遒∵直髯ｦ・ｨ驕会ｽｺ邵ｺ・ｫ邵ｺ蜷ｶ・狗ｸｲ髦ｪ竊馴お・ｱ陷ｷ繝ｻ*/
 
-/* 外部ツールアイコン用非表示ボタン */
+/* 陞溷､慚夂ｹ昴・繝ｻ郢晢ｽｫ郢ｧ・｢郢ｧ・､郢ｧ・ｳ郢晢ｽｳ騾包ｽｨ鬮ｱ讚・ｽ｡・ｨ驕会ｽｺ郢晄㈱縺｡郢晢ｽｳ */
 .ext-icon-wrap {
   position: relative;
 }
@@ -8743,7 +8827,7 @@ html.font-xl { font-size: 21px; }
   justify-content: center;
   width: 20px;
   height: 20px;
-  background: rgba(0,0,0,0.6);
+  background: var(--shadow-ink-stronger);
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -8760,7 +8844,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-on-accent);
 }
 
-/* 設定パネル：非表示カード管理 */
+/* 髫ｪ・ｭ陞ｳ螢ｹ繝ｱ郢晞亂ﾎ昴・螟先直髯ｦ・ｨ驕会ｽｺ郢ｧ・ｫ郢晢ｽｼ郢晁・・ｮ・｡騾・・*/
 .settings-hint {
   font-size: 0.78rem;
   color: var(--text-muted);
@@ -8832,7 +8916,7 @@ html.font-xl { font-size: 21px; }
   background: var(--bg-card-hover);
 }
 
-/* ===== 検索結果ダイレクト表示 ===== */
+/* ===== 隶諛・ｽｴ・｢驍ｨ蜈域｣｡郢敖郢ｧ・､郢晢ｽｬ郢ｧ・ｯ郢晞メ・｡・ｨ驕会ｽｺ ===== */
 .search-hidden {
   display: none !important;
 }
@@ -8888,7 +8972,7 @@ html.font-xl { font-size: 21px; }
   opacity: 0.7;
 }
 
-/* ===== ミッションバナー ===== */
+/* ===== 郢晄ｺ倥Ε郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ郢晁・繝ｪ郢晢ｽｼ ===== */
 .mission-banner {
   background: var(--bg-secondary);
   border: 1px solid var(--border-glass);
@@ -8969,12 +9053,12 @@ html.font-xl { font-size: 21px; }
   white-space: pre-wrap;
 }
 
-/* ライトテーマ対応 */
+/* 郢晢ｽｩ郢ｧ・､郢晏現繝ｦ郢晢ｽｼ郢晄ｧｫ・ｯ・ｾ陟｢繝ｻ*/
 [data-theme="light"] .mission-banner {
   color: var(--accent-blue);
 }
 
-/* ===== カード非表示確認モーダル ===== */
+/* ===== 郢ｧ・ｫ郢晢ｽｼ郢晁崟謦ｼ髯ｦ・ｨ驕会ｽｺ驕抵ｽｺ髫ｱ髦ｪﾎ皮ｹ晢ｽｼ郢敖郢晢ｽｫ ===== */
 .hide-card-confirm-dialog {
   max-width: 400px;
   width: 92%;
@@ -9029,8 +9113,8 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
 }
 
-/* ===== セクション展開アニメーション ===== */
-/* category-header をクリッカブルに見せる */
+/* ===== 郢ｧ・ｻ郢ｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ陞ｻ證ｮ蟷慕ｹｧ・｢郢昜ｹ斟鍋ｹ晢ｽｼ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ ===== */
+/* category-header 郢ｧ蛛ｵ縺醍ｹ晢ｽｪ郢昴・縺咲ｹ晄じﾎ晉ｸｺ・ｫ髫穂ｹ昶雷郢ｧ繝ｻ*/
 .category-section .category-header,
 .external-tools .category-header {
   cursor: pointer;
@@ -9046,7 +9130,7 @@ html.font-xl { font-size: 21px; }
   animation: sectionReveal 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* ===== 目安箱 アーカイブ折りたたみ ===== */
+/* ===== 騾ｶ・ｮ陞ｳ閾･・ｮ・ｱ 郢ｧ・｢郢晢ｽｼ郢ｧ・ｫ郢ｧ・､郢晏戟驥懃ｹｧ鄙ｫ笳・ｸｺ貅倪茜 ===== */
 .sugg-archived-details {
   margin-top: 10px;
 }
@@ -9069,9 +9153,9 @@ html.font-xl { font-size: 21px; }
   color: var(--text-secondary);
 }
 
-/* ===== カレンダー拡張 — タブ / 共有カレンダー / 会社情報バッジ / 設定モーダル ===== */
+/* ===== 郢ｧ・ｫ郢晢ｽｬ郢晢ｽｳ郢敖郢晢ｽｼ隲｡・｡陟托ｽｵ 遯ｶ繝ｻ郢ｧ・ｿ郢昴・/ 陷茨ｽｱ隴帛ｳｨ縺咲ｹ晢ｽｬ郢晢ｽｳ郢敖郢晢ｽｼ / 闔ｨ螟ゑｽ､・ｾ隲繝ｻ・ｰ・ｱ郢晁・繝｣郢ｧ・ｸ / 髫ｪ・ｭ陞ｳ螢ｹﾎ皮ｹ晢ｽｼ郢敖郢晢ｽｫ ===== */
 
-/* タブバー */
+/* 郢ｧ・ｿ郢晄じ繝ｰ郢晢ｽｼ */
 .cal-tab-bar {
   display: flex;
   gap: 6px;
@@ -9098,18 +9182,18 @@ html.font-xl { font-size: 21px; }
   background: var(--accent-blue);
 }
 
-/* 年度有給サマリー */
+/* 陝ｷ・ｴ陟趣ｽｦ隴幄・・ｵ・ｦ郢ｧ・ｵ郢晄ｧｭﾎ懃ｹ晢ｽｼ */
 .cal-summary-fiscal {
   background: rgba(16,185,129,0.12);
   border-color: rgba(16,185,129,0.25);
-  color: #10b981;
+  color: var(--state-success);
 }
 [data-theme="light"] .cal-summary-fiscal {
   background: rgba(16,185,129,0.1);
-  color: #059669;
+  color: var(--state-success-strong);
 }
 
-/* 締め期間ラベル（早出・残業の下に表示） */
+/* 驍ｱ・ｰ郢ｧ竏ｵ謔・ｫ｢阮厥帷ｹ晏生ﾎ昴・蝓滓滋陷・ｽｺ郢晢ｽｻ隹ｿ蛹ｺ・･・ｭ邵ｺ・ｮ闕ｳ荵昶・髯ｦ・ｨ驕会ｽｺ繝ｻ繝ｻ*/
 .cal-shime-label {
   display: block;
   font-size: 0.65rem;
@@ -9118,7 +9202,7 @@ html.font-xl { font-size: 21px; }
   margin-top: 1px;
 }
 
-/* 会社カレンダー情報バッジ（個人・共有両方で使用） */
+/* 闔ｨ螟ゑｽ､・ｾ郢ｧ・ｫ郢晢ｽｬ郢晢ｽｳ郢敖郢晢ｽｼ隲繝ｻ・ｰ・ｱ郢晁・繝｣郢ｧ・ｸ繝ｻ莠･ﾂ蛟ｶ・ｺ・ｺ郢晢ｽｻ陷茨ｽｱ隴帶・・ｸ・｡隴・ｽｹ邵ｺ・ｧ闖ｴ・ｿ騾包ｽｨ繝ｻ繝ｻ*/
 .cal-company-badge {
   font-size: 0.58rem;
   padding: 0 3px;
@@ -9144,42 +9228,42 @@ html.font-xl { font-size: 21px; }
   font-weight: 600;
 }
 
-/* 会社休日セル */
+/* 闔ｨ螟ゑｽ､・ｾ闔ｨ隨ｬ蠕狗ｹｧ・ｻ郢晢ｽｫ */
 .cal-cell.cal-company-holiday {
   background: rgba(156,39,176,0.06);
 }
 
-/* 日本の祝祭日セル（共有カレンダー） */
+/* 隴鯉ｽ･隴幢ｽｬ邵ｺ・ｮ騾ｾ譎会ｽ･・ｭ隴鯉ｽ･郢ｧ・ｻ郢晢ｽｫ繝ｻ莠･繝ｻ隴帛ｳｨ縺咲ｹ晢ｽｬ郢晢ｽｳ郢敖郢晢ｽｼ繝ｻ繝ｻ*/
 .cal-cell.cal-jp-holiday {
   background: rgba(248,113,113,0.07);
 }
 .cal-cell.cal-jp-holiday .cal-day-num {
-  color: #f87171;
+  color: var(--state-danger-soft);
 }
 [data-theme="light"] .cal-cell.cal-jp-holiday {
   background: rgba(239,68,68,0.06);
 }
 [data-theme="light"] .cal-cell.cal-jp-holiday .cal-day-num {
-  color: #dc2626;
+  color: var(--state-danger-strong);
 }
 
-/* 祝祭日バッジ（共有カレンダー） */
+/* 騾ｾ譎会ｽ･・ｭ隴鯉ｽ･郢晁・繝｣郢ｧ・ｸ繝ｻ莠･繝ｻ隴帛ｳｨ縺咲ｹ晢ｽｬ郢晢ｽｳ郢敖郢晢ｽｼ繝ｻ繝ｻ*/
 .cal-company-badge.jp-holiday-badge {
   background: rgba(248,113,113,0.15);
-  color: #fca5a5;
+  color: var(--state-danger-pale);
   font-weight: 600;
 }
 [data-theme="light"] .cal-company-badge.jp-holiday-badge {
   background: rgba(239,68,68,0.10);
-  color: #dc2626;
+  color: var(--state-danger-strong);
 }
 
-/* 共有カレンダーコンテナ — 個人グリッドと同じパディングに揃える */
+/* 陷茨ｽｱ隴帛ｳｨ縺咲ｹ晢ｽｬ郢晢ｽｳ郢敖郢晢ｽｼ郢ｧ・ｳ郢晢ｽｳ郢昴・繝ｪ 遯ｶ繝ｻ陋溷ｶ・ｺ・ｺ郢ｧ・ｰ郢晢ｽｪ郢昴・繝ｩ邵ｺ・ｨ陷ｷ蠕個ｧ郢昜ｻ｣繝ｧ郢ｧ・｣郢晢ｽｳ郢ｧ・ｰ邵ｺ・ｫ隰繝ｻ竏ｴ郢ｧ繝ｻ*/
 #cal-shared-container {
   padding: 12px 20px;
 }
 
-/* 共有カレンダーのヘッダー */
+/* 陷茨ｽｱ隴帛ｳｨ縺咲ｹ晢ｽｬ郢晢ｽｳ郢敖郢晢ｽｼ邵ｺ・ｮ郢晏･繝｣郢敖郢晢ｽｼ */
 .cal-shared-header {
   display: flex;
   align-items: center;
@@ -9212,7 +9296,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
 }
 
-/* 共有カレンダー — 休暇者バッジ */
+/* 陷茨ｽｱ隴帛ｳｨ縺咲ｹ晢ｽｬ郢晢ｽｳ郢敖郢晢ｽｼ 遯ｶ繝ｻ闔ｨ隨ｬ蝴企蔓繝ｻ繝ｰ郢昴・縺・*/
 .cal-shared-user-badge {
   font-size: 0.58rem;
   padding: 1px 3px;
@@ -9228,17 +9312,17 @@ html.font-xl { font-size: 21px; }
 }
 .cal-shared-user-badge.yukyu  { background: rgba(76,175,80,0.2);  color: #4CAF50; }
 .cal-shared-user-badge.hankyu { background: rgba(255,193,7,0.2);  color: #ca8a04; }
-.cal-shared-user-badge.kekkin { background: rgba(244,67,54,0.2);  color: #ef4444; }
+.cal-shared-user-badge.kekkin { background: rgba(244,67,54,0.2);  color: var(--state-danger); }
 [data-theme="light"] .cal-shared-user-badge.hankyu { color: #b45309; }
 
-/* 共有カレンダーのセル — 個人と同じ高さに揃える */
+/* 陷茨ｽｱ隴帛ｳｨ縺咲ｹ晢ｽｬ郢晢ｽｳ郢敖郢晢ｽｼ邵ｺ・ｮ郢ｧ・ｻ郢晢ｽｫ 遯ｶ繝ｻ陋溷ｶ・ｺ・ｺ邵ｺ・ｨ陷ｷ蠕個ｧ鬯ｮ蛟･・・ｸｺ・ｫ隰繝ｻ竏ｴ郢ｧ繝ｻ*/
 .cal-shared-cells .cal-cell {
   min-height: 72px;
 }
 
-/* ===== 会社カレンダー設定モーダル（年間グリッド版） ===== */
+/* ===== 闔ｨ螟ゑｽ､・ｾ郢ｧ・ｫ郢晢ｽｬ郢晢ｽｳ郢敖郢晢ｽｼ髫ｪ・ｭ陞ｳ螢ｹﾎ皮ｹ晢ｽｼ郢敖郢晢ｽｫ繝ｻ莠･・ｹ・ｴ鬮｢阮吶￡郢晢ｽｪ郢昴・繝ｩ霑夊肩・ｼ繝ｻ===== */
 
-/* モーダル外枠 */
+/* 郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ陞溷戟譽ｧ */
 .ccs-modal-outer {
   max-width: 920px;
   width: min(920px, 96vw);
@@ -9263,7 +9347,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
 }
 
-/* PINゲート */
+/* PIN郢ｧ・ｲ郢晢ｽｼ郢昴・*/
 .ccs-pin-gate {
   display: flex;
   flex-direction: column;
@@ -9284,7 +9368,7 @@ html.font-xl { font-size: 21px; }
   margin-top: 8px;
 }
 
-/* 設定本体 */
+/* 髫ｪ・ｭ陞ｳ螢ｽ謔ｽ闖ｴ繝ｻ*/
 .ccs-body {
   flex: 1;
   overflow-y: auto;
@@ -9297,7 +9381,7 @@ html.font-xl { font-size: 21px; }
 .ccs-body::-webkit-scrollbar-track { background: transparent; }
 .ccs-body::-webkit-scrollbar-thumb { background: var(--border-glass); border-radius: 2px; }
 
-/* ツールバー */
+/* 郢昴・繝ｻ郢晢ｽｫ郢晁・繝ｻ */
 .ccs-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -9334,7 +9418,7 @@ html.font-xl { font-size: 21px; }
 }
 .ccs-year-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
 
-/* モードタブ */
+/* 郢晢ｽ｢郢晢ｽｼ郢晏ｳｨ縺｡郢昴・*/
 .ccs-mode-tabs {
   display: flex;
   gap: 4px;
@@ -9362,7 +9446,7 @@ html.font-xl { font-size: 21px; }
   flex-shrink: 0;
 }
 
-/* モードヒント */
+/* 郢晢ｽ｢郢晢ｽｼ郢晏ｳｨ繝ｲ郢晢ｽｳ郢昴・*/
 .ccs-mode-hint {
   font-size: 0.78rem;
   color: var(--text-secondary);
@@ -9374,7 +9458,7 @@ html.font-xl { font-size: 21px; }
   flex-shrink: 0;
 }
 
-/* 凡例 */
+/* 陷・ｽ｡關薙・*/
 .ccs-legend {
   display: flex;
   flex-wrap: wrap;
@@ -9394,7 +9478,7 @@ html.font-xl { font-size: 21px; }
   border-radius: 2px;
 }
 
-/* 年間グリッド: 3列×4行 */
+/* 陝ｷ・ｴ鬮｢阮吶￡郢晢ｽｪ郢昴・繝ｩ: 3陋ｻ逋ゅ・髯ｦ繝ｻ*/
 .ccs-annual-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -9408,7 +9492,7 @@ html.font-xl { font-size: 21px; }
   .ccs-annual-grid { grid-template-columns: 1fr; }
 }
 
-/* 月別ミニカレンダー */
+/* 隴帑ｺ･謖ｨ郢晄ｺ倥Ν郢ｧ・ｫ郢晢ｽｬ郢晢ｽｳ郢敖郢晢ｽｼ */
 .ccs-mini-cal {
   background: var(--bg-card);
   border: 1px solid var(--border-glass);
@@ -9437,15 +9521,15 @@ html.font-xl { font-size: 21px; }
   color: var(--text-muted);
   padding: 1px 0;
 }
-.ccs-mini-dow.ccs-sun { color: #f87171; }
-.ccs-mini-dow.ccs-sat { color: #60a5fa; }
+.ccs-mini-dow.ccs-sun { color: var(--state-danger-soft); }
+.ccs-mini-dow.ccs-sat { color: var(--state-info); }
 .ccs-mini-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 1px;
 }
 
-/* 日付セル */
+/* 隴鯉ｽ･闔牙･縺晉ｹ晢ｽｫ */
 .ccs-mini-day {
   font-size: 0.68rem;
   text-align: center;
@@ -9457,10 +9541,10 @@ html.font-xl { font-size: 21px; }
   user-select: none;
 }
 .ccs-mini-empty { visibility: hidden; }
-.ccs-mini-day.ccs-sun { color: #f87171; }
-.ccs-mini-day.ccs-sat-day { color: #60a5fa; }
+.ccs-mini-day.ccs-sun { color: var(--state-danger-soft); }
+.ccs-mini-day.ccs-sat-day { color: var(--state-info); }
 
-/* クリック可能 */
+/* 郢ｧ・ｯ郢晢ｽｪ郢昴・縺題愾・ｯ髢ｭ・ｽ */
 .ccs-day-clickable {
   cursor: pointer;
   transition: background 0.1s, transform 0.1s;
@@ -9470,16 +9554,16 @@ html.font-xl { font-size: 21px; }
   transform: scale(1.15);
 }
 
-/* 状態ハイライト */
+/* 霑･・ｶ隲ｷ荵昴Ρ郢ｧ・､郢晢ｽｩ郢ｧ・､郢昴・*/
 .ccs-day-worksat {
   background: rgba(96,165,250,0.22) !important;
-  color: #93c5fd !important;
+  color: var(--state-info-soft) !important;
   font-weight: 700;
   border-radius: 4px;
 }
 .ccs-day-planned {
   background: rgba(52,211,153,0.22) !important;
-  color: #6ee7b7 !important;
+  color: var(--state-success-mint) !important;
   font-weight: 700;
   border-radius: 4px;
 }
@@ -9494,12 +9578,12 @@ html.font-xl { font-size: 21px; }
   border-radius: 4px;
 }
 .ccs-day-pending {
-  outline: 2px solid #fb923c;
+  outline: 2px solid var(--state-warning-warm);
   outline-offset: -1px;
   border-radius: 4px;
 }
 
-/* 行事ドット */
+/* 髯ｦ蠕｡・ｺ荵昴Λ郢昴・繝ｨ */
 .ccs-event-dot {
   display: block;
   width: 4px;
@@ -9508,20 +9592,20 @@ html.font-xl { font-size: 21px; }
   margin: 1px auto 0;
 }
 
-/* 日本祝祭日（年間グリッド） */
+/* 隴鯉ｽ･隴幢ｽｬ騾ｾ譎会ｽ･・ｭ隴鯉ｽ･繝ｻ莠･・ｹ・ｴ鬮｢阮吶￡郢晢ｽｪ郢昴・繝ｩ繝ｻ繝ｻ*/
 .ccs-mini-day.ccs-jp-holiday {
-  color: #f87171 !important;
+  color: var(--state-danger-soft) !important;
   font-weight: 700;
 }
 
-/* ライトモード調整 */
-[data-theme="light"] .ccs-mini-day.ccs-jp-holiday { color: #dc2626 !important; }
+/* 郢晢ｽｩ郢ｧ・､郢晏現ﾎ皮ｹ晢ｽｼ郢晁歓・ｪ・ｿ隰ｨ・ｴ */
+[data-theme="light"] .ccs-mini-day.ccs-jp-holiday { color: var(--state-danger-strong) !important; }
 [data-theme="light"] .ccs-day-worksat { background: rgba(9,105,218,0.14) !important; color: #0969da !important; }
 [data-theme="light"] .ccs-day-planned { background: rgba(26,127,55,0.14) !important; color: #1a7f37 !important; }
 [data-theme="light"] .ccs-day-holiday { background: rgba(188,76,0,0.14) !important; color: #bc4c00 !important; }
 [data-theme="light"] .ccs-day-event   { background: rgba(102,57,186,0.14) !important; color: #6639ba !important; }
 
-/* ===== 旧スタイル（互換用、非表示化） ===== */
+/* ===== 隴鯉ｽｧ郢ｧ・ｹ郢ｧ・ｿ郢ｧ・､郢晢ｽｫ繝ｻ莠包ｽｺ蜻磯共騾包ｽｨ邵ｲ繝ｻ謦ｼ髯ｦ・ｨ驕会ｽｺ陋ｹ蜴・ｽｼ繝ｻ===== */
 .ccs-section {
   padding: 14px;
   border-radius: 10px;
@@ -9600,9 +9684,9 @@ html.font-xl { font-size: 21px; }
 .btn-ccs-remove-ws:hover,
 .btn-ccs-remove-hr:hover,
 .btn-ccs-remove-ev:hover {
-  background: rgba(239,68,68,0.12);
-  color: #ef4444;
-  border-color: rgba(239,68,68,0.3);
+  background: rgba(var(--state-danger-rgb), 0.12);
+  color: var(--state-danger);
+  border-color: rgba(var(--state-danger-rgb), 0.30);
 }
 .ccs-planned-tag {
   font-size: 0.68rem;
@@ -9625,20 +9709,20 @@ html.font-xl { font-size: 21px; }
   line-height: 1.5;
 }
 
-/* ===== タスク割り振り 編集・共有機能 (tasks.js) ===== */
+/* ===== 郢ｧ・ｿ郢ｧ・ｹ郢ｧ・ｯ陷托ｽｲ郢ｧ鬆鷹匱郢ｧ繝ｻ驍ｱ・ｨ鬮ｮ繝ｻ繝ｻ陷茨ｽｱ隴帷判・ｩ貅ｯ繝ｻ (tasks.js) ===== */
 
-/* 編集ボタン */
+/* 驍ｱ・ｨ鬮ｮ繝ｻ繝ｻ郢ｧ・ｿ郢晢ｽｳ */
 .task-action-edit {
-  background: rgba(74, 158, 255, 0.15);
+  background: rgba(var(--accent-blue-rgb-legacy), 0.15);
   color: var(--accent-blue);
-  border: 1px solid rgba(74, 158, 255, 0.3);
+  border: 1px solid rgba(var(--accent-blue-rgb-legacy), 0.30);
 }
 .task-action-edit:hover {
   background: rgba(74, 158, 255, 0.28);
   border-color: rgba(74, 158, 255, 0.55);
 }
 
-/* 共有ボタン */
+/* 陷茨ｽｱ隴帛ｳｨ繝ｻ郢ｧ・ｿ郢晢ｽｳ */
 .task-action-share {
   background: rgba(56, 189, 130, 0.15);
   color: #38bd82;
@@ -9649,12 +9733,12 @@ html.font-xl { font-size: 21px; }
   border-color: rgba(56, 189, 130, 0.55);
 }
 
-/* 共有タスク（受け取ったタスクと区別）*/
+/* 陷茨ｽｱ隴帛ｳｨ縺｡郢ｧ・ｹ郢ｧ・ｯ繝ｻ莠･螂ｳ邵ｺ螟ｧ蜿咏ｸｺ・｣邵ｺ貅倥■郢ｧ・ｹ郢ｧ・ｯ邵ｺ・ｨ陋ｹ・ｺ陋ｻ・･繝ｻ繝ｻ/
 .task-item--shared {
   border-left: 3px solid var(--accent-cyan);
 }
 
-/* 共有タスク応答ラベル */
+/* 陷茨ｽｱ隴帛ｳｨ縺｡郢ｧ・ｹ郢ｧ・ｯ陟｢諛・ｽｭ譁石帷ｹ晏生ﾎ・*/
 .task-shared-response-label {
   font-size: 0.82rem;
   font-weight: 600;
@@ -9670,7 +9754,7 @@ html.font-xl { font-size: 21px; }
   background: var(--bg-glass);
 }
 
-/* 依頼したタスクの共有済みユーザーバッジ一覧 */
+/* 關捺辨・ｰ・ｼ邵ｺ蜉ｱ笳・ｹｧ・ｿ郢ｧ・ｹ郢ｧ・ｯ邵ｺ・ｮ陷茨ｽｱ隴帷判・ｸ蛹ｻ竏ｩ郢晢ｽｦ郢晢ｽｼ郢ｧ・ｶ郢晢ｽｼ郢晁・繝｣郢ｧ・ｸ闕ｳﾂ髫包ｽｧ */
 .task-shared-with-list {
   display: flex;
   flex-wrap: wrap;
@@ -9696,7 +9780,7 @@ html.font-xl { font-size: 21px; }
   color: #ffc107;
 }
 
-/* 共有ピッカー */
+/* 陷茨ｽｱ隴帛ｳｨ繝ｴ郢昴・縺咲ｹ晢ｽｼ */
 .task-share-user-list {
   max-height: 260px;
   overflow-y: auto;
@@ -9739,7 +9823,7 @@ html.font-xl { font-size: 21px; }
   margin: 0;
 }
 
-/* 共有済みユーザー表示エリア */
+/* 陷茨ｽｱ隴帷判・ｸ蛹ｻ竏ｩ郢晢ｽｦ郢晢ｽｼ郢ｧ・ｶ郢晢ｽｼ髯ｦ・ｨ驕会ｽｺ郢ｧ・ｨ郢晢ｽｪ郢ｧ・｢ */
 .task-share-already {
   display: flex;
   flex-wrap: wrap;
@@ -9757,9 +9841,9 @@ html.font-xl { font-size: 21px; }
 
 
 
-/* ===== 自分のタスクウィジェット — 割り振りタスク統合 (script.js) ===== */
+/* ===== 髢ｾ・ｪ陋ｻ繝ｻ繝ｻ郢ｧ・ｿ郢ｧ・ｹ郢ｧ・ｯ郢ｧ・ｦ郢ｧ・｣郢ｧ・ｸ郢ｧ・ｧ郢昴・繝ｨ 遯ｶ繝ｻ陷托ｽｲ郢ｧ鬆鷹匱郢ｧ鄙ｫ縺｡郢ｧ・ｹ郢ｧ・ｯ驍ｨ・ｱ陷ｷ繝ｻ(script.js) ===== */
 
-/* 割り振りタスク行 */
+/* 陷托ｽｲ郢ｧ鬆鷹匱郢ｧ鄙ｫ縺｡郢ｧ・ｹ郢ｧ・ｯ髯ｦ繝ｻ*/
 .todo-item--assigned {
   cursor: pointer;
   display: flex;
@@ -9775,7 +9859,7 @@ html.font-xl { font-size: 21px; }
   background: var(--bg-card-hover);
 }
 
-/* ステータスバッジ（タスクモジュールのクラスを流用） */
+/* 郢ｧ・ｹ郢昴・繝ｻ郢ｧ・ｿ郢ｧ・ｹ郢晁・繝｣郢ｧ・ｸ繝ｻ蛹ｻ縺｡郢ｧ・ｹ郢ｧ・ｯ郢晢ｽ｢郢ｧ・ｸ郢晢ｽ･郢晢ｽｼ郢晢ｽｫ邵ｺ・ｮ郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｹ郢ｧ蜻茨ｽｵ竏ｫ逡代・繝ｻ*/
 .todo-assigned-badge {
   font-size: 0.7rem;
   font-weight: 700;
@@ -9785,7 +9869,7 @@ html.font-xl { font-size: 21px; }
   white-space: nowrap;
 }
 
-/* テキスト */
+/* 郢昴・縺冗ｹｧ・ｹ郢昴・*/
 .todo-text--assigned {
   flex: 1;
   min-width: 0;
@@ -9795,7 +9879,7 @@ html.font-xl { font-size: 21px; }
   font-size: 0.88rem;
 }
 
-/* 期限（割り振りタスク用） */
+/* 隴帶ｻ・応繝ｻ莠･迚｡郢ｧ鬆鷹匱郢ｧ鄙ｫ縺｡郢ｧ・ｹ郢ｧ・ｯ騾包ｽｨ繝ｻ繝ｻ*/
 .todo-due--assigned {
   font-size: 0.72rem;
   color: var(--text-muted);
@@ -9805,7 +9889,7 @@ html.font-xl { font-size: 21px; }
   white-space: nowrap;
 }
 
-/* 依頼者名 */
+/* 關捺辨・ｰ・ｼ髢繝ｻ骭・*/
 .todo-assigned-from {
   font-size: 0.72rem;
   color: var(--text-muted);
@@ -9813,7 +9897,7 @@ html.font-xl { font-size: 21px; }
   margin-left: auto;
 }
 
-/* 区切り線 */
+/* 陋ｹ・ｺ陋ｻ繝ｻ・企こ繝ｻ*/
 .todo-divider {
   list-style: none;
   height: 1px;
@@ -9824,17 +9908,17 @@ html.font-xl { font-size: 21px; }
 }
 
 /* =====================================================
-   UI刷新 — App Layout / Sidebar / Bottom Nav / Drawers
+   UI陋ｻ・ｷ隴・ｽｰ 遯ｶ繝ｻApp Layout / Sidebar / Bottom Nav / Drawers
    ===================================================== */
 
-/* CSS変数追加 */
+/* CSS陞溽判辟夐恆・ｽ陷会｣ｰ */
 :root {
   --sidebar-width: 220px;
   --header-height: 64px;
 }
 
 /* ===========================
-   お知らせパネル
+   邵ｺ鬘碑｡咲ｹｧ蟲ｨ笳狗ｹ昜ｻ｣繝ｭ郢晢ｽｫ
    =========================== */
 .notice-panel {
   position: fixed;
@@ -9870,7 +9954,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-primary);
   flex-shrink: 0;
 }
-.notice-panel-header i { color: #60a5fa; margin-right: 6px; }
+.notice-panel-header i { color: var(--state-info); margin-right: 6px; }
 .notice-panel-close {
   background: none;
   border: none;
@@ -9891,7 +9975,7 @@ html.font-xl { font-size: 21px; }
   margin-bottom: 0;
 }
 
-/* モバイル */
+/* 郢晢ｽ｢郢晁・縺・ｹ晢ｽｫ */
 @media (max-width: 768px) {
   .notice-panel {
     left: 8px !important;
@@ -9902,7 +9986,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   スペース wrapper（個人 / 全社共有）
+   郢ｧ・ｹ郢晏｣ｹ繝ｻ郢ｧ・ｹ wrapper繝ｻ莠･ﾂ蛟ｶ・ｺ・ｺ / 陷茨ｽｨ驕会ｽｾ陷茨ｽｱ隴帑ｼ夲ｽｼ繝ｻ
    =========================== */
 .space-wrapper {
   border: 1px solid var(--border-glass);
@@ -9922,19 +10006,19 @@ html.font-xl { font-size: 21px; }
   flex-direction: column;
   gap: 12px;
 }
-/* space-body 直下のセクションは margin-bottom を 0 に（gap で制御） */
+/* space-body 騾ｶ・ｴ闕ｳ荵昴・郢ｧ・ｻ郢ｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ邵ｺ・ｯ margin-bottom 郢ｧ繝ｻ0 邵ｺ・ｫ繝ｻ繝ｻap 邵ｺ・ｧ陋ｻ・ｶ陟包ｽ｡繝ｻ繝ｻ*/
 .space-body > .category-section,
 .space-body > .todo-section,
 .space-body > .favorites-section,
 .space-body > .external-tools {
   margin-bottom: 0;
 }
-/* 追加ボタンエリアも margin なし */
+/* 髴托ｽｽ陷会｣ｰ郢晄㈱縺｡郢晢ｽｳ郢ｧ・ｨ郢晢ｽｪ郢ｧ・｢郢ｧ繝ｻmargin 邵ｺ・ｪ邵ｺ繝ｻ*/
 .space-body > .btn-add-category-wrap {
   margin: 4px 0 0;
 }
 
-/* エリアヘッダー（個人 / 全社共有） */
+/* 郢ｧ・ｨ郢晢ｽｪ郢ｧ・｢郢晏･繝｣郢敖郢晢ｽｼ繝ｻ莠･ﾂ蛟ｶ・ｺ・ｺ / 陷茨ｽｨ驕会ｽｾ陷茨ｽｱ隴帑ｼ夲ｽｼ繝ｻ*/
 .area-header {
   display: flex;
   flex-direction: column;
@@ -9949,10 +10033,10 @@ html.font-xl { font-size: 21px; }
   border-bottom: 1px solid var(--border-glass);
 }
 .area-personal {
-  /* 上部ボーダーは space-personal で管理 */
+  /* 闕ｳ莨∃夂ｹ晄㈱繝ｻ郢敖郢晢ｽｼ邵ｺ・ｯ space-personal 邵ｺ・ｧ驍ゑｽ｡騾・・*/
 }
 .area-shared {
-  /* 上部ボーダーは space-shared で管理 */
+  /* 闕ｳ莨∃夂ｹ晄㈱繝ｻ郢敖郢晢ｽｼ邵ｺ・ｯ space-shared 邵ｺ・ｧ驍ゑｽ｡騾・・*/
 }
 .area-header-title {
   display: flex;
@@ -9970,16 +10054,16 @@ html.font-xl { font-size: 21px; }
   font-size: 0.76rem;
   color: var(--text-muted);
   line-height: 1.5;
-  padding-left: 22px; /* アイコン幅分インデント */
+  padding-left: 22px; /* 郢ｧ・｢郢ｧ・､郢ｧ・ｳ郢晢ｽｳ陝ｷ繝ｻ繝ｻ郢ｧ・､郢晢ｽｳ郢昴・ﾎｦ郢昴・*/
 }
 
-/* モバイル: wrapper のパディングを詰める */
+/* 郢晢ｽ｢郢晁・縺・ｹ晢ｽｫ: wrapper 邵ｺ・ｮ郢昜ｻ｣繝ｧ郢ｧ・｣郢晢ｽｳ郢ｧ・ｰ郢ｧ螳夲ｽｩ・ｰ郢ｧ竏夲ｽ・*/
 @media (max-width: 768px) {
   .space-body { padding: 8px; gap: 8px; }
   .space-wrapper { margin-bottom: 12px; }
 }
 
-/* お気に入りのみ表示モード時は共有スペース全体を非表示 */
+/* 邵ｺ鬆托ｽｰ蜉ｱ竊楢怦・･郢ｧ鄙ｫ繝ｻ邵ｺ・ｿ髯ｦ・ｨ驕会ｽｺ郢晢ｽ｢郢晢ｽｼ郢晉判蜃ｾ邵ｺ・ｯ陷茨ｽｱ隴帛ｳｨ縺帷ｹ晏｣ｹ繝ｻ郢ｧ・ｹ陷茨ｽｨ闖ｴ阮呻ｽ帝ｫｱ讚・ｽ｡・ｨ驕会ｽｺ */
 .main.favorites-only #space-shared { display: none; }
 
 /* ===========================
@@ -9991,7 +10075,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   Header Right (時計 + ユーザー)
+   Header Right (隴弱ｊ・ｨ繝ｻ+ 郢晢ｽｦ郢晢ｽｼ郢ｧ・ｶ郢晢ｽｼ)
    =========================== */
 .header-right {
   display: flex;
@@ -10002,7 +10086,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   Sidebar（PC用）
+   Sidebar繝ｻ繝ｻC騾包ｽｨ繝ｻ繝ｻ
    =========================== */
 .sidebar {
   width: var(--sidebar-width);
@@ -10041,7 +10125,7 @@ html.font-xl { font-size: 21px; }
   padding: var(--space-sm) var(--space-sm) 4px;
 }
 
-/* サイドバーアイテム（共通） */
+/* 郢ｧ・ｵ郢ｧ・､郢晏ｳｨ繝ｰ郢晢ｽｼ郢ｧ・｢郢ｧ・､郢昴・ﾎ偵・莠･繝ｻ鬨ｾ螟ｲ・ｼ繝ｻ*/
 .sidebar-item {
   display: flex;
   align-items: center;
@@ -10091,7 +10175,7 @@ html.font-xl { font-size: 21px; }
   white-space: nowrap;
 }
 
-/* サイドバー内バッジ位置調整 */
+/* 郢ｧ・ｵ郢ｧ・､郢晏ｳｨ繝ｰ郢晢ｽｼ陷繝ｻ繝ｰ郢昴・縺夊抄蜥ｲ・ｽ・ｮ髫ｱ・ｿ隰ｨ・ｴ */
 .sidebar-item-icon .task-badge,
 .sidebar-item-icon .req-badge,
 .sidebar-item-icon .notice-unread-badge,
@@ -10106,7 +10190,7 @@ html.font-xl { font-size: 21px; }
   border-radius: 7px;
 }
 
-/* FABをサイドバーに組み込んだ際のposition解除 */
+/* FAB郢ｧ蛛ｵ縺礼ｹｧ・､郢晏ｳｨ繝ｰ郢晢ｽｼ邵ｺ・ｫ驍ｨ繝ｻ竏ｩ髴趣ｽｼ郢ｧ阮吮味鬮ｫ蟶吶・position髫暦ｽ｣鬮ｯ・､ */
 .sidebar .ft-fab,
 .sidebar .chat-fab,
 .sidebar .settings-fab,
@@ -10149,17 +10233,17 @@ html.font-xl { font-size: 21px; }
 }
 
 .sidebar .ft-fab.has-pending {
-  color: #34d399 !important;
+  color: var(--state-success-soft) !important;
   border-color: rgba(52, 211, 153, 0.35) !important;
 }
 
 .sidebar .chat-fab.has-unread {
-  color: #60a5fa !important;
+  color: var(--state-info) !important;
   border-color: rgba(96, 165, 250, 0.35) !important;
 }
 
 /* ===========================
-   PC時のパネル位置（サイドバー右横）
+   PC隴弱ｅ繝ｻ郢昜ｻ｣繝ｭ郢晢ｽｫ闖ｴ蜥ｲ・ｽ・ｮ繝ｻ蛹ｻ縺礼ｹｧ・､郢晏ｳｨ繝ｰ郢晢ｽｼ陷ｿ・ｳ隶難ｽｪ繝ｻ繝ｻ
    =========================== */
 @media (min-width: 769px) {
   .ft-panel {
@@ -10176,7 +10260,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   Bottom Nav（スマホ用）
+   Bottom Nav繝ｻ蛹ｻ縺帷ｹ晄ｧｭ繝ｻ騾包ｽｨ繝ｻ繝ｻ
    =========================== */
 .bottom-nav {
   display: none;
@@ -10236,7 +10320,7 @@ html.font-xl { font-size: 21px; }
   position: absolute;
   top: -5px;
   right: -7px;
-  background: #ef4444;
+  background: var(--state-danger);
   color: var(--text-on-accent);
   font-size: 0.55rem;
   font-weight: 700;
@@ -10250,7 +10334,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   その他ドロワー（スマホ用）
+   邵ｺ譏ｴ繝ｻ闔画じ繝ｩ郢晢ｽｭ郢晢ｽｯ郢晢ｽｼ繝ｻ蛹ｻ縺帷ｹ晄ｧｭ繝ｻ騾包ｽｨ繝ｻ繝ｻ
    =========================== */
 .more-drawer {
   position: fixed;
@@ -10266,7 +10350,7 @@ html.font-xl { font-size: 21px; }
 .more-drawer-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--shadow-ink-heavy);
   animation: fadeIn 0.2s ease;
 }
 
@@ -10282,7 +10366,7 @@ html.font-xl { font-size: 21px; }
   animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   max-height: 75vh;
   overflow-y: auto;
-  padding-bottom: 80px; /* ボトムナビ(48px)+余白 */
+  padding-bottom: 80px; /* 郢晄㈱繝ｨ郢晢｣ｰ郢晉ｿｫ繝ｳ(48px)+闖ｴ蜥丞項 */
 }
 
 @keyframes slideUp {
@@ -10357,7 +10441,7 @@ html.font-xl { font-size: 21px; }
   position: absolute;
   top: -5px;
   right: -8px;
-  background: #ef4444;
+  background: var(--state-danger);
   color: var(--text-on-accent);
   font-size: 0.55rem;
   font-weight: 700;
@@ -10371,7 +10455,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   個人ドロワー（スマホ用）
+   陋溷ｶ・ｺ・ｺ郢晏ｳｨﾎ溽ｹ晢ｽｯ郢晢ｽｼ繝ｻ蛹ｻ縺帷ｹ晄ｧｭ繝ｻ騾包ｽｨ繝ｻ繝ｻ
    =========================== */
 .personal-drawer {
   position: fixed;
@@ -10387,7 +10471,7 @@ html.font-xl { font-size: 21px; }
 .personal-drawer-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--shadow-ink-heavy);
   animation: fadeIn 0.2s ease;
 }
 
@@ -10401,7 +10485,7 @@ html.font-xl { font-size: 21px; }
   border-top: 1px solid var(--border-glass);
   padding: var(--space-md);
   animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  padding-bottom: 80px; /* ボトムナビ(48px)+余白 */
+  padding-bottom: 80px; /* 郢晄㈱繝ｨ郢晢｣ｰ郢晉ｿｫ繝ｳ(48px)+闖ｴ蜥丞項 */
 }
 
 .personal-drawer-header {
@@ -10461,7 +10545,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   レスポンシブ
+   郢晢ｽｬ郢ｧ・ｹ郢晄亢ﾎｦ郢ｧ・ｷ郢昴・
    =========================== */
 @media (max-width: 768px) {
   .sidebar { display: none !important; }
@@ -10470,20 +10554,20 @@ html.font-xl { font-size: 21px; }
   .header-clock { display: none; }
   .app-layout { min-height: auto; }
 
-  /* ヘッダーを1行に収める */
+  /* 郢晏･繝｣郢敖郢晢ｽｼ郢ｧ繝ｻ髯ｦ蠕娯・陷ｿ蠑ｱ・∫ｹｧ繝ｻ*/
   .header { padding: var(--space-sm) var(--space-md); }
   .header-inner { gap: var(--space-sm); flex-wrap: nowrap; }
   .header-brand { flex-shrink: 1; min-width: 0; overflow: hidden; }
   .header-title { font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .header-right { flex-shrink: 0; gap: var(--space-sm); }
-  .user-info { display: none; } /* スマホではラベル非表示 */
+  .user-info { display: none; } /* 郢ｧ・ｹ郢晄ｧｭ繝ｻ邵ｺ・ｧ邵ｺ・ｯ郢晢ｽｩ郢晏生ﾎ晞ｫｱ讚・ｽ｡・ｨ驕会ｽｺ */
   .btn-user { padding: 4px; }
   .user-avatar { width: 32px; height: 32px; font-size: 0.9rem; }
 
-  /* スマホ: モーダルをボトムナビ(48px)を避けた位置に */
+  /* 郢ｧ・ｹ郢晄ｧｭ繝ｻ: 郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ郢ｧ蛛ｵ繝ｻ郢晏現ﾎ堤ｹ晉ｿｫ繝ｳ(48px)郢ｧ蟶昶茜邵ｺ莉｣笳・抄蜥ｲ・ｽ・ｮ邵ｺ・ｫ */
   .task-modal-inner,
   .reqboard-modal-inner {
-    top: calc(64px + 8px); /* ヘッダー下 */
+    top: calc(64px + 8px); /* 郢晏･繝｣郢敖郢晢ｽｼ闕ｳ繝ｻ*/
     transform: translateX(-50%);
     max-height: calc(100dvh - 64px - 48px - 16px);
   }
@@ -10496,7 +10580,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* ===========================
-   ライトモード調整
+   郢晢ｽｩ郢ｧ・､郢晏現ﾎ皮ｹ晢ｽｼ郢晁歓・ｪ・ｿ隰ｨ・ｴ
    =========================== */
 [data-theme="light"] .sidebar {
   background: var(--bg-secondary);
@@ -10513,23 +10597,23 @@ html.font-xl { font-size: 21px; }
 
 [data-theme="light"] .bottom-nav {
   background: var(--bg-card-hover);
-  border-top-color: rgba(31, 35, 40, 0.15);
+  border-top-color: rgba(var(--light-border-rgb), 0.15);
 }
 
 [data-theme="light"] .more-drawer-panel,
 [data-theme="light"] .personal-drawer-panel {
   background: var(--bg-primary);
-  border-top-color: rgba(31, 35, 40, 0.15);
+  border-top-color: rgba(var(--light-border-rgb), 0.15);
 }
 
 [data-theme="light"] .more-drawer-item {
   background: var(--bg-card-hover);
-  border-color: rgba(31, 35, 40, 0.15);
+  border-color: rgba(var(--light-border-rgb), 0.15);
 }
 
 [data-theme="light"] .personal-drawer-item {
   background: var(--bg-card-hover);
-  border-color: rgba(31, 35, 40, 0.15);
+  border-color: rgba(var(--light-border-rgb), 0.15);
 }
 
 [data-theme="light"] .more-drawer-item i {
@@ -10540,7 +10624,7 @@ html.font-xl { font-size: 21px; }
   color: var(--accent-blue);
 }
 
-/* ===== ヘッダーヘルプボタン（PCスマホ共通） ===== */
+/* ===== 郢晏･繝｣郢敖郢晢ｽｼ郢晏･ﾎ晉ｹ晏干繝ｻ郢ｧ・ｿ郢晢ｽｳ繝ｻ繝ｻC郢ｧ・ｹ郢晄ｧｭ繝ｻ陷茨ｽｱ鬨ｾ螟ｲ・ｼ繝ｻ===== */
 .header-help-btn {
   display: flex;
   align-items: center;
@@ -10571,7 +10655,7 @@ html.font-xl { font-size: 21px; }
   .header-help-btn { width: 30px; height: 30px; font-size: 1rem; }
 }
 
-/* ===== 個人スペース未設定バナー ===== */
+/* ===== 陋溷ｶ・ｺ・ｺ郢ｧ・ｹ郢晏｣ｹ繝ｻ郢ｧ・ｹ隴幢ｽｪ髫ｪ・ｭ陞ｳ螢ｹ繝ｰ郢晉ｿｫ繝ｻ ===== */
 .area-header-hint {
   margin-top: 4px;
   padding: 6px 10px;
@@ -10585,7 +10669,7 @@ html.font-xl { font-size: 21px; }
   background: rgba(188, 76, 0, 0.07);
 }
 
-/* ===== セクションドラッグハンドル タッチターゲット改善（スマホ） ===== */
+/* ===== 郢ｧ・ｻ郢ｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ郢晏ｳｨﾎ帷ｹ昴・縺堤ｹ昜ｸ莞ｦ郢晏ｳｨﾎ・郢ｧ・ｿ郢昴・繝｡郢ｧ・ｿ郢晢ｽｼ郢ｧ・ｲ郢昴・繝ｨ隰ｾ・ｹ陜溘・・ｼ蛹ｻ縺帷ｹ晄ｧｭ繝ｻ繝ｻ繝ｻ===== */
 @media (max-width: 768px) {
   .section-drag-handle {
     width: 36px;
@@ -10594,7 +10678,7 @@ html.font-xl { font-size: 21px; }
   }
 }
 
-/* ===== bnav-task バッジ ===== */
+/* ===== bnav-task 郢晁・繝｣郢ｧ・ｸ ===== */
 #bnav-task-badge {
   position: absolute;
   top: -3px;
@@ -10614,9 +10698,9 @@ html.font-xl { font-size: 21px; }
 }
 
 
-/* ===== 鋼材発注 (order.js) ===== */
+/* ===== 鬩ｪ・ｼ隴壼鴻蛹ｱ雎包ｽｨ (order.js) ===== */
 
-/* 発注区分トグル */
+/* 騾具ｽｺ雎包ｽｨ陋ｹ・ｺ陋ｻ繝ｻ繝ｨ郢ｧ・ｰ郢晢ｽｫ */
 .ord-type-toggle {
   display: flex;
   gap: 8px;
@@ -10639,16 +10723,16 @@ html.font-xl { font-size: 21px; }
 }
 .ord-type-btn:hover { background: var(--bg-card-hover); border-color: var(--border-glass-hover); }
 .ord-type-btn.active {
-  background: rgba(99,102,241,0.15);
-  border-color: #6366f1;
-  color: #a5b4fc;
+  background: rgba(var(--state-primary-rgb), 0.15);
+  border-color: var(--state-primary);
+  color: var(--state-task-accent);
 }
 [data-theme="light"] .ord-type-btn.active {
   background: rgba(99,102,241,0.10);
   color: #4338ca;
 }
 
-/* 品目追加ボタン（この発注のみ） */
+/* 陷ｩ竏ｫ蟯ｼ髴托ｽｽ陷会｣ｰ郢晄㈱縺｡郢晢ｽｳ繝ｻ蛹ｻ・・ｸｺ・ｮ騾具ｽｺ雎包ｽｨ邵ｺ・ｮ邵ｺ・ｿ繝ｻ繝ｻ*/
 .ord-add-custom-btn {
   margin-top: 8px;
   padding: 6px 14px;
@@ -10665,7 +10749,7 @@ html.font-xl { font-size: 21px; }
 }
 .ord-add-custom-btn:hover { color: var(--text-secondary); border-color: var(--accent-blue); }
 
-/* カスタム品目行 */
+/* 郢ｧ・ｫ郢ｧ・ｹ郢ｧ・ｿ郢晢｣ｰ陷ｩ竏ｫ蟯ｼ髯ｦ繝ｻ*/
 .ord-item-row--custom { flex-wrap: wrap; gap: 6px; }
 .ord-custom-inputs {
   flex: 1;
@@ -10683,9 +10767,9 @@ html.font-xl { font-size: 21px; }
   font-size: 0.9rem;
   flex-shrink: 0;
 }
-.ord-custom-del-btn:hover { color: #ef4444; }
+.ord-custom-del-btn:hover { color: var(--state-danger); }
 
-/* 区分バッジ */
+/* 陋ｹ・ｺ陋ｻ繝ｻ繝ｰ郢昴・縺・*/
 .ord-type-badge {
   font-size: 0.7rem;
   font-weight: 600;
@@ -10694,22 +10778,22 @@ html.font-xl { font-size: 21px; }
   white-space: nowrap;
 }
 .ord-type-badge--factory {
-  background: rgba(99,102,241,0.15);
-  color: #a5b4fc;
+  background: rgba(var(--state-primary-rgb), 0.15);
+  color: var(--state-task-accent);
 }
 .ord-type-badge--site {
-  background: rgba(34,197,94,0.15);
-  color: #4ade80;
+  background: rgba(var(--state-success-ok-rgb), 0.15);
+  color: var(--state-success-bright);
 }
 .ord-type-badge--both {
   background: rgba(251,146,60,0.15);
-  color: #fb923c;
+  color: var(--state-warning-warm);
 }
 [data-theme="light"] .ord-type-badge--factory { color: #4338ca; }
 [data-theme="light"] .ord-type-badge--site    { color: #15803d; }
 [data-theme="light"] .ord-type-badge--both    { color: #c2410c; }
 
-/* メール送信バッジ */
+/* 郢晢ｽ｡郢晢ｽｼ郢晢ｽｫ鬨ｾ竏ｽ・ｿ・｡郢晁・繝｣郢ｧ・ｸ */
 .ord-email-badge {
   font-size: 0.72rem;
   padding: 2px 7px;
@@ -10722,17 +10806,17 @@ html.font-xl { font-size: 21px; }
 [data-theme="light"] .ord-email-badge--sent   { color: #0a7fc0; background: rgba(10,127,192,0.10); }
 [data-theme="light"] .ord-email-badge--unsent { color: #bc4c00; background: rgba(188,76,0,0.10); }
 
-/* 現場名 */
+/* 霑ｴ・ｾ陜｣・ｴ陷ｷ繝ｻ*/
 .ord-history-site {
   font-size: 0.82rem;
   color: var(--accent-cyan);
   font-weight: 600;
 }
 
-/* 管理画面の区分selectサイズ */
+/* 驍ゑｽ｡騾・・蛻､鬮ｱ・｢邵ｺ・ｮ陋ｹ・ｺ陋ｻ繝ｻelect郢ｧ・ｵ郢ｧ・､郢ｧ・ｺ */
 .ord-type-select { flex-shrink: 0; min-width: 90px; }
 
-/* モーダルヘッダー（共通） */
+/* 郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ郢晏･繝｣郢敖郢晢ｽｼ繝ｻ莠･繝ｻ鬨ｾ螟ｲ・ｼ繝ｻ*/
 .ord-modal-inner .modal-header {
   display: flex;
   align-items: center;
@@ -10764,7 +10848,7 @@ html.font-xl { font-size: 21px; }
   background: var(--bg-card-hover);
 }
 
-/* モーダル本体サイズ */
+/* 郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ隴幢ｽｬ闖ｴ阮吶＠郢ｧ・､郢ｧ・ｺ */
 .ord-modal-inner {
   width: min(760px, 95vw);
   max-height: 90vh;
@@ -10774,7 +10858,7 @@ html.font-xl { font-size: 21px; }
   gap: 16px;
 }
 
-/* 発注モーダルのアクションボタン: 4ボタン1行維持 */
+/* 騾具ｽｺ雎包ｽｨ郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ邵ｺ・ｮ郢ｧ・｢郢ｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ郢晄㈱縺｡郢晢ｽｳ: 4郢晄㈱縺｡郢晢ｽｳ1髯ｦ讙趣ｽｶ・ｭ隰悶・*/
 .ord-modal-inner .modal-actions {
   flex-wrap: nowrap;
   gap: 8px;
@@ -10788,7 +10872,7 @@ html.font-xl { font-size: 21px; }
   flex-shrink: 0;
 }
 
-/* 発注先表示 */
+/* 騾具ｽｺ雎包ｽｨ陷磯メ・｡・ｨ驕会ｽｺ */
 .ord-supplier-info {
   background: var(--bg-card);
   border: 1px solid var(--border-glass);
@@ -10813,7 +10897,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-secondary);
 }
 
-/* 鋼材チェックリスト */
+/* 鬩ｪ・ｼ隴夊・繝｡郢ｧ・ｧ郢昴・縺醍ｹ晢ｽｪ郢ｧ・ｹ郢昴・*/
 .ord-item-list {
   display: flex;
   flex-direction: column;
@@ -10862,7 +10946,7 @@ html.font-xl { font-size: 21px; }
   min-width: 24px;
 }
 
-/* 数量入力 */
+/* 隰ｨ・ｰ鬩･荳槭・陷峨・*/
 .ord-qty-input {
   width: 64px !important;
   text-align: right;
@@ -10871,7 +10955,7 @@ html.font-xl { font-size: 21px; }
   font-size: 0.9rem;
 }
 
-/* 備考エリア */
+/* 陋ｯ蜻ｵﾂ繝ｻ縺顔ｹ晢ｽｪ郢ｧ・｢ */
 .ord-note-textarea {
   resize: vertical;
   min-height: 72px;
@@ -10892,14 +10976,14 @@ html.font-xl { font-size: 21px; }
   line-height: 1.2;
 }
 
-/* バッジ */
+/* 郢晁・繝｣郢ｧ・ｸ */
 .ord-badge-sent {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  background: rgba(var(--state-success-ok-rgb), 0.15);
+  color: var(--state-success-ok);
+  border: 1px solid rgba(var(--state-success-ok-rgb), 0.30);
   border-radius: 12px;
   padding: 2px 8px;
   font-size: 0.75rem;
@@ -10917,7 +11001,7 @@ html.font-xl { font-size: 21px; }
   font-size: 0.75rem;
 }
 
-/* 空・ローディング */
+/* 驕ｨ・ｺ郢晢ｽｻ郢晢ｽｭ郢晢ｽｼ郢昴・縺・ｹ晢ｽｳ郢ｧ・ｰ */
 .ord-empty,
 .ord-loading {
   text-align: center;
@@ -10926,7 +11010,7 @@ html.font-xl { font-size: 21px; }
   font-size: 0.9rem;
 }
 
-/* 履歴モーダル: 期間ナビ */
+/* 陞ｻ・･雎・ｽｴ郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ: 隴帶ｻ・ｿ｣郢晉ｿｫ繝ｳ */
 .ord-period-nav {
   display: flex;
   align-items: center;
@@ -10995,7 +11079,7 @@ html.font-xl { font-size: 21px; }
   white-space: nowrap;
 }
 
-/* 履歴一覧 */
+/* 陞ｻ・･雎・ｽｴ闕ｳﾂ髫包ｽｧ */
 .ord-history-list {
   display: flex;
   flex-direction: column;
@@ -11003,7 +11087,7 @@ html.font-xl { font-size: 21px; }
   max-height: 400px;
   overflow-y: auto;
 }
-/* 業者グループ */
+/* 隶鯉ｽｭ髢繝ｻ縺堤ｹ晢ｽｫ郢晢ｽｼ郢昴・*/
 .ord-history-group {
   display: flex;
   flex-direction: column;
@@ -11074,14 +11158,14 @@ html.font-xl { font-size: 21px; }
   color: var(--text-muted);
 }
 
-/* 管理モーダル */
+/* 驍ゑｽ｡騾・・ﾎ皮ｹ晢ｽｼ郢敖郢晢ｽｫ */
 .ord-admin-auth-desc {
   color: var(--text-secondary);
   font-size: 0.9rem;
   margin-bottom: 12px;
 }
 .ord-admin-auth-error {
-  color: #ef4444;
+  color: var(--state-danger);
   font-size: 0.85rem;
   margin-top: 6px;
 }
@@ -11174,14 +11258,14 @@ html.font-xl { font-size: 21px; }
   margin-top: 8px;
 }
 
-/* GAS設定 */
+/* GAS髫ｪ・ｭ陞ｳ繝ｻ*/
 .ord-gas-desc {
   font-size: 0.85rem;
   color: var(--text-secondary);
   line-height: 1.6;
 }
 
-/* ===== 発注品目リスト（マテリアルフィルタ・カテゴリグループ）===== */
+/* ===== 騾具ｽｺ雎包ｽｨ陷ｩ竏ｫ蟯ｼ郢晢ｽｪ郢ｧ・ｹ郢晁肩・ｼ蛹ｻ繝ｻ郢昴・ﾎ懃ｹｧ・｢郢晢ｽｫ郢晁ｼ斐≦郢晢ｽｫ郢ｧ・ｿ郢晢ｽｻ郢ｧ・ｫ郢昴・縺也ｹ晢ｽｪ郢ｧ・ｰ郢晢ｽｫ郢晢ｽｼ郢晄圜・ｼ繝ｻ==== */
 .ord-item-list-header {
   display: flex;
   align-items: center;
@@ -11260,7 +11344,7 @@ html.font-xl { font-size: 21px; }
 }
 .ord-lengths-tag { font-size: 0.75rem; color: var(--text-muted); }
 
-/* ===== メールプレビューモーダル ===== */
+/* ===== 郢晢ｽ｡郢晢ｽｼ郢晢ｽｫ郢晏干ﾎ樒ｹ晁侭ﾎ礼ｹ晢ｽｼ郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ ===== */
 .ord-preview-inner {
   max-width: 680px;
   width: 95%;
@@ -11312,20 +11396,20 @@ html.font-xl { font-size: 21px; }
   overflow-y: auto;
   margin-bottom: 0;
 }
-/* ライトモード */
+/* 郢晢ｽｩ郢ｧ・､郢晏現ﾎ皮ｹ晢ｽｼ郢昴・*/
 [data-theme="light"] .ord-preview-body {
   background: var(--bg-card-hover);
   border-color: rgba(31,35,40,0.2);
 }
 
-/* ライトモード対応 */
+/* 郢晢ｽｩ郢ｧ・､郢晏現ﾎ皮ｹ晢ｽｼ郢晉甥・ｯ・ｾ陟｢繝ｻ*/
 [data-theme="light"] .ord-badge-sent {
-  background: rgba(34, 197, 94, 0.1);
+  background: rgba(var(--state-success-ok-rgb), 0.10);
   color: #16a34a;
   border-color: rgba(34, 197, 94, 0.25);
 }
 
-/* ===== 印刷スタイル ===== */
+/* ===== 陷奇ｽｰ陋ｻ・ｷ郢ｧ・ｹ郢ｧ・ｿ郢ｧ・､郢晢ｽｫ ===== */
 @media print {
   body > *:not(#ord-print-area) {
     display: none !important;
@@ -11406,9 +11490,9 @@ html.font-xl { font-size: 21px; }
   }
 }
 
-/* ===== 発注モーダル — 検索・カテゴリタブ・選択済みトグル・ピン・仕上げ ===== */
+/* ===== 騾具ｽｺ雎包ｽｨ郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ 遯ｶ繝ｻ隶諛・ｽｴ・｢郢晢ｽｻ郢ｧ・ｫ郢昴・縺也ｹ晢ｽｪ郢ｧ・ｿ郢晄じ繝ｻ鬩包ｽｸ隰壽ｨ奇ｽｸ蛹ｻ竏ｩ郢晏現縺堤ｹ晢ｽｫ郢晢ｽｻ郢晄鱒ﾎｦ郢晢ｽｻ闔臥ｩゑｽｸ鄙ｫ・｡ ===== */
 
-/* 検索バー */
+/* 隶諛・ｽｴ・｢郢晁・繝ｻ */
 .ord-search-bar-wrap {
   position: relative;
   display: flex;
@@ -11445,7 +11529,7 @@ html.font-xl { font-size: 21px; }
 }
 .ord-search-clear:hover { color: var(--text-primary); background: var(--bg-card-hover); }
 
-/* カテゴリフィルタタブ（横スクロール） */
+/* 郢ｧ・ｫ郢昴・縺也ｹ晢ｽｪ郢晁ｼ斐≦郢晢ｽｫ郢ｧ・ｿ郢ｧ・ｿ郢晏私・ｼ蝓滂ｽｨ・ｪ郢ｧ・ｹ郢ｧ・ｯ郢晢ｽｭ郢晢ｽｼ郢晢ｽｫ繝ｻ繝ｻ*/
 .ord-cat-filter-tabs {
   display: flex;
   gap: 4px;
@@ -11479,7 +11563,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-on-accent);
 }
 
-/* 選択済みトグル行 */
+/* 鬩包ｽｸ隰壽ｨ奇ｽｸ蛹ｻ竏ｩ郢晏現縺堤ｹ晢ｽｫ髯ｦ繝ｻ*/
 .ord-filter-row {
   display: flex;
   align-items: center;
@@ -11502,7 +11586,7 @@ html.font-xl { font-size: 21px; }
 }
 .ord-selected-toggle:hover span { color: var(--text-primary); }
 
-/* スペシャルセクション（ピン留め・最近使った） */
+/* 郢ｧ・ｹ郢晏｣ｹ縺咏ｹ晢ｽ｣郢晢ｽｫ郢ｧ・ｻ郢ｧ・ｯ郢ｧ・ｷ郢晢ｽｧ郢晢ｽｳ繝ｻ蛹ｻ繝ｴ郢晢ｽｳ騾｡蜷ｶ・∫ｹ晢ｽｻ隴崢髴大床・ｽ・ｿ邵ｺ・｣邵ｺ貊ゑｽｼ繝ｻ*/
 .ord-special-section {
   margin-bottom: 8px;
   border: 1px solid var(--border-glass);
@@ -11523,7 +11607,7 @@ html.font-xl { font-size: 21px; }
 .ord-special-section .fa-star { color: #f0b429; }
 .ord-special-section .fa-clock-rotate-left { color: var(--accent-cyan); }
 
-/* ピンボタン */
+/* 郢晄鱒ﾎｦ郢晄㈱縺｡郢晢ｽｳ */
 .ord-pin-btn {
   flex-shrink: 0;
   background: none;
@@ -11540,7 +11624,7 @@ html.font-xl { font-size: 21px; }
 .ord-pin-btn.pinned { color: #f0b429; }
 .ord-pin-btn.pinned .fa-star { font-weight: 900; }
 
-/* 仕上げセレクト */
+/* 闔臥ｩゑｽｸ鄙ｫ・｡郢ｧ・ｻ郢晢ｽｬ郢ｧ・ｯ郢昴・*/
 .ord-finish-select {
   flex-shrink: 0;
   width: 68px !important;
@@ -11549,7 +11633,7 @@ html.font-xl { font-size: 21px; }
   height: 26px;
 }
 
-/* 品目行レイアウト更新（pin追加分の対応） */
+/* 陷ｩ竏ｫ蟯ｼ髯ｦ蠕湖樒ｹｧ・､郢ｧ・｢郢ｧ・ｦ郢晏沺蟲ｩ隴・ｽｰ繝ｻ繝ｻin髴托ｽｽ陷会｣ｰ陋ｻ繝ｻ繝ｻ陝・ｽｾ陟｢諛ｶ・ｼ繝ｻ*/
 .ord-item-row {
   display: flex;
   align-items: center;
@@ -11558,14 +11642,14 @@ html.font-xl { font-size: 21px; }
   border-bottom: 1px solid var(--border-glass);
 }
 .ord-item-row:last-child { border-bottom: none; }
-/* ===== 発注 — カテゴリドロップダウン ===== */
+/* ===== 騾具ｽｺ雎包ｽｨ 遯ｶ繝ｻ郢ｧ・ｫ郢昴・縺也ｹ晢ｽｪ郢晏ｳｨﾎ溽ｹ昴・繝ｻ郢敖郢ｧ・ｦ郢晢ｽｳ ===== */
 .ord-cat-select {
   font-size: 0.82rem;
   padding: 5px 10px !important;
   margin-bottom: 6px;
 }
 
-/* ===== 発注 — 選択中サマリー ===== */
+/* ===== 騾具ｽｺ雎包ｽｨ 遯ｶ繝ｻ鬩包ｽｸ隰壽ｨ費ｽｸ・ｭ郢ｧ・ｵ郢晄ｧｭﾎ懃ｹ晢ｽｼ ===== */
 .ord-selected-summary {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
@@ -11604,7 +11688,7 @@ html.font-xl { font-size: 21px; }
   color: var(--text-muted);
 }
 
-/* ===== 発注履歴 — 詳細ボタン ===== */
+/* ===== 騾具ｽｺ雎包ｽｨ陞ｻ・･雎・ｽｴ 遯ｶ繝ｻ髫ｧ・ｳ驍擾ｽｰ郢晄㈱縺｡郢晢ｽｳ ===== */
 .ord-history-item {
   cursor: default;
 }
@@ -11704,7 +11788,7 @@ html.font-xl { font-size: 21px; }
   gap: 10px;
 }
 
-/* ===== 発注詳細モーダル ===== */
+/* ===== 騾具ｽｺ雎包ｽｨ髫ｧ・ｳ驍擾ｽｰ郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ ===== */
 .ord-detail-inner {
   width: min(680px, 95vw);
 }
@@ -11805,7 +11889,7 @@ html.font-xl { font-size: 21px; }
   border-top: 1px solid var(--border-glass);
 }
 
-/* ===== 勤務内容表機能 (attendance-work.js) ===== */
+/* ===== 陷搾ｽ､陷榊雀繝ｻ陞ｳ・ｹ髯ｦ・ｨ隶匁ｺｯ繝ｻ (attendance-work.js) ===== */
 .calw-subtab-bar {
   display: flex;
   gap: 6px;
@@ -12029,17 +12113,17 @@ html.font-xl { font-size: 21px; }
 
 .calw-day-row.calw-sun td:first-child,
 .calw-day-row.calw-sun .calw-dow-cell {
-  color: #ef4444;
+  color: var(--state-danger);
 }
 .calw-day-row.calw-sat td:first-child,
 .calw-day-row.calw-sat .calw-dow-cell {
-  color: #3b82f6;
+  color: var(--state-info-strong);
 }
 .calw-day-row.calw-company-holiday td {
   background: color-mix(in srgb, var(--accent-purple) 8%, transparent);
 }
 .calw-day-row.calw-jp-holiday td {
-  background: color-mix(in srgb, #ef4444 7%, transparent);
+  background: color-mix(in srgb, var(--state-danger) 7%, transparent);
 }
 
 .calw-date-cell,
@@ -12825,7 +12909,7 @@ html.font-xl { font-size: 21px; }
   border-radius: 18px;
   border: 1px solid var(--border-glass);
   background: var(--bg-card);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 24px var(--shadow-ink-weak);
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
