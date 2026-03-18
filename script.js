@@ -282,6 +282,42 @@ function buildTodayDateKey() {
   return `${year}-${month}-${day}`;
 }
 
+let dashboardNoticeFocusTimer = null;
+
+function focusNoticeBoardFromDashboard() {
+  const board = document.getElementById('notice-board');
+  if (!board) return;
+
+  const headerOffset = window.innerWidth <= 768 ? 76 : 92;
+  const targetTop = Math.max(0, window.scrollY + board.getBoundingClientRect().top - headerOffset);
+  window.scrollTo({ top: targetTop, behavior: 'smooth' });
+
+  if (!board.hasAttribute('tabindex')) {
+    board.setAttribute('tabindex', '-1');
+  }
+
+  const prevOutline = board.style.outline;
+  const prevOutlineOffset = board.style.outlineOffset;
+  const prevBoxShadow = board.style.boxShadow;
+  const prevTransition = board.style.transition;
+
+  board.focus({ preventScroll: true });
+  board.style.transition = [prevTransition, 'outline-color 180ms ease', 'box-shadow 180ms ease']
+    .filter(Boolean)
+    .join(', ');
+  board.style.outline = '2px solid var(--accent-blue)';
+  board.style.outlineOffset = '6px';
+  board.style.boxShadow = '0 0 0 8px rgba(var(--state-primary-rgb), 0.14)';
+
+  clearTimeout(dashboardNoticeFocusTimer);
+  dashboardNoticeFocusTimer = window.setTimeout(() => {
+    board.style.outline = prevOutline;
+    board.style.outlineOffset = prevOutlineOffset;
+    board.style.boxShadow = prevBoxShadow;
+    board.style.transition = prevTransition;
+  }, 1800);
+}
+
 function bindProfileQuickActions() {
   const renameBtn = document.getElementById('ep-edit-username');
   if (!renameBtn) return;
@@ -324,7 +360,7 @@ initTodayDashboard({
     openDayPanel(buildTodayDateKey());
   },
   openNoticeBoard: () => {
-    document.getElementById('notice-board')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    focusNoticeBoardFromDashboard();
   },
 });
 initReadDiagnostics();
