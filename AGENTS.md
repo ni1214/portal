@@ -574,6 +574,17 @@ assigned_tasks/{taskId}
   - `drive_link`: Supabase 1 件移行済み
   - `drive_contacts`: Supabase 1 件移行済み
   - 現時点の実データは `髙林` の 1 セットのみ確認
+- Firestore 通知データの現況
+  - `notices`: 0 件
+  - `notice_reactions`: 4 件あるが、参照先通知が空のため孤立データ扱い
+  - `read_notices`: 11 件あるが、同じく参照先通知が空のため保留のまま
+- `supabase/005_add_attendance_tables.sql` を remote 適用済み
+- `tools/build-firestore-attendance-sql.mjs` を追加済み
+  - 対象: `attendance_sites / users/{name}/attendance`
+- Firestore 勤怠データの移行状況
+  - `attendance_sites`: Supabase 523 件移行済み
+  - `attendance_entries`: Supabase 14 件移行済み
+  - 現時点の個人勤怠は `髙林=13件 / 佐野=1件`
 
 ## Supabase 移行メモ（2026-03-18 追加）
 
