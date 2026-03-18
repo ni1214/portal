@@ -585,6 +585,16 @@ assigned_tasks/{taskId}
   - `attendance_sites`: Supabase 523 件移行済み
   - `attendance_entries`: Supabase 14 件移行済み
   - 現時点の個人勤怠は `髙林=13件 / 佐野=1件`
+- `supabase/006_add_request_task_tables.sql` を remote 適用済み
+- `tools/build-firestore-request-task-sql.mjs` を追加済み
+  - 対象: `cross_dept_requests / assigned_tasks`
+- Firestore 業務依頼データの移行状況
+  - `cross_dept_requests`: Supabase 11 件移行済み
+  - `assigned_tasks`: Supabase 16 件移行済み
+  - 現時点の実データでは `assigned_tasks.sourceType` はすべて `manual`
+- `tools/invoke-supabase-sql-statements.mjs` を追加済み
+  - Management API に `generated-*.sql` を1文ずつ流す補助ツール
+  - 一括 `SqlFile` 実行で件数が入らない場合は、こちらで逐次適用して切り分ける
 
 ## Supabase 移行メモ（2026-03-18 追加）
 
