@@ -213,7 +213,7 @@
 
         <div class="rd-launch-row">
           <button class="btn-modal-secondary rd-launch-btn" id="btn-read-diagnostics">
-            <i class="fa-solid fa-gauge-high"></i> 読取診断
+            <i class="fa-solid fa-gauge-high"></i> 転送診断
           </button>
         </div>
 
@@ -2358,11 +2358,11 @@
   <div class="modal-overlay" id="rd-modal">
     <div class="modal-glass rd-modal-inner">
       <div class="modal-header rd-modal-header">
-        <h2 class="modal-title"><i class="fa-solid fa-gauge-high"></i> 読取診断</h2>
+        <h2 class="modal-title"><i class="fa-solid fa-gauge-high"></i> 転送診断</h2>
         <button class="modal-close" id="rd-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="rd-note">
-        Firestore の請求 read と完全一致する値ではなく、返却された doc 件数ベースの概算です。どこが重いか、無料枠に対してどのくらいかを判断するための画面です。
+        Supabase や Firebase の請求値そのものではなく、取得データを JSON 化したときの推定転送量ベースの概算です。どこが重いか、5GB/月に対してどのくらいか、30人利用だとどう見えるかを判断するための画面です。
       </div>
       <div id="rd-summary"></div>
       <div class="rd-section">
@@ -2370,11 +2370,11 @@
         <div id="rd-source-list" class="rd-source-list"></div>
       </div>
       <div class="rd-section">
-        <div class="rd-section-title">最近の読取イベント</div>
+        <div class="rd-section-title">最近の転送イベント</div>
         <div id="rd-event-list" class="rd-event-list"></div>
       </div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="rd-reset-btn"><i class="fa-solid fa-rotate-left"></i> 計測をリセット</button>
+        <button class="btn-modal-secondary" id="rd-reset-btn"><i class="fa-solid fa-rotate-left"></i> 診断をリセット</button>
         <button class="btn-modal-primary" id="rd-close2">閉じる</button>
       </div>
     </div>

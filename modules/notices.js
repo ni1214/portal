@@ -173,7 +173,7 @@ export async function loadReadNotices(username) {
   if (!username) { state.readNoticeIds = new Set(); updateNoticeBadge(); return; }
   try {
     const snap = await getDocs(collection(db, 'users', username, 'read_notices'));
-    recordGetDocsRead('notice.read-notices', '既読お知らせ', `users/${username}/read_notices`, snap.size);
+    recordGetDocsRead('notice.read-notices', '既読お知らせ', `users/${username}/read_notices`, snap.size, snap.docs);
     state.readNoticeIds = new Set(snap.docs.map(d => d.id));
     updateNoticeBadge();
     renderNotices(state.visibleNotices);
@@ -298,7 +298,7 @@ export async function loadAllNoticeReactions() {
   state.noticeReactionsLoading = true;
   try {
     const snap = await getDocs(collection(db, 'notice_reactions'));
-    recordGetDocsRead('notice.reactions', 'お知らせリアクション', 'notice_reactions', snap.size);
+    recordGetDocsRead('notice.reactions', 'お知らせリアクション', 'notice_reactions', snap.size, snap.docs);
     state.noticeReactions = {};
     snap.docs.forEach(d => { state.noticeReactions[d.id] = d.data(); });
     state.noticeReactionsLoaded = true;
@@ -354,7 +354,7 @@ export function subscribeNotices() {
   state._noticeUnsub = wrapTrackedListenerUnsubscribe('notice.list', onSnapshot(
     collection(db, 'notices'),
     snap => {
-      recordListenerSnapshot('notice.list', snap.size, 'notices');
+      recordListenerSnapshot('notice.list', snap.size, 'notices', snap.docs);
       state.allNotices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       state.allNotices.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       refreshNoticeVisibility();

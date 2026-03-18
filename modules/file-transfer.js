@@ -292,7 +292,7 @@ export function startFtListener() {
   const q = query(collection(db, 'p2p_signals'), where('to', '==', state.currentUsername));
   recordListenerStart('ft.p2p', 'P2Pファイル受信', `p2p_signals:${state.currentUsername}`);
   state._ftIncomingSub = wrapTrackedListenerUnsubscribe('ft.p2p', onSnapshot(q, snap => {
-    recordListenerSnapshot('ft.p2p', snap.size, state.currentUsername);
+    recordListenerSnapshot('ft.p2p', snap.size, state.currentUsername, snap.docs);
     state._ftIncoming = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     updateFtBadge();
     renderFtPanel();
@@ -330,7 +330,7 @@ export function startDriveListeners(username) {
     const qIn = query(collection(db, 'drive_shares'), where('to', '==', username));
     recordListenerStart('ft.drive-in', 'Drive受信', `drive_shares:${username}`);
     state._driveIncomingSub = wrapTrackedListenerUnsubscribe('ft.drive-in', onSnapshot(qIn, snap => {
-      recordListenerSnapshot('ft.drive-in', snap.size, username);
+      recordListenerSnapshot('ft.drive-in', snap.size, username, snap.docs);
       // 受信した Drive 通知の送信者を「相手の Drive URL」で連絡先に自動保存
       // → これにより「開く」ボタンで相手のフォルダが開けるようになる
       snap.docChanges().forEach(change => {
@@ -351,7 +351,7 @@ export function startDriveListeners(username) {
     const qOut = query(collection(db, 'drive_shares'), where('from', '==', username));
     recordListenerStart('ft.drive-out', 'Drive送信', `drive_shares:${username}`);
     state._driveOutgoingSub = wrapTrackedListenerUnsubscribe('ft.drive-out', onSnapshot(qOut, snap => {
-      recordListenerSnapshot('ft.drive-out', snap.size, username);
+      recordListenerSnapshot('ft.drive-out', snap.size, username, snap.docs);
       state._driveOutgoing = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderDrivePanel();
     }));

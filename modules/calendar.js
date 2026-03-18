@@ -81,7 +81,7 @@ export function subscribeTodayAttendance(username) {
   state.todayAttendanceDate = todayStr;
   recordListenerStart('cal.today', '今日の勤怠', `attendance:${username}`);
   state._todayAttendanceSub = wrapTrackedListenerUnsubscribe('cal.today', onSnapshot(attendancePath(username, todayStr), snap => {
-    recordListenerSnapshot('cal.today', snap.exists() ? 1 : 0, todayStr);
+    recordListenerSnapshot('cal.today', snap.exists() ? 1 : 0, todayStr, snap.exists() ? [{ id: snap.id, ...snap.data() }] : []);
     syncTodayAttendanceState(todayStr, snap.exists() ? snap.data() : null);
     deps.renderTodayDashboard?.();
   }));
@@ -167,7 +167,7 @@ export function subscribeAttendance(username) {
   );
   recordListenerStart('cal.month', '月次勤怠', `attendance:${ym}`);
   state._attendanceSub = wrapTrackedListenerUnsubscribe('cal.month', onSnapshot(q, snap => {
-    recordListenerSnapshot('cal.month', snap.size, ym);
+    recordListenerSnapshot('cal.month', snap.size, ym, snap.docs);
     state.attendanceData = {};
     snap.docs.forEach(d => { state.attendanceData[d.id] = d.data(); });
     renderCalendar();
@@ -195,7 +195,7 @@ async function fetchPrevMonthAttendance() {
       query(collection(db, 'users', state.currentUsername, 'attendance'),
             where('yearMonth', '==', ym))
     );
-    recordGetDocsRead('cal.prev-month', '前月勤怠取得', `attendance:${ym}`, snap.size);
+    recordGetDocsRead('cal.prev-month', '前月勤怠取得', `attendance:${ym}`, snap.size, snap.docs);
     state.prevMonthAttendance = { _fetched: true };
     snap.docs.forEach(d => { state.prevMonthAttendance[d.id] = d.data(); });
   } catch (err) {
@@ -218,7 +218,7 @@ export async function fetchFiscalYearPaidLeave() {
             where('yearMonth', '>=', fiscalStart),
             where('yearMonth', '<=', fiscalEnd))
     );
-    recordGetDocsRead('cal.fiscal-paid', '年度有給集計', `${fiscalStart}..${fiscalEnd}`, snap.size);
+    recordGetDocsRead('cal.fiscal-paid', '年度有給集計', `${fiscalStart}..${fiscalEnd}`, snap.size, snap.docs);
     let total = 0;
     snap.docs.forEach(d => {
       const att = d.data();

@@ -195,7 +195,8 @@ export const state = {
   readDiagModalOpen: false,
   readDiagnostics: {
     sessionStartedAt: Date.now(),
-    estimatedReads: 0,
+    estimatedTransferBytes: 0,
+    estimatedItems: 0,
     listenerStarts: 0,
     listenerSnapshots: 0,
     getDocsCalls: 0,

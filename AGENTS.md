@@ -258,34 +258,38 @@ export function xxxFunction() { ... }
 | `acknowledgedBy` | string[] | 確認したユーザー名の一覧 |
 | `createdAt` | timestamp | 作成日時 |
 
-## Firestore 読み取り超過 再発防止ルール
+## Supabase 転送量超過 再発防止ルール
 
-> **目的**: Spark 無料枠（読み取り 5万/日）を超えないようにし、30人規模でも無料運用を維持しやすくする。
+> **目的**: Supabase Free の転送量 5GB/月を意識しながら、30人規模でも無料運用を維持しやすくする。
+> **補足**: 移行完了までは Firebase 側も残るので、「無駄な初期読込を増やさない」姿勢はそのまま継続する。
 
-### ルールA: ログイン前・招待コード前に Firestore の公開読込を始めない
-- `portal/config` の招待設定確認より前に `subscribeNotices()` や `subscribeCards()` などの常時読込を始めない
-- 「URLを知っているだけの未認証状態」で Firestore listener を立てる変更は禁止
+### ルールA: ホーム初期表示で大きい一覧を自動読込しない
+- ログイン直後やホーム表示時に、全件リンク集・履歴・集計結果をまとめて自動取得しない
+- 必要なら `ボタンを押した時だけ` `タブを開いた時だけ` `検索した時だけ` 読む
+- 共有スペースやダッシュボードは「要点だけ先に表示」「重い一覧は後から開く」を基本にする
 
-### ルールB: 常時 listener は「今日使うもの」だけ
-- ログイン直後に自動起動してよい realtime listener は、ダッシュボードや通知など**常時見る必要がある軽いものだけ**
-- `chat / file-transfer / drive / users_list` のような重い機能は **開いた時だけ** 読む
-- 新機能で `onSnapshot` を使う前に、「本当に realtime 必須か」を先に検討する
+### ルールB: realtime / listener は軽い常用データだけ
+- 常時購読してよいのは、通知・今日のタスク・当日勤怠など「常時見る軽いもの」だけ
+- `chat / file-transfer / drive / users_list / 集計` のような重い機能は **開いた時だけ** 購読する
+- 新機能で realtime を使う前に、「本当に即時反映が必要か」を先に検討する
 
-### ルールC: 履歴・集計・全社横断は手動実行を基本にする
-- 完了済み履歴、アーカイブ、月次集計、`collectionGroup()` を使う横断集計は初期表示で自動実行しない
-- 「タブを開いた時だけ `getDocs()`」「集計ボタンを押した時だけ実行」を基本にする
+### ルールC: 広い select と大きい payload を避ける
+- Supabase 移行後は `select *` を安易に増やさず、画面に必要な列だけ取る
+- 長文本文・履歴配列・巨大 map・base64 文字列を一覧系レスポンスに混ぜない
+- 画像・添付・大きいファイルは DB 本体に持たず、Storage や外部リンクで分離する
 
-### ルールD: 新しい読込は診断対象に含める
-- 新しい `getDocs()` / `onSnapshot()` / 重い `getDoc()` を追加したら、`read-diagnostics` でも追えるようにする
-- 少なくとも「どの画面を開くと何を読むか」は後から見える状態を維持する
+### ルールD: 履歴・集計・横断表示は手動実行を基本にする
+- 完了済み履歴、アーカイブ、月次集計、全社横断集計は初期表示で自動実行しない
+- 「タブを開いた時だけ」「集計ボタンを押した時だけ」「期間を確定した時だけ」実行する
 
-### ルールE: 管理画面でも全件読込を安易に増やさない
-- 管理者向け一覧は `getDocs()` 1回読込を基本にし、不要な realtime 化をしない
-- 全ユーザー一覧や重い設定一覧をモーダルを開くたびに複数回読み直さない
+### ルールE: 新しい取得は転送診断の対象に含める
+- 新しい `getDocs()` / `onSnapshot()` / `getDoc()` 相当や、Supabase の新しい fetch を追加したら `転送診断` で追えるようにする
+- 少なくとも「どの画面を開くと何件・何KBくらい動くか」は後から見える状態を維持する
+- 30人想定の月間転送見積もりが急に跳ねる変更は、そのまま merge しない
 
 ### ルールF: 実装後は PC / スマホの両方で確認する
 - 表示確認だけでなく `保存 → 閉じる → 再表示 → 関連画面反映` まで見る
-- 読み取り削減の変更後は `読取診断` を見て、起動直後に不要 listener が立っていないか確認する
+- 転送量まわりの変更後は `転送診断` を見て、ホーム初期表示やモーダル表示で不要な大きい取得が走っていないか確認する
 
 ## 2026-03-18 最新引き継ぎ（Cursor向け）
 
@@ -319,7 +323,7 @@ export function xxxFunction() { ... }
 - `9e70c62` `notice_reactions` を起動時全件読込しないよう変更
 - `6110f09` `tasks / reqboard` を未処理だけ realtime に変更
 - `8d24871` `chat / file-transfer / drive / users_list` を lazy load 化
-- `c14f575` 読取診断を追加
+- `c14f575` 診断基盤を追加（現在は転送診断として運用）
 
 ### ここまでの業務プラン達成状況
 - `部門間依頼 → タスク化` 実装済み
@@ -334,7 +338,7 @@ export function xxxFunction() { ... }
 
 ### 次に着手しやすい残タスク
 1. Firestore 読み取りの最終判断
-   - まず `読取診断` と Firebase Console で数日観察
+   - まず `転送診断` と Supabase Usage で数日観察
    - まだ Spark 無料枠が厳しい場合のみ `offline persistence` を検討
    - 共有PC前提なので、導入時はキャッシュ残留リスクに注意
 2. 共有ダッシュボードの次段
@@ -579,6 +583,9 @@ assigned_tasks/{taskId}
 - `users/{name}/data/preferences` は 7 件移行済み
 - `users/{name}/data/email_profile` は 1 件移行済み
 - `users/{name}/data/lock_pin` は 3 件移行済み
+- 共有コアの移行済み: `portal_config / public_categories / public_cards`
+- 個人コアの移行済み: `user_accounts / user_preferences / user_profiles / user_lock_pins`
+- まだ未移行の個人データ: `section_order / read_notices / private_sections / private_cards / todos / email_contacts / drive_link / drive_contacts`
 - 現時点で作成確認できた core tables:
   - `portal_config`
   - `public_categories`

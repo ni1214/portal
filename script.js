@@ -441,7 +441,7 @@ function loadTodos(username) {
   );
   recordListenerStart('todo.personal', '個人TODO', `users/${username}/todos`);
   state._todoUnsubscribe = wrapTrackedListenerUnsubscribe('todo.personal', onSnapshot(q, snap => {
-    recordListenerSnapshot('todo.personal', snap.size, username);
+    recordListenerSnapshot('todo.personal', snap.size, username, snap.docs);
     state.personalTodos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderTodoSection();
   }, err => console.error('TODO読み込みエラー:', err)));
@@ -951,7 +951,7 @@ async function ensureSharedCardsLoaded(force = false) {
   _sharedCardsLoadPromise = (async () => {
     const q = query(collection(db, 'cards'), orderBy('categoryOrder'));
     const snap = await getDocs(q);
-    recordGetDocsRead('cards.all', '公開カード一覧', 'cards', snap.size);
+    recordGetDocsRead('cards.all', '公開カード一覧', 'cards', snap.size, snap.docs);
     state.allCards = sortCards(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     state.sharedCardsLoaded = true;
     rerenderCards();
@@ -983,7 +983,7 @@ async function ensureFavoritePublicCardsLoaded() {
     const chunk = targetIds.slice(i, i + 10);
     const favQuery = query(collection(db, 'cards'), where(documentId(), 'in', chunk));
     const snap = await getDocs(favQuery);
-    recordGetDocsRead('cards.favorites', 'お気に入り公開カード', 'cards', snap.size);
+    recordGetDocsRead('cards.favorites', 'お気に入り公開カード', 'cards', snap.size, snap.docs);
     loadedCards.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
   }
 

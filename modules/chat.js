@@ -125,7 +125,7 @@ export function startChatListeners(username) {
   const dmQ = query(collection(db, 'dm_rooms'), where('members', 'array-contains', username));
   recordListenerStart('chat.dm-rooms', 'DM一覧', `dm_rooms:${username}`);
   state._dmRoomsUnsubscribe = wrapTrackedListenerUnsubscribe('chat.dm-rooms', onSnapshot(dmQ, snap => {
-    recordListenerSnapshot('chat.dm-rooms', snap.size, username);
+    recordListenerSnapshot('chat.dm-rooms', snap.size, username, snap.docs);
     state.dmRooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     if (state.chatPanelOpen) renderChatSidebar();
     updateChatBadge();
@@ -134,7 +134,7 @@ export function startChatListeners(username) {
   const grpQ = query(collection(db, 'chat_rooms'), where('members', 'array-contains', username));
   recordListenerStart('chat.group-rooms', 'グループ一覧', `chat_rooms:${username}`);
   state._groupRoomsUnsubscribe = wrapTrackedListenerUnsubscribe('chat.group-rooms', onSnapshot(grpQ, snap => {
-    recordListenerSnapshot('chat.group-rooms', snap.size, username);
+    recordListenerSnapshot('chat.group-rooms', snap.size, username, snap.docs);
     state.groupRooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     if (state.chatPanelOpen) renderChatSidebar();
     updateChatBadge();
@@ -157,7 +157,7 @@ export function subscribeUsersList() {
   if (state._usersListUnsub) return;
   recordListenerStart('chat.users-list', 'ユーザー一覧', 'users_list');
   state._usersListUnsub = wrapTrackedListenerUnsubscribe('chat.users-list', onSnapshot(collection(db, 'users_list'), snap => {
-    recordListenerSnapshot('chat.users-list', snap.size, 'users_list');
+    recordListenerSnapshot('chat.users-list', snap.size, 'users_list', snap.docs);
     state._knownUsernames = new Set(snap.docs.map(d => d.id));
     // 現在開いているDMルームの相手が存在しないユーザーならパネルを閉じる
     if (state.currentRoomId && state.currentRoomType === 'dm') {
@@ -609,7 +609,7 @@ export async function loadUsersForChatPicker(listElId, searchElId, onSelect, exc
   let users = [];
   try {
     const snap = await getDocs(collection(db, 'users_list'));
-    recordGetDocsRead('chat.user-picker', 'ユーザーピッカー', 'users_list', snap.size);
+    recordGetDocsRead('chat.user-picker', 'ユーザーピッカー', 'users_list', snap.size, snap.docs);
     users = snap.docs.map(d => d.id);
     if (excludeSelf) users = users.filter(u => u !== state.currentUsername);
   } catch (_) {

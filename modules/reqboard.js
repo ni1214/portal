@@ -130,7 +130,7 @@ async function _loadRequestHistory(side, force = false) {
       ? query(collection(db, 'cross_dept_requests'), where('toDept', '==', myDept))
       : query(collection(db, 'cross_dept_requests'), where('createdBy', '==', state.currentUsername));
     const snap = await getDocs(historyQuery);
-    recordGetDocsRead(`req.history.${side}`, `部門間依頼履歴:${side}`, side === 'received' ? myDept : state.currentUsername, snap.size);
+    recordGetDocsRead(`req.history.${side}`, `部門間依頼履歴:${side}`, side === 'received' ? myDept : state.currentUsername, snap.size, snap.docs);
     const allRequests = _sortRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     const historyOnly = allRequests.filter(req => side === 'received' ? !_isReceivedRequestLive(req) : !_isSentRequestLive(req));
 
@@ -183,7 +183,7 @@ export function startRequestListeners(username) {
     );
     recordListenerStart('req.received', '受信部門間依頼', `cross_dept_requests:${myDept}`);
     state._reqReceivedUnsub = wrapTrackedListenerUnsubscribe('req.received', onSnapshot(rQ, snap => {
-      recordListenerSnapshot('req.received', snap.size, myDept);
+      recordListenerSnapshot('req.received', snap.size, myDept, snap.docs);
       liveReceivedRequests = _sortRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       _syncReceivedRequests();
       updateReqBadge();
@@ -201,7 +201,7 @@ export function startRequestListeners(username) {
   );
   recordListenerStart('req.sent', '送信部門間依頼', `cross_dept_requests:${username}`);
   state._reqSentUnsub = wrapTrackedListenerUnsubscribe('req.sent', onSnapshot(sQ, snap => {
-    recordListenerSnapshot('req.sent', snap.size, username);
+    recordListenerSnapshot('req.sent', snap.size, username, snap.docs);
     liveSentRequests = _sortRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     _syncSentRequests();
     updateReqBadge();
@@ -214,7 +214,7 @@ export function startRequestListeners(username) {
     const suggQ = query(collection(db, 'suggestion_box'), orderBy('createdAt', 'desc'));
     recordListenerStart('req.suggestion', '目安箱一覧', 'suggestion_box');
     state._suggUnsub = wrapTrackedListenerUnsubscribe('req.suggestion', onSnapshot(suggQ, snap => {
-      recordListenerSnapshot('req.suggestion', snap.size, 'suggestion_box');
+      recordListenerSnapshot('req.suggestion', snap.size, 'suggestion_box', snap.docs);
       state.suggestionList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       updateReqBadge();
       if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();

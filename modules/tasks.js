@@ -259,7 +259,7 @@ async function _loadTaskHistory(tab, force = false) {
     if (!historyQuery) return;
 
     const snap = await getDocs(historyQuery);
-    recordGetDocsRead(`task.history.${tab}`, `タスク履歴:${tab}`, `assigned_tasks:${state.currentUsername}`, snap.size);
+    recordGetDocsRead(`task.history.${tab}`, `タスク履歴:${tab}`, `assigned_tasks:${state.currentUsername}`, snap.size, snap.docs);
     const allTasks = _sortTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     const historyOnly = allTasks.filter(task => {
       if (tab === 'received') return !_isReceivedTaskLive(task);
@@ -304,7 +304,7 @@ export function startTaskListeners(username) {
   );
   recordListenerStart('task.received', '受け取ったタスク', `assigned_tasks:${username}`);
   state._receivedTasksUnsub = wrapTrackedListenerUnsubscribe('task.received', onSnapshot(rQ, snap => {
-    recordListenerSnapshot('task.received', snap.size, username);
+    recordListenerSnapshot('task.received', snap.size, username, snap.docs);
     liveReceivedTasks = _sortTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     _syncReceivedTasks();
     updateTaskBadge();
@@ -319,7 +319,7 @@ export function startTaskListeners(username) {
   );
   recordListenerStart('task.sent', '依頼したタスク', `assigned_tasks:${username}`);
   state._sentTasksUnsub = wrapTrackedListenerUnsubscribe('task.sent', onSnapshot(sQ, snap => {
-    recordListenerSnapshot('task.sent', snap.size, username);
+    recordListenerSnapshot('task.sent', snap.size, username, snap.docs);
     liveSentTasks = _sortTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     _syncSentTasks();
     updateTaskBadge();
@@ -335,7 +335,7 @@ export function startTaskListeners(username) {
   );
   recordListenerStart('task.sent-done', '未確認の完了タスク', `assigned_tasks:${username}`);
   state._sentTaskDoneNotifyUnsub = wrapTrackedListenerUnsubscribe('task.sent-done', onSnapshot(sentDoneNotifyQ, snap => {
-    recordListenerSnapshot('task.sent-done', snap.size, username);
+    recordListenerSnapshot('task.sent-done', snap.size, username, snap.docs);
     liveSentDoneNotifyTasks = _sortTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     _syncSentTasks();
     updateTaskBadge();
@@ -349,7 +349,7 @@ export function startTaskListeners(username) {
   );
   recordListenerStart('task.shared', '共有されたタスク', `assigned_tasks:${username}`);
   state._sharedTasksUnsub = wrapTrackedListenerUnsubscribe('task.shared', onSnapshot(shareQ, snap => {
-    recordListenerSnapshot('task.shared', snap.size, username);
+    recordListenerSnapshot('task.shared', snap.size, username, snap.docs);
     liveSharedTasks = _sortTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     _syncSharedTasks();
     updateTaskBadge();
