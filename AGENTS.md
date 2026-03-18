@@ -548,3 +548,20 @@ assigned_tasks/{taskId}
 - 返答は**日本語**で行うこと
 - 「記録して」と言われた場合は **AGENTS.md** に記載する（MEMORY.md はローカル専用のため Git 経由で別 PC に引き継がれない）
 - 実機テスト用の招待コード・PIN など**秘密値そのものは AGENTS.md に書かない**。必要な場合はローカル専用の `C:\Users\frx\.codex\memory.md` を参照し、ここには「ローカル専用メモを使う」という運用ルールだけ残す
+
+## Supabase 移行メモ（2026-03-18 追加）
+
+### 方針
+- Firestore の read 最適化を続けるより、段階的に `Supabase` へ移行する方針で進める
+- 以後の Supabase 操作は Codex 側で SQL editor / テーブル作成まで担当する前提でステップを切る
+- ただし `project URL / anon key / service role key / project ref` などの秘密値は repo に書かない
+- 秘密値はローカル専用の `C:\Users\frx\.codex\memory.md` に保存する
+- まずは `DB 置換` を優先し、`ニックネームログイン + 招待コード + ログイン前 PIN` の UX は維持する
+
+### 参照先
+- 詳細な移行順とフェーズは `docs/supabase-migration-plan.md` を最新として扱う
+
+### 次の開始点
+1. `Step 0`: Supabase プロジェクト情報の扱いをローカル秘密値へ固定
+2. `Step 1`: `supabase/001_core_schema.sql` を作成
+3. `Step 2`: shared core 用の DB adapter 設計へ入る
