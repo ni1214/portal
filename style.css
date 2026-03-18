@@ -2992,16 +2992,12 @@ html.font-xl { font-size: 21px; }
   background: rgba(251, 191, 36, 0.12);
   border-color: rgba(251, 191, 36, 0.5);
 }
-[data-theme="light"] .lock-key:not(.lock-key-del) {
-  color: rgba(31, 35, 40, 0.78);
-  border-color: rgba(31, 35, 40, 0.18);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
-}
-[data-theme="light"] .lock-key:not(.lock-key-del):active {
-  background: rgba(255, 255, 255, 1);
-}
-[data-theme="light"] .lock-key-del {
-  color: rgba(255, 255, 255, 0.82);
+[data-theme="light"] .lock-screen {
+  --lock-key-text: rgba(31, 35, 40, 0.78);
+  --lock-key-border: rgba(31, 35, 40, 0.18);
+  --lock-key-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+  --lock-key-active-bg: rgba(255, 255, 255, 1);
+  --lock-key-del-text: rgba(255, 255, 255, 0.82);
 }
 [data-theme="light"] .search-container:focus-within,
 [data-theme="light"] .search-container.has-value {
@@ -6840,10 +6836,27 @@ html.font-xl { font-size: 21px; }
    ロック画面
    =========================== */
 .lock-screen {
+  --lock-screen-bg: rgba(5, 7, 20, 0.92);
+  --lock-text-primary: rgba(255,255,255,0.92);
+  --lock-text-secondary: rgba(255,255,255,0.85);
+  --lock-text-muted: rgba(255,255,255,0.6);
+  --lock-text-faint: rgba(255,255,255,0.45);
+  --lock-text-subtle: rgba(255,255,255,0.25);
+  --lock-key-text: #fff;
+  --lock-key-del-text: #fff;
+  --lock-key-border: var(--border-glass);
+  --lock-dot-fill: #fff;
+  --lock-dot-border: rgba(255,255,255,0.4);
+  --lock-badge-ring: #0f172a;
+  --lock-switch-text: rgba(255,255,255,0.45);
+  --lock-switch-text-hover: rgba(255,255,255,0.8);
+  --lock-switch-border-hover: rgba(255,255,255,0.4);
+  --lock-key-shadow: none;
+  --lock-key-active-bg: var(--bg-card-hover);
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: rgba(5, 7, 20, 0.92);
+  background: var(--lock-screen-bg);
   backdrop-filter: blur(24px) saturate(0.6);
   -webkit-backdrop-filter: blur(24px) saturate(0.6);
   display: flex;
@@ -6856,7 +6869,7 @@ html.font-xl { font-size: 21px; }
 .lock-clock {
   font-size: clamp(3rem, 12vw, 5.5rem);
   font-weight: 200;
-  color: rgba(255,255,255,0.92);
+  color: var(--lock-text-primary);
   letter-spacing: 0.05em;
   margin-bottom: 24px;
   font-variant-numeric: tabular-nums;
@@ -6870,14 +6883,14 @@ html.font-xl { font-size: 21px; }
   justify-content: center;
   font-size: 1.8rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--lock-dot-fill);
   box-shadow: 0 4px 20px rgba(0,0,0,0.4);
   margin-bottom: 10px;
 }
 .lock-username {
   font-size: 1.1rem;
   font-weight: 500;
-  color: rgba(255,255,255,0.85);
+  color: var(--lock-text-secondary);
   margin-bottom: 28px;
 }
 .lock-pin-dots {
@@ -6889,12 +6902,12 @@ html.font-xl { font-size: 21px; }
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.4);
+  border: 2px solid var(--lock-dot-border);
   transition: all 0.15s;
 }
 .lock-pin-dots span.filled {
-  background: #fff;
-  border-color: #fff;
+  background: var(--lock-dot-fill);
+  border-color: var(--lock-dot-fill);
   transform: scale(1.1);
 }
 .lock-pin-dots.shake { animation: pinShake 0.5s ease; }
@@ -6923,8 +6936,8 @@ html.font-xl { font-size: 21px; }
   height: 72px;
   border-radius: 50%;
   background: var(--bg-card);
-  border: 1px solid var(--border-glass);
-  color: #fff;
+  border: 1px solid var(--lock-key-border);
+  color: var(--lock-key-text);
   font-size: 1.4rem;
   font-weight: 300;
   cursor: pointer;
@@ -6933,12 +6946,13 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   justify-content: center;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: var(--lock-key-shadow);
 }
-.lock-key:active { background: var(--bg-card-hover); transform: scale(0.93); }
-.lock-key-del { font-size: 1.1rem; background: transparent; border-color: transparent; }
+.lock-key:active { background: var(--lock-key-active-bg); transform: scale(0.93); }
+.lock-key-del { font-size: 1.1rem; background: transparent; border-color: transparent; color: var(--lock-key-del-text); }
 .lock-key-del:active { background: var(--bg-card); }
 .lock-key-empty { visibility: hidden; }
-.lock-hint { margin-top: 28px; font-size: 0.68rem; color: rgba(255,255,255,0.25); text-align: center; }
+.lock-hint { margin-top: 28px; font-size: 0.68rem; color: var(--lock-text-subtle); text-align: center; }
 .lock-notifications {
   display: flex;
   gap: 20px;
@@ -6973,7 +6987,7 @@ html.font-xl { font-size: 21px; }
   top: -4px;
   right: -4px;
   background: #ef4444;
-  color: #fff;
+  color: var(--lock-dot-fill);
   font-size: 0.65rem;
   font-weight: 700;
   min-width: 20px;
@@ -6983,12 +6997,12 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   justify-content: center;
   padding: 0 4px;
-  border: 2px solid #0f172a;
+  border: 2px solid var(--lock-badge-ring);
   box-shadow: 0 0 8px rgba(239,68,68,0.7);
 }
 .lock-notif-label {
   font-size: 0.68rem;
-  color: rgba(255,255,255,0.6);
+  color: var(--lock-text-muted);
   font-weight: 500;
   letter-spacing: 0.02em;
 }
@@ -7004,7 +7018,7 @@ html.font-xl { font-size: 21px; }
 .btn-lock-switch {
   background: none;
   border: 1px solid var(--border-glass);
-  color: rgba(255,255,255,0.45);
+  color: var(--lock-switch-text);
   font-size: 0.75rem;
   padding: 7px 18px;
   border-radius: 20px;
@@ -7016,8 +7030,8 @@ html.font-xl { font-size: 21px; }
 }
 .btn-lock-switch:hover {
   background: var(--bg-card);
-  color: rgba(255,255,255,0.8);
-  border-color: rgba(255,255,255,0.4);
+  color: var(--lock-switch-text-hover);
+  border-color: var(--lock-switch-border-hover);
 }
 
 /* ===========================
