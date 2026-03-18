@@ -61,18 +61,30 @@
   --state-warning-soft:   #fbbf24;
   --state-warning-bright: #ffcc00;
   --state-warning-warm:   #fb923c;
+  --state-warning-amber:  #eab308;
+  --state-warning-deep:   #ca8a04;
+  --state-warning-deeper: #b45309;
   --state-warning-rgb:    245, 158, 11;
   --state-warning-bright-rgb: 255, 204, 0;
   --state-warning-gold-rgb: 251, 191, 36;
   --state-warning-google-rgb: 251, 188, 4;
+  --state-warning-signal-rgb: 255, 193, 7;
   --state-danger-google-rgb: 234, 67, 53;
   --state-task-accent:    #a5b4fc;
   --state-violet-soft:    #a29bfe;
   --state-violet-pale:    #c4b5fe;
+  --state-violet-mid:     #a78bfa;
+  --state-violet-mid-rgb: 167, 139, 250;
   --state-sky-deep:       #0369a1;
+  --state-orange-hot:     #f97316;
   --state-neutral:        #9ca3af;
   --state-neutral-strong: #6b7280;
   --state-neutral-rgb:    107, 114, 128;
+  --state-company-green:  #4CAF50;
+  --state-company-green-rgb: 76, 175, 80;
+  --state-company-holiday: #ba68c8;
+  --state-company-holiday-rgb: 156, 39, 176;
+  --state-company-worksat-rgb: 33, 150, 243;
 
   /* Branded Actions */
   --brand-drive-blue:     #1a73e8;
@@ -97,15 +109,17 @@
   --light-accent-rgb:    74, 100, 200;
   --light-preview-rgb:   100, 120, 200;
   --light-surface-rgb:   241, 243, 247;
-  --shadow-ink-weak:     var(--shadow-ink-weak);
-  --shadow-ink-soft:     var(--shadow-ink-soft);
-  --shadow-ink-medium:   var(--shadow-ink-medium);
+  --shadow-ink-weak:     rgba(0, 0, 0, 0.08);
+  --shadow-ink-soft:     rgba(0, 0, 0, 0.15);
+  --shadow-ink-medium:   rgba(0, 0, 0, 0.25);
   --shadow-ink-strong:   rgba(0, 0, 0, 0.40);
   --shadow-ink-heavy:    rgba(0, 0, 0, 0.50);
   --shadow-ink-stronger: rgba(0, 0, 0, 0.60);
-  --overlay-backdrop:    var(--overlay-backdrop);
+  --overlay-backdrop:    rgba(0, 0, 0, 0.65);
   --overlay-panel-dark:  rgba(10, 14, 39, 0.80);
   --heat-glow-default:   rgba(255, 100, 100, 0.50);
+  --surface-danger-soft: #fee2e2;
+  --light-focus-ring:    rgba(9, 105, 218, 0.14);
 
   /* Common Action Gradients */
   --gradient-action-primary: linear-gradient(135deg, var(--state-primary), var(--state-primary-strong));
@@ -3043,7 +3057,7 @@ html.font-xl { font-size: 21px; }
 }
 [data-theme="light"] .form-input:focus {
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.14);
+  box-shadow: 0 0 0 3px var(--light-focus-ring);
 }
 [data-theme="light"] .form-input::placeholder {
   color: var(--text-muted);
@@ -4291,7 +4305,7 @@ html.font-xl { font-size: 21px; }
   font-size: 0.78rem;
   transition: background 0.15s, color 0.15s;
 }
-.btn-ft-reject:hover { background: #fee2e2; color: var(--state-danger); }
+.btn-ft-reject:hover { background: var(--surface-danger-soft); color: var(--state-danger); }
 .btn-ft-download {
   flex: 1;
   padding: 6px;
@@ -4321,7 +4335,7 @@ html.font-xl { font-size: 21px; }
   font-size: 0.72rem;
   color: var(--text-muted);
 }
-.ft-item-status.offline { color: #f97316; }
+.ft-item-status.offline { color: var(--state-orange-hot); }
 .ft-item-status.done    { color: var(--state-success); }
 .ft-item-status.rejected { color: var(--state-neutral); }
 
@@ -5048,7 +5062,7 @@ html.font-xl { font-size: 21px; }
 }
 .chat-room-delete-btn:hover {
   color: var(--state-danger);
-  background: #fee2e2;
+  background: var(--surface-danger-soft);
 }
 .chat-room-item:hover .chat-room-delete-btn {
   display: flex;
@@ -5817,12 +5831,12 @@ html.font-xl { font-size: 21px; }
 .task-item--done { border-left: 3px solid var(--state-success-ok); opacity: 0.75; }
 .task-item--alert {
   border-color: rgba(var(--state-primary-rgb), 0.40);
-  background: rgba(99,102,241,0.06);
+  background: rgba(var(--state-primary-rgb), 0.06);
   animation: taskAlertPulse 2.5s ease-in-out infinite;
 }
 @keyframes taskAlertPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(var(--state-primary-rgb), 0.30); }
-  50%       { box-shadow: 0 0 0 6px rgba(99,102,241,0); }
+  50%       { box-shadow: 0 0 0 6px rgba(var(--state-primary-rgb), 0.00); }
 }
 .task-item-meta {
   display: flex;
@@ -5837,8 +5851,8 @@ html.font-xl { font-size: 21px; }
   padding: 2px 8px;
   border-radius: 20px;
 }
-.status-pending  { background: rgba(245,158,11,0.2);  color: var(--state-warning-soft); border: 1px solid rgba(var(--state-warning-rgb), 0.30); }
-.status-accepted { background: rgba(59,130,246,0.2);  color: var(--state-info-soft); border: 1px solid rgba(59,130,246,0.3); }
+.status-pending  { background: rgba(var(--state-warning-rgb), 0.20);  color: var(--state-warning-soft); border: 1px solid rgba(var(--state-warning-rgb), 0.30); }
+.status-accepted { background: rgba(var(--state-info-strong-rgb), 0.20);  color: var(--state-info-soft); border: 1px solid rgba(var(--state-info-strong-rgb), 0.30); }
 .status-done     { background: rgba(var(--state-success-ok-rgb), 0.20);   color: var(--state-success-pale); border: 1px solid rgba(var(--state-success-ok-rgb), 0.30); }
 .task-partner {
   font-size: 0.72rem;
@@ -8139,12 +8153,12 @@ html.font-xl { font-size: 21px; }
 [data-theme="light"] .email-profile-prompt-area:focus,
 [data-theme="light"] .email-received-area:focus {
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.14);
+  box-shadow: 0 0 0 3px var(--light-focus-ring);
 }
 [data-theme="light"] .ep-input:focus,
 [data-theme="light"] .ep-signature-area:focus {
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.14);
+  box-shadow: 0 0 0 3px var(--light-focus-ring);
 }
 [data-theme="light"] .email-received-area::placeholder,
 [data-theme="light"] .email-profile-prompt-area::placeholder {
@@ -8382,9 +8396,9 @@ html.font-xl { font-size: 21px; }
   text-overflow: ellipsis;
 }
 .cal-att-yukyu  { color: var(--state-success-ok); border: 1px solid rgba(var(--state-success-ok-rgb), 0.30); }
-.cal-att-hankyu { color: #eab308; border: 1px solid rgba(234,179,8,0.3); }
+.cal-att-hankyu { color: var(--state-warning-amber); border: 1px solid rgba(var(--state-warning-amber-rgb), 0.30); }
 .cal-att-kekkin { color: var(--state-danger); border: 1px solid rgba(var(--state-danger-rgb), 0.30); }
-.cal-att-hayade { color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
+.cal-att-hayade { color: var(--state-violet-mid); border: 1px solid rgba(var(--state-violet-mid-rgb), 0.30); }
 .cal-att-zangyo { color: var(--state-warning-warm); border: 1px solid rgba(251,146,60,0.3); }
 
 /* 郢ｧ・ｿ郢ｧ・ｹ郢ｧ・ｯ郢晏ｳｨ繝｣郢昴・*/
@@ -8404,8 +8418,8 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   justify-content: center;
 }
-.cal-task-received { background: rgba(96,165,250,0.2); color: var(--state-info); }
-.cal-task-sent     { background: rgba(167,139,250,0.2); color: #a78bfa; }
+.cal-task-received { background: rgba(var(--state-info-rgb), 0.20); color: var(--state-info); }
+.cal-task-sent     { background: rgba(var(--state-violet-mid-rgb), 0.20); color: var(--state-violet-mid); }
 
 /* 隴鯉ｽ･闔牙ｩ・ｩ・ｳ驍擾ｽｰ郢昜ｻ｣繝ｭ郢晢ｽｫ */
 .cal-day-panel {
@@ -9310,10 +9324,10 @@ html.font-xl { font-size: 21px; }
   display: inline-block;
   margin-bottom: 1px;
 }
-.cal-shared-user-badge.yukyu  { background: rgba(76,175,80,0.2);  color: #4CAF50; }
-.cal-shared-user-badge.hankyu { background: rgba(255,193,7,0.2);  color: #ca8a04; }
-.cal-shared-user-badge.kekkin { background: rgba(244,67,54,0.2);  color: var(--state-danger); }
-[data-theme="light"] .cal-shared-user-badge.hankyu { color: #b45309; }
+.cal-shared-user-badge.yukyu  { background: rgba(var(--state-company-green-rgb), 0.20);  color: var(--state-company-green); }
+.cal-shared-user-badge.hankyu { background: rgba(var(--state-warning-signal-rgb), 0.20);  color: var(--state-warning-deep); }
+.cal-shared-user-badge.kekkin { background: rgba(var(--state-danger-google-rgb), 0.20);  color: var(--state-danger); }
+[data-theme="light"] .cal-shared-user-badge.hankyu { color: var(--state-warning-deeper); }
 
 /* 陷茨ｽｱ隴帛ｳｨ縺咲ｹ晢ｽｬ郢晢ｽｳ郢敖郢晢ｽｼ邵ｺ・ｮ郢ｧ・ｻ郢晢ｽｫ 遯ｶ繝ｻ陋溷ｶ・ｺ・ｺ邵ｺ・ｨ陷ｷ蠕個ｧ鬯ｮ蛟･・・ｸｺ・ｫ隰繝ｻ竏ｴ郢ｧ繝ｻ*/
 .cal-shared-cells .cal-cell {
@@ -9600,7 +9614,7 @@ html.font-xl { font-size: 21px; }
 
 /* 郢晢ｽｩ郢ｧ・､郢晏現ﾎ皮ｹ晢ｽｼ郢晁歓・ｪ・ｿ隰ｨ・ｴ */
 [data-theme="light"] .ccs-mini-day.ccs-jp-holiday { color: var(--state-danger-strong) !important; }
-[data-theme="light"] .ccs-day-worksat { background: rgba(9,105,218,0.14) !important; color: #0969da !important; }
+[data-theme="light"] .ccs-day-worksat { background: var(--light-focus-ring) !important; color: var(--accent-blue) !important; }
 [data-theme="light"] .ccs-day-planned { background: rgba(26,127,55,0.14) !important; color: #1a7f37 !important; }
 [data-theme="light"] .ccs-day-holiday { background: rgba(188,76,0,0.14) !important; color: #bc4c00 !important; }
 [data-theme="light"] .ccs-day-event   { background: rgba(102,57,186,0.14) !important; color: #6639ba !important; }
@@ -10728,8 +10742,8 @@ html.font-xl { font-size: 21px; }
   color: var(--state-task-accent);
 }
 [data-theme="light"] .ord-type-btn.active {
-  background: rgba(99,102,241,0.10);
-  color: #4338ca;
+  background: rgba(var(--state-primary-rgb), 0.10);
+  color: var(--state-primary-strong);
 }
 
 /* 陷ｩ竏ｫ蟯ｼ髴托ｽｽ陷会｣ｰ郢晄㈱縺｡郢晢ｽｳ繝ｻ蛹ｻ・・ｸｺ・ｮ騾具ｽｺ雎包ｽｨ邵ｺ・ｮ邵ｺ・ｿ繝ｻ繝ｻ*/
@@ -10789,7 +10803,7 @@ html.font-xl { font-size: 21px; }
   background: rgba(251,146,60,0.15);
   color: var(--state-warning-warm);
 }
-[data-theme="light"] .ord-type-badge--factory { color: #4338ca; }
+[data-theme="light"] .ord-type-badge--factory { color: var(--state-primary-strong); }
 [data-theme="light"] .ord-type-badge--site    { color: #15803d; }
 [data-theme="light"] .ord-type-badge--both    { color: #c2410c; }
 
