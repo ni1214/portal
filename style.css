@@ -10503,23 +10503,23 @@ html.font-xl { font-size: 21px; }
 }
 
 [data-theme="light"] .bottom-nav {
-  background: #ffffff;
+  background: var(--bg-card-hover);
   border-top-color: rgba(31, 35, 40, 0.15);
 }
 
 [data-theme="light"] .more-drawer-panel,
 [data-theme="light"] .personal-drawer-panel {
-  background: #f6f8fa;
+  background: var(--bg-primary);
   border-top-color: rgba(31, 35, 40, 0.15);
 }
 
 [data-theme="light"] .more-drawer-item {
-  background: #ffffff;
+  background: var(--bg-card-hover);
   border-color: rgba(31, 35, 40, 0.15);
 }
 
 [data-theme="light"] .personal-drawer-item {
-  background: #ffffff;
+  background: var(--bg-card-hover);
   border-color: rgba(31, 35, 40, 0.15);
 }
 
