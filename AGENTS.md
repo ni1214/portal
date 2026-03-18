@@ -663,3 +663,20 @@ assigned_tasks/{taskId}
 - `tools/invoke-supabase-sql-statements.mjs` を更新
   - `--batch-size=25` を追加
   - 発注データのように statement 数が多い場合は、小分けバッチで Management API へ流す
+
+## 2026-03-18 Supabase 追加進捗（company calendar）
+- `supabase/008_add_company_calendar_tables.sql` を remote 適用済み
+  - `company_calendar_settings / public_attendance_months` を追加
+- `tools/build-firestore-company-calendar-sql.mjs` を追加
+  - 対象: `company_calendar/config / public_attendance/{YYYY-MM}`
+- Firestore 実データの移行結果
+  - `company_calendar_settings`: Supabase 1 件
+  - `public_attendance_months`: Supabase 1 件
+  - `company_calendar_settings.work_saturdays`: 11 件
+  - `company_calendar_settings.planned_leave_saturdays`: 3 件
+  - `company_calendar_settings.holiday_ranges`: 2 件
+  - `company_calendar_settings.events`: 0 件
+  - `public_attendance_months.year_month=2026-03` に `06 / 09` の共有勤怠が入っていることを確認済み
+- `tools/invoke-supabase-sql-statements.mjs` の前処理を修正
+  - SQL 先頭の `--` コメント行を除去してから statement 分割するようにした
+  - これで少件数の generated SQL でも silent no-op を起こしにくくした

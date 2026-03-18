@@ -22,7 +22,12 @@ if (!accessToken) {
 
 const sqlPath = path.resolve(sqlFileArg);
 const sql = await fs.readFile(sqlPath, 'utf8');
-const rawStatements = sql
+const normalizedSql = sql
+  .split(/\r?\n/)
+  .filter(line => !line.trim().startsWith('--'))
+  .join('\n');
+
+const rawStatements = normalizedSql
   .split(/;\s*\r?\n/)
   .map(statement => statement.trim())
   .filter(Boolean);
