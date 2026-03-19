@@ -101,6 +101,37 @@ export function xxxFunction() { ... }
   **実装前に「この方針で進めます」と変更概要を提示してからコーディングする**
 - ユーザーの承認なしに大規模リライトは行わない
 
+### 🔔 ルール9: ブラウザネイティブ通知を使わない（notify.js を必ず使う）
+
+> **背景**: `alert()` / `confirm()` はブラウザのネイティブダイアログを出し、ポータルの UI から浮いて見える。
+> 2026-03 に全廃して `modules/notify.js` に統一済み。
+
+```
+❌ NG: alert('保存しました')
+❌ NG: if (confirm('削除しますか？')) { ... }
+
+✅ 正しい: showToast('保存しました', 'success')
+✅ 正しい: if (await showConfirm('削除しますか？', { danger: true })) { ... }
+```
+
+**使い方**
+```js
+import { showToast, showConfirm } from './notify.js';
+
+// トースト (alert 代替) — type: 'info' | 'success' | 'error' | 'warning'
+showToast('メッセージ', 'success');
+showToast('保存に失敗しました', 'error');
+showToast('入力してください', 'warning');
+
+// 確認ダイアログ (confirm 代替) — Promise<boolean>
+const ok = await showConfirm('削除しますか？', { danger: true });
+if (!ok) return;
+```
+
+- 新機能・修正時に `alert()`/`confirm()` を書いてはいけない
+- `window.alert` / `window.confirm` も同様に禁止
+- `showToast` を使うファイルは必ず `import { showToast, showConfirm } from './notify.js';` を先頭に追加する
+
 ---
 
 ## Git ワークフロー
