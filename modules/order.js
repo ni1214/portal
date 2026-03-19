@@ -543,9 +543,18 @@ function fmtPeriodLabel(period) {
 
 // ===== 日付フォーマット =====
 const WEEK_DAYS = ['日', '月', '火', '水', '木', '金', '土'];
+function tsToDate(ts) {
+  if (!ts) return null;
+  if (ts.toDate) return ts.toDate();
+  if (typeof ts === 'object' && typeof ts.seconds === 'number') return new Date(ts.seconds * 1000);
+  const d = new Date(ts);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function fmtDatetime(ts) {
   if (!ts) return '';
-  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const d = tsToDate(ts);
+  if (!d) return '';
   const wd = WEEK_DAYS[d.getDay()];
   const pad = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${wd}）${pad(d.getHours())}時${pad(d.getMinutes())}分`;
