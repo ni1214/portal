@@ -559,11 +559,19 @@ assigned_tasks/{taskId}
   - `supabaseUrl`: Supabase project URL
   - `supabasePublishableKey`: フロントで使う API key（publishable 推奨）
   - `supabaseAnonKey`: 旧メモ互換の fallback。新規保存は `supabasePublishableKey` を優先
-- **この段階で Supabase 切替対象にするのは shared core のみ**
-  - `public_categories`
-  - `public_cards`
+- **Supabase 切替済み対象（Step 3 = Phase A 完了）**
+  - `public_categories` ✅
+  - `public_cards` ✅
+  - `notices` ✅（2026-03-19 追加。realtime なし、一回読み込み）
+  - `notice_reactions` ✅（行単位 insert/delete。Firebase の arrayUnion は使わない）
+  - `user_notice_reads` ✅（`username` + `notice_id` 行単位）
 - 管理画面の `データ接続設定` から保存する
 - 実装側は「読込だけ fallback 可 / 保存系は選んだ backend に固定」を守る
+
+### notices Supabase の注意点
+- `subscribeNotices()` は Supabase モードで `async function` に変更済み。呼び出し元は `await` 必須
+- `acknowledged_by` は PATCH で配列ごと上書き（optimistic 更新後に state の値を送る）
+- `notice_reactions` は `(notice_id, emoji, username)` 行単位。Firebase の `{ emoji: [username] }` map へは JS 側で groupBy して変換
 
 ## Supabase 移行追記（2026-03-18 / 個人データ続き）
 - `supabase/004_fix_private_cards_hierarchy.sql` を remote 適用済み

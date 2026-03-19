@@ -342,3 +342,172 @@ export async function deleteSharedCardInSupabase(id) {
     prefer: 'return=minimal',
   });
 }
+
+// ===== お知らせ (notices / notice_reactions / user_notice_reads) =====
+
+const NOTICE_SELECT = 'id,title,body,priority,target_scope,target_departments,require_acknowledgement,acknowledged_by,created_by,created_at';
+
+function isoToFirestoreTs(isoStr) {
+  if (!isoStr) return null;
+  const ms = Date.parse(isoStr);
+  return Number.isFinite(ms) ? { seconds: Math.floor(ms / 1000), nanoseconds: 0 } : null;
+}
+
+function normalizeTextArray(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter(v => typeof v === 'string' && v.trim()).map(v => v.trim());
+}
+
+function mapNoticeRow(row = {}) {
+  return {
+    id: row.id,
+    title: row.title || '',
+    body: row.body || '',
+    priority: row.priority || 'normal',
+    targetScope: row.target_scope || 'all',
+    targetDepartments: normalizeTextArray(row.target_departments),
+    requireAcknowledgement: !!row.require_acknowledgement,
+    acknowledgedBy: normalizeTextArray(row.acknowledged_by),
+    createdBy: row.created_by || '',
+    createdAt: isoToFirestoreTs(row.created_at),
+  };
+}
+
+function mapNoticePayload(data = {}) {
+  return {
+    id: data.id,
+    title: data.title || '',
+    body: data.body || '',
+    priority: data.priority || 'normal',
+    target_scope: data.targetScope || 'all',
+    target_departments: normalizeTextArray(data.targetDepartments),
+    require_acknowledgement: !!data.requireAcknowledgement,
+    acknowledged_by: normalizeTextArray(data.acknowledgedBy),
+    created_by: data.createdBy || '',
+  };
+}
+
+function mapNoticeUpdatePayload(data = {}) {
+  const payload = {};
+  if ('title' in data) payload.title = data.title || '';
+  if ('body' in data) payload.body = data.body || '';
+  if ('priority' in data) payload.priority = data.priority || 'normal';
+  if ('targetScope' in data) payload.target_scope = data.targetScope || 'all';
+  if ('targetDepartments' in data) payload.target_departments = normalizeTextArray(data.targetDepartments);
+  if ('requireAcknowledgement' in data) payload.require_acknowledgement = !!data.requireAcknowledgement;
+  if ('acknowledgedBy' in data) payload.acknowledged_by = normalizeTextArray(data.acknowledgedBy);
+  return payload;
+}
+
+export async function fetchNoticesFromSupabase() {
+  const rows = await requestSupabase(
+    `notices?select=${encodeURIComponent(NOTICE_SELECT)}&order=created_at.desc`,
+    {
+      diagKey: 'supabase.notices',
+      diagLabel: 'Supabase お知らせ一覧',
+      diagScope: 'notices',
+    }
+  );
+  return Array.isArray(rows) ? rows.map(mapNoticeRow) : [];
+}
+
+export async function createNoticeInSupabase(data) {
+  const payload = mapNoticePayload(data);
+  if (!payload.id) payload.id = createSupabaseClientId('notice');
+  await requestSupabase('notices', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+  return payload.id;
+}
+
+export async function updateNoticeInSupabase(id, data) {
+  const payload = mapNoticeUpdatePayload(data);
+  await requestSupabase(`notices?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+}
+
+export async function deleteNoticeInSupabase(id) {
+  await requestSupabase(`notices?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
+
+export async function acknowledgeNoticeInSupabase(noticeId, acknowledgedByArray) {
+  // acknowledged_by は配列ごと PATCH（Supabase REST は arrayUnion 非対応）
+  await requestSupabase(`notices?id=eq.${encodeURIComponent(noticeId)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: { acknowledged_by: normalizeTextArray(acknowledgedByArray) },
+  });
+}
+
+// ---- user_notice_reads ----
+
+export async function fetchReadNoticeIdsFromSupabase(username) {
+  if (!username) return new Set();
+  const rows = await requestSupabase(
+    `user_notice_reads?username=eq.${encodeURIComponent(username)}&select=notice_id`,
+    {
+      diagKey: 'supabase.user_notice_reads',
+      diagLabel: 'Supabase 既読お知らせ',
+      diagScope: 'user_notice_reads',
+    }
+  );
+  if (!Array.isArray(rows)) return new Set();
+  return new Set(rows.map(r => r.notice_id).filter(Boolean));
+}
+
+export async function markNoticesReadInSupabase(username, noticeIds) {
+  const ids = [...new Set((noticeIds || []).filter(Boolean))];
+  if (!username || !ids.length) return;
+  const rows = ids.map(notice_id => ({ username, notice_id }));
+  await requestSupabase('user_notice_reads', {
+    method: 'POST',
+    prefer: 'return=minimal,resolution=ignore-duplicates',
+    body: rows,
+  });
+}
+
+// ---- notice_reactions ----
+
+export async function fetchNoticeReactionsFromSupabase() {
+  const rows = await requestSupabase(
+    'notice_reactions?select=notice_id,emoji,username',
+    {
+      diagKey: 'supabase.notice_reactions',
+      diagLabel: 'Supabase お知らせリアクション',
+      diagScope: 'notice_reactions',
+    }
+  );
+  if (!Array.isArray(rows)) return {};
+  // { [noticeId]: { [emoji]: [username, ...] } } に変換（Firebase 互換形式）
+  const grouped = {};
+  rows.forEach(({ notice_id, emoji, username }) => {
+    if (!notice_id || !emoji || !username) return;
+    if (!grouped[notice_id]) grouped[notice_id] = {};
+    if (!grouped[notice_id][emoji]) grouped[notice_id][emoji] = [];
+    grouped[notice_id][emoji].push(username);
+  });
+  return grouped;
+}
+
+export async function addNoticeReactionInSupabase(noticeId, emoji, username) {
+  await requestSupabase('notice_reactions', {
+    method: 'POST',
+    prefer: 'return=minimal,resolution=ignore-duplicates',
+    body: { notice_id: noticeId, emoji, username },
+  });
+}
+
+export async function removeNoticeReactionInSupabase(noticeId, emoji, username) {
+  await requestSupabase(
+    `notice_reactions?notice_id=eq.${encodeURIComponent(noticeId)}&emoji=eq.${encodeURIComponent(emoji)}&username=eq.${encodeURIComponent(username)}`,
+    { method: 'DELETE', prefer: 'return=minimal' }
+  );
+}

@@ -2766,7 +2766,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await migrateCategories();
     await migrateAddBox();
     await loadCategories();
-    subscribeNotices();
+    await subscribeNotices();
     renderAllSections();
     renderFavorites();
   } catch (err) {

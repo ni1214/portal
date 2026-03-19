@@ -11,6 +11,20 @@ import {
   recordListenerSnapshot,
   wrapTrackedListenerUnsubscribe,
 } from './read-diagnostics.js';
+import {
+  isSupabaseSharedCoreEnabled,
+  createSupabaseClientId,
+  fetchNoticesFromSupabase,
+  createNoticeInSupabase,
+  updateNoticeInSupabase,
+  deleteNoticeInSupabase,
+  acknowledgeNoticeInSupabase,
+  fetchReadNoticeIdsFromSupabase,
+  markNoticesReadInSupabase,
+  fetchNoticeReactionsFromSupabase,
+  addNoticeReactionInSupabase,
+  removeNoticeReactionInSupabase,
+} from './supabase.js';
 
 // Cross-module function references
 export const deps = {};
@@ -172,9 +186,13 @@ export function refreshNoticeVisibility() {
 export async function loadReadNotices(username) {
   if (!username) { state.readNoticeIds = new Set(); updateNoticeBadge(); return; }
   try {
-    const snap = await getDocs(collection(db, 'users', username, 'read_notices'));
-    recordGetDocsRead('notice.read-notices', '既読お知らせ', `users/${username}/read_notices`, snap.size, snap.docs);
-    state.readNoticeIds = new Set(snap.docs.map(d => d.id));
+    if (isSupabaseSharedCoreEnabled()) {
+      state.readNoticeIds = await fetchReadNoticeIdsFromSupabase(username);
+    } else {
+      const snap = await getDocs(collection(db, 'users', username, 'read_notices'));
+      recordGetDocsRead('notice.read-notices', '既読お知らせ', `users/${username}/read_notices`, snap.size, snap.docs);
+      state.readNoticeIds = new Set(snap.docs.map(d => d.id));
+    }
     updateNoticeBadge();
     renderNotices(state.visibleNotices);
     deps.renderTodayDashboard?.();
@@ -186,15 +204,19 @@ export async function loadReadNotices(username) {
 
 export async function markAllNoticesRead() {
   if (!state.currentUsername || !state.visibleNotices.length) return;
-  const batch = writeBatch(db);
-  state.visibleNotices.forEach(n => {
-    if (!state.readNoticeIds.has(n.id)) {
-      batch.set(doc(db, 'users', state.currentUsername, 'read_notices', n.id), {
+  const unreadIds = state.visibleNotices.filter(n => !state.readNoticeIds.has(n.id)).map(n => n.id);
+  if (!unreadIds.length) return;
+  if (isSupabaseSharedCoreEnabled()) {
+    await markNoticesReadInSupabase(state.currentUsername, unreadIds);
+  } else {
+    const batch = writeBatch(db);
+    unreadIds.forEach(id => {
+      batch.set(doc(db, 'users', state.currentUsername, 'read_notices', id), {
         readAt: serverTimestamp()
       });
-    }
-  });
-  await batch.commit();
+    });
+    await batch.commit();
+  }
   state.visibleNotices.forEach(n => state.readNoticeIds.add(n.id));
   updateNoticeBadge();
   renderNotices(state.visibleNotices);
@@ -216,14 +238,21 @@ export async function acknowledgeNotice(noticeId) {
   deps.renderSharedHome?.();
 
   try {
-    const batch = writeBatch(db);
-    batch.update(doc(db, 'notices', noticeId), {
-      acknowledgedBy: arrayUnion(state.currentUsername),
-    });
-    batch.set(doc(db, 'users', state.currentUsername, 'read_notices', noticeId), {
-      readAt: serverTimestamp(),
-    }, { merge: true });
-    await batch.commit();
+    if (isSupabaseSharedCoreEnabled()) {
+      await Promise.all([
+        acknowledgeNoticeInSupabase(noticeId, notice.acknowledgedBy),
+        markNoticesReadInSupabase(state.currentUsername, [noticeId]),
+      ]);
+    } else {
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'notices', noticeId), {
+        acknowledgedBy: arrayUnion(state.currentUsername),
+      });
+      batch.set(doc(db, 'users', state.currentUsername, 'read_notices', noticeId), {
+        readAt: serverTimestamp(),
+      }, { merge: true });
+      await batch.commit();
+    }
   } catch (err) {
     notice.acknowledgedBy = previousAcknowledgedBy;
     state.readNoticeIds.delete(noticeId);
@@ -297,10 +326,14 @@ export async function loadAllNoticeReactions() {
   if (state.noticeReactionsLoading) return;
   state.noticeReactionsLoading = true;
   try {
-    const snap = await getDocs(collection(db, 'notice_reactions'));
-    recordGetDocsRead('notice.reactions', 'お知らせリアクション', 'notice_reactions', snap.size, snap.docs);
-    state.noticeReactions = {};
-    snap.docs.forEach(d => { state.noticeReactions[d.id] = d.data(); });
+    if (isSupabaseSharedCoreEnabled()) {
+      state.noticeReactions = await fetchNoticeReactionsFromSupabase();
+    } else {
+      const snap = await getDocs(collection(db, 'notice_reactions'));
+      recordGetDocsRead('notice.reactions', 'お知らせリアクション', 'notice_reactions', snap.size, snap.docs);
+      state.noticeReactions = {};
+      snap.docs.forEach(d => { state.noticeReactions[d.id] = d.data(); });
+    }
     state.noticeReactionsLoaded = true;
     renderNotices(state.visibleNotices);
   } catch (err) {
@@ -313,7 +346,6 @@ export async function loadAllNoticeReactions() {
 
 export async function toggleReaction(noticeId, emoji) {
   if (!state.currentUsername) return;
-  const ref = doc(db, 'notice_reactions', noticeId);
   const current = (state.noticeReactions[noticeId] || {})[emoji] || [];
   const alreadyReacted = current.includes(state.currentUsername);
   // 楽観的UI更新
@@ -325,10 +357,19 @@ export async function toggleReaction(noticeId, emoji) {
   }
   renderNotices(state.visibleNotices);
   try {
-    if (alreadyReacted) {
-      await updateDoc(ref, { [emoji]: arrayRemove(state.currentUsername) });
+    if (isSupabaseSharedCoreEnabled()) {
+      if (alreadyReacted) {
+        await removeNoticeReactionInSupabase(noticeId, emoji, state.currentUsername);
+      } else {
+        await addNoticeReactionInSupabase(noticeId, emoji, state.currentUsername);
+      }
     } else {
-      await setDoc(ref, { [emoji]: arrayUnion(state.currentUsername) }, { merge: true });
+      const ref = doc(db, 'notice_reactions', noticeId);
+      if (alreadyReacted) {
+        await updateDoc(ref, { [emoji]: arrayRemove(state.currentUsername) });
+      } else {
+        await setDoc(ref, { [emoji]: arrayUnion(state.currentUsername) }, { merge: true });
+      }
     }
   } catch (err) {
     console.error('リアクション更新エラー:', err);
@@ -348,8 +389,20 @@ export function buildReactionBar(noticeId) {
   return `<div class="notice-reactions">${btns}</div>`;
 }
 
-// ========== Firestore CRUD ==========
-export function subscribeNotices() {
+// ========== CRUD ==========
+export async function subscribeNotices() {
+  if (isSupabaseSharedCoreEnabled()) {
+    // Supabase モード: realtime なし、一回読み込み
+    try {
+      const notices = await fetchNoticesFromSupabase();
+      state.allNotices = notices;
+      refreshNoticeVisibility();
+    } catch (err) {
+      console.error('Supabase お知らせ読み込みエラー:', err);
+    }
+    return;
+  }
+  // Firebase モード: onSnapshot
   recordListenerStart('notice.list', 'お知らせ一覧', 'notices');
   state._noticeUnsub = wrapTrackedListenerUnsubscribe('notice.list', onSnapshot(
     collection(db, 'notices'),
@@ -375,7 +428,19 @@ export async function saveNotice(data) {
     requireAcknowledgement: !!data?.requireAcknowledgement,
     acknowledgedBy: normalizeAcknowledgedUsers(existingNotice?.acknowledgedBy),
   };
-  if (state.editingNoticeId) {
+  if (isSupabaseSharedCoreEnabled()) {
+    if (state.editingNoticeId) {
+      await updateNoticeInSupabase(state.editingNoticeId, normalizedData);
+    } else {
+      const newId = await createNoticeInSupabase(normalizedData);
+      // 楽観的更新: ローカル state にも追加（次の subscribeNotices 呼出しまでの暫定）
+      state.allNotices = [
+        { id: newId, ...normalizedData, createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 } },
+        ...(state.allNotices || []),
+      ];
+      refreshNoticeVisibility();
+    }
+  } else if (state.editingNoticeId) {
     await updateDoc(doc(db, 'notices', state.editingNoticeId), normalizedData);
   } else {
     await addDoc(collection(db, 'notices'), { ...normalizedData, createdAt: serverTimestamp() });
@@ -383,7 +448,7 @@ export async function saveNotice(data) {
 }
 
 export async function addNotice(data) {
-  await addDoc(collection(db, 'notices'), {
+  const normalizedData = {
     ...data,
     targetScope: data?.targetScope === 'departments' && normalizeTargetDepartments(data?.targetDepartments).length > 0
       ? 'departments'
@@ -391,12 +456,22 @@ export async function addNotice(data) {
     targetDepartments: normalizeTargetDepartments(data?.targetDepartments),
     requireAcknowledgement: !!data?.requireAcknowledgement,
     acknowledgedBy: [],
-    createdAt: serverTimestamp()
-  });
+  };
+  if (isSupabaseSharedCoreEnabled()) {
+    await createNoticeInSupabase(normalizedData);
+  } else {
+    await addDoc(collection(db, 'notices'), { ...normalizedData, createdAt: serverTimestamp() });
+  }
 }
 
 export async function deleteNotice(id) {
-  await deleteDoc(doc(db, 'notices', id));
+  if (isSupabaseSharedCoreEnabled()) {
+    await deleteNoticeInSupabase(id);
+    state.allNotices = (state.allNotices || []).filter(n => n.id !== id);
+    refreshNoticeVisibility();
+  } else {
+    await deleteDoc(doc(db, 'notices', id));
+  }
 }
 
 // ========== お知らせ描画 ==========
