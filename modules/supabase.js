@@ -802,3 +802,97 @@ export async function deletePrivateCardInSupabase(id) {
     prefer: 'return=minimal',
   });
 }
+
+// ---- user_todos ----
+
+const TODO_SELECT = 'id,text,done,due_date,created_at';
+
+function mapTodoRow(row = {}) {
+  return {
+    id:        row.id,
+    text:      row.text || '',
+    done:      !!row.done,
+    dueDate:   row.due_date || null,
+    createdAt: row.created_at ? isoToFirestoreTs(row.created_at) : null,
+  };
+}
+
+export async function fetchUserTodosFromSupabase(username) {
+  if (!username) return [];
+  const rows = await requestSupabase(
+    `user_todos?username=eq.${encodeURIComponent(username)}&select=${encodeURIComponent(TODO_SELECT)}&order=created_at.asc`,
+    { diagKey: 'supabase.user_todos', diagLabel: 'Supabase TODO', diagScope: 'user_todos' }
+  );
+  return Array.isArray(rows) ? rows.map(mapTodoRow) : [];
+}
+
+export async function createUserTodoInSupabase(username, data) {
+  const id = data.id || createSupabaseClientId('todo');
+  await requestSupabase('user_todos', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: {
+      id,
+      username,
+      text:    data.text || '',
+      done:    false,
+      due_date: data.dueDate || null,
+    },
+  });
+  return id;
+}
+
+export async function updateUserTodoInSupabase(id, data) {
+  const payload = {};
+  if ('text' in data) payload.text = data.text || '';
+  if ('done' in data) payload.done = !!data.done;
+  if ('dueDate' in data) payload.due_date = data.dueDate || null;
+  await requestSupabase(`user_todos?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+}
+
+export async function deleteUserTodoInSupabase(id) {
+  await requestSupabase(`user_todos?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
+
+// ---- user_email_contacts ----
+
+const EMAIL_CONTACT_SELECT = 'id,company_name,person_name,created_at';
+
+function mapEmailContactRow(row = {}) {
+  return {
+    id:          row.id,
+    companyName: row.company_name || '',
+    personName:  row.person_name  || '',
+  };
+}
+
+export async function fetchEmailContactsFromSupabase(username) {
+  if (!username) return [];
+  const rows = await requestSupabase(
+    `user_email_contacts?username=eq.${encodeURIComponent(username)}&select=${encodeURIComponent(EMAIL_CONTACT_SELECT)}&order=created_at.asc`,
+    { diagKey: 'supabase.email_contacts', diagLabel: 'Supabase メール連絡先', diagScope: 'user_email_contacts' }
+  );
+  return Array.isArray(rows) ? rows.map(mapEmailContactRow) : [];
+}
+
+export async function createEmailContactInSupabase(username, data) {
+  const id = data.id || createSupabaseClientId('contact');
+  await requestSupabase('user_email_contacts', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: {
+      id,
+      username,
+      company_name: data.companyName || '',
+      person_name:  data.personName  || '',
+    },
+  });
+  return id;
+}

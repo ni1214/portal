@@ -720,3 +720,53 @@ assigned_tasks/{taskId}
 - `tools/invoke-supabase-sql-statements.mjs` の前処理を修正
   - SQL 先頭の `--` コメント行を除去してから statement 分割するようにした
   - これで少件数の generated SQL でも silent no-op を起こしにくくした
+
+## 2026-03-19 Step 4 残り完了（user_todos / user_email_contacts Supabase 対応）
+
+### 追加した Supabase 関数（modules/supabase.js）
+- `fetchUserTodosFromSupabase(username)` — `user_todos` を作成日昇順で取得
+- `createUserTodoInSupabase(username, data)` — TODO 作成
+- `updateUserTodoInSupabase(id, data)` — TODO 更新（done / text / dueDate）
+- `deleteUserTodoInSupabase(id)` — TODO 削除
+- `fetchEmailContactsFromSupabase(username)` — `user_email_contacts` を作成日昇順で取得
+- `createEmailContactInSupabase(username, data)` — メール連絡先作成
+
+### 変更したモジュール
+| モジュール | 変更内容 |
+|---|---|
+| `script.js` | `loadTodos` / `addTodo` / `toggleTodo` / `deleteTodo` に Supabase 分岐を追加 |
+| `modules/email.js` | `loadEmailContacts` / `saveNewContact` に Supabase 分岐を追加 |
+
+### Supabase モードでの挙動
+- `loadTodos`: onSnapshot を使わず `fetchUserTodosFromSupabase` で一回取得 → `state.personalTodos` に反映 → `renderTodoSection()`
+- `addTodo` / `toggleTodo` / `deleteTodo`: Supabase 更新後に `state.personalTodos` をローカル更新 → `renderTodoSection()` で即時反映（再フェッチ不要）
+- `loadEmailContacts`: Supabase → Firestore fallback の順で取得
+- `saveNewContact`: Supabase モード時は `createEmailContactInSupabase` を使用
+
+### 必要な Supabase テーブル（まだ作成していない場合は SQL Editor で実行）
+```sql
+-- user_todos
+create table if not exists public.user_todos (
+  id          text primary key,
+  username    text not null,
+  text        text not null default '',
+  done        boolean not null default false,
+  due_date    text,
+  created_at  timestamptz not null default now()
+);
+create index if not exists user_todos_username_idx on public.user_todos (username);
+
+-- user_email_contacts
+create table if not exists public.user_email_contacts (
+  id           text primary key,
+  username     text not null,
+  company_name text not null default '',
+  person_name  text not null default '',
+  created_at   timestamptz not null default now()
+);
+create index if not exists user_email_contacts_username_idx on public.user_email_contacts (username);
+```
+
+### 残りの未対応個人データ
+- `user_drive_links` / `user_drive_contacts` — file-transfer.js 関連（優先度低）
+- `user_chat_reads` — chat.js 関連（Phase D で対応）

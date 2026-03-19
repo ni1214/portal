@@ -209,6 +209,11 @@ import {
   createPrivateCardInSupabase,
   updatePrivateCardInSupabase,
   deletePrivateCardInSupabase,
+  // Step 4残: user_todos
+  fetchUserTodosFromSupabase,
+  createUserTodoInSupabase,
+  updateUserTodoInSupabase,
+  deleteUserTodoInSupabase,
 } from './modules/supabase.js';
 
 
@@ -464,6 +469,14 @@ function loadTodos(username) {
   if (state._todoUnsubscribe) { state._todoUnsubscribe(); state._todoUnsubscribe = null; }
   if (!username) { state.personalTodos = []; renderTodoSection(); return; }
 
+  if (isSupabaseSharedCoreEnabled()) {
+    fetchUserTodosFromSupabase(username).then(todos => {
+      state.personalTodos = todos;
+      renderTodoSection();
+    }).catch(err => console.error('Supabase TODO読み込みエラー:', err));
+    return;
+  }
+
   const q = query(
     collection(db, 'users', username, 'todos'),
     orderBy('createdAt', 'asc')
@@ -478,6 +491,15 @@ function loadTodos(username) {
 
 async function addTodo(text, dueDate) {
   if (!state.currentUsername || !text.trim()) return;
+  if (isSupabaseSharedCoreEnabled()) {
+    const id = await createUserTodoInSupabase(state.currentUsername, {
+      text: text.trim(),
+      dueDate: dueDate || null,
+    });
+    state.personalTodos = [...state.personalTodos, { id, text: text.trim(), done: false, dueDate: dueDate || null }];
+    renderTodoSection();
+    return;
+  }
   await addDoc(collection(db, 'users', state.currentUsername, 'todos'), {
     text:      text.trim(),
     done:      false,
@@ -488,6 +510,13 @@ async function addTodo(text, dueDate) {
 
 async function toggleTodo(todoId, currentDone) {
   if (!state.currentUsername) return;
+  if (isSupabaseSharedCoreEnabled()) {
+    const newDone = !currentDone;
+    await updateUserTodoInSupabase(todoId, { done: newDone });
+    state.personalTodos = state.personalTodos.map(t => t.id === todoId ? { ...t, done: newDone } : t);
+    renderTodoSection();
+    return;
+  }
   await updateDoc(doc(db, 'users', state.currentUsername, 'todos', todoId), {
     done: !currentDone,
   });
@@ -495,6 +524,12 @@ async function toggleTodo(todoId, currentDone) {
 
 async function deleteTodo(todoId) {
   if (!state.currentUsername) return;
+  if (isSupabaseSharedCoreEnabled()) {
+    await deleteUserTodoInSupabase(todoId);
+    state.personalTodos = state.personalTodos.filter(t => t.id !== todoId);
+    renderTodoSection();
+    return;
+  }
   await deleteDoc(doc(db, 'users', state.currentUsername, 'todos', todoId));
 }
 

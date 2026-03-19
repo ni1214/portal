@@ -9,6 +9,8 @@ import {
   isSupabaseSharedCoreEnabled,
   fetchUserProfileFromSupabase,
   saveUserProfileToSupabase,
+  fetchEmailContactsFromSupabase,
+  createEmailContactInSupabase,
 } from './supabase.js';
 
 let deps = {};
@@ -117,6 +119,16 @@ export async function loadEmailData() {
 // ===== 連絡先読み込み =====
 async function loadEmailContacts() {
   try {
+    if (isSupabaseSharedCoreEnabled()) {
+      const contacts = await fetchEmailContactsFromSupabase(state.currentUsername).catch(err => {
+        console.warn('Supabase 連絡先読込失敗、Firestore fallback:', err);
+        return null;
+      });
+      if (contacts !== null) {
+        emailContacts = contacts;
+        return;
+      }
+    }
     const snap = await getDocs(
       query(collection(db, 'users', state.currentUsername, 'email_contacts'), orderBy('createdAt', 'asc'))
     );
@@ -148,13 +160,22 @@ export async function saveNewContact() {
   const person  = document.getElementById('email-contact-person')?.value.trim();
   if (!company && !person) { alert('会社名または担当者名を入力してください'); return; }
 
-  const id = `contact_${Date.now()}`;
+  const baseId = `contact_${Date.now()}`;
   try {
-    await setDoc(doc(db, 'users', state.currentUsername, 'email_contacts', id), {
-      companyName: company || '',
-      personName:  person  || '',
-      createdAt:   serverTimestamp(),
-    });
+    let id = baseId;
+    if (isSupabaseSharedCoreEnabled()) {
+      id = await createEmailContactInSupabase(state.currentUsername, {
+        id: baseId,
+        companyName: company || '',
+        personName:  person  || '',
+      });
+    } else {
+      await setDoc(doc(db, 'users', state.currentUsername, 'email_contacts', id), {
+        companyName: company || '',
+        personName:  person  || '',
+        createdAt:   serverTimestamp(),
+      });
+    }
     emailContacts.push({ id, companyName: company || '', personName: person || '' });
     renderContactSelect();
     document.getElementById('email-contact-select').value = id;
