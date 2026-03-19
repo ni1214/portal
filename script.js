@@ -3058,6 +3058,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // カテゴリ修復ボタン（Supabase 上のカテゴリラベルが文字化けしている場合に修復）
+  document.getElementById('admin-repair-categories-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('admin-repair-categories-btn');
+    const errEl = document.getElementById('admin-supabase-error');
+    errEl.hidden = true;
+    if (!isSupabaseSharedCoreEnabled()) {
+      showToast('Supabase が有効のときのみ使えます', 'warning');
+      return;
+    }
+    if (!await showConfirm('Supabase のカテゴリラベルをデフォルト値で上書きします。よろしいですか？')) return;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+    try {
+      for (const cat of DEFAULT_CATEGORIES) {
+        await updateSharedCategoryInSupabase(cat.id, {
+          label: cat.label,
+          icon: cat.icon,
+          colorIndex: cat.colorIndex,
+          order: cat.order,
+          isExternal: cat.isExternal ?? false,
+        });
+      }
+      await reloadSharedCoreData();
+      showToast('カテゴリラベルを修復しました', 'success');
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> 修復済み';
+    } catch (err) {
+      errEl.textContent = err?.message || 'カテゴリ修復に失敗しました。';
+      errEl.hidden = false;
+      btn.innerHTML = '<i class="fa-solid fa-wrench"></i> カテゴリ修復';
+    } finally {
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-wrench"></i> カテゴリ修復';
+      }, errEl.hidden ? 1500 : 0);
+    }
+  });
+
   document.getElementById('btn-set-pin').addEventListener('click', async () => {
     const newPin  = document.getElementById('new-pin-input').value;
     const confirm = document.getElementById('confirm-pin-input').value;

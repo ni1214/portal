@@ -14001,7 +14001,9 @@ html.font-xl { font-size: 21px; }
 .admin-supabase-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   margin-top: 12px;
+  flex-wrap: wrap;
 }
 
 .admin-supabase-key-preview {
