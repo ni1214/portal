@@ -3,6 +3,7 @@ import { db, doc, getDoc, setDoc, addDoc, deleteDoc, updateDoc, collection, quer
 import { state, CHAT_MSG_MAX } from './state.js';
 import { getUserAvatarColor } from './auth.js';
 import { esc } from './utils.js';
+import { showToast, showConfirm } from './notify.js';
 import {
   recordGetDocsRead,
   recordListenerStart,
@@ -477,7 +478,7 @@ export function scrollChatToBottom() {
 
 // ===== DM作成モーダル =====
 export async function openNewDmModal() {
-  if (!state.currentUsername) { alert('チャットするにはユーザーネームを設定してください。'); return; }
+  if (!state.currentUsername) { showToast('チャットするにはユーザーネームを設定してください。', 'warning'); return; }
   const modal = document.getElementById('new-dm-modal');
   modal.classList.add('visible');
   document.getElementById('new-dm-search').value = '';
@@ -489,7 +490,7 @@ export async function openNewDmModal() {
 
 export async function deleteDmRoom(roomId) {
   if (!state.currentUsername || !roomId) return;
-  if (!confirm('このDMを削除しますか？（自分の一覧からのみ消えます）')) return;
+  if (!await showConfirm('このDMを削除しますか？（自分の一覧からのみ消えます）', { danger: true })) return;
   try {
     const roomRef = doc(db, 'dm_rooms', roomId);
     await updateDoc(roomRef, { members: arrayRemove(state.currentUsername) });
@@ -504,7 +505,7 @@ export async function deleteDmRoom(roomId) {
     }
   } catch (e) {
     console.error('DM削除失敗:', e);
-    alert('削除に失敗しました');
+    showToast('削除に失敗しました', 'error');
   }
 }
 
@@ -546,7 +547,7 @@ export async function openOrCreateDm(targetUser) {
 let _newGroupSelected = [];
 
 export async function openNewGroupModal() {
-  if (!state.currentUsername) { alert('チャットするにはユーザーネームを設定してください。'); return; }
+  if (!state.currentUsername) { showToast('チャットするにはユーザーネームを設定してください。', 'warning'); return; }
   _newGroupSelected = [];
   document.getElementById('new-group-name').value = '';
   document.getElementById('new-group-member-search').value = '';
@@ -581,7 +582,7 @@ export function renderNewGroupSelected() {
 export async function createGroupRoom() {
   const name = document.getElementById('new-group-name').value.trim();
   if (!name) { document.getElementById('new-group-name').focus(); return; }
-  if (!_newGroupSelected.length) { alert('メンバーを1人以上選んでください。'); return; }
+  if (!_newGroupSelected.length) { showToast('メンバーを1人以上選んでください。', 'warning'); return; }
   const members = [...new Set([state.currentUsername, ..._newGroupSelected])];
   try {
     const roomRef = await addDoc(collection(db, 'chat_rooms'), {
@@ -598,7 +599,7 @@ export async function createGroupRoom() {
       await openChatPanel();
     }
     await openRoom(roomRef.id, 'group');
-  } catch (err) { console.error('グループ作成エラー:', err); alert('作成に失敗しました。'); }
+  } catch (err) { console.error('グループ作成エラー:', err); showToast('作成に失敗しました。', 'error'); }
 }
 
 // ===== ユーザーピッカー（DM/グループ共通）=====

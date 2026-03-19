@@ -5,6 +5,7 @@ import {
 } from './config.js';
 import { state, USER_ROLE_OPTIONS, USER_ROLE_LABELS } from './state.js';
 import { esc } from './utils.js';
+import { showToast } from './notify.js';
 import {
   isSupabaseSharedCoreEnabled,
   fetchUserProfileFromSupabase,
@@ -155,10 +156,10 @@ function renderContactSelect() {
 
 // ===== 連絡先保存 =====
 export async function saveNewContact() {
-  if (!state.currentUsername) { alert('ユーザーネームを設定してください'); return; }
+  if (!state.currentUsername) { showToast('ユーザーネームを設定してください', 'warning'); return; }
   const company = document.getElementById('email-contact-company')?.value.trim();
   const person  = document.getElementById('email-contact-person')?.value.trim();
-  if (!company && !person) { alert('会社名または担当者名を入力してください'); return; }
+  if (!company && !person) { showToast('会社名または担当者名を入力してください', 'warning'); return; }
 
   const baseId = `contact_${Date.now()}`;
   try {
@@ -187,7 +188,7 @@ export async function saveNewContact() {
     document.getElementById('email-contact-person').value  = '';
   } catch (err) {
     console.error('連絡先保存エラー:', err);
-    alert('保存に失敗しました');
+    showToast('保存に失敗しました', 'error');
   }
 }
 

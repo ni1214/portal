@@ -13,6 +13,7 @@ import {
   deleteCrossDeptRequestInSupabase,
 } from './supabase.js';
 import {
+import { showToast, showConfirm } from './notify.js';
   recordGetDocsRead,
   recordListenerStart,
   recordListenerSnapshot,
@@ -392,7 +393,7 @@ export async function archiveRequest(id) {
       if (current.toDept === myDept) _upsertRequestHistory('received', updated);
       if (current.createdBy === state.currentUsername) _upsertRequestHistory('sent', updated);
     }
-  } catch (err) { console.error('アーカイブエラー:', err); alert('アーカイブに失敗しました'); }
+  } catch (err) { console.error('アーカイブエラー:', err); showToast('アーカイブに失敗しました', 'error'); }
 }
 
 export async function unarchiveRequest(id) {
@@ -417,11 +418,11 @@ export async function unarchiveRequest(id) {
       if (current.toDept === myDept) _upsertRequestHistory('received', updated);
       if (current.createdBy === state.currentUsername) _upsertRequestHistory('sent', updated);
     }
-  } catch (err) { console.error('アーカイブ解除エラー:', err); alert('解除に失敗しました'); }
+  } catch (err) { console.error('アーカイブ解除エラー:', err); showToast('解除に失敗しました', 'error'); }
 }
 
 export async function deleteRequest(id) {
-  if (!confirm('この依頼を完全に削除しますか？この操作は取り消せません。')) return;
+  if (!await showConfirm('この依頼を完全に削除しますか？この操作は取り消せません。', { danger: true })) return;
   try {
     if (isSupabaseSharedCoreEnabled()) {
       await deleteCrossDeptRequestInSupabase(id);
@@ -430,26 +431,26 @@ export async function deleteRequest(id) {
     }
     await deleteDoc(doc(db, 'cross_dept_requests', id));
     _removeRequestFromAllCaches(id);
-  } catch (err) { console.error('削除エラー:', err); alert('削除に失敗しました'); }
+  } catch (err) { console.error('削除エラー:', err); showToast('削除に失敗しました', 'error'); }
 }
 
 export async function archiveSuggestion(id) {
   try {
     await updateDoc(doc(db, 'suggestion_box', id), { archived: true });
-  } catch (err) { console.error('アーカイブエラー:', err); alert('アーカイブに失敗しました'); }
+  } catch (err) { console.error('アーカイブエラー:', err); showToast('アーカイブに失敗しました', 'error'); }
 }
 
 export async function unarchiveSuggestion(id) {
   try {
     await updateDoc(doc(db, 'suggestion_box', id), { archived: false });
-  } catch (err) { console.error('アーカイブ解除エラー:', err); alert('解除に失敗しました'); }
+  } catch (err) { console.error('アーカイブ解除エラー:', err); showToast('解除に失敗しました', 'error'); }
 }
 
 export async function deleteSuggestion(id) {
-  if (!confirm('この投稿を完全に削除しますか？この操作は取り消せません。')) return;
+  if (!await showConfirm('この投稿を完全に削除しますか？この操作は取り消せません。', { danger: true })) return;
   try {
     await deleteDoc(doc(db, 'suggestion_box', id));
-  } catch (err) { console.error('削除エラー:', err); alert('削除に失敗しました'); }
+  } catch (err) { console.error('削除エラー:', err); showToast('削除に失敗しました', 'error'); }
 }
 
 function _syncReqTabUI() {
@@ -611,7 +612,7 @@ export async function openReqTaskifyModal(reqId) {
   const req = state.receivedRequests.find(r => r.id === reqId);
   if (!req) return;
   if (!_canCreateTaskFromRequest(req)) {
-    alert('この依頼は現在タスク化できません');
+    showToast('この依頼は現在タスク化できません', 'warning');
     return;
   }
   state._pendingReqTaskify = { reqId };
@@ -657,11 +658,11 @@ export async function submitRequestTaskify() {
   const req = reqId ? _getRequestById(reqId) : null;
   if (!req) return;
   if (!_canCreateTaskFromRequest(req)) {
-    alert('この依頼は現在タスク化できません');
+    showToast('この依頼は現在タスク化できません', 'warning');
     return;
   }
   if (!state.reqTaskifyAssignee) {
-    alert('担当者を選択してください');
+    showToast('担当者を選択してください', 'warning');
     return;
   }
 
@@ -727,7 +728,7 @@ export async function submitRequestTaskify() {
     closeReqTaskifyModal();
   } catch (err) {
     console.error('依頼タスク化エラー:', err);
-    alert('タスク化に失敗しました');
+    showToast('タスク化に失敗しました', 'error');
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -1014,7 +1015,7 @@ export async function submitRequest() {
     switchReqSubTab('sent');
   } catch (err) {
     console.error('依頼投稿エラー:', err);
-    alert('投稿に失敗しました。もう一度お試しください。');
+    showToast('投稿に失敗しました。もう一度お試しください。', 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 投稿する';
@@ -1045,7 +1046,7 @@ export function openStatusModal(reqId) {
 
 export async function updateRequestStatus() {
   if (!state._pendingStatusChange?.status) {
-    alert('ステータスを選択してください');
+    showToast('ステータスを選択してください', 'warning');
     return;
   }
   const { reqId, status } = state._pendingStatusChange;
@@ -1096,7 +1097,7 @@ export async function updateRequestStatus() {
     state._pendingStatusChange = null;
   } catch (err) {
     console.error('ステータス更新エラー:', err);
-    alert('更新に失敗しました');
+    showToast('更新に失敗しました', 'error');
   }
 }
 
@@ -1141,10 +1142,10 @@ export async function submitSuggestion(category) {
       repliedBy: '',
     });
     document.getElementById('sugg-content').value = '';
-    alert('投稿しました。ありがとうございます！');
+    showToast('投稿しました。ありがとうございます！', 'success');
   } catch (err) {
     console.error('目安箱投稿エラー:', err);
-    alert('投稿に失敗しました。もう一度お試しください。');
+    showToast('投稿に失敗しました。もう一度お試しください。', 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 投稿する';
@@ -1170,7 +1171,7 @@ export async function sendSuggReply() {
     state._pendingSuggReply = null;
   } catch (err) {
     console.error('返信エラー:', err);
-    alert('返信に失敗しました');
+    showToast('返信に失敗しました', 'error');
   }
 }
 
@@ -1222,7 +1223,7 @@ export async function addSuggBoxViewer() {
   if (!name) return;
   const snap = await getDoc(doc(db, 'portal', 'config'));
   const current = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
-  if (current.includes(name)) { alert('すでに登録されています'); return; }
+  if (current.includes(name)) { showToast('すでに登録されています', 'warning'); return; }
   const newList = [...current, name];
   await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
   state.suggestionBoxViewers = newList;

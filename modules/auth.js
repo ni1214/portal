@@ -2,6 +2,7 @@
 import { db, doc, getDoc, setDoc, getDocs, deleteDoc, updateDoc, collection, query, where, writeBatch, serverTimestamp, onSnapshot } from './config.js';
 import { state } from './state.js';
 import {
+import { showToast, showConfirm } from './notify.js';
   applySupabaseRuntimeConfig,
   isSupabaseSharedCoreEnabled,
   checkUserExistsInSupabase,
@@ -1035,7 +1036,7 @@ export async function loadUsersForAdmin() {
       // PINリセット
       item.querySelector('.btn-admin-reset-pin').addEventListener('click', async (e) => {
         const btn = e.currentTarget;
-        if (!confirm(`${name} さんのPINをリセットしますか？`)) return;
+        if (!await showConfirm(`${name} さんのPINをリセットしますか？`, { danger: true })) return;
         btn.disabled = true;
         btn.textContent = '処理中...';
         try {
@@ -1052,7 +1053,7 @@ export async function loadUsersForAdmin() {
       // ユーザー削除
       item.querySelector('.btn-admin-delete-user').addEventListener('click', async (e) => {
         const btn = e.currentTarget;
-        if (!confirm(`「${name}」のアカウントとすべての個人データを削除しますか？\nこの操作は取り消せません。`)) return;
+        if (!await showConfirm(`「${name}」のアカウントとすべての個人データを削除しますか？\nこの操作は取り消せません。`, { danger: true })) return;
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 削除中...';
         try {
@@ -1072,7 +1073,7 @@ export async function loadUsersForAdmin() {
           console.error('ユーザー削除エラー:', err);
           btn.disabled = false;
           btn.innerHTML = '<i class="fa-solid fa-trash-can"></i> 削除';
-          alert('削除に失敗しました。');
+          showToast('削除に失敗しました。', 'error');
         }
       });
 

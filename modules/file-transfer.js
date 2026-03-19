@@ -3,6 +3,7 @@
 import { db, doc, getDoc, setDoc, addDoc, deleteDoc, updateDoc, collection, query, where, orderBy, serverTimestamp, onSnapshot, arrayUnion } from './config.js';
 import { state, RTC_CONFIG, FILE_CHUNK_SIZE } from './state.js';
 import { esc, getUserAvatarColor } from './utils.js';
+import { showToast, showConfirm } from './notify.js';
 import {
   recordListenerStart,
   recordListenerSnapshot,
@@ -458,7 +459,7 @@ export function renderDrivePanel() {
     });
     contactsEl.querySelectorAll('.btn-ft-contact-del').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (confirm(`「${btn.dataset.name}」の登録リンクを削除しますか？`)) {
+        if (await showConfirm(`「${btn.dataset.name}」の登録リンクを削除しますか？`, { danger: true })) {
           await deleteDriveContact(btn.dataset.name);
         }
       });
@@ -514,9 +515,9 @@ export async function dismissDriveShare(id) {
 
 // --- Drive共有モーダル ---
 export async function openDriveSendModal(prefillUser = null) {
-  if (!state.currentUsername) { alert('ユーザーネームを設定してください'); return; }
+  if (!state.currentUsername) { showToast('ユーザーネームを設定してください', 'warning'); return; }
   if (!state._myDriveUrl) {
-    alert('先に「自分の共有フォルダリンク」を入力してください。');
+    showToast('先に「自分の共有フォルダリンク」を入力してください。', 'warning');
     return;
   }
   state._ftDriveSelectedUser = prefillUser || null;
@@ -554,10 +555,10 @@ export function closeDriveSendModal() {
 
 export async function confirmDriveSend() {
   const msg = document.getElementById('ft-drive-message').value.trim();
-  if (!state._ftDriveSelectedUser) { alert('送信先を選択してください'); return; }
+  if (!state._ftDriveSelectedUser) { showToast('送信先を選択してください', 'warning'); return; }
   const url = state._myDriveUrl;
   if (!url) {
-    alert('自分のDriveフォルダURLを設定してください。\nDrive共有タブの入力欄に貼り付けてください。');
+    showToast('自分のDriveフォルダURLを設定してください。Drive共有タブの入力欄に貼り付けてください。', 'warning');
     closeDriveSendModal();
     return;
   }
@@ -580,7 +581,7 @@ export async function confirmDriveSend() {
     renderDrivePanel();
   } catch (err) {
     console.error('Drive送信エラー:', err);
-    alert('送信に失敗しました');
+    showToast('送信に失敗しました', 'error');
   } finally {
     btn.disabled    = false;
     btn.textContent = `「${state._ftDriveSelectedUser || ''}」に共有する`;
@@ -638,7 +639,7 @@ export function initDriveLinkWidget() {
         await navigator.clipboard.writeText(state._myDriveUrl);
         copyBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
         setTimeout(() => { copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>'; }, 1500);
-      } catch (_) { alert(state._myDriveUrl); }
+      } catch (_) { showToast(state._myDriveUrl, 'info'); }
     });
   }
 
@@ -653,7 +654,7 @@ export function initDriveLinkWidget() {
 // ===== ファイル送信モーダル =====
 
 export async function openFtSendModal(prefillUser = null) {
-  if (!state.currentUsername) { alert('ユーザーネームを設定してください'); return; }
+  if (!state.currentUsername) { showToast('ユーザーネームを設定してください', 'warning'); return; }
   state._ftSelectedUser = null;
   state._ftSelectedFile = null;
   document.getElementById('ft-user-search').value = '';
@@ -762,8 +763,8 @@ export async function acceptFtTransfer(sessionId) {
   if (!state.currentUsername) return;
   const signalRef  = doc(db, 'p2p_signals', sessionId);
   let signalSnap;
-  try { signalSnap = await getDoc(signalRef); } catch (_) { alert('転送セッションの取得に失敗しました。'); return; }
-  if (!signalSnap.exists()) { alert('転送セッションが見つかりません。送信側がオフラインの可能性があります。'); return; }
+  try { signalSnap = await getDoc(signalRef); } catch (_) { showToast('転送セッションの取得に失敗しました。', 'error'); return; }
+  if (!signalSnap.exists()) { showToast('転送セッションが見つかりません。送信側がオフラインの可能性があります。', 'error'); return; }
   const signal = signalSnap.data();
   if (signal.status !== 'pending') return;
 

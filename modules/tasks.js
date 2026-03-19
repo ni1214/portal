@@ -15,6 +15,7 @@ import {
 import { state, TASK_STATUS_LABEL } from './state.js';
 import { esc, getUserAvatarColor, normalizeProjectKey } from './utils.js';
 import {
+import { showToast, showConfirm } from './notify.js';
   recordGetDocsRead,
   recordListenerStart,
   recordListenerSnapshot,
@@ -717,7 +718,7 @@ export async function openTaskUserPicker() {
 }
 
 export async function submitNewTask() {
-  if (!state.newTaskAssignee) { alert('担当者を選択してください。'); return; }
+  if (!state.newTaskAssignee) { showToast('担当者を選択してください。', 'warning'); return; }
   const title = document.getElementById('new-task-title')?.value.trim();
   if (!title) { document.getElementById('new-task-title')?.focus(); return; }
   const description = document.getElementById('new-task-desc')?.value.trim() || '';
@@ -761,7 +762,7 @@ export async function submitNewTask() {
     switchTaskTab('sent');
   } catch (err) {
     console.error('タスク作成エラー:', err);
-    alert('送信に失敗しました: ' + err.message);
+    showToast('送信に失敗しました: ' + err.message, 'error');
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> タスクを依頼する';
   }
@@ -788,7 +789,7 @@ export async function acceptTask(taskId) {
 }
 
 export async function completeTask(taskId) {
-  if (!confirm('このタスクを完了として報告しますか？')) return;
+  if (!await showConfirm('このタスクを完了として報告しますか？')) return;
   try {
     const current = state.receivedTasks.find(task => task.id === taskId);
     if (isSupabaseSharedCoreEnabled()) {
@@ -834,7 +835,7 @@ export async function acknowledgeTask(taskId) {
 }
 
 export async function deleteTask(taskId, confirmMsg) {
-  if (!confirm(confirmMsg)) return;
+  if (!await showConfirm(confirmMsg, { danger: true })) return;
   try {
     let task;
     if (isSupabaseSharedCoreEnabled()) {
@@ -907,7 +908,7 @@ export async function submitTaskEdit() {
     closeTaskEditModal();
   } catch (err) {
     console.error('タスク編集エラー:', err);
-    alert('保存に失敗しました: ' + err.message);
+    showToast('保存に失敗しました: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }
@@ -1018,7 +1019,7 @@ export async function submitTaskShare() {
     document.querySelectorAll('#task-share-user-list input[type=checkbox]:checked')
   ).map(cb => cb.value);
 
-  if (!selected.length) { alert('共有する相手を選択してください。'); return; }
+  if (!selected.length) { showToast('共有する相手を選択してください。', 'warning'); return; }
 
   const alreadyShared   = task.sharedWith || [];
   const alreadyResponses = task.sharedResponses || {};
@@ -1046,7 +1047,7 @@ export async function submitTaskShare() {
     closeTaskSharePicker();
   } catch (err) {
     console.error('タスク共有エラー:', err);
-    alert('共有に失敗しました: ' + err.message);
+    showToast('共有に失敗しました: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }

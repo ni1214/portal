@@ -5,6 +5,7 @@ import {
 } from './config.js';
 import { state, REACTION_EMOJIS } from './state.js';
 import { esc } from './utils.js';
+import { showToast } from './notify.js';
 import {
   recordGetDocsRead,
   recordListenerStart,
@@ -261,7 +262,7 @@ export async function acknowledgeNotice(noticeId) {
     deps.renderTodayDashboard?.();
     deps.renderSharedHome?.();
     console.error('お知らせ確認の保存に失敗しました:', err);
-    alert('確認の保存に失敗しました。時間をおいてもう一度お試しください。');
+    showToast('確認の保存に失敗しました。時間をおいてもう一度お試しください。', 'error');
   }
 }
 
@@ -554,7 +555,7 @@ export function renderNotices(notices) {
   list.addEventListener('click', async e => {
     const ackBtn = e.target.closest('[data-notice-ack]');
     if (ackBtn) {
-      if (!state.currentUsername) { alert('確認するにはユーザーネームを設定してください'); return; }
+      if (!state.currentUsername) { showToast('確認するにはユーザーネームを設定してください', 'warning'); return; }
       ackBtn.disabled = true;
       try {
         await acknowledgeNotice(ackBtn.dataset.noticeAck);
@@ -565,7 +566,7 @@ export function renderNotices(notices) {
     }
     const btn = e.target.closest('.reaction-btn');
     if (!btn) return;
-    if (!state.currentUsername) { alert('リアクションするにはユーザーネームを設定してください'); return; }
+    if (!state.currentUsername) { showToast('リアクションするにはユーザーネームを設定してください', 'warning'); return; }
     btn.disabled = true;
     try {
       await ensureNoticeReactionsLoaded();

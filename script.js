@@ -215,6 +215,7 @@ import {
   updateUserTodoInSupabase,
   deleteUserTodoInSupabase,
 } from './modules/supabase.js';
+import { showToast, showConfirm } from './modules/notify.js';
 
 
 // ========== 依存注入 ==========
@@ -1317,7 +1318,7 @@ async function saveMissionText() {
     setTimeout(() => { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存'; } }, 1500);
   } catch (err) {
     console.error('ミッションテキスト保存エラー:', err);
-    alert('保存に失敗しました');
+    showToast('保存に失敗しました', 'error');
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存'; }
   }
 }
@@ -3016,7 +3017,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('admin-invite-clear-btn').addEventListener('click', async () => {
     const msgEl = document.getElementById('admin-invite-error');
     msgEl.hidden = true;
-    if (!confirm('招待コードを解除しますか？')) return;
+    if (!await showConfirm('招待コードを解除しますか？', { danger: true })) return;
     try {
       await clearInviteCode();
     } catch (err) {
@@ -3467,7 +3468,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderAllSections();
     } catch (err) {
       console.error('マイカテゴリ保存エラー:', err);
-      alert('保存に失敗しました。');
+      showToast('保存に失敗しました。', 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = '保存';
@@ -3568,7 +3569,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeCardModal();
     } catch (err) {
       console.error('保存エラー:', err);
-      alert('保存に失敗しました。もう一度お試しください。');
+      showToast('保存に失敗しました。もう一度お試しください。', 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = '保存';
@@ -3608,7 +3609,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       .filter(Boolean);
     if (!title) { document.getElementById('notice-title').focus(); return; }
     if (targetScope === 'departments' && targetDepartments.length === 0) {
-      alert('配信先部署を1つ以上選んでください。');
+      showToast('配信先部署を1つ以上選んでください。', 'warning');
       document.querySelector('.notice-target-checkbox')?.focus();
       return;
     }
@@ -3631,7 +3632,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       refreshNoticeVisibility();
     } catch (err) {
       console.error('お知らせ保存エラー:', err);
-      alert('保存に失敗しました。');
+      showToast('保存に失敗しました。', 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = '保存';
@@ -3676,7 +3677,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderAllSections();
     } catch (err) {
       console.error('カテゴリ保存エラー:', err);
-      alert('保存に失敗しました。');
+      showToast('保存に失敗しました。', 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = '保存';
@@ -3688,7 +3689,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cat = state.allCategories.find(c => c.docId === state.editingCategoryId);
     const hasCards = state.allCards.some(c => c.category === cat?.id);
     if (hasCards) {
-      alert('このカテゴリにはカードがあります。先にカードを削除または移動してください。');
+      showToast('このカテゴリにはカードがあります。先にカードを削除または移動してください。', 'warning');
       return;
     }
     if (await confirmDelete(`「${cat?.label}」を削除しますか？`)) {

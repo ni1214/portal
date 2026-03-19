@@ -4,6 +4,7 @@ import {
   db, collection, doc, setDoc, deleteDoc, getDocs, query, where, onSnapshot, serverTimestamp, deleteField
 } from './config.js';
 import { esc, normalizeProjectKeys } from './utils.js';
+import { showToast } from './notify.js';
 import {
   recordGetDocsRead,
   recordListenerStart,
@@ -133,7 +134,7 @@ export async function saveAttendance(dateStr, data) {
       return true;
     } catch (err) {
       console.error('勤怠保存エラー:', err);
-      alert('保存に失敗しました');
+      showToast('保存に失敗しました', 'error');
       return false;
     }
   }
@@ -168,7 +169,7 @@ export async function saveAttendance(dateStr, data) {
     return true;
   } catch (err) {
     console.error('勤怠保存エラー:', err);
-    alert('保存に失敗しました');
+    showToast('保存に失敗しました', 'error');
     return false;
   }
 }
@@ -524,7 +525,7 @@ export function switchCalTab(tab) {
 
 // ===== モーダル開閉 =====
 export async function openCalendarModal() {
-  if (!state.currentUsername) { alert('ユーザーネームを設定してください'); return; }
+  if (!state.currentUsername) { showToast('ユーザーネームを設定してください', 'warning'); return; }
   document.getElementById('cal-modal').classList.add('visible');
   // タブをリセット
   state.calTab = 'personal';

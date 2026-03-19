@@ -5,6 +5,7 @@ import {
   query, where, orderBy, onSnapshot, serverTimestamp
 } from './config.js';
 import { esc, normalizeProjectKey, normalizeProjectKeys } from './utils.js';
+import { showToast, showConfirm } from './notify.js';
 import {
   recordGetDocsRead,
   recordListenerStart,
@@ -443,11 +444,11 @@ async function importSitesFromExcelFile() {
 
   const file = fileInput.files?.[0];
   if (!file) {
-    alert('Excelファイルを選択してください。');
+    showToast('Excelファイルを選択してください。', 'warning');
     return;
   }
   if (!window.XLSX) {
-    alert('Excel解析ライブラリの読み込みに失敗しました。ページを再読み込みしてください。');
+    showToast('Excel解析ライブラリの読み込みに失敗しました。ページを再読み込みしてください。', 'error');
     return;
   }
 
@@ -470,11 +471,11 @@ async function importSitesFromExcelFile() {
     setImportStatus(`解析完了: ${summary}`);
 
     if (parsed.uniqueSiteCount === 0) {
-      alert('有効な現場データを検出できませんでした。');
+      showToast('有効な現場データを検出できませんでした。', 'warning');
       return;
     }
 
-    const go = confirm(`${summary}\n\nこの内容で登録現場へ取り込みますか？`);
+    const go = await showConfirm(`${summary}\n\nこの内容で登録現場へ取り込みますか？`);
     if (!go) {
       setImportStatus('取込をキャンセルしました。');
       return;
@@ -483,13 +484,13 @@ async function importSitesFromExcelFile() {
     setImportStatus('Firestoreへ取り込み中...');
     const result = await importSitesToFirestore(parsed);
     setImportStatus(`取込完了: 追加 ${result.inserted}件 / 更新 ${result.updated}件 / 解析 ${parsed.uniqueSiteCount}件`);
-    alert(`登録現場の取込が完了しました。\n追加: ${result.inserted}件\n更新: ${result.updated}件`);
+    showToast(`登録現場の取込が完了しました。追加: ${result.inserted}件 更新: ${result.updated}件`, 'success');
     fileInput.value = '';
     updateSiteImportFileLabel();
   } catch (err) {
     console.error('Excel取込エラー:', err);
     setImportStatus('取込に失敗しました。ファイル形式または内容を確認してください。');
-    alert('Excel取込に失敗しました。');
+    showToast('Excel取込に失敗しました。', 'error');
   } finally {
     button.disabled = false;
   }
@@ -1300,7 +1301,7 @@ function buildSummaryCsv(snapshot) {
 async function exportSummaryCsv() {
   const snapshot = await ensureSummarySnapshot();
   if (!snapshot) {
-    alert('集計データがありません。');
+    showToast('集計データがありません。', 'warning');
     return;
   }
 
@@ -1384,13 +1385,13 @@ function buildSummaryPrintHtml(snapshot) {
 async function printSummaryTable() {
   const snapshot = await ensureSummarySnapshot();
   if (!snapshot) {
-    alert('印刷できる集計データがありません。');
+    showToast('印刷できる集計データがありません。', 'warning');
     return;
   }
 
   const win = window.open('', '_blank', 'noopener,noreferrer,width=1280,height=900');
   if (!win) {
-    alert('印刷ウィンドウを開けませんでした。ポップアップブロックを確認してください。');
+    showToast('印刷ウィンドウを開けませんでした。ポップアップブロックを確認してください。', 'error');
     return;
   }
 
@@ -1440,7 +1441,7 @@ async function addAttendanceSiteFromForm() {
 
   if (!name) {
     nameEl.focus();
-    alert('現場名を入力してください。');
+    showToast('現場名を入力してください。', 'warning');
     return;
   }
 
@@ -1478,7 +1479,7 @@ async function addAttendanceSiteFromForm() {
     nameEl.focus();
   } catch (err) {
     console.error('登録現場追加エラー:', err);
-    alert('登録現場の追加に失敗しました。');
+    showToast('登録現場の追加に失敗しました。', 'error');
   } finally {
     btn.disabled = false;
   }
@@ -1496,7 +1497,7 @@ async function editAttendanceSite(siteId) {
   const code = nextCode.trim();
   const name = nextName.trim();
   if (!name) {
-    alert('現場名は必須です。');
+    showToast('現場名は必須です。', 'warning');
     return;
   }
 
@@ -1522,14 +1523,14 @@ async function editAttendanceSite(siteId) {
     markWorkSummaryStale();
   } catch (err) {
     console.error('登録現場更新エラー:', err);
-    alert('登録現場の更新に失敗しました。');
+    showToast('登録現場の更新に失敗しました。', 'error');
   }
 }
 
 async function deleteAttendanceSite(siteId) {
   const site = (state.attendanceSites || []).find(s => s.id === siteId);
   if (!site) return;
-  const ok = confirm(`「${site.name || '現場'}」を削除しますか？\n既存の勤務内容データは未登録現場として集計されます。`);
+  const ok = await showConfirm(`「${site.name || '現場'}」を削除しますか？\n既存の勤務内容データは未登録現場として集計されます。`, { danger: true });
   if (!ok) return;
 
   try {
@@ -1543,7 +1544,7 @@ async function deleteAttendanceSite(siteId) {
     markWorkSummaryStale();
   } catch (err) {
     console.error('登録現場削除エラー:', err);
-    alert('登録現場の削除に失敗しました。');
+    showToast('登録現場の削除に失敗しました。', 'error');
   }
 }
 

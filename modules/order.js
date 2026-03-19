@@ -18,6 +18,7 @@ import {
 } from './supabase.js';
 import { state } from './state.js';
 import { esc, normalizeProjectKey } from './utils.js';
+import { showToast, showConfirm } from './notify.js';
 
 // ===== 内部状態 =====
 let _suppliers = [];   // order_suppliers
@@ -741,7 +742,7 @@ const NOTIFY_EMAIL = 'takabayashi@framex.co.jp';
 
 async function sendOrderEmail(orderData) {
   if (!_gasUrl) {
-    alert('GAS URLが設定されていません。管理者に設定を依頼してください。');
+    showToast('GAS URLが設定されていません。管理者に設定を依頼してください。', 'error');
     return false;
   }
 
@@ -771,7 +772,7 @@ async function sendOrderEmail(orderData) {
     return true;
   } catch (err) {
     console.error('order: sendOrderEmail error', err);
-    alert('メール送信に失敗しました。\n' + err.message);
+    showToast('メール送信に失敗しました。' + err.message, 'error');
     return false;
   }
 }
@@ -1137,7 +1138,7 @@ function collectOrderData() {
   const username = state.currentUsername || '未設定';
   const siteName = (document.getElementById('ord-site-name')?.value || '').trim();
   if (_orderType === 'site' && !siteName) {
-    alert('現場名を入力してください。');
+    showToast('現場名を入力してください。', 'warning');
     document.getElementById('ord-site-name')?.focus();
     return null;
   }
@@ -1169,7 +1170,7 @@ function collectOrderData() {
   });
 
   if (selectedItems.length === 0) {
-    alert('発注する鋼材を1つ以上選択してください。');
+    showToast('発注する鋼材を1つ以上選択してください。', 'warning');
     return null;
   }
 
@@ -1240,14 +1241,14 @@ async function submitFromPreview() {
 
     const usedIds = data.items.filter(it => it.itemId).map(it => it.itemId);
     if (usedIds.length) saveRecent(usedIds);
-    alert('メールを送信しました。');
+    showToast('メールを送信しました。', 'success');
     document.getElementById('ord-preview-modal').classList.remove('visible');
     _pendingOrderData = null;
   } catch (err) {
     console.error('order: submitFromPreview error', err);
     document.getElementById('ord-preview-modal')?.classList.remove('visible');
     _pendingOrderData = null;
-    alert('メール送信後の履歴保存に失敗しました。\n履歴に残っていない可能性があります。\n' + err.message);
+    showToast('メール送信後の履歴保存に失敗しました。履歴に残っていない可能性があります。' + err.message, 'error');
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -1539,7 +1540,7 @@ async function deleteOrderHistory(orderId) {
   const order = findOrderById(orderId);
   if (!order || isOrderDeleted(order)) return;
   const summary = getOrderItemsSummary(order) || '発注明細';
-  const ok = confirm(`この履歴を削除しますか？\n\n${summary}\n\n削除後も「削除済み履歴」から元に戻せます。`);
+  const ok = await showConfirm(`この履歴を削除しますか？\n\n${summary}\n\n削除後も「削除済み履歴」から元に戻せます。`, { danger: true });
   if (!ok) return;
 
   try {
@@ -1556,10 +1557,10 @@ async function deleteOrderHistory(orderId) {
     }
     closeOrderDetailModal();
     await renderHistory();
-    alert('履歴を削除しました。誤って削除した場合は「削除済み履歴」から元に戻せます。');
+    showToast('履歴を削除しました。誤って削除した場合は「削除済み履歴」から元に戻せます。', 'success');
   } catch (err) {
     console.error('order: deleteOrderHistory error', err);
-    alert('履歴の削除に失敗しました。\n' + err.message);
+    showToast('履歴の削除に失敗しました。' + err.message, 'error');
   }
 }
 
@@ -1578,10 +1579,10 @@ async function restoreOrderHistory(orderId) {
     }
     closeOrderDetailModal();
     await renderHistory();
-    alert('履歴を元に戻しました。');
+    showToast('履歴を元に戻しました。', 'success');
   } catch (err) {
     console.error('order: restoreOrderHistory error', err);
-    alert('履歴の復元に失敗しました。\n' + err.message);
+    showToast('履歴の復元に失敗しました。' + err.message, 'error');
   }
 }
 
@@ -1663,12 +1664,12 @@ async function addOrUpdateItem(id, data) {
     await loadMasters();
     renderAdminItems();
   } catch (err) {
-    alert('保存に失敗しました: ' + err.message);
+    showToast('保存に失敗しました: ' + err.message, 'error');
   }
 }
 
 async function deleteItem(id) {
-  if (!confirm('この鋼材を削除しますか？')) return;
+  if (!await showConfirm('この鋼材を削除しますか？', { danger: true })) return;
   try {
     if (isSupabaseSharedCoreEnabled()) {
       await deactivateOrderItemInSupabase(id);
@@ -1678,7 +1679,7 @@ async function deleteItem(id) {
     await loadMasters();
     renderAdminItems();
   } catch (err) {
-    alert('削除に失敗しました: ' + err.message);
+    showToast('削除に失敗しました: ' + err.message, 'error');
   }
 }
 
@@ -1714,9 +1715,9 @@ async function saveGasUrl() {
   try {
     await setDoc(doc(db, 'portal', 'config'), { gasOrderUrl: url }, { merge: true });
     _gasUrl = url;
-    alert('GAS URLを保存しました。');
+    showToast('GAS URLを保存しました。', 'success');
   } catch (err) {
-    alert('保存に失敗しました: ' + err.message);
+    showToast('保存に失敗しました: ' + err.message, 'error');
   }
 }
 
@@ -1888,7 +1889,7 @@ function bindOrderEvents() {
     const lengths  = rawLen ? rawLen.split(/[,、\s]+/).map(s => s.trim()).filter(Boolean) : ['6m'];
     const ordType  = document.getElementById('ord-item-add-type')?.value || 'both';
     const suppId   = _suppliers[0]?.id || '';
-    if (!category || !spec) { alert('品種とサイズは必須です。'); return; }
+    if (!category || !spec) { showToast('品種とサイズは必須です。', 'warning'); return; }
     await addOrUpdateItem(null, {
       itemCategory: category, name: category, spec, materialType: material,
       availableLengths: lengths, unit: '本', defaultQty: 1,
@@ -1951,7 +1952,7 @@ function bindOrderEvents() {
       await loadMasters();
       renderAdminSuppliers();
     } catch (err) {
-      alert('保存に失敗しました: ' + err.message);
+      showToast('保存に失敗しました: ' + err.message, 'error');
     }
   });
 
@@ -1961,7 +1962,7 @@ function bindOrderEvents() {
     const email = document.getElementById('ord-supp-add-email')?.value.trim();
     const tel   = document.getElementById('ord-supp-add-tel')?.value.trim() || '';
     const addr  = document.getElementById('ord-supp-add-addr')?.value.trim() || '';
-    if (!name || !email) { alert('会社名とメールアドレスは必須です。'); return; }
+    if (!name || !email) { showToast('会社名とメールアドレスは必須です。', 'warning'); return; }
     try {
       await addDoc(collection(db, 'order_suppliers'), {
         name, email, tel, address: addr, active: true, createdAt: serverTimestamp()
@@ -1973,7 +1974,7 @@ function bindOrderEvents() {
         if (el) el.value = '';
       });
     } catch (err) {
-      alert('保存に失敗しました: ' + err.message);
+      showToast('保存に失敗しました: ' + err.message, 'error');
     }
   });
 
