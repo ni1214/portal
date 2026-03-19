@@ -8,6 +8,8 @@ import { esc } from './utils.js';
 import { showToast } from './notify.js';
 import {
   isSupabaseSharedCoreEnabled,
+  fetchPortalConfigFromSupabase,
+  savePortalConfigToSupabase,
   fetchUserProfileFromSupabase,
   saveUserProfileToSupabase,
   fetchEmailContactsFromSupabase,
@@ -102,8 +104,13 @@ export async function loadUserEmailProfile(username = state.currentUsername) {
 // ===== 初期データ読み込み =====
 export async function loadEmailData() {
   try {
-    const snap = await getDoc(doc(db, 'portal', 'config'));
-    geminiApiKey = snap.data()?.geminiApiKey || null;
+    if (isSupabaseSharedCoreEnabled()) {
+      const config = await fetchPortalConfigFromSupabase();
+      geminiApiKey = config.geminiApiKey || null;
+    } else {
+      const snap = await getDoc(doc(db, 'portal', 'config'));
+      geminiApiKey = snap.data()?.geminiApiKey || null;
+    }
   } catch (_) {}
 
   if (state.currentUsername) {
@@ -378,7 +385,11 @@ export async function saveGeminiApiKey() {
   const key = document.getElementById('email-api-key-input').value.trim();
   if (!key) return;
   try {
-    await setDoc(doc(db, 'portal', 'config'), { geminiApiKey: key }, { merge: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await savePortalConfigToSupabase({ geminiApiKey: key });
+    } else {
+      await setDoc(doc(db, 'portal', 'config'), { geminiApiKey: key }, { merge: true });
+    }
     geminiApiKey = key;
     document.getElementById('email-api-key-input').value = '';
     updateApiKeyUI();

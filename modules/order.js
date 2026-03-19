@@ -6,6 +6,8 @@ import {
 } from './config.js';
 import {
   isSupabaseSharedCoreEnabled,
+  fetchPortalConfigFromSupabase,
+  savePortalConfigToSupabase,
   fetchOrderSuppliersFromSupabase,
   fetchOrderItemsFromSupabase,
   createOrderInSupabase,
@@ -473,16 +475,14 @@ async function cleanupFactoryDuplicates() {
 async function loadMasters() {
   if (isSupabaseSharedCoreEnabled()) {
     try {
-      const [suppliers, items, configSnap] = await Promise.all([
+      const [suppliers, items, config] = await Promise.all([
         fetchOrderSuppliersFromSupabase(),
         fetchOrderItemsFromSupabase(),
-        getDoc(doc(db, 'portal', 'config'))
+        fetchPortalConfigFromSupabase(),
       ]);
       _suppliers = suppliers;
       _items = items;
-      if (configSnap.exists()) {
-        _gasUrl = configSnap.data().gasOrderUrl || '';
-      }
+      _gasUrl = config.gasOrderUrl || '';
     } catch (err) {
       console.error('order: loadMasters (Supabase) error', err);
     }
@@ -1722,7 +1722,11 @@ async function saveGasUrl() {
   if (!input) return;
   const url = input.value.trim();
   try {
-    await setDoc(doc(db, 'portal', 'config'), { gasOrderUrl: url }, { merge: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await savePortalConfigToSupabase({ gasOrderUrl: url });
+    } else {
+      await setDoc(doc(db, 'portal', 'config'), { gasOrderUrl: url }, { merge: true });
+    }
     _gasUrl = url;
     showToast('GAS URLを保存しました。', 'success');
   } catch (err) {

@@ -1533,7 +1533,7 @@ export async function updateOrderInSupabase(id, data) {
 
 // ===== portal_config（管理設定） =====
 
-const PORTAL_CONFIG_SELECT = 'pin_hash,invite_code_hash,invite_code_plain,invite_updated_at,gemini_api_key,departments,suggestion_box_viewers,mission_text';
+const PORTAL_CONFIG_SELECT = 'pin_hash,invite_code_hash,invite_code_plain,invite_updated_at,gemini_api_key,departments,suggestion_box_viewers,mission_text,gas_order_url,order_seed_version';
 
 export async function fetchPortalConfigFromSupabase() {
   const rows = await requestSupabase(
@@ -1551,6 +1551,8 @@ export async function fetchPortalConfigFromSupabase() {
     departments: Array.isArray(r.departments) ? r.departments : [],
     suggestionBoxViewers: Array.isArray(r.suggestion_box_viewers) ? r.suggestion_box_viewers : [],
     missionText: r.mission_text || '',
+    gasOrderUrl: r.gas_order_url || '',
+    orderSeedVersion: typeof r.order_seed_version === 'number' ? r.order_seed_version : 0,
   };
 }
 
@@ -1564,6 +1566,8 @@ export async function savePortalConfigToSupabase(fields = {}) {
   if ('departments' in fields)          body.departments = Array.isArray(fields.departments) ? fields.departments : [];
   if ('suggestionBoxViewers' in fields) body.suggestion_box_viewers = Array.isArray(fields.suggestionBoxViewers) ? fields.suggestionBoxViewers : [];
   if ('missionText' in fields)          body.mission_text = fields.missionText ?? '';
+  if ('gasOrderUrl' in fields)          body.gas_order_url = fields.gasOrderUrl || '';
+  if ('orderSeedVersion' in fields)     body.order_seed_version = Number(fields.orderSeedVersion) || 0;
   if (Object.keys(body).length === 0) return;
   await requestSupabase('portal_config?id=eq.1', {
     method: 'PATCH',
