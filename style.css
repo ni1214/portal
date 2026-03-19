@@ -7263,9 +7263,9 @@ html.font-xl { font-size: 21px; }
 .autolock-time-btn.active { background: var(--accent-blue); border-color: var(--accent-blue); color: var(--text-on-accent); font-weight: 600; }
 
 /* ===========================
-   驍ゑｽ｡騾・・ﾂ繝ｻ繝ｱ郢晞亂ﾎ・郢晢ｽ｢郢晢ｽｼ郢敖郢晢ｽｫ
+   管理者パネル スタイル
    =========================== */
-.admin-modal-inner { max-width: 420px; width: 100%; }
+.admin-modal-inner { max-width: 600px; width: 100%; }
 .admin-panel-header {
   display: flex;
   align-items: center;
