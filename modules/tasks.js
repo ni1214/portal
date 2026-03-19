@@ -15,12 +15,12 @@ import {
 import { state, TASK_STATUS_LABEL } from './state.js';
 import { esc, getUserAvatarColor, normalizeProjectKey } from './utils.js';
 import {
-import { showToast, showConfirm } from './notify.js';
   recordGetDocsRead,
   recordListenerStart,
   recordListenerSnapshot,
   wrapTrackedListenerUnsubscribe,
 } from './read-diagnostics.js';
+import { showToast, showConfirm } from './notify.js';
 export const deps = {};
 
 const ACTIVE_TASK_STATUSES = ['pending', 'accepted'];
