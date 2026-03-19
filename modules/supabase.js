@@ -1,9 +1,9 @@
-import { db, doc, setDoc, serverTimestamp } from './config.js';
 import { state } from './state.js';
 import { recordTransferFetch } from './read-diagnostics.js';
 
 const BACKEND_FIREBASE = 'firebase';
 const BACKEND_SUPABASE = 'supabase';
+const SUPABASE_STORAGE_KEY = 'portal-supabase-v2';
 
 const CATEGORY_SELECT = 'id,label,icon,color_index,order_index,is_external';
 const CARD_SELECT = 'id,label,icon,url,category_id,parent_id,order_index,category_order,is_external_tool';
@@ -182,6 +182,29 @@ function mapCardUpdatePayload(data = {}) {
   return payload;
 }
 
+export function saveSupabaseConfigToStorage(url, apiKey, mode) {
+  try {
+    localStorage.setItem(SUPABASE_STORAGE_KEY, JSON.stringify({
+      url: normalizeUrl(url),
+      apiKey: normalizeApiKey(apiKey),
+      mode: normalizeBackendMode(mode),
+    }));
+  } catch (_) {}
+}
+
+export function loadSupabaseConfigFromStorage() {
+  try {
+    const raw = localStorage.getItem(SUPABASE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return {
+      supabaseUrl: parsed.url || '',
+      supabasePublishableKey: parsed.apiKey || '',
+      dataBackendMode: parsed.mode || 'supabase',
+    };
+  } catch (_) { return null; }
+}
+
 export function applySupabaseRuntimeConfig(config = {}) {
   state.dataBackendMode = normalizeBackendMode(config.dataBackendMode);
   state.supabaseUrl = normalizeUrl(config.supabaseUrl);
@@ -242,12 +265,8 @@ export async function saveSupabaseRuntimeConfig({ mode, url, apiKey }) {
 
   validateRuntimeConfig(nextMode, nextUrl, nextApiKey);
 
-  await setDoc(doc(db, 'portal', 'config'), {
-    dataBackendMode: nextMode,
-    supabaseUrl: nextUrl || null,
-    supabasePublishableKey: nextApiKey || null,
-    supabaseUpdatedAt: serverTimestamp(),
-  }, { merge: true });
+  // localStorage に保存（Firebase依存を廃止）
+  saveSupabaseConfigToStorage(nextUrl, nextApiKey, nextMode);
 
   return applySupabaseRuntimeConfig({
     dataBackendMode: nextMode,
@@ -1509,5 +1528,46 @@ export async function updateOrderInSupabase(id, data) {
     method: 'PATCH',
     prefer: 'return=minimal',
     body: payload,
+  });
+}
+
+// ===== portal_config（管理設定） =====
+
+const PORTAL_CONFIG_SELECT = 'pin_hash,invite_code_hash,invite_code_plain,invite_updated_at,gemini_api_key,departments,suggestion_box_viewers,mission_text';
+
+export async function fetchPortalConfigFromSupabase() {
+  const rows = await requestSupabase(
+    `portal_config?id=eq.1&select=${encodeURIComponent(PORTAL_CONFIG_SELECT)}`,
+    { diagKey: 'supabase.portal_config', diagLabel: 'Supabase 管理設定', diagScope: 'portal_config' }
+  );
+  if (!Array.isArray(rows) || !rows.length) return {};
+  const r = rows[0];
+  return {
+    pinHash: r.pin_hash || null,
+    inviteCodeHash: r.invite_code_hash || null,
+    inviteCodePlain: r.invite_code_plain || '',
+    inviteUpdatedAt: r.invite_updated_at || null,
+    geminiApiKey: r.gemini_api_key || '',
+    departments: Array.isArray(r.departments) ? r.departments : [],
+    suggestionBoxViewers: Array.isArray(r.suggestion_box_viewers) ? r.suggestion_box_viewers : [],
+    missionText: r.mission_text || '',
+  };
+}
+
+export async function savePortalConfigToSupabase(fields = {}) {
+  const body = {};
+  if ('pinHash' in fields)              body.pin_hash = fields.pinHash || null;
+  if ('inviteCodeHash' in fields)       body.invite_code_hash = fields.inviteCodeHash || null;
+  if ('inviteCodePlain' in fields)      body.invite_code_plain = fields.inviteCodePlain || '';
+  if ('inviteUpdatedAt' in fields)      body.invite_updated_at = fields.inviteUpdatedAt || null;
+  if ('geminiApiKey' in fields)         body.gemini_api_key = fields.geminiApiKey || '';
+  if ('departments' in fields)          body.departments = Array.isArray(fields.departments) ? fields.departments : [];
+  if ('suggestionBoxViewers' in fields) body.suggestion_box_viewers = Array.isArray(fields.suggestionBoxViewers) ? fields.suggestionBoxViewers : [];
+  if ('missionText' in fields)          body.mission_text = fields.missionText ?? '';
+  if (Object.keys(body).length === 0) return;
+  await requestSupabase('portal_config?id=eq.1', {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body,
   });
 }

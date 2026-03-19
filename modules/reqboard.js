@@ -5,6 +5,8 @@ import { esc, escHtml, getUserAvatarColor, normalizeProjectKey, _fmtTs } from '.
 import {
   isSupabaseSharedCoreEnabled,
   applySupabaseRuntimeConfig,
+  fetchPortalConfigFromSupabase,
+  savePortalConfigToSupabase,
   fetchReceivedRequestsFromSupabase,
   fetchSentRequestsFromSupabase,
   fetchRequestHistoryFromSupabase,
@@ -32,11 +34,24 @@ const LINKED_TASK_STATUS_LABEL = {
 };
 
 export async function loadConfigDepartmentsAndViewers() {
+  // Supabase接続済みならportal_configをSupabaseから読む
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const data = await fetchPortalConfigFromSupabase();
+      if (Array.isArray(data.departments) && data.departments.length > 0) {
+        state.currentDepartments = data.departments;
+      }
+      state.suggestionBoxViewers = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
+      state.isSuggestionBoxViewer = state.currentUsername ? state.suggestionBoxViewers.includes(state.currentUsername) : false;
+      state.missionText = data.missionText || '';
+      return;
+    } catch (err) { console.error('Supabase config読み込みエラー:', err); }
+  }
+  // フォールバック: Firebase
   try {
     const snap = await getDoc(doc(db, 'portal', 'config'));
     if (snap.exists()) {
       const data = snap.data();
-      applySupabaseRuntimeConfig(data);
       if (Array.isArray(data.departments) && data.departments.length > 0) {
         state.currentDepartments = data.departments;
       }
@@ -1191,8 +1206,19 @@ export async function _markSuggestionsViewed() {
 
 // 管理者パネル：目安箱閲覧者管理
 export async function renderAdminSuggBoxSection() {
-  const snap = await getDoc(doc(db, 'portal', 'config'));
-  const viewers = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
+  let viewers = [];
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const data = await fetchPortalConfigFromSupabase();
+      viewers = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
+    } catch (_) {
+      const snap = await getDoc(doc(db, 'portal', 'config'));
+      viewers = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
+    }
+  } else {
+    const snap = await getDoc(doc(db, 'portal', 'config'));
+    viewers = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
+  }
   const container = document.getElementById('admin-suggbox-viewers');
   if (!container) return;
   if (viewers.length === 0) {
@@ -1208,7 +1234,15 @@ export async function renderAdminSuggBoxSection() {
       btn.addEventListener('click', async () => {
         const name = btn.dataset.name;
         const newList = viewers.filter(v => v !== name);
-        await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
+        if (isSupabaseSharedCoreEnabled()) {
+          try {
+            await savePortalConfigToSupabase({ suggestionBoxViewers: newList });
+          } catch (_) {
+            await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
+          }
+        } else {
+          await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
+        }
         state.suggestionBoxViewers = newList;
         state.isSuggestionBoxViewer = state.currentUsername ? newList.includes(state.currentUsername) : false;
         renderAdminSuggBoxSection();
@@ -1221,11 +1255,30 @@ export async function addSuggBoxViewer() {
   const input = document.getElementById('admin-suggbox-add-input');
   const name = input.value.trim();
   if (!name) return;
-  const snap = await getDoc(doc(db, 'portal', 'config'));
-  const current = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
+  let current = [];
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const data = await fetchPortalConfigFromSupabase();
+      current = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
+    } catch (_) {
+      const snap = await getDoc(doc(db, 'portal', 'config'));
+      current = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
+    }
+  } else {
+    const snap = await getDoc(doc(db, 'portal', 'config'));
+    current = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
+  }
   if (current.includes(name)) { showToast('すでに登録されています', 'warning'); return; }
   const newList = [...current, name];
-  await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      await savePortalConfigToSupabase({ suggestionBoxViewers: newList });
+    } catch (_) {
+      await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
+    }
+  } else {
+    await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
+  }
   state.suggestionBoxViewers = newList;
   state.isSuggestionBoxViewer = state.currentUsername ? newList.includes(state.currentUsername) : false;
   input.value = '';

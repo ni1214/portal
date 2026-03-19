@@ -4,6 +4,9 @@ import { state } from './state.js';
 import {
   applySupabaseRuntimeConfig,
   isSupabaseSharedCoreEnabled,
+  loadSupabaseConfigFromStorage,
+  fetchPortalConfigFromSupabase,
+  savePortalConfigToSupabase,
   checkUserExistsInSupabase,
   registerUserLoginInSupabase,
   getUserLockPinFromSupabase,
@@ -29,30 +32,74 @@ export async function hashPIN(pin) {
 }
 
 export async function verifyPIN(pin) {
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const data = await fetchPortalConfigFromSupabase();
+      if (!data.pinHash) return false;
+      return (await hashPIN(pin)) === data.pinHash;
+    } catch (_) {}
+  }
   const snap = await getDoc(doc(db, 'portal', 'config'));
   if (!snap.exists() || !snap.data().pinHash) return false;
   return (await hashPIN(pin)) === snap.data().pinHash;
 }
 
 export async function setPIN(pin) {
-  await setDoc(doc(db, 'portal', 'config'), { pinHash: await hashPIN(pin) }, { merge: true });
+  const hash = await hashPIN(pin);
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      await savePortalConfigToSupabase({ pinHash: hash });
+      return;
+    } catch (_) {}
+  }
+  await setDoc(doc(db, 'portal', 'config'), { pinHash: hash }, { merge: true });
 }
 
 export async function isPINConfigured() {
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const data = await fetchPortalConfigFromSupabase();
+      return !!data.pinHash;
+    } catch (_) {}
+  }
   const snap = await getDoc(doc(db, 'portal', 'config'));
   return snap.exists() && !!snap.data().pinHash;
 }
 
 export async function loadInviteCodeConfig() {
-  const snap = await getDoc(doc(db, 'portal', 'config'));
-  const data = snap.exists() ? snap.data() : {};
-  applySupabaseRuntimeConfig(data);
-  state.inviteCodeHash = data.inviteCodeHash || null;
-  state.inviteCodePlain = data.inviteCodePlain || '';
-  state.inviteCodeRequired = !!state.inviteCodeHash;
-  state.adminInviteConfigured = state.inviteCodeRequired;
-  updateInviteAdminState();
-  return data;
+  // まずlocalStorageからSupabase接続情報を復元
+  const stored = loadSupabaseConfigFromStorage();
+  if (stored) applySupabaseRuntimeConfig(stored);
+
+  // Supabase接続済みならportal_configをSupabaseから読む
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const data = await fetchPortalConfigFromSupabase();
+      state.inviteCodeHash = data.inviteCodeHash || null;
+      state.inviteCodePlain = data.inviteCodePlain || '';
+      state.inviteCodeRequired = !!state.inviteCodeHash;
+      state.adminInviteConfigured = state.inviteCodeRequired;
+      updateInviteAdminState();
+      return data;
+    } catch (err) {
+      console.error('Supabase portal_config読み込みエラー:', err);
+    }
+  }
+  // フォールバック: Firebase（移行期間中のみ）
+  try {
+    const snap = await getDoc(doc(db, 'portal', 'config'));
+    const data = snap.exists() ? snap.data() : {};
+    applySupabaseRuntimeConfig(data);
+    state.inviteCodeHash = data.inviteCodeHash || null;
+    state.inviteCodePlain = data.inviteCodePlain || '';
+    state.inviteCodeRequired = !!state.inviteCodeHash;
+    state.adminInviteConfigured = state.inviteCodeRequired;
+    updateInviteAdminState();
+    return data;
+  } catch (err) {
+    console.error('Firebase portal/config読み込みエラー:', err);
+    return {};
+  }
 }
 
 function hasTrustedInviteAccess() {
@@ -211,11 +258,27 @@ export async function saveInviteCode(code) {
     throw new Error('4桁の数字を入力してください。');
   }
   const hash = await hashPIN(normalized);
-  await setDoc(doc(db, 'portal', 'config'), {
-    inviteCodeHash: hash,
-    inviteCodePlain: normalized,
-    inviteUpdatedAt: serverTimestamp(),
-  }, { merge: true });
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      await savePortalConfigToSupabase({
+        inviteCodeHash: hash,
+        inviteCodePlain: normalized,
+        inviteUpdatedAt: new Date().toISOString(),
+      });
+    } catch (_) {
+      await setDoc(doc(db, 'portal', 'config'), {
+        inviteCodeHash: hash,
+        inviteCodePlain: normalized,
+        inviteUpdatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+  } else {
+    await setDoc(doc(db, 'portal', 'config'), {
+      inviteCodeHash: hash,
+      inviteCodePlain: normalized,
+      inviteUpdatedAt: serverTimestamp(),
+    }, { merge: true });
+  }
   state.inviteCodeHash = hash;
   state.inviteCodePlain = normalized;
   state.inviteCodeRequired = true;
@@ -224,11 +287,27 @@ export async function saveInviteCode(code) {
 }
 
 export async function clearInviteCode() {
-  await setDoc(doc(db, 'portal', 'config'), {
-    inviteCodeHash: null,
-    inviteCodePlain: null,
-    inviteUpdatedAt: serverTimestamp(),
-  }, { merge: true });
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      await savePortalConfigToSupabase({
+        inviteCodeHash: null,
+        inviteCodePlain: null,
+        inviteUpdatedAt: new Date().toISOString(),
+      });
+    } catch (_) {
+      await setDoc(doc(db, 'portal', 'config'), {
+        inviteCodeHash: null,
+        inviteCodePlain: null,
+        inviteUpdatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+  } else {
+    await setDoc(doc(db, 'portal', 'config'), {
+      inviteCodeHash: null,
+      inviteCodePlain: null,
+      inviteUpdatedAt: serverTimestamp(),
+    }, { merge: true });
+  }
   state.inviteCodeHash = null;
   state.inviteCodePlain = '';
   state.inviteCodeRequired = false;
