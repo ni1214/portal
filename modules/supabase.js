@@ -862,12 +862,13 @@ export async function deleteUserTodoInSupabase(id) {
 }
 
 // ---- user_email_contacts ----
+// 注意: テーブルの PK カラム名は `contact_id`（`id` ではない）
 
-const EMAIL_CONTACT_SELECT = 'id,company_name,person_name,created_at';
+const EMAIL_CONTACT_SELECT = 'contact_id,company_name,person_name,created_at';
 
 function mapEmailContactRow(row = {}) {
   return {
-    id:          row.id,
+    id:          row.contact_id,   // Firebase 互換: contact_id → id
     companyName: row.company_name || '',
     personName:  row.person_name  || '',
   };
@@ -883,16 +884,16 @@ export async function fetchEmailContactsFromSupabase(username) {
 }
 
 export async function createEmailContactInSupabase(username, data) {
-  const id = data.id || createSupabaseClientId('contact');
+  const contactId = data.id || createSupabaseClientId('contact');
   await requestSupabase('user_email_contacts', {
     method: 'POST',
     prefer: 'return=minimal',
     body: {
-      id,
+      contact_id:   contactId,
       username,
       company_name: data.companyName || '',
       person_name:  data.personName  || '',
     },
   });
-  return id;
+  return contactId;
 }
