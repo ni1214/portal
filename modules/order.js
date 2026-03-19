@@ -552,7 +552,13 @@ function fmtDatetime(ts) {
 
 function toDateValue(value) {
   if (!value) return null;
-  const date = value.toDate ? value.toDate() : new Date(value);
+  // Firebase Timestamp (.toDate() あり)
+  if (value.toDate) return value.toDate();
+  // isoToFirestoreTs が返す { seconds, nanoseconds } 形式
+  if (typeof value === 'object' && typeof value.seconds === 'number') {
+    return new Date(value.seconds * 1000);
+  }
+  const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
