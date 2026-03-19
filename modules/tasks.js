@@ -737,6 +737,15 @@ export async function submitNewTask() {
       projectKey,
       sourceType: 'manual',
     });
+    // Supabase モードは onSnapshot がないため liveSentTasks を手動更新
+    if (isSupabaseSharedCoreEnabled()) {
+      const refreshed = await fetchSentTasksFromSupabase(state.currentUsername);
+      liveSentTasks = refreshed;
+      // 履歴キャッシュをリセットして次回タブ切替時に再取得させる
+      state.taskHistoryLoaded = { ...state.taskHistoryLoaded, sent: false };
+      state.taskHistoryCache  = { ...state.taskHistoryCache,  sent: [] };
+      _syncSentTasks();
+    }
     // フォームをリセット
     state.newTaskAssignee = '';
     const titleEl = document.getElementById('new-task-title');
