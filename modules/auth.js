@@ -2,7 +2,6 @@
 import { db, doc, getDoc, setDoc, getDocs, deleteDoc, updateDoc, collection, query, where, writeBatch, serverTimestamp, onSnapshot } from './config.js';
 import { state } from './state.js';
 import {
-import { showToast, showConfirm } from './notify.js';
   applySupabaseRuntimeConfig,
   isSupabaseSharedCoreEnabled,
   checkUserExistsInSupabase,
@@ -10,6 +9,7 @@ import { showToast, showConfirm } from './notify.js';
   getUserLockPinFromSupabase,
   saveLockPinToSupabase,
 } from './supabase.js';
+import { showToast, showConfirm } from './notify.js';
 
 // Cross-module function references (set by script.js after all modules load)
 export const deps = {};
