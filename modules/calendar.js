@@ -126,11 +126,11 @@ export async function saveAttendance(dateStr, data) {
         await deps.removePublicAttendance?.(dateStr, state.currentUsername);
       }
       deps.markWorkSummaryStale?.();
-      if (dateStr === getTodayDateStr()) {
-        syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
-        deps.renderTodayDashboard?.();
-      }
       state.attendanceData[dateStr] = data;
+      syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
+      renderCalendar();
+      updateCalendarSummary();
+      deps.renderTodayDashboard?.();
       return true;
     } catch (err) {
       console.error('勤怠保存エラー:', err);
@@ -162,10 +162,11 @@ export async function saveAttendance(dateStr, data) {
       await deps.removePublicAttendance?.(dateStr, state.currentUsername);
     }
     deps.markWorkSummaryStale?.();
-    if (dateStr === getTodayDateStr()) {
-      syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
-      deps.renderTodayDashboard?.();
-    }
+    state.attendanceData[dateStr] = { ...data, yearMonth };
+    syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
+    renderCalendar();
+    updateCalendarSummary();
+    deps.renderTodayDashboard?.();
     return true;
   } catch (err) {
     console.error('勤怠保存エラー:', err);
