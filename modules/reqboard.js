@@ -13,6 +13,9 @@ import {
   createCrossDeptRequestInSupabase,
   updateCrossDeptRequestInSupabase,
   deleteCrossDeptRequestInSupabase,
+  fetchSuggestionsFromSupabase,
+  createSuggestionInSupabase,
+  deleteSuggestionInSupabase,
 } from './supabase.js';
 import {
   recordGetDocsRead,
@@ -239,16 +242,19 @@ export function startRequestListeners(username) {
       updateReqBadge();
       if (state.reqModalOpen && state.activeReqTab === 'request' && state.activeReqSubTab === 'sent') renderReqContent();
     }).catch(err => console.error('Supabase 送信依頼取得エラー:', err));
-    // 目安箱は Supabase 非対応（Firestore のまま）
+    // 目安箱（Supabase: ポーリングなし・一度だけ取得）
     if (state.isSuggestionBoxViewer) {
-      const suggQ = query(collection(db, 'suggestion_box'), orderBy('createdAt', 'desc'));
-      recordListenerStart('req.suggestion', '目安箱一覧', 'suggestion_box');
-      state._suggUnsub = wrapTrackedListenerUnsubscribe('req.suggestion', onSnapshot(suggQ, snap => {
-        recordListenerSnapshot('req.suggestion', snap.size, 'suggestion_box', snap.docs);
-        state.suggestionList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      fetchSuggestionsFromSupabase().then(suggestions => {
+        state.suggestionList = suggestions.map(s => ({
+          id: s.id,
+          content: s.content,
+          author: s.isAnonymous ? '匿名' : s.createdBy,
+          isAnonymous: s.isAnonymous,
+          createdAt: s.createdAt,
+        }));
         updateReqBadge();
         if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();
-      }, err => console.error('suggestion_box listener error:', err)));
+      }).catch(err => console.error('Supabase 目安箱取得エラー:', err));
     }
     return;
   }
@@ -300,7 +306,7 @@ export function startRequestListeners(username) {
       if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();
     }, err => console.error('suggestion_box listener error:', err)));
   }
-}
+}  // end startRequestListeners
 
 export function stopRequestListeners() {
   if (state._reqReceivedUnsub) { state._reqReceivedUnsub(); state._reqReceivedUnsub = null; }
@@ -464,6 +470,13 @@ export async function unarchiveSuggestion(id) {
 export async function deleteSuggestion(id) {
   if (!await showConfirm('この投稿を完全に削除しますか？この操作は取り消せません。', { danger: true })) return;
   try {
+    if (isSupabaseSharedCoreEnabled()) {
+      await deleteSuggestionInSupabase(id);
+      state.suggestionList = (state.suggestionList || []).filter(s => s.id !== id);
+      updateReqBadge();
+      if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();
+      return;
+    }
     await deleteDoc(doc(db, 'suggestion_box', id));
   } catch (err) { console.error('削除エラー:', err); showToast('削除に失敗しました', 'error'); }
 }
@@ -1146,18 +1159,28 @@ export async function submitSuggestion(category) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>';
   try {
-    await addDoc(collection(db, 'suggestion_box'), {
-      content,
-      category: category || 'other',
-      isAnonymous: anonymous,
-      author: anonymous ? '匿名' : (state.currentUsername || '匿名'),
-      createdAt: serverTimestamp(),
-      adminReply: '',
-      repliedAt: null,
-      repliedBy: '',
-    });
-    document.getElementById('sugg-content').value = '';
-    showToast('投稿しました。ありがとうございます！', 'success');
+    if (isSupabaseSharedCoreEnabled()) {
+      await createSuggestionInSupabase({
+        content,
+        createdBy: state.currentUsername || 'anonymous',
+        isAnonymous: anonymous,
+      });
+      document.getElementById('sugg-content').value = '';
+      showToast('投稿しました。ありがとうございます！', 'success');
+    } else {
+      await addDoc(collection(db, 'suggestion_box'), {
+        content,
+        category: category || 'other',
+        isAnonymous: anonymous,
+        author: anonymous ? '匿名' : (state.currentUsername || '匿名'),
+        createdAt: serverTimestamp(),
+        adminReply: '',
+        repliedAt: null,
+        repliedBy: '',
+      });
+      document.getElementById('sugg-content').value = '';
+      showToast('投稿しました。ありがとうございます！', 'success');
+    }
   } catch (err) {
     console.error('目安箱投稿エラー:', err);
     showToast('投稿に失敗しました。もう一度お試しください。', 'error');
@@ -1176,6 +1199,11 @@ export function openSuggReplyModal(suggId) {
 export async function sendSuggReply() {
   const text = document.getElementById('sugg-reply-text').value.trim();
   if (!text || !state._pendingSuggReply) return;
+  // Supabase移行後は adminReply カラムが未定義のため返信機能は Firebase のみ対応
+  if (isSupabaseSharedCoreEnabled()) {
+    showToast('返信機能はSupabase移行後も対応予定です（現在未実装）', 'error');
+    return;
+  }
   try {
     await updateDoc(doc(db, 'suggestion_box', state._pendingSuggReply), {
       adminReply: text,

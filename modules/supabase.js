@@ -1571,3 +1571,43 @@ export async function savePortalConfigToSupabase(fields = {}) {
     body,
   });
 }
+
+// ===== suggestion_box（目安箱） =====
+
+const SUGGESTION_SELECT = 'id,content,created_by,is_anonymous,created_at';
+
+export async function fetchSuggestionsFromSupabase() {
+  const rows = await requestSupabase(
+    `suggestion_box?select=${encodeURIComponent(SUGGESTION_SELECT)}&order=created_at.desc`,
+    { diagKey: 'supabase.suggestion_box', diagLabel: 'Supabase 目安箱', diagScope: 'suggestion_box' }
+  );
+  return Array.isArray(rows) ? rows.map(r => ({
+    id: r.id,
+    content: r.content || '',
+    createdBy: r.created_by || 'anonymous',
+    isAnonymous: !!r.is_anonymous,
+    createdAt: r.created_at ? new Date(r.created_at) : null,
+  })) : [];
+}
+
+export async function createSuggestionInSupabase(data) {
+  const id = data.id || createSupabaseClientId('sug');
+  await requestSupabase('suggestion_box', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: {
+      id,
+      content: data.content || '',
+      created_by: data.createdBy || 'anonymous',
+      is_anonymous: !!data.isAnonymous,
+    },
+  });
+  return id;
+}
+
+export async function deleteSuggestionInSupabase(id) {
+  await requestSupabase(`suggestion_box?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
