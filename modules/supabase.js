@@ -897,3 +897,617 @@ export async function createEmailContactInSupabase(username, data) {
   });
   return contactId;
 }
+
+// ===== Step 5: 業務系 =====
+
+// ---- cross_dept_requests ----
+
+const CDR_SELECT = [
+  'id', 'title', 'project_key', 'to_dept', 'from_dept', 'content', 'proposal', 'remarks',
+  'status', 'created_by', 'status_note', 'status_updated_by', 'archived',
+  'notify_creator', 'linked_task_id', 'linked_task_status', 'linked_task_assigned_to',
+  'linked_task_linked_by', 'linked_task_linked_at', 'linked_task_closed_at',
+  'created_at', 'updated_at',
+].join(',');
+
+function mapCdrRow(row = {}) {
+  return {
+    id:                  row.id,
+    title:               row.title || '',
+    projectKey:          row.project_key || '',
+    toDept:              row.to_dept || '',
+    fromDept:            row.from_dept || '',
+    content:             row.content || '',
+    proposal:            row.proposal || '',
+    remarks:             row.remarks || '',
+    status:              row.status || 'submitted',
+    createdBy:           row.created_by || '',
+    statusNote:          row.status_note || '',
+    statusUpdatedBy:     row.status_updated_by || '',
+    archived:            !!row.archived,
+    notifyCreator:       !!row.notify_creator,
+    linkedTaskId:        row.linked_task_id || null,
+    linkedTaskStatus:    row.linked_task_status || null,
+    linkedTaskAssignedTo: row.linked_task_assigned_to || null,
+    linkedTaskLinkedBy:  row.linked_task_linked_by || null,
+    linkedTaskLinkedAt:  row.linked_task_linked_at ? isoToFirestoreTs(row.linked_task_linked_at) : null,
+    linkedTaskClosedAt:  row.linked_task_closed_at ? isoToFirestoreTs(row.linked_task_closed_at) : null,
+    createdAt:           isoToFirestoreTs(row.created_at),
+    updatedAt:           isoToFirestoreTs(row.updated_at),
+  };
+}
+
+/** 自分の部署宛て・アクティブな依頼 */
+export async function fetchReceivedRequestsFromSupabase(myDept) {
+  if (!myDept) return [];
+  const rows = await requestSupabase(
+    `cross_dept_requests?to_dept=eq.${encodeURIComponent(myDept)}&status=eq.submitted&archived=eq.false&select=${encodeURIComponent(CDR_SELECT)}&order=created_at.desc`,
+    { diagKey: 'supabase.cdr.received', diagLabel: 'Supabase 受信依頼', diagScope: 'cross_dept_requests' }
+  );
+  return Array.isArray(rows) ? rows.map(mapCdrRow) : [];
+}
+
+/** 自分が送信した依頼・通知あり */
+export async function fetchSentRequestsFromSupabase(username) {
+  if (!username) return [];
+  const rows = await requestSupabase(
+    `cross_dept_requests?created_by=eq.${encodeURIComponent(username)}&notify_creator=eq.true&archived=eq.false&select=${encodeURIComponent(CDR_SELECT)}&order=created_at.desc`,
+    { diagKey: 'supabase.cdr.sent', diagLabel: 'Supabase 送信依頼', diagScope: 'cross_dept_requests' }
+  );
+  return Array.isArray(rows) ? rows.map(mapCdrRow) : [];
+}
+
+/** 履歴取得（archived 含む全件） */
+export async function fetchRequestHistoryFromSupabase(side, { myDept, username } = {}) {
+  let url;
+  if (side === 'received' && myDept) {
+    url = `cross_dept_requests?to_dept=eq.${encodeURIComponent(myDept)}&select=${encodeURIComponent(CDR_SELECT)}&order=created_at.desc`;
+  } else if (username) {
+    url = `cross_dept_requests?created_by=eq.${encodeURIComponent(username)}&select=${encodeURIComponent(CDR_SELECT)}&order=created_at.desc`;
+  } else {
+    return [];
+  }
+  const rows = await requestSupabase(url,
+    { diagKey: `supabase.cdr.history.${side}`, diagLabel: `Supabase 依頼履歴:${side}`, diagScope: 'cross_dept_requests' }
+  );
+  return Array.isArray(rows) ? rows.map(mapCdrRow) : [];
+}
+
+export async function createCrossDeptRequestInSupabase(data) {
+  const id = data.id || createSupabaseClientId('req');
+  await requestSupabase('cross_dept_requests', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: {
+      id,
+      title:             data.title || '',
+      project_key:       data.projectKey || '',
+      to_dept:           data.toDept || '',
+      from_dept:         data.fromDept || '',
+      content:           data.content || '',
+      proposal:          data.proposal || '',
+      remarks:           data.remarks || '',
+      status:            data.status || 'submitted',
+      created_by:        data.createdBy || '',
+      status_note:       '',
+      status_updated_by: '',
+      archived:          false,
+      notify_creator:    false,
+    },
+  });
+  return id;
+}
+
+export async function updateCrossDeptRequestInSupabase(id, data) {
+  const payload = {};
+  if ('status' in data)           payload.status              = data.status;
+  if ('statusNote' in data)       payload.status_note         = data.statusNote || '';
+  if ('statusUpdatedBy' in data)  payload.status_updated_by   = data.statusUpdatedBy || '';
+  if ('archived' in data)         payload.archived            = !!data.archived;
+  if ('notifyCreator' in data)    payload.notify_creator      = !!data.notifyCreator;
+  if ('linkedTaskId' in data)     payload.linked_task_id      = data.linkedTaskId || null;
+  if ('linkedTaskStatus' in data) payload.linked_task_status  = data.linkedTaskStatus || null;
+  if ('linkedTaskAssignedTo' in data) payload.linked_task_assigned_to = data.linkedTaskAssignedTo || null;
+  if ('linkedTaskLinkedBy' in data)   payload.linked_task_linked_by   = data.linkedTaskLinkedBy || null;
+  if ('linkedTaskLinkedAt' in data)   payload.linked_task_linked_at   = data.linkedTaskLinkedAt || null;
+  if ('linkedTaskClosedAt' in data)   payload.linked_task_closed_at   = data.linkedTaskClosedAt || null;
+  if ('proposal' in data)         payload.proposal            = data.proposal || '';
+  if ('remarks' in data)          payload.remarks             = data.remarks || '';
+  await requestSupabase(`cross_dept_requests?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+}
+
+export async function deleteCrossDeptRequestInSupabase(id) {
+  await requestSupabase(`cross_dept_requests?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
+
+// ---- assigned_tasks ----
+
+const TASK_SELECT = [
+  'id', 'title', 'description', 'assigned_by', 'assigned_to', 'status',
+  'due_date', 'project_key', 'source_type', 'source_request_id',
+  'source_request_from_dept', 'source_request_to_dept',
+  'notified_done', 'shared_with', 'shared_responses',
+  'accepted_at', 'done_at', 'created_at', 'updated_at',
+].join(',');
+
+function mapTaskRow(row = {}) {
+  return {
+    id:                   row.id,
+    title:                row.title || '',
+    description:          row.description || '',
+    assignedBy:           row.assigned_by || '',
+    assignedTo:           row.assigned_to || '',
+    status:               row.status || 'pending',
+    dueDate:              row.due_date || '',
+    projectKey:           row.project_key || '',
+    sourceType:           row.source_type || 'manual',
+    sourceRequestId:      row.source_request_id || null,
+    sourceRequestFromDept: row.source_request_from_dept || null,
+    sourceRequestToDept:  row.source_request_to_dept || null,
+    notifiedDone:         !!row.notified_done,
+    sharedWith:           Array.isArray(row.shared_with) ? row.shared_with : [],
+    sharedResponses:      (row.shared_responses && typeof row.shared_responses === 'object') ? row.shared_responses : {},
+    acceptedAt:           row.accepted_at ? isoToFirestoreTs(row.accepted_at) : null,
+    doneAt:               row.done_at     ? isoToFirestoreTs(row.done_at)     : null,
+    createdAt:            isoToFirestoreTs(row.created_at),
+    updatedAt:            isoToFirestoreTs(row.updated_at),
+  };
+}
+
+const ACTIVE_TASK_STATUSES_SB = ['pending', 'accepted'];
+
+export async function fetchReceivedTasksFromSupabase(username) {
+  if (!username) return [];
+  const rows = await requestSupabase(
+    `assigned_tasks?assigned_to=eq.${encodeURIComponent(username)}&status=in.(pending,accepted)&select=${encodeURIComponent(TASK_SELECT)}&order=created_at.desc`,
+    { diagKey: 'supabase.tasks.received', diagLabel: 'Supabase 受け取りタスク', diagScope: 'assigned_tasks' }
+  );
+  return Array.isArray(rows) ? rows.map(mapTaskRow) : [];
+}
+
+export async function fetchSentTasksFromSupabase(username) {
+  if (!username) return [];
+  const rows = await requestSupabase(
+    `assigned_tasks?assigned_by=eq.${encodeURIComponent(username)}&status=in.(pending,accepted)&select=${encodeURIComponent(TASK_SELECT)}&order=created_at.desc`,
+    { diagKey: 'supabase.tasks.sent', diagLabel: 'Supabase 依頼タスク', diagScope: 'assigned_tasks' }
+  );
+  return Array.isArray(rows) ? rows.map(mapTaskRow) : [];
+}
+
+export async function fetchSentDoneNotifyTasksFromSupabase(username) {
+  if (!username) return [];
+  const rows = await requestSupabase(
+    `assigned_tasks?assigned_by=eq.${encodeURIComponent(username)}&status=eq.done&notified_done=eq.false&select=${encodeURIComponent(TASK_SELECT)}&order=created_at.desc`,
+    { diagKey: 'supabase.tasks.done-notify', diagLabel: 'Supabase 未確認完了タスク', diagScope: 'assigned_tasks' }
+  );
+  return Array.isArray(rows) ? rows.map(mapTaskRow) : [];
+}
+
+/** shared_with に username を含む全タスクを取得しクライアント側でフィルタ */
+export async function fetchSharedTasksFromSupabase(username) {
+  if (!username) return [];
+  // PostgREST: text[] contains → cs.{value}
+  const rows = await requestSupabase(
+    `assigned_tasks?shared_with=cs.${encodeURIComponent(`{${username}}`)}&select=${encodeURIComponent(TASK_SELECT)}&order=created_at.desc`,
+    { diagKey: 'supabase.tasks.shared', diagLabel: 'Supabase 共有タスク', diagScope: 'assigned_tasks' }
+  );
+  if (!Array.isArray(rows)) return [];
+  // クライアント側で pending 応答のみフィルタ
+  return rows
+    .map(mapTaskRow)
+    .filter(t => {
+      const resp = t.sharedResponses?.[username];
+      return !resp || resp === 'pending';
+    });
+}
+
+export async function fetchTaskHistoryFromSupabase(side, username) {
+  if (!username) return [];
+  const filter = side === 'received'
+    ? `assigned_to=eq.${encodeURIComponent(username)}`
+    : side === 'shared'
+    ? `shared_with=cs.${encodeURIComponent(`{${username}}`)}`
+    : `assigned_by=eq.${encodeURIComponent(username)}`;
+  const rows = await requestSupabase(
+    `assigned_tasks?${filter}&select=${encodeURIComponent(TASK_SELECT)}&order=created_at.desc`,
+    { diagKey: `supabase.tasks.history.${side}`, diagLabel: `Supabase タスク履歴:${side}`, diagScope: 'assigned_tasks' }
+  );
+  return Array.isArray(rows) ? rows.map(mapTaskRow) : [];
+}
+
+export async function getAssignedTaskFromSupabase(taskId) {
+  if (!taskId) return null;
+  const rows = await requestSupabase(
+    `assigned_tasks?id=eq.${encodeURIComponent(taskId)}&select=${encodeURIComponent(TASK_SELECT)}&limit=1`,
+    { diagKey: 'supabase.tasks.get', diagLabel: 'Supabase タスク取得', diagScope: 'assigned_tasks' }
+  );
+  return Array.isArray(rows) && rows.length > 0 ? mapTaskRow(rows[0]) : null;
+}
+
+export async function createAssignedTaskInSupabase(data) {
+  const id = data.id || createSupabaseClientId('task');
+  await requestSupabase('assigned_tasks', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: {
+      id,
+      title:                    data.title || '',
+      description:              data.description || '',
+      assigned_by:              data.assignedBy || '',
+      assigned_to:              data.assignedTo || '',
+      status:                   data.status || 'pending',
+      due_date:                 data.dueDate || '',
+      project_key:              data.projectKey || '',
+      source_type:              data.sourceType || 'manual',
+      source_request_id:        data.sourceRequestId || null,
+      source_request_from_dept: data.sourceRequestFromDept || null,
+      source_request_to_dept:   data.sourceRequestToDept || null,
+      notified_done:            false,
+      shared_with:              [],
+      shared_responses:         {},
+    },
+  });
+  return id;
+}
+
+export async function updateAssignedTaskInSupabase(id, data) {
+  const payload = {};
+  if ('status' in data)           payload.status           = data.status;
+  if ('notifiedDone' in data)     payload.notified_done    = !!data.notifiedDone;
+  if ('acceptedAt' in data)       payload.accepted_at      = data.acceptedAt || null;
+  if ('doneAt' in data)           payload.done_at          = data.doneAt || null;
+  if ('sharedWith' in data)       payload.shared_with      = Array.isArray(data.sharedWith) ? data.sharedWith : [];
+  if ('sharedResponses' in data)  payload.shared_responses = (data.sharedResponses && typeof data.sharedResponses === 'object') ? data.sharedResponses : {};
+  if ('title' in data)            payload.title            = data.title || '';
+  if ('description' in data)      payload.description      = data.description || '';
+  if ('dueDate' in data)          payload.due_date         = data.dueDate || '';
+  if ('projectKey' in data)       payload.project_key      = data.projectKey || '';
+  if ('linkedTaskId' in data)     payload.linked_task_id   = data.linkedTaskId || null;  // cross_dept_requests 側の更新用
+  await requestSupabase(`assigned_tasks?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+}
+
+export async function deleteAssignedTaskInSupabase(id) {
+  await requestSupabase(`assigned_tasks?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
+
+// ---- attendance_sites ----
+
+const SITE_SELECT = 'id,code,name,sort_order,active,updated_by,created_at,updated_at';
+
+function mapSiteRow(row = {}) {
+  return {
+    id:        row.id,
+    code:      row.code || '',
+    name:      row.name || '',
+    sortOrder: Number.isFinite(row.sort_order) ? row.sort_order : 0,
+    active:    row.active !== false,
+    updatedBy: row.updated_by || '',
+    createdAt: isoToFirestoreTs(row.created_at),
+    updatedAt: isoToFirestoreTs(row.updated_at),
+  };
+}
+
+export async function fetchAttendanceSitesFromSupabase() {
+  const rows = await requestSupabase(
+    `attendance_sites?select=${encodeURIComponent(SITE_SELECT)}&order=sort_order.asc`,
+    { diagKey: 'supabase.attendance_sites', diagLabel: 'Supabase 登録現場', diagScope: 'attendance_sites' }
+  );
+  return Array.isArray(rows) ? rows.map(mapSiteRow) : [];
+}
+
+export async function createAttendanceSiteInSupabase(data) {
+  const id = data.id || createSupabaseClientId('site');
+  await requestSupabase('attendance_sites', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: {
+      id,
+      code:       data.code || '',
+      name:       data.name || '',
+      sort_order: Number.isFinite(data.sortOrder) ? data.sortOrder : 0,
+      active:     true,
+      updated_by: data.updatedBy || '',
+    },
+  });
+  return id;
+}
+
+export async function updateAttendanceSiteInSupabase(id, data) {
+  const payload = {};
+  if ('code' in data)       payload.code        = data.code || '';
+  if ('name' in data)       payload.name        = data.name || '';
+  if ('sortOrder' in data)  payload.sort_order  = Number.isFinite(data.sortOrder) ? data.sortOrder : 0;
+  if ('active' in data)     payload.active      = !!data.active;
+  if ('updatedBy' in data)  payload.updated_by  = data.updatedBy || '';
+  await requestSupabase(`attendance_sites?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+}
+
+export async function deleteAttendanceSiteInSupabase(id) {
+  await requestSupabase(`attendance_sites?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
+
+// ---- attendance_entries ----
+
+const ENTRY_SELECT = 'username,entry_date,type,hayade,zangyo,note,work_site_hours,project_keys,year_month,created_at,updated_at';
+
+function mapEntryRow(row = {}) {
+  return {
+    dateStr:        row.entry_date,   // YYYY-MM-DD
+    type:           row.type || null,
+    hayade:         row.hayade || null,
+    zangyo:         row.zangyo || null,
+    note:           row.note || null,
+    yearMonth:      row.year_month || '',
+    workSiteHours:  (row.work_site_hours && typeof row.work_site_hours === 'object') ? row.work_site_hours : {},
+    projectKeys:    Array.isArray(row.project_keys) ? row.project_keys : [],
+    updatedAt:      isoToFirestoreTs(row.updated_at),
+  };
+}
+
+/** username + yearMonth(s) で個人勤怠を取得 */
+export async function fetchAttendanceEntriesFromSupabase(username, yearMonths) {
+  if (!username) return {};
+  const yms = Array.isArray(yearMonths) ? yearMonths : [yearMonths];
+  // OR フィルタは PostgREST の year_month=in.(ym1,ym2,...) で対応
+  const ymList = yms.map(ym => encodeURIComponent(ym)).join(',');
+  const rows = await requestSupabase(
+    `attendance_entries?username=eq.${encodeURIComponent(username)}&year_month=in.(${ymList})&select=${encodeURIComponent(ENTRY_SELECT)}&order=entry_date.asc`,
+    { diagKey: 'supabase.attendance_entries', diagLabel: 'Supabase 個人勤怠', diagScope: 'attendance_entries' }
+  );
+  if (!Array.isArray(rows)) return {};
+  const map = {};
+  rows.forEach(row => {
+    if (row.entry_date) map[row.entry_date] = mapEntryRow(row);
+  });
+  return map;
+}
+
+/** 個人勤怠を upsert（on conflict (username, entry_date) → update） */
+export async function upsertAttendanceEntryInSupabase(username, dateStr, data) {
+  if (!username || !dateStr) return;
+  await requestSupabase('attendance_entries', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=minimal',
+    body: {
+      username,
+      entry_date:       dateStr,
+      type:             data.type ?? null,
+      hayade:           data.hayade ?? null,
+      zangyo:           data.zangyo ?? null,
+      note:             data.note ?? null,
+      year_month:       data.yearMonth || dateStr.slice(0, 7),
+      work_site_hours:  (data.workSiteHours && typeof data.workSiteHours === 'object') ? data.workSiteHours : {},
+      project_keys:     Array.isArray(data.projectKeys) ? data.projectKeys : [],
+    },
+  });
+}
+
+export async function deleteAttendanceEntryInSupabase(username, dateStr) {
+  if (!username || !dateStr) return;
+  await requestSupabase(
+    `attendance_entries?username=eq.${encodeURIComponent(username)}&entry_date=eq.${encodeURIComponent(dateStr)}`,
+    { method: 'DELETE', prefer: 'return=minimal' }
+  );
+}
+
+/** 全ユーザーの月次勤怠一括取得（管理者向け集計） */
+export async function fetchMonthlyAttendanceSummaryFromSupabase(yearMonth) {
+  if (!yearMonth) return [];
+  const rows = await requestSupabase(
+    `attendance_entries?year_month=eq.${encodeURIComponent(yearMonth)}&select=${encodeURIComponent(ENTRY_SELECT)}&order=username.asc,entry_date.asc`,
+    { diagKey: 'supabase.attendance_summary', diagLabel: 'Supabase 月次勤怠集計', diagScope: 'attendance_entries' }
+  );
+  return Array.isArray(rows) ? rows.map(r => ({ ...mapEntryRow(r), username: r.username })) : [];
+}
+
+// ---- order_suppliers ----
+
+const SUPPLIER_SELECT = 'id,name,email,tel,address,active,created_at,updated_at';
+
+function mapSupplierRow(row = {}) {
+  return {
+    id:      row.id,
+    name:    row.name    || '',
+    email:   row.email   || '',
+    tel:     row.tel     || '',
+    address: row.address || '',
+    active:  row.active !== false,
+  };
+}
+
+export async function fetchOrderSuppliersFromSupabase() {
+  const rows = await requestSupabase(
+    `order_suppliers?active=eq.true&select=${encodeURIComponent(SUPPLIER_SELECT)}&order=name.asc`,
+    { diagKey: 'supabase.order_suppliers', diagLabel: 'Supabase 発注先', diagScope: 'order_suppliers' }
+  );
+  return Array.isArray(rows) ? rows.map(mapSupplierRow) : [];
+}
+
+export async function createOrderSupplierInSupabase(data) {
+  const id = data.id || createSupabaseClientId('sup');
+  await requestSupabase('order_suppliers', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: {
+      id,
+      name:    data.name    || '',
+      email:   data.email   || '',
+      tel:     data.tel     || '',
+      address: data.address || '',
+      active:  true,
+    },
+  });
+  return id;
+}
+
+export async function updateOrderSupplierInSupabase(id, data) {
+  const payload = {};
+  if ('name' in data)    payload.name    = data.name    || '';
+  if ('email' in data)   payload.email   = data.email   || '';
+  if ('tel' in data)     payload.tel     = data.tel     || '';
+  if ('address' in data) payload.address = data.address || '';
+  if ('active' in data)  payload.active  = !!data.active;
+  await requestSupabase(`order_suppliers?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+}
+
+// ---- order_items ----
+
+const ITEM_SELECT = 'id,supplier_id,item_category,name,spec,unit,default_qty,order_type,material_type,available_lengths,sort_order,active,created_at,updated_at';
+
+function mapItemRow(row = {}) {
+  return {
+    id:               row.id,
+    supplierId:       row.supplier_id || null,
+    itemCategory:     row.item_category || '',
+    name:             row.name   || '',
+    spec:             row.spec   || '',
+    unit:             row.unit   || '',
+    defaultQty:       Number.isFinite(row.default_qty) ? Number(row.default_qty) : 1,
+    orderType:        row.order_type    || 'both',
+    materialType:     row.material_type || 'steel',
+    availableLengths: Array.isArray(row.available_lengths) ? row.available_lengths : [],
+    sortOrder:        Number.isFinite(row.sort_order) ? row.sort_order : 0,
+    active:           row.active !== false,
+  };
+}
+
+export async function fetchOrderItemsFromSupabase() {
+  const rows = await requestSupabase(
+    `order_items?select=${encodeURIComponent(ITEM_SELECT)}&order=sort_order.asc,item_category.asc,spec.asc`,
+    { diagKey: 'supabase.order_items', diagLabel: 'Supabase 鋼材マスタ', diagScope: 'order_items' }
+  );
+  return Array.isArray(rows) ? rows.map(mapItemRow) : [];
+}
+
+export async function upsertOrderItemInSupabase(data) {
+  const id = data.id || createSupabaseClientId('item');
+  await requestSupabase('order_items', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=minimal',
+    body: {
+      id,
+      supplier_id:       data.supplierId     || null,
+      item_category:     data.itemCategory   || '',
+      name:              data.name           || '',
+      spec:              data.spec           || '',
+      unit:              data.unit           || '',
+      default_qty:       Number.isFinite(data.defaultQty) ? data.defaultQty : 1,
+      order_type:        data.orderType      || 'both',
+      material_type:     data.materialType   || 'steel',
+      available_lengths: Array.isArray(data.availableLengths) ? data.availableLengths : [],
+      sort_order:        Number.isFinite(data.sortOrder) ? data.sortOrder : 0,
+      active:            data.active !== false,
+    },
+  });
+  return id;
+}
+
+export async function deactivateOrderItemInSupabase(id) {
+  await requestSupabase(`order_items?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: { active: false },
+  });
+}
+
+// ---- orders ----
+
+const ORDER_SELECT = 'id,supplier_id,supplier_name,supplier_email,order_type,site_name,project_key,items,ordered_by,note,ordered_at,email_sent,email_sent_at,deleted_at,deleted_by,created_at,updated_at';
+
+function mapOrderRow(row = {}) {
+  return {
+    id:            row.id,
+    supplierId:    row.supplier_id    || null,
+    supplierName:  row.supplier_name  || '',
+    supplierEmail: row.supplier_email || '',
+    orderType:     row.order_type     || 'factory',
+    siteName:      row.site_name      || null,
+    projectKey:    row.project_key    || '',
+    items:         Array.isArray(row.items) ? row.items : [],
+    orderedBy:     row.ordered_by     || '',
+    note:          row.note           || '',
+    orderedAt:     isoToFirestoreTs(row.ordered_at),
+    emailSent:     !!row.email_sent,
+    emailSentAt:   row.email_sent_at  ? isoToFirestoreTs(row.email_sent_at) : null,
+    deletedAt:     row.deleted_at     ? isoToFirestoreTs(row.deleted_at) : null,
+    deletedBy:     row.deleted_by     || null,
+    createdAt:     isoToFirestoreTs(row.created_at),
+    updatedAt:     isoToFirestoreTs(row.updated_at),
+  };
+}
+
+/** orderedBy でフィルタ（管理者は全件 → username=null） */
+export async function fetchOrdersFromSupabase(username) {
+  const filter = username
+    ? `ordered_by=eq.${encodeURIComponent(username)}&`
+    : '';
+  const rows = await requestSupabase(
+    `orders?${filter}deleted_at=is.null&select=${encodeURIComponent(ORDER_SELECT)}&order=ordered_at.desc`,
+    { diagKey: 'supabase.orders', diagLabel: 'Supabase 発注履歴', diagScope: 'orders' }
+  );
+  return Array.isArray(rows) ? rows.map(mapOrderRow) : [];
+}
+
+export async function createOrderInSupabase(data) {
+  const id = data.id || createSupabaseClientId('order');
+  const now = new Date().toISOString();
+  await requestSupabase('orders', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: {
+      id,
+      supplier_id:    data.supplierId    || null,
+      supplier_name:  data.supplierName  || '',
+      supplier_email: data.supplierEmail || '',
+      order_type:     data.orderType     || 'factory',
+      site_name:      data.siteName      || null,
+      project_key:    data.projectKey    || '',
+      items:          Array.isArray(data.items) ? data.items : [],
+      ordered_by:     data.orderedBy     || '',
+      note:           data.note          || '',
+      ordered_at:     data.orderedAt     || now,
+      email_sent:     !!data.emailSent,
+      email_sent_at:  data.emailSentAt   || null,
+    },
+  });
+  return id;
+}
+
+export async function updateOrderInSupabase(id, data) {
+  const payload = {};
+  if ('emailSent' in data)    payload.email_sent     = !!data.emailSent;
+  if ('emailSentAt' in data)  payload.email_sent_at  = data.emailSentAt || null;
+  if ('deletedAt' in data)    payload.deleted_at     = data.deletedAt || null;
+  if ('deletedBy' in data)    payload.deleted_by     = data.deletedBy || null;
+  if ('note' in data)         payload.note           = data.note || '';
+  await requestSupabase(`orders?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+}

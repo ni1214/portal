@@ -11,6 +11,14 @@ import {
   recordListenerSnapshot,
   wrapTrackedListenerUnsubscribe,
 } from './read-diagnostics.js';
+import {
+  isSupabaseSharedCoreEnabled,
+  fetchAttendanceEntriesFromSupabase,
+  fetchAttendanceSitesFromSupabase,
+  createAttendanceSiteInSupabase,
+  updateAttendanceSiteInSupabase,
+  deleteAttendanceSiteInSupabase,
+} from './supabase.js';
 
 let deps = {};
 let eventsBound = false;
@@ -501,6 +509,16 @@ function renderEmpty(containerId, message) {
 async function loadUserPeriodAttendance(username, period) {
   if (!username) return {};
   const yms = getPeriodYearMonths(period);
+  if (isSupabaseSharedCoreEnabled()) {
+    const entries = await fetchAttendanceEntriesFromSupabase(username, yms);
+    const map = {};
+    for (const [dateStr, entry] of Object.entries(entries)) {
+      if (dateStr >= period.startStr && dateStr <= period.endStr) {
+        map[dateStr] = entry;
+      }
+    }
+    return map;
+  }
   const snaps = await Promise.all(
     yms.map(ym =>
       getDocs(
@@ -1433,15 +1451,27 @@ async function addAttendanceSiteFromForm() {
 
   btn.disabled = true;
   try {
-    await addDoc(collection(db, 'attendance_sites'), {
-      code: code || '',
-      name,
-      active: true,
-      sortOrder: maxOrder + 1,
-      updatedBy: state.currentUsername || '',
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      const newSite = await createAttendanceSiteInSupabase({
+        code: code || '',
+        name,
+        active: true,
+        sortOrder: maxOrder + 1,
+        updatedBy: state.currentUsername || '',
+      });
+      state.attendanceSites = [...(state.attendanceSites || []), newSite];
+      renderAttendanceSiteTable();
+    } else {
+      await addDoc(collection(db, 'attendance_sites'), {
+        code: code || '',
+        name,
+        active: true,
+        sortOrder: maxOrder + 1,
+        updatedBy: state.currentUsername || '',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
     markWorkSummaryStale();
     codeEl.value = '';
     nameEl.value = '';
@@ -1471,12 +1501,24 @@ async function editAttendanceSite(siteId) {
   }
 
   try {
-    await updateDoc(doc(db, 'attendance_sites', siteId), {
-      code: code || '',
-      name,
-      updatedBy: state.currentUsername || '',
-      updatedAt: serverTimestamp(),
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateAttendanceSiteInSupabase(siteId, {
+        code: code || '',
+        name,
+        updatedBy: state.currentUsername || '',
+      });
+      state.attendanceSites = (state.attendanceSites || []).map(s =>
+        s.id === siteId ? { ...s, code: code || '', name, updatedBy: state.currentUsername || '' } : s
+      );
+      renderAttendanceSiteTable();
+    } else {
+      await updateDoc(doc(db, 'attendance_sites', siteId), {
+        code: code || '',
+        name,
+        updatedBy: state.currentUsername || '',
+        updatedAt: serverTimestamp(),
+      });
+    }
     markWorkSummaryStale();
   } catch (err) {
     console.error('登録現場更新エラー:', err);
@@ -1491,7 +1533,13 @@ async function deleteAttendanceSite(siteId) {
   if (!ok) return;
 
   try {
-    await deleteDoc(doc(db, 'attendance_sites', siteId));
+    if (isSupabaseSharedCoreEnabled()) {
+      await deleteAttendanceSiteInSupabase(siteId);
+      state.attendanceSites = (state.attendanceSites || []).filter(s => s.id !== siteId);
+      renderAttendanceSiteTable();
+    } else {
+      await deleteDoc(doc(db, 'attendance_sites', siteId));
+    }
     markWorkSummaryStale();
   } catch (err) {
     console.error('登録現場削除エラー:', err);
@@ -1501,6 +1549,20 @@ async function deleteAttendanceSite(siteId) {
 
 function subscribeAttendanceSites() {
   if (state._attendanceSitesSub) return;
+  if (isSupabaseSharedCoreEnabled()) {
+    fetchAttendanceSitesFromSupabase().then(sites => {
+      state.attendanceSites = sites;
+      if (state.calTab !== 'personal') return;
+      if (state.calPersonalTab === 'sites') renderAttendanceSiteTable();
+      if (state.calPersonalTab === 'work') void renderWorkTable();
+      if (state.calPersonalTab === 'summary') markWorkSummaryStale();
+    }).catch(err => {
+      console.error('登録現場取得エラー(Supabase):', err);
+      state.attendanceSites = [];
+      if (state.calPersonalTab === 'sites') renderAttendanceSiteTable();
+    });
+    return;
+  }
   recordListenerStart('calw.sites', '登録現場マスタ', 'attendance_sites');
   state._attendanceSitesSub = wrapTrackedListenerUnsubscribe('calw.sites', onSnapshot(
     query(collection(db, 'attendance_sites'), orderBy('sortOrder', 'asc')),

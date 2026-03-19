@@ -1,5 +1,17 @@
 // ========== タスク割り振り ==========
 import { db, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, collection, query, where, orderBy, serverTimestamp, onSnapshot } from './config.js';
+import {
+  isSupabaseSharedCoreEnabled,
+  fetchReceivedTasksFromSupabase,
+  fetchSentTasksFromSupabase,
+  fetchSentDoneNotifyTasksFromSupabase,
+  fetchSharedTasksFromSupabase,
+  fetchTaskHistoryFromSupabase,
+  getAssignedTaskFromSupabase,
+  createAssignedTaskInSupabase,
+  updateAssignedTaskInSupabase,
+  deleteAssignedTaskInSupabase,
+} from './supabase.js';
 import { state, TASK_STATUS_LABEL } from './state.js';
 import { esc, getUserAvatarColor, normalizeProjectKey } from './utils.js';
 import {
@@ -52,6 +64,10 @@ function buildTaskPayload({
 }
 
 export async function createTaskRecord(taskInput) {
+  if (isSupabaseSharedCoreEnabled()) {
+    const id = await createAssignedTaskInSupabase(buildTaskPayload(taskInput));
+    return { id };  // DocumentReference 互換 ( .id プロパティ )
+  }
   return addDoc(collection(db, 'assigned_tasks'), buildTaskPayload(taskInput));
 }
 
@@ -247,6 +263,28 @@ async function _loadTaskHistory(tab, force = false) {
     renderTaskTabContent();
   }
 
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const all = await fetchTaskHistoryFromSupabase(tab, state.currentUsername);
+      // live のものは除外
+      const historyOnly = all.filter(t =>
+        tab === 'received' ? !_isReceivedTaskLive(t) :
+        tab === 'sent'     ? !_isSentTaskLive(t) :
+        !_isSharedTaskLive(t)
+      );
+      state.taskHistoryCache = { ...state.taskHistoryCache, [tab]: historyOnly };
+      state.taskHistoryLoaded = { ...state.taskHistoryLoaded, [tab]: true };
+      _syncAllTaskLists();
+    } catch (err) {
+      console.error(`Supabase task history error (${tab}):`, err);
+    } finally {
+      state.taskHistoryLoading = { ...state.taskHistoryLoading, [tab]: false };
+      if (state.taskModalOpen) renderTaskTabContent();
+    }
+    return;
+  }
+
+  // Firestore の既存コード...
   try {
     let historyQuery = null;
     if (tab === 'received') {
@@ -296,6 +334,28 @@ export function startTaskListeners(username) {
   if (!username) return;
   _resetTaskHistoryState();
 
+  if (isSupabaseSharedCoreEnabled()) {
+    Promise.all([
+      fetchReceivedTasksFromSupabase(username),
+      fetchSentTasksFromSupabase(username),
+      fetchSentDoneNotifyTasksFromSupabase(username),
+      fetchSharedTasksFromSupabase(username),
+    ]).then(([received, sent, sentDone, shared]) => {
+      liveReceivedTasks = received;
+      liveSentTasks = sent;
+      liveSentDoneNotifyTasks = sentDone;
+      liveSharedTasks = shared;
+      _syncReceivedTasks();
+      _syncSentTasks();
+      _syncSharedTasks();
+      updateTaskBadge();
+      deps.renderTodoSection?.();
+      if (state.taskModalOpen) renderTaskTabContent();
+    }).catch(err => console.error('Supabase タスク初期取得エラー:', err));
+    return;
+  }
+
+  // Firestore の既存コード（onSnapshot 4つ）はそのまま残す
   // orderBy を外してクライアント側でソート（複合インデックス不要）
   const rQ = query(
     collection(db, 'assigned_tasks'),
@@ -700,10 +760,17 @@ export async function submitNewTask() {
 
 export async function acceptTask(taskId) {
   try {
-    await updateDoc(doc(db, 'assigned_tasks', taskId), {
-      status: 'accepted',
-      acceptedAt: serverTimestamp(),
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateAssignedTaskInSupabase(taskId, {
+        status: 'accepted',
+        acceptedAt: new Date().toISOString(),
+      });
+    } else {
+      await updateDoc(doc(db, 'assigned_tasks', taskId), {
+        status: 'accepted',
+        acceptedAt: serverTimestamp(),
+      });
+    }
     await syncRequestLink(taskId, {
       linkedTaskStatus: 'accepted',
       linkedTaskClosedAt: null,
@@ -715,10 +782,17 @@ export async function completeTask(taskId) {
   if (!confirm('このタスクを完了として報告しますか？')) return;
   try {
     const current = state.receivedTasks.find(task => task.id === taskId);
-    await updateDoc(doc(db, 'assigned_tasks', taskId), {
-      status: 'done',
-      doneAt: serverTimestamp(),
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateAssignedTaskInSupabase(taskId, {
+        status: 'done',
+        doneAt: new Date().toISOString(),
+      });
+    } else {
+      await updateDoc(doc(db, 'assigned_tasks', taskId), {
+        status: 'done',
+        doneAt: serverTimestamp(),
+      });
+    }
     if (current) {
       _upsertTaskHistory('received', {
         ...current,
@@ -736,7 +810,11 @@ export async function completeTask(taskId) {
 export async function acknowledgeTask(taskId) {
   try {
     const current = state.sentTasks.find(task => task.id === taskId);
-    await updateDoc(doc(db, 'assigned_tasks', taskId), { notifiedDone: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateAssignedTaskInSupabase(taskId, { notifiedDone: true });
+    } else {
+      await updateDoc(doc(db, 'assigned_tasks', taskId), { notifiedDone: true });
+    }
     if (current) {
       _upsertTaskHistory('sent', {
         ...current,
@@ -749,9 +827,15 @@ export async function acknowledgeTask(taskId) {
 export async function deleteTask(taskId, confirmMsg) {
   if (!confirm(confirmMsg)) return;
   try {
-    const taskSnap = await getDoc(doc(db, 'assigned_tasks', taskId));
-    const task = taskSnap.exists() ? { id: taskSnap.id, ...taskSnap.data() } : null;
-    await deleteDoc(doc(db, 'assigned_tasks', taskId));
+    let task;
+    if (isSupabaseSharedCoreEnabled()) {
+      task = await getAssignedTaskFromSupabase(taskId);
+      await deleteAssignedTaskInSupabase(taskId);
+    } else {
+      const taskSnap = await getDoc(doc(db, 'assigned_tasks', taskId));
+      task = taskSnap.exists() ? { id: taskSnap.id, ...taskSnap.data() } : null;
+      await deleteDoc(doc(db, 'assigned_tasks', taskId));
+    }
     _removeTaskFromAllCaches(taskId);
     if (task?.sourceRequestId) {
       await updateDoc(doc(db, 'cross_dept_requests', task.sourceRequestId), {
@@ -796,12 +880,21 @@ export async function submitTaskEdit() {
   const btn = document.getElementById('task-edit-save-btn');
   btn.disabled = true;
   try {
-    await updateDoc(doc(db, 'assigned_tasks', taskId), {
-      title,
-      projectKey: normalizeProjectKey(document.getElementById('task-edit-project-key')?.value || ''),
-      description: document.getElementById('task-edit-desc')?.value.trim() || '',
-      dueDate:     document.getElementById('task-edit-due')?.value || '',
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateAssignedTaskInSupabase(taskId, {
+        title,
+        projectKey: normalizeProjectKey(document.getElementById('task-edit-project-key')?.value || ''),
+        description: document.getElementById('task-edit-desc')?.value.trim() || '',
+        dueDate: document.getElementById('task-edit-due')?.value || '',
+      });
+    } else {
+      await updateDoc(doc(db, 'assigned_tasks', taskId), {
+        title,
+        projectKey: normalizeProjectKey(document.getElementById('task-edit-project-key')?.value || ''),
+        description: document.getElementById('task-edit-desc')?.value.trim() || '',
+        dueDate:     document.getElementById('task-edit-due')?.value || '',
+      });
+    }
     closeTaskEditModal();
   } catch (err) {
     console.error('タスク編集エラー:', err);
@@ -930,10 +1023,17 @@ export async function submitTaskShare() {
   const btn = document.getElementById('task-share-confirm-btn');
   btn.disabled = true;
   try {
-    await updateDoc(doc(db, 'assigned_tasks', taskId), {
-      sharedWith:      newSharedWith,
-      sharedResponses: newResponses,
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateAssignedTaskInSupabase(taskId, {
+        sharedWith: newSharedWith,
+        sharedResponses: newResponses,
+      });
+    } else {
+      await updateDoc(doc(db, 'assigned_tasks', taskId), {
+        sharedWith:      newSharedWith,
+        sharedResponses: newResponses,
+      });
+    }
     closeTaskSharePicker();
   } catch (err) {
     console.error('タスク共有エラー:', err);
@@ -946,9 +1046,14 @@ export async function submitTaskShare() {
 export async function acceptSharedTask(taskId) {
   try {
     const current = state.sharedTasks.find(task => task.id === taskId);
-    await updateDoc(doc(db, 'assigned_tasks', taskId), {
-      [`sharedResponses.${state.currentUsername}`]: 'accepted',
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      const newResponses = { ...(current?.sharedResponses || {}), [state.currentUsername]: 'accepted' };
+      await updateAssignedTaskInSupabase(taskId, { sharedResponses: newResponses });
+    } else {
+      await updateDoc(doc(db, 'assigned_tasks', taskId), {
+        [`sharedResponses.${state.currentUsername}`]: 'accepted',
+      });
+    }
     if (current) {
       _upsertTaskHistory('shared', {
         ...current,
@@ -964,9 +1069,14 @@ export async function acceptSharedTask(taskId) {
 export async function declineSharedTask(taskId) {
   try {
     const current = state.sharedTasks.find(task => task.id === taskId);
-    await updateDoc(doc(db, 'assigned_tasks', taskId), {
-      [`sharedResponses.${state.currentUsername}`]: 'declined',
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      const newResponses = { ...(current?.sharedResponses || {}), [state.currentUsername]: 'declined' };
+      await updateAssignedTaskInSupabase(taskId, { sharedResponses: newResponses });
+    } else {
+      await updateDoc(doc(db, 'assigned_tasks', taskId), {
+        [`sharedResponses.${state.currentUsername}`]: 'declined',
+      });
+    }
     if (current) {
       _upsertTaskHistory('shared', {
         ...current,

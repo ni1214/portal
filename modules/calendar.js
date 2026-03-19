@@ -10,6 +10,12 @@ import {
   recordListenerSnapshot,
   wrapTrackedListenerUnsubscribe,
 } from './read-diagnostics.js';
+import {
+  isSupabaseSharedCoreEnabled,
+  fetchAttendanceEntriesFromSupabase,
+  upsertAttendanceEntryInSupabase,
+  deleteAttendanceEntryInSupabase,
+} from './supabase.js';
 
 const DOW_LABELS  = ['日','月','火','水','木','金','土'];
 const TYPE_LABELS = {
@@ -98,6 +104,39 @@ export function unsubscribeTodayAttendance() {
 export async function saveAttendance(dateStr, data) {
   if (!state.currentUsername) return;
   const yearMonth = dateStr.slice(0, 7);
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const map = data.workSiteHours;
+      const workSiteHours = (map && typeof map === 'object' && Object.keys(map).length > 0) ? map : {};
+      const projectKeys = normalizeProjectKeys(data.projectKeys || []);
+      await upsertAttendanceEntryInSupabase(state.currentUsername, dateStr, {
+        type: data.type ?? null,
+        hayade: data.hayade ?? null,
+        zangyo: data.zangyo ?? null,
+        note: data.note ?? null,
+        yearMonth,
+        workSiteHours,
+        projectKeys,
+      });
+      // 公開出席への同期
+      if (data.type && data.type !== 'normal' && data.type !== null) {
+        await deps.writePublicAttendance?.(dateStr, state.currentUsername, data.type);
+      } else {
+        await deps.removePublicAttendance?.(dateStr, state.currentUsername);
+      }
+      deps.markWorkSummaryStale?.();
+      if (dateStr === getTodayDateStr()) {
+        syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
+        deps.renderTodayDashboard?.();
+      }
+      state.attendanceData[dateStr] = data;
+      return true;
+    } catch (err) {
+      console.error('勤怠保存エラー:', err);
+      alert('保存に失敗しました');
+      return false;
+    }
+  }
   try {
     const payload = {
       ...data,
@@ -136,6 +175,20 @@ export async function saveAttendance(dateStr, data) {
 
 export async function deleteAttendance(dateStr) {
   if (!state.currentUsername) return;
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      await deleteAttendanceEntryInSupabase(state.currentUsername, dateStr);
+      delete state.attendanceData[dateStr];
+      if (dateStr === getTodayDateStr()) {
+        syncTodayAttendanceState(dateStr, null);
+      }
+      await deps.removePublicAttendance?.(dateStr, state.currentUsername);
+      deps.markWorkSummaryStale?.();
+      renderCalendar();
+      deps.renderTodayDashboard?.();
+    } catch (err) { console.error('勤怠削除エラー:', err); }
+    return;
+  }
   try {
     await deleteDoc(attendancePath(state.currentUsername, dateStr));
     delete state.attendanceData[dateStr];
@@ -160,8 +213,22 @@ export function subscribeAttendance(username) {
   if (state._attendanceSub) { state._attendanceSub(); state._attendanceSub = null; }
   // 月が変わったら前月データをリセット
   state.prevMonthAttendance = {};
-  const ym  = buildYearMonth(state.calendarYear, state.calendarMonth);
-  const q   = query(
+  const ym = buildYearMonth(state.calendarYear, state.calendarMonth);
+  if (isSupabaseSharedCoreEnabled()) {
+    fetchAttendanceEntriesFromSupabase(username, [ym]).then(entries => {
+      state.attendanceData = {};
+      for (const [dateStr, entry] of Object.entries(entries)) {
+        state.attendanceData[dateStr] = entry;
+      }
+      renderCalendar();
+      updateCalendarSummary();
+      deps.renderTodayDashboard?.();
+    }).catch(err => {
+      console.error('勤怠取得エラー(Supabase):', err);
+    });
+    return;
+  }
+  const q = query(
     collection(db, 'users', username, 'attendance'),
     where('yearMonth', '==', ym)
   );
@@ -190,6 +257,16 @@ async function fetchPrevMonthAttendance() {
   let m = state.calendarMonth - 1;
   if (m < 0) { m = 11; y--; }
   const ym = `${y}-${String(m + 1).padStart(2, '0')}`;
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const entries = await fetchAttendanceEntriesFromSupabase(state.currentUsername, [ym]);
+      state.prevMonthAttendance = { _fetched: true, ...entries };
+    } catch (err) {
+      console.warn('前月勤怠取得エラー(Supabase):', err);
+      state.prevMonthAttendance = { _fetched: true };
+    }
+    return;
+  }
   try {
     const snap = await getDocs(
       query(collection(db, 'users', state.currentUsername, 'attendance'),

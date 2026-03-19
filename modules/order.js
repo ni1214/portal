@@ -4,6 +4,18 @@ import {
   collection, query, where, orderBy,
   serverTimestamp
 } from './config.js';
+import {
+  isSupabaseSharedCoreEnabled,
+  fetchOrderSuppliersFromSupabase,
+  fetchOrderItemsFromSupabase,
+  createOrderInSupabase,
+  fetchOrdersFromSupabase,
+  updateOrderInSupabase,
+  createOrderSupplierInSupabase,
+  updateOrderSupplierInSupabase,
+  upsertOrderItemInSupabase,
+  deactivateOrderItemInSupabase,
+} from './supabase.js';
 import { state } from './state.js';
 import { esc, normalizeProjectKey } from './utils.js';
 
@@ -458,6 +470,23 @@ async function cleanupFactoryDuplicates() {
 
 // ===== マスタ読み込み =====
 async function loadMasters() {
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const [suppliers, items, configSnap] = await Promise.all([
+        fetchOrderSuppliersFromSupabase(),
+        fetchOrderItemsFromSupabase(),
+        getDoc(doc(db, 'portal', 'config'))
+      ]);
+      _suppliers = suppliers;
+      _items = items;
+      if (configSnap.exists()) {
+        _gasUrl = configSnap.data().gasOrderUrl || '';
+      }
+    } catch (err) {
+      console.error('order: loadMasters (Supabase) error', err);
+    }
+    return;
+  }
   try {
     const [suppSnap, itemSnap, configSnap] = await Promise.all([
       getDocs(query(collection(db, 'order_suppliers'), where('active', '==', true))),
@@ -477,8 +506,11 @@ async function loadMasters() {
 // ===== 初期化 =====
 export async function initOrder(d) {
   // d は deps（将来の拡張用）
-  await seedInitialData();
-  await cleanupFactoryDuplicates();
+  if (!isSupabaseSharedCoreEnabled()) {
+    // Firestore モード: シードロジック実行
+    await seedInitialData();
+    await cleanupFactoryDuplicates();
+  }
   await loadMasters();
   bindOrderEvents();
 }
@@ -1189,7 +1221,16 @@ async function submitFromPreview() {
     const ok = await sendOrderEmail(localOrderData);
     if (!ok) return;
 
-    await addDoc(collection(db, 'orders'), buildStoredOrderData(data, { emailSent: true }));
+    if (isSupabaseSharedCoreEnabled()) {
+      const stored = buildStoredOrderData(data, { emailSent: true });
+      await createOrderInSupabase({
+        ...stored,
+        orderedAt: nowLocal.toISOString(),
+        emailSentAt: nowLocal.toISOString(),
+      });
+    } else {
+      await addDoc(collection(db, 'orders'), buildStoredOrderData(data, { emailSent: true }));
+    }
 
     const usedIds = data.items.filter(it => it.itemId).map(it => it.itemId);
     if (usedIds.length) saveRecent(usedIds);
@@ -1267,6 +1308,28 @@ async function renderHistory() {
 
   try {
     const username = state.currentUsername;
+
+    if (isSupabaseSharedCoreEnabled()) {
+      // Supabase: active orders のみ（deleted_at=is.null）
+      const fetchUsername = state.isAdmin ? null : username;
+      const allOrders = await fetchOrdersFromSupabase(fetchUsername);
+      const orders = allOrders
+        .filter(o => {
+          const t = toDateValue(o.orderedAt);
+          if (!t) return false;
+          return t >= period.start && t <= period.end;
+        })
+        .sort((a, b) => {
+          const ta = toDateValue(a.orderedAt) || new Date(0);
+          const tb = toDateValue(b.orderedAt) || new Date(0);
+          return tb - ta;
+        });
+      _historyOrders = orders;
+      _deletedHistoryOrders = [];
+      renderHistoryList();
+      return;
+    }
+
     let q = state.isAdmin
       ? query(collection(db, 'orders'))
       : query(collection(db, 'orders'), where('orderedBy', '==', username));
@@ -1474,10 +1537,17 @@ async function deleteOrderHistory(orderId) {
   if (!ok) return;
 
   try {
-    await updateDoc(doc(db, 'orders', orderId), {
-      deletedAt: serverTimestamp(),
-      deletedBy: state.currentUsername || '不明'
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateOrderInSupabase(orderId, {
+        deletedAt: new Date().toISOString(),
+        deletedBy: state.currentUsername || '不明',
+      });
+    } else {
+      await updateDoc(doc(db, 'orders', orderId), {
+        deletedAt: serverTimestamp(),
+        deletedBy: state.currentUsername || '不明'
+      });
+    }
     closeOrderDetailModal();
     await renderHistory();
     alert('履歴を削除しました。誤って削除した場合は「削除済み履歴」から元に戻せます。');
@@ -1492,10 +1562,14 @@ async function restoreOrderHistory(orderId) {
   if (!order || !isOrderDeleted(order)) return;
 
   try {
-    await updateDoc(doc(db, 'orders', orderId), {
-      deletedAt: null,
-      deletedBy: null
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateOrderInSupabase(orderId, { deletedAt: null, deletedBy: null });
+    } else {
+      await updateDoc(doc(db, 'orders', orderId), {
+        deletedAt: null,
+        deletedBy: null
+      });
+    }
     closeOrderDetailModal();
     await renderHistory();
     alert('履歴を元に戻しました。');
@@ -1573,7 +1647,9 @@ function renderAdminItems() {
 
 async function addOrUpdateItem(id, data) {
   try {
-    if (id) {
+    if (isSupabaseSharedCoreEnabled()) {
+      await upsertOrderItemInSupabase(id ? { ...data, id } : { ...data, active: true });
+    } else if (id) {
       await updateDoc(doc(db, 'order_items', id), data);
     } else {
       await addDoc(collection(db, 'order_items'), { ...data, active: true });
@@ -1588,7 +1664,11 @@ async function addOrUpdateItem(id, data) {
 async function deleteItem(id) {
   if (!confirm('この鋼材を削除しますか？')) return;
   try {
-    await updateDoc(doc(db, 'order_items', id), { active: false });
+    if (isSupabaseSharedCoreEnabled()) {
+      await deactivateOrderItemInSupabase(id);
+    } else {
+      await updateDoc(doc(db, 'order_items', id), { active: false });
+    }
     await loadMasters();
     renderAdminItems();
   } catch (err) {

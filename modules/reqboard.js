@@ -2,7 +2,16 @@
 import { db, doc, getDoc, setDoc, addDoc, deleteDoc, updateDoc, collection, query, where, orderBy, serverTimestamp, onSnapshot, getDocs } from './config.js';
 import { state, REQ_STATUS_LABEL } from './state.js';
 import { esc, escHtml, getUserAvatarColor, normalizeProjectKey, _fmtTs } from './utils.js';
-import { applySupabaseRuntimeConfig } from './supabase.js';
+import {
+  isSupabaseSharedCoreEnabled,
+  applySupabaseRuntimeConfig,
+  fetchReceivedRequestsFromSupabase,
+  fetchSentRequestsFromSupabase,
+  fetchRequestHistoryFromSupabase,
+  createCrossDeptRequestInSupabase,
+  updateCrossDeptRequestInSupabase,
+  deleteCrossDeptRequestInSupabase,
+} from './supabase.js';
 import {
   recordGetDocsRead,
   recordListenerStart,
@@ -127,6 +136,27 @@ async function _loadRequestHistory(side, force = false) {
     renderReqContent();
   }
 
+  // Supabase 分岐
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const all = await fetchRequestHistoryFromSupabase(side, { myDept, username: state.currentUsername });
+      // liveReceivedRequests / liveSentRequests に既にある id のものを除外
+      const historyOnly = all.filter(req =>
+        side === 'received' ? !_isReceivedRequestLive(req) : !_isSentRequestLive(req)
+      );
+      state.reqHistoryCache = { ...state.reqHistoryCache, [side]: historyOnly };
+      state.reqHistoryLoaded = { ...state.reqHistoryLoaded, [side]: true };
+      _syncAllRequests();
+    } catch (err) {
+      console.error(`Supabase request history error (${side}):`, err);
+    } finally {
+      state.reqHistoryLoading = { ...state.reqHistoryLoading, [side]: false };
+      if (state.reqModalOpen && state.activeReqTab === 'request') renderReqContent();
+    }
+    return;
+  }
+
+  // Firestore の既存コード
   try {
     const historyQuery = side === 'received'
       ? query(collection(db, 'cross_dept_requests'), where('toDept', '==', myDept))
@@ -174,8 +204,40 @@ export function startRequestListeners(username) {
   _resetRequestHistoryState();
   if (state._suggUnsub)        { state._suggUnsub();         state._suggUnsub = null; }
 
-  // 自分の部署宛て依頼を監視
+  // Supabase 分岐
   const myDept = state.userEmailProfile ? state.userEmailProfile.department : null;
+  if (isSupabaseSharedCoreEnabled()) {
+    // 受信依頼（自分の部署宛て, submitted, archived=false）
+    if (myDept) {
+      fetchReceivedRequestsFromSupabase(myDept).then(rows => {
+        liveReceivedRequests = rows;
+        _syncReceivedRequests();
+        updateReqBadge();
+        if (state.reqModalOpen && state.activeReqTab === 'request' && state.activeReqSubTab === 'received') renderReqContent();
+      }).catch(err => console.error('Supabase 受信依頼取得エラー:', err));
+    }
+    // 送信依頼（notifyCreator=true, archived=false）
+    fetchSentRequestsFromSupabase(username).then(rows => {
+      liveSentRequests = rows;
+      _syncSentRequests();
+      updateReqBadge();
+      if (state.reqModalOpen && state.activeReqTab === 'request' && state.activeReqSubTab === 'sent') renderReqContent();
+    }).catch(err => console.error('Supabase 送信依頼取得エラー:', err));
+    // 目安箱は Supabase 非対応（Firestore のまま）
+    if (state.isSuggestionBoxViewer) {
+      const suggQ = query(collection(db, 'suggestion_box'), orderBy('createdAt', 'desc'));
+      recordListenerStart('req.suggestion', '目安箱一覧', 'suggestion_box');
+      state._suggUnsub = wrapTrackedListenerUnsubscribe('req.suggestion', onSnapshot(suggQ, snap => {
+        recordListenerSnapshot('req.suggestion', snap.size, 'suggestion_box', snap.docs);
+        state.suggestionList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        updateReqBadge();
+        if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();
+      }, err => console.error('suggestion_box listener error:', err)));
+    }
+    return;
+  }
+
+  // Firestore の既存コード（onSnapshot 3つ）
   if (myDept) {
     const rQ = query(
       collection(db, 'cross_dept_requests'),
@@ -311,6 +373,17 @@ export function switchReqSubTab(subtab) {
 export async function archiveRequest(id) {
   try {
     const current = _getRequestById(id);
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateCrossDeptRequestInSupabase(id, { archived: true });
+      if (current) {
+        _removeRequestFromAllCaches(id);
+        const updated = { ...current, archived: true, updatedAt: { seconds: Math.floor(Date.now() / 1000) } };
+        const myDept = state.userEmailProfile ? state.userEmailProfile.department : '';
+        if (current.toDept === myDept) _upsertRequestHistory('received', updated);
+        if (current.createdBy === state.currentUsername) _upsertRequestHistory('sent', updated);
+      }
+      return;
+    }
     await updateDoc(doc(db, 'cross_dept_requests', id), { archived: true, updatedAt: serverTimestamp() });
     if (current) {
       _removeRequestFromAllCaches(id);
@@ -325,6 +398,17 @@ export async function archiveRequest(id) {
 export async function unarchiveRequest(id) {
   try {
     const current = _getRequestById(id);
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateCrossDeptRequestInSupabase(id, { archived: false });
+      if (current) {
+        _removeRequestFromAllCaches(id);
+        const updated = { ...current, archived: false, updatedAt: { seconds: Math.floor(Date.now() / 1000) } };
+        const myDept = state.userEmailProfile ? state.userEmailProfile.department : '';
+        if (current.toDept === myDept) _upsertRequestHistory('received', updated);
+        if (current.createdBy === state.currentUsername) _upsertRequestHistory('sent', updated);
+      }
+      return;
+    }
     await updateDoc(doc(db, 'cross_dept_requests', id), { archived: false, updatedAt: serverTimestamp() });
     if (current) {
       _removeRequestFromAllCaches(id);
@@ -339,6 +423,11 @@ export async function unarchiveRequest(id) {
 export async function deleteRequest(id) {
   if (!confirm('この依頼を完全に削除しますか？この操作は取り消せません。')) return;
   try {
+    if (isSupabaseSharedCoreEnabled()) {
+      await deleteCrossDeptRequestInSupabase(id);
+      _removeRequestFromAllCaches(id);
+      return;
+    }
     await deleteDoc(doc(db, 'cross_dept_requests', id));
     _removeRequestFromAllCaches(id);
   } catch (err) { console.error('削除エラー:', err); alert('削除に失敗しました'); }
@@ -609,18 +698,32 @@ export async function submitRequestTaskify() {
           sharedResponses: {},
         });
 
-    await updateDoc(doc(db, 'cross_dept_requests', req.id), {
-      status: 'accepted',
-      statusUpdatedBy: state.currentUsername,
-      updatedAt: serverTimestamp(),
-      notifyCreator: true,
-      linkedTaskId: taskRef.id,
-      linkedTaskStatus: 'pending',
-      linkedTaskAssignedTo: state.reqTaskifyAssignee,
-      linkedTaskLinkedAt: serverTimestamp(),
-      linkedTaskLinkedBy: state.currentUsername,
-      linkedTaskClosedAt: null,
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateCrossDeptRequestInSupabase(req.id, {
+        status: 'accepted',
+        statusUpdatedBy: state.currentUsername,
+        notifyCreator: true,
+        linkedTaskId: taskRef.id,
+        linkedTaskStatus: 'pending',
+        linkedTaskAssignedTo: state.reqTaskifyAssignee,
+        linkedTaskLinkedAt: new Date().toISOString(),
+        linkedTaskLinkedBy: state.currentUsername,
+        linkedTaskClosedAt: null,
+      });
+    } else {
+      await updateDoc(doc(db, 'cross_dept_requests', req.id), {
+        status: 'accepted',
+        statusUpdatedBy: state.currentUsername,
+        updatedAt: serverTimestamp(),
+        notifyCreator: true,
+        linkedTaskId: taskRef.id,
+        linkedTaskStatus: 'pending',
+        linkedTaskAssignedTo: state.reqTaskifyAssignee,
+        linkedTaskLinkedAt: serverTimestamp(),
+        linkedTaskLinkedBy: state.currentUsername,
+        linkedTaskClosedAt: null,
+      });
+    }
     closeReqTaskifyModal();
   } catch (err) {
     console.error('依頼タスク化エラー:', err);
@@ -866,6 +969,25 @@ export async function submitRequest() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>';
   try {
+    if (isSupabaseSharedCoreEnabled()) {
+      await createCrossDeptRequestInSupabase({
+        title,
+        projectKey,
+        toDept,
+        fromDept: state.userEmailProfile?.department || '',
+        content,
+        proposal: proposal || '',
+        remarks:  remarks  || '',
+        createdBy: state.currentUsername,
+      });
+      // 送信タブを表示
+      switchReqSubTab('sent');
+      // 履歴をリフレッシュ
+      _resetRequestHistoryState();
+      void _loadRequestHistory('sent');
+      return;
+    }
+    // Firestore の既存コード
     await addDoc(collection(db, 'cross_dept_requests'), {
       title,
       projectKey,
@@ -931,6 +1053,24 @@ export async function updateRequestStatus() {
   try {
     const current = _getRequestById(reqId);
     const isCreator = state.sentRequests.some(r => r.id === reqId);
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateCrossDeptRequestInSupabase(reqId, {
+        status,
+        statusNote: note,
+        statusUpdatedBy: state.currentUsername,
+        notifyCreator: !isCreator,
+      });
+      if (current) {
+        _removeRequestFromAllCaches(reqId);
+        const updated = { ...current, status, statusNote: note, statusUpdatedBy: state.currentUsername, updatedAt: { seconds: Math.floor(Date.now() / 1000) }, notifyCreator: !isCreator };
+        const myDept = state.userEmailProfile ? state.userEmailProfile.department : '';
+        if (current.toDept === myDept) _upsertRequestHistory('received', updated);
+        if (current.createdBy === state.currentUsername) _upsertRequestHistory('sent', updated);
+      }
+      document.getElementById('req-status-modal').classList.remove('visible');
+      state._pendingStatusChange = null;
+      return;
+    }
     await updateDoc(doc(db, 'cross_dept_requests', reqId), {
       status,
       statusNote: note,
@@ -963,6 +1103,14 @@ export async function updateRequestStatus() {
 export async function markRequestSeen(reqId) {
   try {
     const current = state.sentRequests.find(req => req.id === reqId);
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateCrossDeptRequestInSupabase(reqId, { notifyCreator: false });
+      if (current) {
+        _removeRequestFromAllCaches(reqId);
+        _upsertRequestHistory('sent', { ...current, notifyCreator: false });
+      }
+      return;
+    }
     await updateDoc(doc(db, 'cross_dept_requests', reqId), { notifyCreator: false });
     if (current) {
       _removeRequestFromAllCaches(reqId);
