@@ -511,3 +511,294 @@ export async function removeNoticeReactionInSupabase(noticeId, emoji, username) 
     { method: 'DELETE', prefer: 'return=minimal' }
   );
 }
+
+// ===== 個人データ (Step 4: user_accounts / user_lock_pins / user_preferences / etc.) =====
+
+// ---- user_accounts ----
+
+export async function checkUserExistsInSupabase(username) {
+  if (!username) return false;
+  const rows = await requestSupabase(
+    `user_accounts?username=eq.${encodeURIComponent(username)}&select=username`,
+    { diagKey: 'supabase.user_accounts.check', diagLabel: 'Supabase ユーザー存在確認', diagScope: 'user_accounts' }
+  );
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+export async function registerUserLoginInSupabase(username) {
+  if (!username) return;
+  await requestSupabase('user_accounts', {
+    method: 'POST',
+    prefer: 'return=minimal,resolution=merge-duplicates',
+    body: { username, last_login_at: new Date().toISOString() },
+  });
+}
+
+// ---- user_lock_pins ----
+
+export async function getUserLockPinFromSupabase(username) {
+  if (!username) return null;
+  const rows = await requestSupabase(
+    `user_lock_pins?username=eq.${encodeURIComponent(username)}&select=enabled,hash,auto_lock_minutes`,
+    { diagKey: 'supabase.user_lock_pins', diagLabel: 'Supabase PINロック', diagScope: 'user_lock_pins' }
+  );
+  if (!Array.isArray(rows) || !rows.length) return null;
+  return rows[0];
+}
+
+export async function saveLockPinToSupabase(username, { hash, enabled, autoLockMinutes }) {
+  if (!username) return;
+  await requestSupabase('user_lock_pins', {
+    method: 'POST',
+    prefer: 'return=minimal,resolution=merge-duplicates',
+    body: {
+      username,
+      hash: hash ?? null,
+      enabled: !!enabled,
+      auto_lock_minutes: autoLockMinutes ?? 5,
+    },
+  });
+}
+
+// ---- user_preferences ----
+
+const PREFS_SELECT = 'theme,font_size,fav_only,favorites,collapsed_sections,collapse_seeded,hidden_cards,mission_banner_hidden,last_viewed_suggestions_at';
+
+function mapPrefsRow(row = {}) {
+  return {
+    theme: row.theme || 'dark',
+    fontSize: row.font_size || 'font-md',
+    favOnly: !!row.fav_only,
+    favorites: Array.isArray(row.favorites) ? row.favorites : [],
+    collapsedSections: Array.isArray(row.collapsed_sections) ? row.collapsed_sections : [],
+    collapseSeeded: !!row.collapse_seeded,
+    hiddenCards: Array.isArray(row.hidden_cards) ? row.hidden_cards : [],
+    missionBannerHidden: row.mission_banner_hidden !== false,
+    lastViewedSuggestionsAt: row.last_viewed_suggestions_at
+      ? Math.floor(Date.parse(row.last_viewed_suggestions_at) / 1000)
+      : null,
+  };
+}
+
+export async function fetchUserPreferencesFromSupabase(username) {
+  if (!username) return null;
+  const rows = await requestSupabase(
+    `user_preferences?username=eq.${encodeURIComponent(username)}&select=${encodeURIComponent(PREFS_SELECT)}`,
+    { diagKey: 'supabase.user_preferences', diagLabel: 'Supabase 個人設定', diagScope: 'user_preferences' }
+  );
+  if (!Array.isArray(rows) || !rows.length) return null;
+  return mapPrefsRow(rows[0]);
+}
+
+export async function saveUserPreferencesToSupabase(username, prefs = {}) {
+  if (!username) return;
+  const body = { username };
+  if ('theme' in prefs) body.theme = prefs.theme || 'dark';
+  if ('fontSize' in prefs) body.font_size = prefs.fontSize || 'font-md';
+  if ('favOnly' in prefs) body.fav_only = !!prefs.favOnly;
+  if ('favorites' in prefs) body.favorites = Array.isArray(prefs.favorites) ? prefs.favorites : [];
+  if ('collapsedSections' in prefs) body.collapsed_sections = Array.isArray(prefs.collapsedSections) ? prefs.collapsedSections : [];
+  if ('collapseSeeded' in prefs) body.collapse_seeded = !!prefs.collapseSeeded;
+  if ('hiddenCards' in prefs) body.hidden_cards = Array.isArray(prefs.hiddenCards) ? prefs.hiddenCards : [];
+  if ('missionBannerHidden' in prefs) body.mission_banner_hidden = prefs.missionBannerHidden !== false;
+  if ('lastViewedSuggestionsAt' in prefs && prefs.lastViewedSuggestionsAt != null) {
+    body.last_viewed_suggestions_at = new Date(prefs.lastViewedSuggestionsAt * 1000).toISOString();
+  }
+  await requestSupabase('user_preferences', {
+    method: 'POST',
+    prefer: 'return=minimal,resolution=merge-duplicates',
+    body,
+  });
+}
+
+// ---- user_section_orders ----
+
+export async function fetchSectionOrderFromSupabase(username) {
+  if (!username) return [];
+  const rows = await requestSupabase(
+    `user_section_orders?username=eq.${encodeURIComponent(username)}&select=order_ids`,
+    { diagKey: 'supabase.user_section_orders', diagLabel: 'Supabase セクション順', diagScope: 'user_section_orders' }
+  );
+  if (!Array.isArray(rows) || !rows.length) return [];
+  return Array.isArray(rows[0].order_ids) ? rows[0].order_ids : [];
+}
+
+export async function saveSectionOrderToSupabase(username, orderIds) {
+  if (!username) return;
+  await requestSupabase('user_section_orders', {
+    method: 'POST',
+    prefer: 'return=minimal,resolution=merge-duplicates',
+    body: { username, order_ids: Array.isArray(orderIds) ? orderIds : [] },
+  });
+}
+
+// ---- user_profiles ----
+
+const PROFILE_SELECT = 'real_name,department,role_type,email,phone,signature_template';
+
+function mapProfileRow(row = {}) {
+  return {
+    realName: row.real_name || '',
+    department: row.department || '',
+    roleType: row.role_type || 'member',
+    email: row.email || '',
+    phone: row.phone || '',
+    signatureTemplate: row.signature_template || '',
+  };
+}
+
+export async function fetchUserProfileFromSupabase(username) {
+  if (!username) return null;
+  const rows = await requestSupabase(
+    `user_profiles?username=eq.${encodeURIComponent(username)}&select=${encodeURIComponent(PROFILE_SELECT)}`,
+    { diagKey: 'supabase.user_profiles', diagLabel: 'Supabase プロフィール', diagScope: 'user_profiles' }
+  );
+  if (!Array.isArray(rows) || !rows.length) return null;
+  return mapProfileRow(rows[0]);
+}
+
+export async function saveUserProfileToSupabase(username, data = {}) {
+  if (!username) return;
+  const body = { username };
+  if ('realName' in data) body.real_name = data.realName || '';
+  if ('department' in data) body.department = data.department || '';
+  if ('roleType' in data) body.role_type = data.roleType || 'member';
+  if ('email' in data) body.email = data.email || '';
+  if ('phone' in data) body.phone = data.phone || '';
+  if ('signatureTemplate' in data) body.signature_template = data.signatureTemplate || '';
+  await requestSupabase('user_profiles', {
+    method: 'POST',
+    prefer: 'return=minimal,resolution=merge-duplicates',
+    body,
+  });
+}
+
+// ---- private_sections ----
+
+const PRIVATE_SECTION_SELECT = 'id,label,icon,color_index,order_index';
+
+function mapPrivateSectionRow(row = {}) {
+  return {
+    docId: row.id,
+    id: row.id,
+    label: row.label || '',
+    icon: row.icon || 'fa-solid fa-star',
+    colorIndex: Number.isFinite(row.color_index) ? row.color_index : 1,
+    order: Number.isFinite(row.order_index) ? row.order_index : 0,
+    isPrivate: true,
+  };
+}
+
+export async function fetchPrivateSectionsFromSupabase(username) {
+  if (!username) return [];
+  const rows = await requestSupabase(
+    `private_sections?username=eq.${encodeURIComponent(username)}&select=${encodeURIComponent(PRIVATE_SECTION_SELECT)}&order=order_index.asc`,
+    { diagKey: 'supabase.private_sections', diagLabel: 'Supabase マイセクション', diagScope: 'private_sections' }
+  );
+  return Array.isArray(rows) ? rows.map(mapPrivateSectionRow) : [];
+}
+
+export async function createPrivateSectionInSupabase(username, data) {
+  const id = data.id || createSupabaseClientId('psec');
+  await requestSupabase('private_sections', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: {
+      id,
+      username,
+      label: data.label || '',
+      icon: data.icon || 'fa-solid fa-star',
+      color_index: Number.isFinite(data.colorIndex) ? data.colorIndex : 1,
+      order_index: Number.isFinite(data.order) ? data.order : 0,
+    },
+  });
+  return id;
+}
+
+export async function updatePrivateSectionInSupabase(id, data) {
+  const payload = {};
+  if ('label' in data) payload.label = data.label || '';
+  if ('icon' in data) payload.icon = data.icon || 'fa-solid fa-star';
+  if ('colorIndex' in data) payload.color_index = Number.isFinite(data.colorIndex) ? data.colorIndex : 1;
+  if ('order' in data) payload.order_index = Number.isFinite(data.order) ? data.order : 0;
+  await requestSupabase(`private_sections?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+}
+
+export async function deletePrivateSectionInSupabase(id) {
+  await requestSupabase(`private_sections?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
+
+// ---- private_cards ----
+
+const PRIVATE_CARD_SELECT = 'id,label,icon,url,section_id,parent_id,order_index';
+
+function mapPrivateCardRow(row = {}) {
+  return {
+    id: row.id,
+    label: row.label || '',
+    icon: row.icon || 'fa-solid fa-link',
+    url: row.url || '#',
+    category: row.section_id || '',   // Firebase 互換: category = section_id
+    parentId: row.parent_id || null,
+    order: Number.isFinite(row.order_index) ? row.order_index : 0,
+    isPrivate: true,
+  };
+}
+
+export async function fetchPrivateCardsFromSupabase(username) {
+  if (!username) return [];
+  const rows = await requestSupabase(
+    `private_cards?username=eq.${encodeURIComponent(username)}&select=${encodeURIComponent(PRIVATE_CARD_SELECT)}`,
+    { diagKey: 'supabase.private_cards', diagLabel: 'Supabase マイカード', diagScope: 'private_cards' }
+  );
+  return Array.isArray(rows) ? rows.map(mapPrivateCardRow) : [];
+}
+
+export async function createPrivateCardInSupabase(username, data) {
+  const id = data.id || createSupabaseClientId('pcard');
+  await requestSupabase('private_cards', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: {
+      id,
+      username,
+      label: data.label || '',
+      icon: data.icon || 'fa-solid fa-link',
+      url: data.url || '#',
+      section_id: data.category || data.sectionId || '',
+      parent_id: data.parentId || null,
+      order_index: Number.isFinite(data.order) ? data.order : 0,
+    },
+  });
+  return id;
+}
+
+export async function updatePrivateCardInSupabase(id, data) {
+  const payload = {};
+  if ('label' in data) payload.label = data.label || '';
+  if ('icon' in data) payload.icon = data.icon || 'fa-solid fa-link';
+  if ('url' in data) payload.url = data.url || '#';
+  if ('category' in data) payload.section_id = data.category || '';
+  if ('sectionId' in data) payload.section_id = data.sectionId || '';
+  if ('parentId' in data) payload.parent_id = data.parentId || null;
+  if ('order' in data) payload.order_index = Number.isFinite(data.order) ? data.order : 0;
+  await requestSupabase(`private_cards?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+}
+
+export async function deletePrivateCardInSupabase(id) {
+  await requestSupabase(`private_cards?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}

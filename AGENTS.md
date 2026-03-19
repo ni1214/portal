@@ -573,6 +573,26 @@ assigned_tasks/{taskId}
 - `acknowledged_by` は PATCH で配列ごと上書き（optimistic 更新後に state の値を送る）
 - `notice_reactions` は `(notice_id, emoji, username)` 行単位。Firebase の `{ emoji: [username] }` map へは JS 側で groupBy して変換
 
+## 2026-03-19 Supabase Step 4 完了（個人データ Supabase 対応）
+
+### 切替済み個人データ
+| Supabase テーブル | Firebase パス | 変更先 |
+|---|---|---|
+| `user_accounts` | `users_list/{name}` | `modules/auth.js` |
+| `user_lock_pins` | `users/{name}/data/lock_pin` | `modules/auth.js` |
+| `user_preferences` | `users/{name}/data/preferences` | `script.js` |
+| `user_section_orders` | `users/{name}/data/section_order` | `script.js` |
+| `user_profiles` | `users/{name}/data/email_profile` | `modules/email.js` |
+| `private_sections` | `users/{name}/private_sections` | `script.js` |
+| `private_cards` | `users/{name}/private_cards` | `script.js` |
+
+### 注意点
+- `registerUserLogin` は Supabase モードでも Firebase `users_list` に並行書込み（users_list 依存の他機能のため）
+- 読込は全て Supabase fallback → Firestore の順で行う（Supabase 障害時の安全網）
+- `user_preferences` は `lastViewedSuggestionsAt` を ISO 文字列 ↔ `seconds` で変換
+- `private_cards` の `category` フィールドは Supabase の `section_id` にマッピング
+- 未対応: `user_todos`（別モジュール `tasks.js` に関連）/ `user_email_contacts` / `user_drive_links`
+
 ## Supabase 移行追記（2026-03-18 / 個人データ続き）
 - `supabase/004_fix_private_cards_hierarchy.sql` を remote 適用済み
   - `private_cards` は `parent_section_id` ではなく `section_id + parent_id` を持つ形に補正した

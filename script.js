@@ -196,6 +196,19 @@ import {
   updateSharedCardInSupabase,
   deleteSharedCardInSupabase,
   createSupabaseClientId,
+  // Step 4: 個人データ
+  fetchUserPreferencesFromSupabase,
+  saveUserPreferencesToSupabase,
+  fetchSectionOrderFromSupabase,
+  saveSectionOrderToSupabase,
+  fetchPrivateSectionsFromSupabase,
+  fetchPrivateCardsFromSupabase,
+  createPrivateSectionInSupabase,
+  updatePrivateSectionInSupabase,
+  deletePrivateSectionInSupabase,
+  createPrivateCardInSupabase,
+  updatePrivateCardInSupabase,
+  deletePrivateCardInSupabase,
 } from './modules/supabase.js';
 
 
@@ -591,7 +604,7 @@ function renderTodoSection() {
 }
 
 
-// ========== 個人設定 Firestore 保存（デバウンス付き） ==========
+// ========== 個人設定保存（デバウンス付き） ==========
 let _prefSaveTimer = null;
 function savePreferencesToFirestore() {
   const targetUsername = state.currentUsername;
@@ -602,21 +615,25 @@ function savePreferencesToFirestore() {
     try {
       const theme    = localStorage.getItem('portal-theme')     || 'dark';
       const fontSize = localStorage.getItem('portal-font-size') || 'font-md';
-      await setDoc(
-        doc(db, 'users', targetUsername, 'data', 'preferences'),
-        {
-          theme,
-          fontSize,
-          favOnly:           state.favoritesOnlyMode,
-          favorites:         state.personalFavorites,
-          collapsedSections:   state.collapsedSections,
-          collapseSeeded:      state._collapseSeeded,
-          hiddenCards:         state.hiddenCards,
-          missionBannerHidden: state.missionBannerHidden,
-          updatedAt: serverTimestamp()
-        },
-        { merge: true }
-      );
+      const prefs = {
+        theme,
+        fontSize,
+        favOnly:           state.favoritesOnlyMode,
+        favorites:         state.personalFavorites,
+        collapsedSections: state.collapsedSections,
+        collapseSeeded:    state._collapseSeeded,
+        hiddenCards:       state.hiddenCards,
+        missionBannerHidden: state.missionBannerHidden,
+      };
+      if (isSupabaseSharedCoreEnabled()) {
+        await saveUserPreferencesToSupabase(targetUsername, prefs);
+      } else {
+        await setDoc(
+          doc(db, 'users', targetUsername, 'data', 'preferences'),
+          { ...prefs, updatedAt: serverTimestamp() },
+          { merge: true }
+        );
+      }
     } catch (err) {
       console.error('設定保存エラー:', err);
     }
@@ -644,40 +661,82 @@ async function loadPersonalData(username, lockOnSwitch = false) {
       updateFtBadge();
     }
 
-    const [orderSnap, prefSnap, privSecSnap, privCardSnap] = await Promise.all([
-      getDoc(doc(db, 'users', username, 'data', 'section_order')),
-      getDoc(doc(db, 'users', username, 'data', 'preferences')),
-      getDocs(collection(db, 'users', username, 'private_sections')),
-      getDocs(collection(db, 'users', username, 'private_cards')),
-    ]);
+    if (isSupabaseSharedCoreEnabled()) {
+      // Supabase モード: 個人データを並行取得
+      const [sbOrder, sbPrefs, sbSections, sbCards] = await Promise.all([
+        fetchSectionOrderFromSupabase(username).catch(err => { console.warn('sectionOrder fallback:', err); return null; }),
+        fetchUserPreferencesFromSupabase(username).catch(err => { console.warn('prefs fallback:', err); return null; }),
+        fetchPrivateSectionsFromSupabase(username).catch(err => { console.warn('privSections fallback:', err); return null; }),
+        fetchPrivateCardsFromSupabase(username).catch(err => { console.warn('privCards fallback:', err); return null; }),
+      ]);
 
-    state.personalSectionOrder = orderSnap.exists() ? (orderSnap.data().order || []) : [];
+      // section_order
+      state.personalSectionOrder = Array.isArray(sbOrder) ? sbOrder : [];
 
-    if (prefSnap.exists()) {
-      const p = prefSnap.data();
-      state.personalFavorites   = Array.isArray(p.favorites) ? p.favorites : [];
-      state.favoritesOnlyMode   = !!p.favOnly;
-      state._collapseSeeded     = p.collapseSeeded === true;
-      state.collapsedSections   = Array.isArray(p.collapsedSections) ? p.collapsedSections : [];
-      state.hiddenCards         = Array.isArray(p.hiddenCards) ? p.hiddenCards : [];
-      state.missionBannerHidden = p.missionBannerHidden !== false; // 未設定なら折りたたみ
-      if (p.theme)    applyTheme(p.theme, false);
-      if (p.fontSize) applyFontSize(p.fontSize, false);
-      if (p.lastViewedSuggestionsAt) {
-        state.lastViewedSuggestionsAt = p.lastViewedSuggestionsAt.seconds ?? Math.floor(p.lastViewedSuggestionsAt / 1000);
+      // preferences
+      if (sbPrefs) {
+        state.personalFavorites   = sbPrefs.favorites;
+        state.favoritesOnlyMode   = sbPrefs.favOnly;
+        state._collapseSeeded     = sbPrefs.collapseSeeded;
+        state.collapsedSections   = sbPrefs.collapsedSections;
+        state.hiddenCards         = sbPrefs.hiddenCards;
+        state.missionBannerHidden = sbPrefs.missionBannerHidden;
+        if (sbPrefs.theme)    applyTheme(sbPrefs.theme, false);
+        if (sbPrefs.fontSize) applyFontSize(sbPrefs.fontSize, false);
+        if (sbPrefs.lastViewedSuggestionsAt) {
+          state.lastViewedSuggestionsAt = sbPrefs.lastViewedSuggestionsAt;
+        }
+      } else {
+        const localFavs = (() => { try { return JSON.parse(localStorage.getItem('portal-favorites') || '[]'); } catch { return []; } })();
+        state.personalFavorites = localFavs;
+        state.favoritesOnlyMode = localStorage.getItem('portal-fav-only') === '1';
+        savePreferencesToFirestore();
+      }
+
+      // private sections / cards
+      if (Array.isArray(sbSections)) {
+        state.privateCategories = sbSections;
+      }
+      if (Array.isArray(sbCards)) {
+        state.privateCards = sbCards;
       }
     } else {
-      const localFavs = (() => {
-        try { return JSON.parse(localStorage.getItem('portal-favorites') || '[]'); } catch { return []; }
-      })();
-      const localFavOnly = localStorage.getItem('portal-fav-only') === '1';
-      state.personalFavorites = localFavs;
-      state.favoritesOnlyMode = localFavOnly;
-      savePreferencesToFirestore();
-    }
+      // Firebase モード（既存処理）
+      const [orderSnap, prefSnap, privSecSnap, privCardSnap] = await Promise.all([
+        getDoc(doc(db, 'users', username, 'data', 'section_order')),
+        getDoc(doc(db, 'users', username, 'data', 'preferences')),
+        getDocs(collection(db, 'users', username, 'private_sections')),
+        getDocs(collection(db, 'users', username, 'private_cards')),
+      ]);
 
-    state.privateCategories = privSecSnap.docs.map(d => ({ docId: d.id, isPrivate: true, ...d.data() }));
-    state.privateCards      = privCardSnap.docs.map(d => ({ id: d.id, isPrivate: true, ...d.data() }));
+      state.personalSectionOrder = orderSnap.exists() ? (orderSnap.data().order || []) : [];
+
+      if (prefSnap.exists()) {
+        const p = prefSnap.data();
+        state.personalFavorites   = Array.isArray(p.favorites) ? p.favorites : [];
+        state.favoritesOnlyMode   = !!p.favOnly;
+        state._collapseSeeded     = p.collapseSeeded === true;
+        state.collapsedSections   = Array.isArray(p.collapsedSections) ? p.collapsedSections : [];
+        state.hiddenCards         = Array.isArray(p.hiddenCards) ? p.hiddenCards : [];
+        state.missionBannerHidden = p.missionBannerHidden !== false;
+        if (p.theme)    applyTheme(p.theme, false);
+        if (p.fontSize) applyFontSize(p.fontSize, false);
+        if (p.lastViewedSuggestionsAt) {
+          state.lastViewedSuggestionsAt = p.lastViewedSuggestionsAt.seconds ?? Math.floor(p.lastViewedSuggestionsAt / 1000);
+        }
+      } else {
+        const localFavs = (() => {
+          try { return JSON.parse(localStorage.getItem('portal-favorites') || '[]'); } catch { return []; }
+        })();
+        const localFavOnly = localStorage.getItem('portal-fav-only') === '1';
+        state.personalFavorites = localFavs;
+        state.favoritesOnlyMode = localFavOnly;
+        savePreferencesToFirestore();
+      }
+
+      state.privateCategories = privSecSnap.docs.map(d => ({ docId: d.id, isPrivate: true, ...d.data() }));
+      state.privateCards      = privCardSnap.docs.map(d => ({ id: d.id, isPrivate: true, ...d.data() }));
+    }
     await ensureFavoritePublicCardsLoaded();
 
     renderAllSections();
@@ -705,27 +764,44 @@ async function loadPersonalData(username, lockOnSwitch = false) {
 
 async function savePersonalSectionOrder(username, order) {
   if (!username) return;
-  await setDoc(doc(db, 'users', username, 'data', 'section_order'), { order, updatedAt: serverTimestamp() });
+  if (isSupabaseSharedCoreEnabled()) {
+    await saveSectionOrderToSupabase(username, order);
+  } else {
+    await setDoc(doc(db, 'users', username, 'data', 'section_order'), { order, updatedAt: serverTimestamp() });
+  }
 }
 
 
 // ========== プライベートセクション CRUD ==========
 async function addPrivateSection(data) {
   if (!state.currentUsername) return;
-  const ref = await addDoc(collection(db, 'users', state.currentUsername, 'private_sections'), { ...data, createdAt: serverTimestamp() });
-  state.privateCategories.push({ docId: ref.id, isPrivate: true, ...data });
+  if (isSupabaseSharedCoreEnabled()) {
+    const id = await createPrivateSectionInSupabase(state.currentUsername, data);
+    state.privateCategories.push({ docId: id, id, isPrivate: true, ...data });
+  } else {
+    const ref = await addDoc(collection(db, 'users', state.currentUsername, 'private_sections'), { ...data, createdAt: serverTimestamp() });
+    state.privateCategories.push({ docId: ref.id, isPrivate: true, ...data });
+  }
 }
 
 async function updatePrivateSection(docId, data) {
   if (!state.currentUsername) return;
-  await updateDoc(doc(db, 'users', state.currentUsername, 'private_sections', docId), { ...data, updatedAt: serverTimestamp() });
+  if (isSupabaseSharedCoreEnabled()) {
+    await updatePrivateSectionInSupabase(docId, data);
+  } else {
+    await updateDoc(doc(db, 'users', state.currentUsername, 'private_sections', docId), { ...data, updatedAt: serverTimestamp() });
+  }
   const idx = state.privateCategories.findIndex(c => c.docId === docId);
   if (idx !== -1) state.privateCategories[idx] = { ...state.privateCategories[idx], ...data };
 }
 
 async function deletePrivateSection(docId) {
   if (!state.currentUsername) return;
-  await deleteDoc(doc(db, 'users', state.currentUsername, 'private_sections', docId));
+  if (isSupabaseSharedCoreEnabled()) {
+    await deletePrivateSectionInSupabase(docId);
+  } else {
+    await deleteDoc(doc(db, 'users', state.currentUsername, 'private_sections', docId));
+  }
   state.privateCategories = state.privateCategories.filter(c => c.docId !== docId);
 }
 
@@ -735,15 +811,24 @@ async function addPrivateCard(data) {
     ? state.privateCards.filter(c => c.parentId === data.parentId)
     : state.privateCards.filter(c => c.sectionId === data.sectionId && !c.parentId);
   const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(c => c.order || 0)) + 1 : 0;
-  const newData = { ...data, parentId: data.parentId || null, order: maxOrder, updatedAt: serverTimestamp() };
-  const ref = await addDoc(collection(db, 'users', state.currentUsername, 'private_cards'), newData);
-  state.privateCards.push({ id: ref.id, isPrivate: true, ...newData });
+  const newData = { ...data, parentId: data.parentId || null, order: maxOrder };
+  if (isSupabaseSharedCoreEnabled()) {
+    const id = await createPrivateCardInSupabase(state.currentUsername, newData);
+    state.privateCards.push({ id, isPrivate: true, ...newData });
+  } else {
+    const ref = await addDoc(collection(db, 'users', state.currentUsername, 'private_cards'), { ...newData, updatedAt: serverTimestamp() });
+    state.privateCards.push({ id: ref.id, isPrivate: true, ...newData });
+  }
   renderAllSections();
 }
 
 async function savePrivateCard(cardId, data) {
   if (!state.currentUsername) return;
-  await updateDoc(doc(db, 'users', state.currentUsername, 'private_cards', cardId), { ...data, updatedAt: serverTimestamp() });
+  if (isSupabaseSharedCoreEnabled()) {
+    await updatePrivateCardInSupabase(cardId, data);
+  } else {
+    await updateDoc(doc(db, 'users', state.currentUsername, 'private_cards', cardId), { ...data, updatedAt: serverTimestamp() });
+  }
   const idx = state.privateCards.findIndex(c => c.id === cardId);
   if (idx !== -1) state.privateCards[idx] = { ...state.privateCards[idx], ...data };
   renderAllSections();
@@ -751,7 +836,11 @@ async function savePrivateCard(cardId, data) {
 
 async function deletePrivateCard(cardId) {
   if (!state.currentUsername) return;
-  await deleteDoc(doc(db, 'users', state.currentUsername, 'private_cards', cardId));
+  if (isSupabaseSharedCoreEnabled()) {
+    await deletePrivateCardInSupabase(cardId);
+  } else {
+    await deleteDoc(doc(db, 'users', state.currentUsername, 'private_cards', cardId));
+  }
   state.privateCards = state.privateCards.filter(c => c.id !== cardId);
   renderAllSections();
 }

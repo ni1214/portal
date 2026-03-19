@@ -1,7 +1,14 @@
 // ========== 認証・ユーザー管理・ロック画面 ==========
 import { db, doc, getDoc, setDoc, getDocs, deleteDoc, updateDoc, collection, query, where, writeBatch, serverTimestamp, onSnapshot } from './config.js';
 import { state } from './state.js';
-import { applySupabaseRuntimeConfig } from './supabase.js';
+import {
+  applySupabaseRuntimeConfig,
+  isSupabaseSharedCoreEnabled,
+  checkUserExistsInSupabase,
+  registerUserLoginInSupabase,
+  getUserLockPinFromSupabase,
+  saveLockPinToSupabase,
+} from './supabase.js';
 
 // Cross-module function references (set by script.js after all modules load)
 export const deps = {};
@@ -446,6 +453,15 @@ export async function saveUsername(name) {
 export async function getUserPreloginLockInfo(username) {
   const normalized = `${username || ''}`.trim();
   if (!normalized) return { requiresPin: false, hash: null };
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const row = await getUserLockPinFromSupabase(normalized);
+      if (!row) return { requiresPin: false, hash: null };
+      return { requiresPin: !!row.enabled && !!row.hash, hash: row.hash || null };
+    } catch (err) {
+      console.warn('Supabase lock_pin 読込失敗、Firestore fallback:', err);
+    }
+  }
   const snap = await getDoc(doc(db, 'users', normalized, 'data', 'lock_pin'));
   if (!snap.exists()) return { requiresPin: false, hash: null };
   const data = snap.data();
@@ -573,8 +589,20 @@ export async function loginExistingUsername(name, options = {}) {
     !options.fromStored
   );
   try {
-    const userSnap = await getDoc(doc(db, 'users_list', normalized));
-    if (!userSnap.exists()) {
+    let userExists = false;
+    if (isSupabaseSharedCoreEnabled()) {
+      try {
+        userExists = await checkUserExistsInSupabase(normalized);
+      } catch (err) {
+        console.warn('Supabase user_accounts 確認失敗、Firestore fallback:', err);
+        const userSnap = await getDoc(doc(db, 'users_list', normalized));
+        userExists = userSnap.exists();
+      }
+    } else {
+      const userSnap = await getDoc(doc(db, 'users_list', normalized));
+      userExists = userSnap.exists();
+    }
+    if (!userExists) {
       if (options.fromStored) {
         localStorage.removeItem('portal-username');
         restoreUsernameModalForRetry(normalized, true);
@@ -629,13 +657,35 @@ export async function loadLockSettings(username, lockImmediately = false) {
   // ユーザー切り替え時に前のユーザーの設定をリセット
   state.lockPinHash = null; state.lockPinEnabled = false; state.lockEnabled = false; state.autoLockMinutes = 5;
   try {
-    const snap = await getDoc(doc(db, 'users', username, 'data', 'lock_pin'));
-    if (snap.exists()) {
-      const data = snap.data();
-      state.lockPinHash      = data.hash || null;
-      state.lockPinEnabled   = !!state.lockPinHash;
-      state.lockEnabled      = data.enabled ?? false;
-      state.autoLockMinutes  = data.autoLockMinutes ?? 5;
+    if (isSupabaseSharedCoreEnabled()) {
+      try {
+        const row = await getUserLockPinFromSupabase(username);
+        if (row) {
+          state.lockPinHash     = row.hash || null;
+          state.lockPinEnabled  = !!state.lockPinHash;
+          state.lockEnabled     = !!row.enabled;
+          state.autoLockMinutes = row.auto_lock_minutes ?? 5;
+        }
+      } catch (err) {
+        console.warn('Supabase lock_pin 読込失敗、Firestore fallback:', err);
+        const snap = await getDoc(doc(db, 'users', username, 'data', 'lock_pin'));
+        if (snap.exists()) {
+          const data = snap.data();
+          state.lockPinHash     = data.hash || null;
+          state.lockPinEnabled  = !!state.lockPinHash;
+          state.lockEnabled     = data.enabled ?? false;
+          state.autoLockMinutes = data.autoLockMinutes ?? 5;
+        }
+      }
+    } else {
+      const snap = await getDoc(doc(db, 'users', username, 'data', 'lock_pin'));
+      if (snap.exists()) {
+        const data = snap.data();
+        state.lockPinHash      = data.hash || null;
+        state.lockPinEnabled   = !!state.lockPinHash;
+        state.lockEnabled      = data.enabled ?? false;
+        state.autoLockMinutes  = data.autoLockMinutes ?? 5;
+      }
     }
   } catch (_) {}
   document.getElementById('btn-lock-header').hidden = !(state.lockEnabled && state.lockPinEnabled && state.currentUsername);
@@ -653,10 +703,18 @@ export async function loadLockSettings(username, lockImmediately = false) {
 export async function saveLockSettings() {
   if (!state.currentUsername) return;
   try {
-    await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), {
-      enabled: state.lockEnabled,
-      autoLockMinutes: state.autoLockMinutes
-    }, { merge: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await saveLockPinToSupabase(state.currentUsername, {
+        enabled: state.lockEnabled,
+        hash: state.lockPinHash,
+        autoLockMinutes: state.autoLockMinutes,
+      });
+    } else {
+      await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), {
+        enabled: state.lockEnabled,
+        autoLockMinutes: state.autoLockMinutes
+      }, { merge: true });
+    }
   } catch (err) { console.error('設定保存エラー:', err); }
 }
 
@@ -683,7 +741,15 @@ export function checkAutoLock() {
 export async function setLockPin(newPin) {
   const hash = await hashPIN(newPin);
   try {
-    await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), { hash }, { merge: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await saveLockPinToSupabase(state.currentUsername, {
+        hash,
+        enabled: state.lockEnabled,
+        autoLockMinutes: state.autoLockMinutes,
+      });
+    } else {
+      await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), { hash }, { merge: true });
+    }
     state.lockPinHash    = hash;
     state.lockPinEnabled = true;
     state.lockRecommendationPending = false;
@@ -695,7 +761,15 @@ export async function setLockPin(newPin) {
 
 export async function removeLockPin() {
   try {
-    await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), { hash: null }, { merge: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await saveLockPinToSupabase(state.currentUsername, {
+        hash: null,
+        enabled: false,
+        autoLockMinutes: state.autoLockMinutes,
+      });
+    } else {
+      await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), { hash: null }, { merge: true });
+    }
     state.lockPinHash    = null;
     state.lockPinEnabled = false;
     document.getElementById('btn-lock-header').hidden = true;
@@ -1062,16 +1136,28 @@ export function updateUsernameDisplay() {
 export async function registerUserLogin(username) {
   if (!username) return;
   try {
-    const ref  = doc(db, 'users_list', username);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
-      await setDoc(ref, {
-        displayName: username,
-        createdAt:   serverTimestamp(),
-        lastLogin:   serverTimestamp(),
-      });
+    if (isSupabaseSharedCoreEnabled()) {
+      // Supabase: UPSERT user_accounts + Firestore users_list も維持（他機能の依存があるため並行）
+      await Promise.all([
+        registerUserLoginInSupabase(username),
+        (async () => {
+          const ref  = doc(db, 'users_list', username);
+          const snap = await getDoc(ref);
+          if (!snap.exists()) {
+            await setDoc(ref, { displayName: username, createdAt: serverTimestamp(), lastLogin: serverTimestamp() });
+          } else {
+            await updateDoc(ref, { lastLogin: serverTimestamp() });
+          }
+        })(),
+      ]);
     } else {
-      await updateDoc(ref, { lastLogin: serverTimestamp() });
+      const ref  = doc(db, 'users_list', username);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        await setDoc(ref, { displayName: username, createdAt: serverTimestamp(), lastLogin: serverTimestamp() });
+      } else {
+        await updateDoc(ref, { lastLogin: serverTimestamp() });
+      }
     }
   } catch (err) {
     console.error('ユーザー登録エラー:', err);
