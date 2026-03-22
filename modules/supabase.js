@@ -553,6 +553,14 @@ export async function registerUserLoginInSupabase(username) {
   });
 }
 
+export async function fetchAllUserAccountsFromSupabase() {
+  const rows = await requestSupabase(
+    'user_accounts?select=username,last_login_at&order=username.asc',
+    { diagKey: 'supabase.user_accounts.all', diagLabel: 'Supabase 全ユーザー一覧', diagScope: 'user_accounts' }
+  );
+  return Array.isArray(rows) ? rows : [];
+}
+
 // ---- user_lock_pins ----
 
 export async function getUserLockPinFromSupabase(username) {

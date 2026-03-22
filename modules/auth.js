@@ -1,5 +1,5 @@
 // ========== 認証・ユーザー管理・ロック画面 ==========
-import { db, doc, getDoc, setDoc, getDocs, deleteDoc, updateDoc, collection, query, where, writeBatch, serverTimestamp, onSnapshot } from './config.js';
+import { db, doc, getDoc, setDoc, getDocs, updateDoc, collection, query, where, writeBatch, serverTimestamp } from './config.js';
 import { state } from './state.js';
 import {
   applySupabaseRuntimeConfig,
@@ -11,6 +11,7 @@ import {
   registerUserLoginInSupabase,
   getUserLockPinFromSupabase,
   saveLockPinToSupabase,
+  fetchAllUserAccountsFromSupabase,
 } from './supabase.js';
 import { showToast, showConfirm } from './notify.js';
 
@@ -1094,11 +1095,16 @@ export async function loadUsersForAdmin() {
   const listEl = document.getElementById('admin-user-list');
   listEl.innerHTML = '<div class="admin-loading">読み込み中...</div>';
   try {
-    const snap = await getDocs(collection(db, 'users_list'));
-    if (snap.empty) { listEl.innerHTML = '<div class="admin-loading">ユーザーなし</div>'; return; }
+    let users = [];
+    if (isSupabaseSharedCoreEnabled()) {
+      users = (await fetchAllUserAccountsFromSupabase()).map(r => r.username);
+    } else {
+      const snap = await getDocs(collection(db, 'users_list'));
+      users = snap.docs.map(d => d.id);
+    }
+    if (!users.length) { listEl.innerHTML = '<div class="admin-loading">ユーザーなし</div>'; return; }
     listEl.innerHTML = '';
-    for (const d of snap.docs) {
-      const name = d.id;
+    for (const name of users) {
       const item = document.createElement('div');
       item.className = 'admin-user-item';
       item.innerHTML = `
@@ -1119,7 +1125,11 @@ export async function loadUsersForAdmin() {
         btn.disabled = true;
         btn.textContent = '処理中...';
         try {
-          await setDoc(doc(db, 'users', name, 'data', 'lock_pin'), { hash: null, enabled: false }, { merge: true });
+          if (isSupabaseSharedCoreEnabled()) {
+            await saveLockPinToSupabase(name, { hash: null, enabled: false, autoLockMinutes: 5 });
+          } else {
+            await setDoc(doc(db, 'users', name, 'data', 'lock_pin'), { hash: null, enabled: false }, { merge: true });
+          }
           btn.textContent = 'リセット済み ✓';
           if (name === state.currentUsername) {
             state.lockPinHash = null; state.lockPinEnabled = false; state.lockEnabled = false;
@@ -1217,19 +1227,7 @@ export async function registerUserLogin(username) {
   if (!username) return;
   try {
     if (isSupabaseSharedCoreEnabled()) {
-      // Supabase: UPSERT user_accounts + Firestore users_list も維持（他機能の依存があるため並行）
-      await Promise.all([
-        registerUserLoginInSupabase(username),
-        (async () => {
-          const ref  = doc(db, 'users_list', username);
-          const snap = await getDoc(ref);
-          if (!snap.exists()) {
-            await setDoc(ref, { displayName: username, createdAt: serverTimestamp(), lastLogin: serverTimestamp() });
-          } else {
-            await updateDoc(ref, { lastLogin: serverTimestamp() });
-          }
-        })(),
-      ]);
+      await registerUserLoginInSupabase(username);
     } else {
       const ref  = doc(db, 'users_list', username);
       const snap = await getDoc(ref);
