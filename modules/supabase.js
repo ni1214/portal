@@ -1640,3 +1640,78 @@ export async function deleteSuggestionInSupabase(id) {
     prefer: 'return=minimal',
   });
 }
+
+// ========== 会社カレンダー ==========
+
+export async function fetchCompanyCalSettingsFromSupabase() {
+  const rows = await requestSupabase(
+    'company_calendar_settings?id=eq.config&select=work_saturdays,planned_leave_saturdays,holiday_ranges,events',
+    { diagKey: 'supabase.company_cal_settings', diagLabel: 'Supabase 会社カレンダー設定', diagScope: 'company_calendar_settings' }
+  );
+  if (!Array.isArray(rows) || !rows.length) return null;
+  const r = rows[0];
+  return {
+    workSaturdays: r.work_saturdays || [],
+    plannedLeaveSaturdays: r.planned_leave_saturdays || [],
+    holidayRanges: r.holiday_ranges || [],
+    events: r.events || [],
+  };
+}
+
+export async function saveCompanyCalSettingsToSupabase(fields = {}) {
+  const body = { id: 'config' };
+  if ('workSaturdays' in fields)         body.work_saturdays = fields.workSaturdays;
+  if ('plannedLeaveSaturdays' in fields) body.planned_leave_saturdays = fields.plannedLeaveSaturdays;
+  if ('holidayRanges' in fields)         body.holiday_ranges = fields.holidayRanges;
+  if ('events' in fields)                body.events = fields.events;
+  await requestSupabase('company_calendar_settings', {
+    method: 'POST',
+    prefer: 'return=minimal,resolution=merge-duplicates',
+    body,
+  });
+}
+
+export async function fetchPublicAttendanceFromSupabase(ym) {
+  const rows = await requestSupabase(
+    `public_attendance_months?year_month=eq.${encodeURIComponent(ym)}&select=days`,
+    { diagKey: 'supabase.public_attendance', diagLabel: 'Supabase 公開出席', diagScope: 'public_attendance_months' }
+  );
+  if (!Array.isArray(rows) || !rows.length) return {};
+  return rows[0].days || {};
+}
+
+export async function writePublicAttendanceToSupabase(ym, day, username, type) {
+  const rows = await requestSupabase(
+    `public_attendance_months?year_month=eq.${encodeURIComponent(ym)}&select=days`,
+    { diagKey: 'supabase.public_attendance.write', diagLabel: 'Supabase 公開出席書込', diagScope: 'public_attendance_months' }
+  );
+  const current = (Array.isArray(rows) && rows.length) ? (rows[0].days || {}) : {};
+  const updated = { ...current, [day]: { ...(current[day] || {}), [username]: type } };
+  await requestSupabase('public_attendance_months', {
+    method: 'POST',
+    prefer: 'return=minimal,resolution=merge-duplicates',
+    body: { year_month: ym, days: updated },
+  });
+}
+
+export async function removePublicAttendanceFromSupabase(ym, day, username) {
+  const rows = await requestSupabase(
+    `public_attendance_months?year_month=eq.${encodeURIComponent(ym)}&select=days`,
+    { diagKey: 'supabase.public_attendance.remove', diagLabel: 'Supabase 公開出席削除', diagScope: 'public_attendance_months' }
+  );
+  if (!Array.isArray(rows) || !rows.length) return;
+  const current = rows[0].days || {};
+  const dayData = { ...(current[day] || {}) };
+  delete dayData[username];
+  const updated = { ...current };
+  if (Object.keys(dayData).length === 0) {
+    delete updated[day];
+  } else {
+    updated[day] = dayData;
+  }
+  await requestSupabase(`public_attendance_months?year_month=eq.${encodeURIComponent(ym)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: { days: updated },
+  });
+}
