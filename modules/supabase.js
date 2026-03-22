@@ -553,6 +553,23 @@ export async function registerUserLoginInSupabase(username) {
   });
 }
 
+export async function deleteUserFromSupabase(username) {
+  if (!username) return;
+  // assigned_tasks の assigned_to / assigned_by は FK なしなので手動削除
+  await Promise.allSettled([
+    requestSupabase(`assigned_tasks?assigned_to=eq.${encodeURIComponent(username)}`, {
+      method: 'DELETE', prefer: 'return=minimal',
+    }),
+    requestSupabase(`assigned_tasks?assigned_by=eq.${encodeURIComponent(username)}`, {
+      method: 'DELETE', prefer: 'return=minimal',
+    }),
+  ]);
+  // user_accounts 削除 → CASCADE で全ユーザーデータが削除される
+  await requestSupabase(`user_accounts?username=eq.${encodeURIComponent(username)}`, {
+    method: 'DELETE', prefer: 'return=minimal',
+  });
+}
+
 export async function fetchAllUserAccountsFromSupabase() {
   const rows = await requestSupabase(
     'user_accounts?select=username,last_login_at&order=username.asc',

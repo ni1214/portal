@@ -12,6 +12,7 @@ import {
   getUserLockPinFromSupabase,
   saveLockPinToSupabase,
   fetchAllUserAccountsFromSupabase,
+  deleteUserFromSupabase,
 } from './supabase.js';
 import { showToast, showConfirm } from './notify.js';
 
@@ -497,8 +498,14 @@ export async function saveUsername(name) {
   hideUsernameError();
 
   try {
-    const snap = await getDoc(doc(db, 'users_list', name));
-    if (snap.exists()) {
+    let alreadyExists = false;
+    if (isSupabaseSharedCoreEnabled()) {
+      alreadyExists = await checkUserExistsInSupabase(name);
+    } else {
+      const snap = await getDoc(doc(db, 'users_list', name));
+      alreadyExists = snap.exists();
+    }
+    if (alreadyExists) {
       showUsernameError('このユーザーネームはすでに使用されています。');
       // 自分のアカウント再ログイン用ボタンを表示
       document.getElementById('username-reclaim').hidden = false;
@@ -1052,6 +1059,10 @@ export function closeAdminModal() {
 }
 
 export async function deleteUserData(username) {
+  if (isSupabaseSharedCoreEnabled()) {
+    await deleteUserFromSupabase(username);
+    return;
+  }
   // 1. users_list エントリ + data サブドキュメントを一括削除
   const batch1 = writeBatch(db);
   batch1.delete(doc(db, 'users_list', username));
