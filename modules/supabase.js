@@ -1603,7 +1603,7 @@ export async function savePortalConfigToSupabase(fields = {}) {
 
 // ===== suggestion_box（目安箱） =====
 
-const SUGGESTION_SELECT = 'id,content,created_by,is_anonymous,created_at';
+const SUGGESTION_SELECT = 'id,content,created_by,is_anonymous,archived,admin_reply,replied_by,replied_at,created_at';
 
 export async function fetchSuggestionsFromSupabase() {
   const rows = await requestSupabase(
@@ -1615,8 +1615,25 @@ export async function fetchSuggestionsFromSupabase() {
     content: r.content || '',
     createdBy: r.created_by || 'anonymous',
     isAnonymous: !!r.is_anonymous,
+    archived: !!r.archived,
+    adminReply: r.admin_reply || '',
+    repliedBy: r.replied_by || '',
+    repliedAt: r.replied_at ? new Date(r.replied_at) : null,
     createdAt: r.created_at ? new Date(r.created_at) : null,
   })) : [];
+}
+
+export async function updateSuggestionInSupabase(id, fields = {}) {
+  const body = {};
+  if ('archived' in fields)   body.archived    = !!fields.archived;
+  if ('adminReply' in fields) body.admin_reply = fields.adminReply ?? null;
+  if ('repliedBy' in fields)  body.replied_by  = fields.repliedBy  ?? null;
+  if ('repliedAt' in fields)  body.replied_at  = fields.repliedAt  ?? null;
+  await requestSupabase(`suggestion_box?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body,
+  });
 }
 
 export async function createSuggestionInSupabase(data) {

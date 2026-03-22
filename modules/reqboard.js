@@ -16,6 +16,7 @@ import {
   fetchSuggestionsFromSupabase,
   createSuggestionInSupabase,
   deleteSuggestionInSupabase,
+  updateSuggestionInSupabase,
 } from './supabase.js';
 import {
   recordGetDocsRead,
@@ -250,6 +251,10 @@ export function startRequestListeners(username) {
           content: s.content,
           author: s.isAnonymous ? '匿名' : s.createdBy,
           isAnonymous: s.isAnonymous,
+          archived: s.archived,
+          adminReply: s.adminReply,
+          repliedBy: s.repliedBy,
+          repliedAt: s.repliedAt,
           createdAt: s.createdAt,
         }));
         updateReqBadge();
@@ -457,13 +462,27 @@ export async function deleteRequest(id) {
 
 export async function archiveSuggestion(id) {
   try {
-    await updateDoc(doc(db, 'suggestion_box', id), { archived: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateSuggestionInSupabase(id, { archived: true });
+      const s = state.suggestionList.find(x => x.id === id);
+      if (s) s.archived = true;
+    } else {
+      await updateDoc(doc(db, 'suggestion_box', id), { archived: true });
+    }
+    if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();
   } catch (err) { console.error('アーカイブエラー:', err); showToast('アーカイブに失敗しました', 'error'); }
 }
 
 export async function unarchiveSuggestion(id) {
   try {
-    await updateDoc(doc(db, 'suggestion_box', id), { archived: false });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateSuggestionInSupabase(id, { archived: false });
+      const s = state.suggestionList.find(x => x.id === id);
+      if (s) s.archived = false;
+    } else {
+      await updateDoc(doc(db, 'suggestion_box', id), { archived: false });
+    }
+    if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();
   } catch (err) { console.error('アーカイブ解除エラー:', err); showToast('解除に失敗しました', 'error'); }
 }
 
@@ -1199,19 +1218,27 @@ export function openSuggReplyModal(suggId) {
 export async function sendSuggReply() {
   const text = document.getElementById('sugg-reply-text').value.trim();
   if (!text || !state._pendingSuggReply) return;
-  // Supabase移行後は adminReply カラムが未定義のため返信機能は Firebase のみ対応
-  if (isSupabaseSharedCoreEnabled()) {
-    showToast('返信機能はSupabase移行後も対応予定です（現在未実装）', 'error');
-    return;
-  }
   try {
-    await updateDoc(doc(db, 'suggestion_box', state._pendingSuggReply), {
-      adminReply: text,
-      repliedAt: serverTimestamp(),
-      repliedBy: state.currentUsername,
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      const now = new Date().toISOString();
+      await updateSuggestionInSupabase(state._pendingSuggReply, {
+        adminReply: text,
+        repliedAt: now,
+        repliedBy: state.currentUsername,
+      });
+      const s = state.suggestionList.find(x => x.id === state._pendingSuggReply);
+      if (s) { s.adminReply = text; s.repliedBy = state.currentUsername; s.repliedAt = new Date(now); }
+    } else {
+      await updateDoc(doc(db, 'suggestion_box', state._pendingSuggReply), {
+        adminReply: text,
+        repliedAt: serverTimestamp(),
+        repliedBy: state.currentUsername,
+      });
+    }
     document.getElementById('sugg-reply-modal').classList.remove('visible');
     state._pendingSuggReply = null;
+    if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();
+    showToast('返信を送信しました', 'success');
   } catch (err) {
     console.error('返信エラー:', err);
     showToast('返信に失敗しました', 'error');
