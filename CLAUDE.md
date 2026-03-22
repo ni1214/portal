@@ -376,3 +376,4 @@ assigned_tasks/{taskId}
 - ヘルプガイド (`#guide-modal` in `index.html`) は大きな機能追加時に更新すること
 - 返答は**日本語**で行うこと
 - 「記録して」と言われた場合は **CLAUDE.md** に記載する（MEMORY.md はローカル専用のため Git 経由で別 PC に引き継がれない）
+- **Supabase への SQL 実行は CLI を使う**: `npx supabase db query --linked -f ./supabase/xxx.sql`（プロジェクトはリンク済み。ブラウザや Supabase ダッシュボードを経由する必要はない）
