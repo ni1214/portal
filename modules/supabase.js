@@ -843,3 +843,1159 @@ export async function updateOrderInSupabase(id, data) {
     body: payload,
   });
 }
+
+// ==================== ヘルパー関数 ====================
+
+/** ISO 日時文字列を Firebase Timestamp 互換オブジェクトに変換 */
+function toTimestamp(isoStr) {
+  if (!isoStr) return null;
+  const ms = new Date(isoStr).getTime();
+  if (isNaN(ms)) return null;
+  return { seconds: Math.floor(ms / 1000), nanoseconds: (ms % 1000) * 1e6, toDate: () => new Date(ms) };
+}
+
+async function callRpc(funcName, body = {}) {
+  return requestSupabase(`rpc/${funcName}`, { method: 'POST', body });
+}
+
+// ==================== ユーザー認証 ====================
+
+export async function checkUserExistsInSupabase(username) {
+  const rows = await requestSupabase(
+    `user_accounts?username=eq.${encodeURIComponent(username)}&select=username&limit=1`
+  );
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+export async function registerUserLoginInSupabase(username) {
+  await requestSupabase('user_accounts', {
+    method: 'POST',
+    prefer: 'return=minimal,resolution=merge-duplicates',
+    body: { username, last_login_at: new Date().toISOString() },
+  });
+}
+
+export async function getUserLockPinFromSupabase(username) {
+  const rows = await requestSupabase(
+    `user_lock_pins?username=eq.${encodeURIComponent(username)}&select=enabled,hash,auto_lock_minutes&limit=1`
+  );
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const r = rows[0];
+  return { enabled: !!r.enabled, hash: r.hash || null, autoLockMinutes: r.auto_lock_minutes ?? 5 };
+}
+
+export async function saveLockPinToSupabase(username, { enabled, hash, autoLockMinutes = 5 }) {
+  await requestSupabase('user_lock_pins', {
+    method: 'POST',
+    prefer: 'return=minimal,resolution=merge-duplicates',
+    body: { username, enabled: !!enabled, hash: hash || null, auto_lock_minutes: autoLockMinutes },
+  });
+}
+
+export async function fetchAllUserAccountsFromSupabase() {
+  const rows = await requestSupabase('user_accounts?select=username,last_login_at&order=username.asc');
+  if (!Array.isArray(rows)) return [];
+  return rows.map(r => ({ username: r.username, lastLoginAt: r.last_login_at || null }));
+}
+
+export async function deleteUserFromSupabase(username) {
+  await requestSupabase(`user_accounts?username=eq.${encodeURIComponent(username)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
+
+export async function migrateUsernameInSupabase(oldName, newName) {
+  // 1. 新しいユーザーを作成（既存なら merge）
+  await requestSupabase('user_accounts', {
+    method: 'POST',
+    prefer: 'return=minimal,resolution=merge-duplicates',
+    body: { username: newName, last_login_at: new Date().toISOString() },
+  });
+  // 2. 旧ユーザーの各テーブルデータを新名にコピーしてから削除
+  const copyTables = [
+    'user_preferences', 'user_lock_pins', 'user_profiles', 'user_section_orders',
+    'private_sections', 'private_cards', 'user_todos', 'user_email_contacts',
+    'user_drive_links', 'user_drive_contacts', 'user_notice_reads', 'user_chat_reads',
+  ];
+  for (const tbl of copyTables) {
+    try {
+      const rows = await requestSupabase(`${tbl}?username=eq.${encodeURIComponent(oldName)}&select=*`);
+      if (!Array.isArray(rows) || rows.length === 0) continue;
+      const newRows = rows.map(r => ({ ...r, username: newName }));
+      await requestSupabase(tbl, { method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates', body: newRows });
+      await requestSupabase(`${tbl}?username=eq.${encodeURIComponent(oldName)}`, { method: 'DELETE', prefer: 'return=minimal' });
+    } catch (_) {}
+  }
+  // 3. assigned_tasks の参照を更新（PATCH は配列フィルタがないため行単位で）
+  try {
+    const tasks = await requestSupabase(
+      `assigned_tasks?or=(assigned_to.eq.${encodeURIComponent(oldName)},assigned_by.eq.${encodeURIComponent(oldName)})`
+    );
+    if (Array.isArray(tasks)) {
+      for (const t of tasks) {
+        const patch = {};
+        if (t.assigned_to === oldName) patch.assigned_to = newName;
+        if (t.assigned_by === oldName) patch.assigned_by = newName;
+        if (Object.keys(patch).length > 0) {
+          await requestSupabase(`assigned_tasks?id=eq.${encodeURIComponent(t.id)}`, {
+            method: 'PATCH', prefer: 'return=minimal', body: patch,
+          });
+        }
+      }
+    }
+  } catch (_) {}
+  // 4. 旧アカウント削除（cascade で関連データも削除）
+  await requestSupabase(`user_accounts?username=eq.${encodeURIComponent(oldName)}`, {
+    method: 'DELETE', prefer: 'return=minimal',
+  });
+}
+
+// ==================== お知らせ ====================
+
+function mapNoticeRow(row = {}) {
+  return {
+    id: row.id,
+    title: row.title || '',
+    body: row.body || '',
+    priority: row.priority || 'normal',
+    targetScope: row.target_scope || 'all',
+    targetDepartments: Array.isArray(row.target_departments) ? row.target_departments : [],
+    requireAcknowledgement: !!row.require_acknowledgement,
+    acknowledgedBy: Array.isArray(row.acknowledged_by) ? row.acknowledged_by : [],
+    createdBy: row.created_by || '',
+    createdAt: toTimestamp(row.created_at),
+  };
+}
+
+export async function fetchNoticesFromSupabase() {
+  const rows = await requestSupabase('notices?select=*&order=created_at.desc', {
+    diagKey: 'notice.list', diagLabel: 'お知らせ一覧', diagScope: 'notices',
+  });
+  return Array.isArray(rows) ? rows.map(mapNoticeRow) : [];
+}
+
+export async function createNoticeInSupabase(data) {
+  const id = createSupabaseClientId('notice');
+  await requestSupabase('notices', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: {
+      id,
+      title: data.title || '',
+      body: data.body || '',
+      priority: data.priority || 'normal',
+      target_scope: data.targetScope || 'all',
+      target_departments: Array.isArray(data.targetDepartments) ? data.targetDepartments : [],
+      require_acknowledgement: !!data.requireAcknowledgement,
+      acknowledged_by: [],
+      created_by: data.createdBy || '',
+    },
+  });
+  return id;
+}
+
+export async function updateNoticeInSupabase(id, data) {
+  const payload = {};
+  if ('title' in data) payload.title = data.title || '';
+  if ('body' in data) payload.body = data.body || '';
+  if ('priority' in data) payload.priority = data.priority || 'normal';
+  if ('targetScope' in data) payload.target_scope = data.targetScope || 'all';
+  if ('targetDepartments' in data) payload.target_departments = Array.isArray(data.targetDepartments) ? data.targetDepartments : [];
+  if ('requireAcknowledgement' in data) payload.require_acknowledgement = !!data.requireAcknowledgement;
+  if ('acknowledgedBy' in data) payload.acknowledged_by = Array.isArray(data.acknowledgedBy) ? data.acknowledgedBy : [];
+  await requestSupabase(`notices?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH', prefer: 'return=minimal', body: payload,
+  });
+}
+
+export async function deleteNoticeInSupabase(id) {
+  await requestSupabase(`notices?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE', prefer: 'return=minimal',
+  });
+}
+
+export async function acknowledgeNoticeInSupabase(noticeId, acknowledgedByArray) {
+  await requestSupabase(`notices?id=eq.${encodeURIComponent(noticeId)}`, {
+    method: 'PATCH', prefer: 'return=minimal',
+    body: { acknowledged_by: Array.isArray(acknowledgedByArray) ? acknowledgedByArray : [] },
+  });
+}
+
+export async function fetchReadNoticeIdsFromSupabase(username) {
+  const rows = await requestSupabase(
+    `user_notice_reads?username=eq.${encodeURIComponent(username)}&select=notice_id`
+  );
+  if (!Array.isArray(rows)) return new Set();
+  return new Set(rows.map(r => r.notice_id));
+}
+
+export async function markNoticesReadInSupabase(username, noticeIds) {
+  if (!noticeIds || noticeIds.length === 0) return;
+  const now = new Date().toISOString();
+  const body = noticeIds.map(id => ({ username, notice_id: id, read_at: now }));
+  await requestSupabase('user_notice_reads', {
+    method: 'POST', prefer: 'return=minimal,resolution=ignore-duplicates', body,
+  });
+}
+
+export async function fetchNoticeReactionsFromSupabase() {
+  const rows = await requestSupabase('notice_reactions?select=notice_id,emoji,username');
+  if (!Array.isArray(rows)) return {};
+  const map = {};
+  rows.forEach(r => {
+    if (!map[r.notice_id]) map[r.notice_id] = {};
+    if (!map[r.notice_id][r.emoji]) map[r.notice_id][r.emoji] = [];
+    map[r.notice_id][r.emoji].push(r.username);
+  });
+  return map;
+}
+
+export async function addNoticeReactionInSupabase(noticeId, emoji, username) {
+  await requestSupabase('notice_reactions', {
+    method: 'POST', prefer: 'return=minimal,resolution=ignore-duplicates',
+    body: { notice_id: noticeId, emoji, username },
+  });
+}
+
+export async function removeNoticeReactionInSupabase(noticeId, emoji, username) {
+  await requestSupabase(
+    `notice_reactions?notice_id=eq.${encodeURIComponent(noticeId)}&emoji=eq.${encodeURIComponent(emoji)}&username=eq.${encodeURIComponent(username)}`,
+    { method: 'DELETE', prefer: 'return=minimal' }
+  );
+}
+
+// ==================== タスク ====================
+
+function mapTaskRow(row = {}) {
+  return {
+    id: row.id,
+    title: row.title || '',
+    description: row.description || '',
+    assignedBy: row.assigned_by || '',
+    assignedTo: row.assigned_to || '',
+    status: row.status || 'pending',
+    dueDate: row.due_date || '',
+    projectKey: row.project_key || '',
+    sourceType: row.source_type || 'manual',
+    sourceRequestId: row.source_request_id || null,
+    sourceRequestFromDept: row.source_request_from_dept || null,
+    sourceRequestToDept: row.source_request_to_dept || null,
+    notifiedDone: !!row.notified_done,
+    sharedWith: Array.isArray(row.shared_with) ? row.shared_with : [],
+    sharedResponses: (row.shared_responses && typeof row.shared_responses === 'object') ? row.shared_responses : {},
+    acceptedAt: toTimestamp(row.accepted_at),
+    doneAt: toTimestamp(row.done_at),
+    createdAt: toTimestamp(row.created_at),
+  };
+}
+
+export async function fetchReceivedTasksFromSupabase(username) {
+  const rows = await requestSupabase(
+    `assigned_tasks?assigned_to=eq.${encodeURIComponent(username)}&status=in.(pending,accepted,done)&order=created_at.desc&limit=100`,
+    { diagKey: 'task.received', diagLabel: '受け取ったタスク', diagScope: username }
+  );
+  return Array.isArray(rows) ? rows.map(mapTaskRow) : [];
+}
+
+export async function fetchSentTasksFromSupabase(username) {
+  const rows = await requestSupabase(
+    `assigned_tasks?assigned_by=eq.${encodeURIComponent(username)}&status=in.(pending,accepted,done)&order=created_at.desc&limit=100`,
+    { diagKey: 'task.sent', diagLabel: '依頼したタスク', diagScope: username }
+  );
+  return Array.isArray(rows) ? rows.map(mapTaskRow) : [];
+}
+
+export async function fetchSharedTasksFromSupabase(username) {
+  const encoded = encodeURIComponent(JSON.stringify([username]));
+  const rows = await requestSupabase(
+    `assigned_tasks?shared_with=cs.${encoded}&status=in.(pending,accepted,done)&order=created_at.desc&limit=100`,
+    { diagKey: 'task.shared', diagLabel: '共有されたタスク', diagScope: username }
+  );
+  return Array.isArray(rows) ? rows.map(mapTaskRow) : [];
+}
+
+export async function fetchTaskHistoryFromSupabase(tab, username) {
+  let filter = '';
+  if (tab === 'received') filter = `assigned_to=eq.${encodeURIComponent(username)}&status=in.(done,cancelled)`;
+  else if (tab === 'sent')   filter = `assigned_by=eq.${encodeURIComponent(username)}&status=in.(done,cancelled)`;
+  else {
+    const encoded = encodeURIComponent(JSON.stringify([username]));
+    filter = `shared_with=cs.${encoded}&status=in.(done,cancelled)`;
+  }
+  const rows = await requestSupabase(
+    `assigned_tasks?${filter}&order=created_at.desc&limit=200`,
+    { diagKey: `task.history.${tab}`, diagLabel: `タスク履歴:${tab}`, diagScope: username }
+  );
+  return Array.isArray(rows) ? rows.map(mapTaskRow) : [];
+}
+
+export async function fetchSentDoneNotifyTasksFromSupabase(username) {
+  const rows = await requestSupabase(
+    `assigned_tasks?assigned_by=eq.${encodeURIComponent(username)}&status=eq.done&notified_done=eq.false&order=done_at.desc&limit=50`
+  );
+  return Array.isArray(rows) ? rows.map(mapTaskRow) : [];
+}
+
+export async function getAssignedTaskFromSupabase(id) {
+  const rows = await requestSupabase(`assigned_tasks?id=eq.${encodeURIComponent(id)}&select=*&limit=1`);
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  return mapTaskRow(rows[0]);
+}
+
+export async function createAssignedTaskInSupabase(data) {
+  const id = createSupabaseClientId('task');
+  const now = new Date().toISOString();
+  await requestSupabase('assigned_tasks', {
+    method: 'POST', prefer: 'return=minimal',
+    body: {
+      id,
+      title: data.title || '',
+      description: data.description || '',
+      assigned_by: data.assignedBy || '',
+      assigned_to: data.assignedTo || '',
+      status: data.status || 'pending',
+      due_date: data.dueDate || '',
+      project_key: data.projectKey || '',
+      source_type: data.sourceType || 'manual',
+      source_request_id: data.sourceRequestId || null,
+      source_request_from_dept: data.sourceRequestFromDept || null,
+      source_request_to_dept: data.sourceRequestToDept || null,
+      notified_done: false,
+      shared_with: Array.isArray(data.sharedWith) ? data.sharedWith : [],
+      shared_responses: (data.sharedResponses && typeof data.sharedResponses === 'object') ? data.sharedResponses : {},
+      created_at: now,
+    },
+  });
+  return id;
+}
+
+export async function updateAssignedTaskInSupabase(id, data) {
+  const payload = {};
+  if ('title' in data)         payload.title          = data.title || '';
+  if ('description' in data)   payload.description    = data.description || '';
+  if ('status' in data)        payload.status         = data.status;
+  if ('dueDate' in data)       payload.due_date       = data.dueDate || '';
+  if ('projectKey' in data)    payload.project_key    = data.projectKey || '';
+  if ('notifiedDone' in data)  payload.notified_done  = !!data.notifiedDone;
+  if ('sharedWith' in data)    payload.shared_with    = Array.isArray(data.sharedWith) ? data.sharedWith : [];
+  if ('sharedResponses' in data) payload.shared_responses = (data.sharedResponses && typeof data.sharedResponses === 'object') ? data.sharedResponses : {};
+  if ('acceptedAt' in data)    payload.accepted_at    = data.acceptedAt || null;
+  if ('doneAt' in data)        payload.done_at        = data.doneAt || null;
+  if ('sourceRequestId' in data)         payload.source_request_id          = data.sourceRequestId || null;
+  if ('linkedTaskStatus' in data)        payload.linked_task_status         = data.linkedTaskStatus || null;
+  if ('linkedTaskAssignedTo' in data)    payload.linked_task_assigned_to    = data.linkedTaskAssignedTo || null;
+  if ('linkedTaskLinkedBy' in data)      payload.linked_task_linked_by      = data.linkedTaskLinkedBy || null;
+  if ('linkedTaskLinkedAt' in data)      payload.linked_task_linked_at      = data.linkedTaskLinkedAt || null;
+  if ('linkedTaskClosedAt' in data)      payload.linked_task_closed_at      = data.linkedTaskClosedAt || null;
+  await requestSupabase(`assigned_tasks?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH', prefer: 'return=minimal', body: payload,
+  });
+}
+
+export async function deleteAssignedTaskInSupabase(id) {
+  await requestSupabase(`assigned_tasks?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE', prefer: 'return=minimal',
+  });
+}
+
+export async function fetchTaskCommentsFromSupabase(taskId) {
+  const rows = await requestSupabase(
+    `task_comments?task_id=eq.${encodeURIComponent(taskId)}&select=*&order=created_at.asc`
+  );
+  if (!Array.isArray(rows)) return [];
+  return rows.map(r => ({
+    id: r.id,
+    taskId: r.task_id,
+    username: r.username || '',
+    body: r.body || '',
+    createdAt: toTimestamp(r.created_at),
+  }));
+}
+
+export async function addTaskCommentInSupabase(data) {
+  await requestSupabase('task_comments', {
+    method: 'POST', prefer: 'return=minimal',
+    body: { task_id: data.taskId, username: data.username || '', body: data.body || '' },
+  });
+}
+
+export async function deleteTaskCommentInSupabase(id) {
+  await requestSupabase(`task_comments?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE', prefer: 'return=minimal',
+  });
+}
+
+export async function fetchTasksByProjectKeyFromSupabase(projectKey) {
+  const rows = await requestSupabase(
+    `assigned_tasks?project_key=eq.${encodeURIComponent(projectKey)}&order=created_at.desc&limit=200`
+  );
+  return Array.isArray(rows) ? rows.map(mapTaskRow) : [];
+}
+
+// ==================== チャット ====================
+
+function mapChatRoomRow(row = {}) {
+  return {
+    id: row.id,
+    type: row.type || 'dm',
+    name: row.name || '',
+    members: Array.isArray(row.members) ? row.members : [],
+    createdBy: row.created_by || '',
+    lastMessage: row.last_message || '',
+    lastAt: row.last_at || null,
+    lastSender: row.last_sender || '',
+    createdAt: toTimestamp(row.created_at),
+  };
+}
+
+export async function fetchChatRoomsFromSupabase(username, type = null) {
+  const encoded = encodeURIComponent(JSON.stringify([username]));
+  let path = `chat_rooms?members=cs.${encoded}&order=last_at.desc.nullslast&limit=100`;
+  if (type) path += `&type=eq.${encodeURIComponent(type)}`;
+  const rows = await requestSupabase(path, {
+    diagKey: `chat.rooms.${type || 'all'}`, diagLabel: 'チャットルーム', diagScope: username,
+  });
+  return Array.isArray(rows) ? rows.map(mapChatRoomRow) : [];
+}
+
+export async function getChatRoomFromSupabase(roomId) {
+  const rows = await requestSupabase(`chat_rooms?id=eq.${encodeURIComponent(roomId)}&select=*&limit=1`);
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  return mapChatRoomRow(rows[0]);
+}
+
+export async function upsertDmRoomInSupabase(roomId, data) {
+  await requestSupabase('chat_rooms', {
+    method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
+    body: {
+      id: roomId,
+      type: 'dm',
+      name: data.name || '',
+      members: Array.isArray(data.members) ? data.members : [],
+      created_by: data.createdBy || '',
+      last_message: data.lastMessage || '',
+      last_at: data.lastAt || null,
+      last_sender: data.lastSender || '',
+    },
+  });
+}
+
+export async function ensureDmMembersInSupabase(roomId, members) {
+  const room = await getChatRoomFromSupabase(roomId);
+  if (!room) return;
+  const current = room.members || [];
+  const missing = members.filter(m => !current.includes(m));
+  if (missing.length === 0) return;
+  const newMembers = [...new Set([...current, ...missing])];
+  await requestSupabase(`chat_rooms?id=eq.${encodeURIComponent(roomId)}`, {
+    method: 'PATCH', prefer: 'return=minimal', body: { members: newMembers },
+  });
+}
+
+export async function createGroupRoomInSupabase(data) {
+  const id = data.id || createSupabaseClientId('room');
+  await requestSupabase('chat_rooms', {
+    method: 'POST', prefer: 'return=minimal',
+    body: {
+      id,
+      type: 'group',
+      name: data.name || '',
+      members: Array.isArray(data.members) ? data.members : [],
+      created_by: data.createdBy || '',
+      last_message: '',
+      last_at: null,
+      last_sender: '',
+    },
+  });
+  return id;
+}
+
+export async function updateChatRoomLastInSupabase(roomId, data) {
+  const payload = {};
+  if ('lastMessage' in data) payload.last_message = data.lastMessage || '';
+  if ('lastAt' in data)      payload.last_at      = data.lastAt || null;
+  if ('lastSender' in data)  payload.last_sender  = data.lastSender || '';
+  if ('name' in data)        payload.name         = data.name || '';
+  if ('members' in data)     payload.members      = Array.isArray(data.members) ? data.members : [];
+  await requestSupabase(`chat_rooms?id=eq.${encodeURIComponent(roomId)}`, {
+    method: 'PATCH', prefer: 'return=minimal', body: payload,
+  });
+}
+
+export async function removeSelfFromDmRoomInSupabase(roomId, username, currentMembers) {
+  const newMembers = (currentMembers || []).filter(m => m !== username);
+  await requestSupabase(`chat_rooms?id=eq.${encodeURIComponent(roomId)}`, {
+    method: 'PATCH', prefer: 'return=minimal', body: { members: newMembers },
+  });
+}
+
+export async function fetchChatMessagesFromSupabase(roomId, msgLimit = 200) {
+  const rows = await requestSupabase(
+    `chat_messages?room_id=eq.${encodeURIComponent(roomId)}&select=*&order=created_at.desc&limit=${msgLimit}`,
+    { diagKey: 'chat.messages', diagLabel: 'チャットメッセージ', diagScope: roomId }
+  );
+  if (!Array.isArray(rows)) return [];
+  return rows.reverse().map(r => ({
+    id: r.id,
+    roomId: r.room_id,
+    username: r.username || '',
+    text: r.text || '',
+    createdAt: toTimestamp(r.created_at),
+  }));
+}
+
+export async function addChatMessageInSupabase(data) {
+  const result = await requestSupabase('chat_messages', {
+    method: 'POST', prefer: 'return=representation',
+    body: { room_id: data.roomId, username: data.username || '', text: data.text || '' },
+  });
+  if (Array.isArray(result) && result[0]) return result[0].id;
+  return null;
+}
+
+export async function deleteChatMessageInSupabase(id) {
+  await requestSupabase(`chat_messages?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE', prefer: 'return=minimal',
+  });
+}
+
+export async function deleteOldestChatMessageInSupabase(roomId) {
+  // 最古のメッセージを1件取得して削除
+  const rows = await requestSupabase(
+    `chat_messages?room_id=eq.${encodeURIComponent(roomId)}&select=id&order=created_at.asc&limit=1`
+  );
+  if (Array.isArray(rows) && rows.length > 0) {
+    await requestSupabase(`chat_messages?id=eq.${encodeURIComponent(rows[0].id)}`, {
+      method: 'DELETE', prefer: 'return=minimal',
+    });
+  }
+}
+
+export async function fetchChatReadTimesFromSupabase(username) {
+  const rows = await requestSupabase(
+    `user_chat_reads?username=eq.${encodeURIComponent(username)}&select=room_key,read_at`
+  );
+  if (!Array.isArray(rows)) return {};
+  const map = {};
+  rows.forEach(r => { map[r.room_key] = r.read_at; });
+  return map;
+}
+
+export async function markChatRoomReadInSupabase(username, roomKey) {
+  await requestSupabase('user_chat_reads', {
+    method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
+    body: { username, room_key: roomKey, read_at: new Date().toISOString() },
+  });
+}
+
+// ==================== 勤怠 ====================
+
+function mapAttendanceRow(row = {}) {
+  return {
+    id: `${row.username}_${row.entry_date}`,
+    username: row.username || '',
+    date: row.entry_date || '',
+    type: row.type || null,
+    hayade: row.hayade || null,
+    zangyo: row.zangyo || null,
+    note: row.note || null,
+    workSiteHours: (row.work_site_hours && typeof row.work_site_hours === 'object') ? row.work_site_hours : {},
+    projectKeys: Array.isArray(row.project_keys) ? row.project_keys : [],
+    yearMonth: row.year_month || '',
+    updatedAt: toTimestamp(row.updated_at),
+  };
+}
+
+export async function fetchAttendanceEntriesFromSupabase(username, yearMonths) {
+  const yms = Array.isArray(yearMonths) ? yearMonths : [yearMonths];
+  const encoded = encodeURIComponent(JSON.stringify(yms));
+  const rows = await requestSupabase(
+    `attendance_entries?username=eq.${encodeURIComponent(username)}&year_month=in.${encoded}&order=entry_date.asc`,
+    { diagKey: 'attendance.entries', diagLabel: '勤怠', diagScope: username }
+  );
+  return Array.isArray(rows) ? rows.map(mapAttendanceRow) : [];
+}
+
+export async function upsertAttendanceEntryInSupabase(username, date, data) {
+  const yearMonth = date.slice(0, 7);
+  await requestSupabase('attendance_entries', {
+    method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
+    body: {
+      username,
+      entry_date: date,
+      type: data.type || null,
+      hayade: data.hayade || null,
+      zangyo: data.zangyo || null,
+      note: data.note || null,
+      work_site_hours: (data.workSiteHours && typeof data.workSiteHours === 'object') ? data.workSiteHours : {},
+      project_keys: Array.isArray(data.projectKeys) ? data.projectKeys : [],
+      year_month: yearMonth,
+    },
+  });
+}
+
+export async function deleteAttendanceEntryInSupabase(username, date) {
+  await requestSupabase(
+    `attendance_entries?username=eq.${encodeURIComponent(username)}&entry_date=eq.${encodeURIComponent(date)}`,
+    { method: 'DELETE', prefer: 'return=minimal' }
+  );
+}
+
+export async function fetchAttendanceSitesFromSupabase() {
+  const rows = await requestSupabase(
+    'attendance_sites?active=eq.true&order=sort_order.asc,code.asc',
+    { diagKey: 'attendance.sites', diagLabel: '現場マスタ', diagScope: 'attendance_sites' }
+  );
+  if (!Array.isArray(rows)) return [];
+  return rows.map(r => ({
+    id: r.id, code: r.code || '', name: r.name || '',
+    sortOrder: r.sort_order || 0, active: !!r.active, updatedBy: r.updated_by || '',
+  }));
+}
+
+export async function createAttendanceSiteInSupabase(data) {
+  const id = createSupabaseClientId('site');
+  await requestSupabase('attendance_sites', {
+    method: 'POST', prefer: 'return=minimal',
+    body: {
+      id, code: data.code || '', name: data.name || '',
+      sort_order: data.sortOrder || 0, active: true, updated_by: data.updatedBy || '',
+    },
+  });
+  return id;
+}
+
+export async function updateAttendanceSiteInSupabase(id, data) {
+  const payload = {};
+  if ('code' in data)      payload.code       = data.code || '';
+  if ('name' in data)      payload.name       = data.name || '';
+  if ('sortOrder' in data) payload.sort_order = data.sortOrder || 0;
+  if ('active' in data)    payload.active     = !!data.active;
+  if ('updatedBy' in data) payload.updated_by = data.updatedBy || '';
+  await requestSupabase(`attendance_sites?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH', prefer: 'return=minimal', body: payload,
+  });
+}
+
+export async function deleteAttendanceSiteInSupabase(id) {
+  await requestSupabase(`attendance_sites?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH', prefer: 'return=minimal', body: { active: false },
+  });
+}
+
+export async function fetchMultipleMonthsAttendanceSummaryFromSupabase(username, yearMonths) {
+  return fetchAttendanceEntriesFromSupabase(username, yearMonths);
+}
+
+export async function cleanupOldAttendanceInSupabase(username, cutoffDate) {
+  await requestSupabase(
+    `attendance_entries?username=eq.${encodeURIComponent(username)}&entry_date=lt.${encodeURIComponent(cutoffDate)}`,
+    { method: 'DELETE', prefer: 'return=minimal' }
+  );
+}
+
+export async function fetchAttendanceByProjectKeyFromSupabase(projectKey) {
+  const encoded = encodeURIComponent(JSON.stringify([projectKey]));
+  const rows = await requestSupabase(
+    `attendance_entries?project_keys=cs.${encoded}&select=*&order=entry_date.desc&limit=500`
+  );
+  return Array.isArray(rows) ? rows.map(mapAttendanceRow) : [];
+}
+
+// ==================== 会社カレンダー ====================
+
+export async function fetchCompanyCalSettingsFromSupabase() {
+  const rows = await requestSupabase(
+    'company_calendar_settings?order=updated_at.desc&limit=1',
+    { diagKey: 'cal.settings', diagLabel: '会社カレンダー設定', diagScope: 'company_calendar_settings' }
+  );
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    workSaturdays: Array.isArray(r.work_saturdays) ? r.work_saturdays : [],
+    plannedLeaveSaturdays: Array.isArray(r.planned_leave_saturdays) ? r.planned_leave_saturdays : [],
+    holidayRanges: Array.isArray(r.holiday_ranges) ? r.holiday_ranges : [],
+    events: Array.isArray(r.events) ? r.events : [],
+  };
+}
+
+export async function saveCompanyCalSettingsToSupabase(data) {
+  const id = data.id || 'default';
+  await requestSupabase('company_calendar_settings', {
+    method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
+    body: {
+      id,
+      work_saturdays: Array.isArray(data.workSaturdays) ? data.workSaturdays : [],
+      planned_leave_saturdays: Array.isArray(data.plannedLeaveSaturdays) ? data.plannedLeaveSaturdays : [],
+      holiday_ranges: Array.isArray(data.holidayRanges) ? data.holidayRanges : [],
+      events: Array.isArray(data.events) ? data.events : [],
+    },
+  });
+}
+
+export async function fetchPublicAttendanceFromSupabase(yearMonth) {
+  const rows = await requestSupabase(
+    `public_attendance_months?year_month=eq.${encodeURIComponent(yearMonth)}&select=year_month,days&limit=1`
+  );
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  return { yearMonth: rows[0].year_month, days: rows[0].days || {} };
+}
+
+export async function writePublicAttendanceToSupabase(username, yearMonth, dayData) {
+  // 既存データをマージして保存
+  const existing = await fetchPublicAttendanceFromSupabase(yearMonth);
+  const days = (existing?.days) || {};
+  days[username] = dayData;
+  await requestSupabase('public_attendance_months', {
+    method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
+    body: { year_month: yearMonth, days },
+  });
+}
+
+export async function removePublicAttendanceFromSupabase(username, yearMonth) {
+  const existing = await fetchPublicAttendanceFromSupabase(yearMonth);
+  if (!existing) return;
+  const days = { ...(existing.days || {}) };
+  delete days[username];
+  await requestSupabase('public_attendance_months', {
+    method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
+    body: { year_month: yearMonth, days },
+  });
+}
+
+// ==================== 部門間依頼 ====================
+
+function mapRequestRow(row = {}) {
+  return {
+    id: row.id,
+    title: row.title || '',
+    projectKey: row.project_key || '',
+    toDept: row.to_dept || '',
+    fromDept: row.from_dept || '',
+    content: row.content || '',
+    proposal: row.proposal || '',
+    remarks: row.remarks || '',
+    status: row.status || 'submitted',
+    createdBy: row.created_by || '',
+    statusNote: row.status_note || '',
+    statusUpdatedBy: row.status_updated_by || '',
+    archived: !!row.archived,
+    notifyCreator: !!row.notify_creator,
+    linkedTaskId: row.linked_task_id || null,
+    linkedTaskStatus: row.linked_task_status || null,
+    linkedTaskAssignedTo: row.linked_task_assigned_to || null,
+    linkedTaskLinkedBy: row.linked_task_linked_by || null,
+    linkedTaskLinkedAt: toTimestamp(row.linked_task_linked_at),
+    linkedTaskClosedAt: toTimestamp(row.linked_task_closed_at),
+    createdAt: toTimestamp(row.created_at),
+    updatedAt: toTimestamp(row.updated_at),
+  };
+}
+
+export async function fetchReceivedRequestsFromSupabase(myDept) {
+  if (!myDept) return [];
+  const rows = await requestSupabase(
+    `cross_dept_requests?to_dept=eq.${encodeURIComponent(myDept)}&archived=eq.false&order=created_at.desc&limit=200`,
+    { diagKey: 'req.received', diagLabel: '受け取った依頼', diagScope: myDept }
+  );
+  return Array.isArray(rows) ? rows.map(mapRequestRow) : [];
+}
+
+export async function fetchSentRequestsFromSupabase(username) {
+  const rows = await requestSupabase(
+    `cross_dept_requests?created_by=eq.${encodeURIComponent(username)}&archived=eq.false&order=created_at.desc&limit=200`,
+    { diagKey: 'req.sent', diagLabel: '送った依頼', diagScope: username }
+  );
+  return Array.isArray(rows) ? rows.map(mapRequestRow) : [];
+}
+
+export async function fetchRequestHistoryFromSupabase(side, { myDept, username }) {
+  let filter = '';
+  if (side === 'received' && myDept) filter = `to_dept=eq.${encodeURIComponent(myDept)}`;
+  else filter = `created_by=eq.${encodeURIComponent(username || '')}`;
+  const rows = await requestSupabase(
+    `cross_dept_requests?${filter}&order=created_at.desc&limit=300`,
+    { diagKey: `req.history.${side}`, diagLabel: `依頼履歴:${side}`, diagScope: myDept || username }
+  );
+  return Array.isArray(rows) ? rows.map(mapRequestRow) : [];
+}
+
+export async function createCrossDeptRequestInSupabase(data) {
+  const id = createSupabaseClientId('req');
+  await requestSupabase('cross_dept_requests', {
+    method: 'POST', prefer: 'return=minimal',
+    body: {
+      id,
+      title: data.title || '',
+      project_key: data.projectKey || '',
+      to_dept: data.toDept || '',
+      from_dept: data.fromDept || '',
+      content: data.content || '',
+      proposal: data.proposal || '',
+      remarks: data.remarks || '',
+      status: data.status || 'submitted',
+      created_by: data.createdBy || '',
+    },
+  });
+  return id;
+}
+
+export async function updateCrossDeptRequestInSupabase(id, data) {
+  const payload = {};
+  if ('status' in data)             payload.status               = data.status;
+  if ('statusNote' in data)         payload.status_note          = data.statusNote || '';
+  if ('statusUpdatedBy' in data)    payload.status_updated_by    = data.statusUpdatedBy || '';
+  if ('archived' in data)           payload.archived             = !!data.archived;
+  if ('notifyCreator' in data)      payload.notify_creator       = !!data.notifyCreator;
+  if ('linkedTaskId' in data)       payload.linked_task_id       = data.linkedTaskId || null;
+  if ('linkedTaskStatus' in data)   payload.linked_task_status   = data.linkedTaskStatus || null;
+  if ('linkedTaskAssignedTo' in data) payload.linked_task_assigned_to = data.linkedTaskAssignedTo || null;
+  if ('linkedTaskLinkedBy' in data) payload.linked_task_linked_by = data.linkedTaskLinkedBy || null;
+  if ('linkedTaskLinkedAt' in data) payload.linked_task_linked_at = data.linkedTaskLinkedAt || null;
+  if ('linkedTaskClosedAt' in data) payload.linked_task_closed_at = data.linkedTaskClosedAt || null;
+  await requestSupabase(`cross_dept_requests?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH', prefer: 'return=minimal', body: payload,
+  });
+}
+
+export async function deleteCrossDeptRequestInSupabase(id) {
+  await requestSupabase(`cross_dept_requests?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE', prefer: 'return=minimal',
+  });
+}
+
+export async function fetchRequestCommentsFromSupabase(requestId) {
+  const rows = await requestSupabase(
+    `request_comments?request_id=eq.${encodeURIComponent(requestId)}&select=*&order=created_at.asc`
+  );
+  if (!Array.isArray(rows)) return [];
+  return rows.map(r => ({
+    id: r.id, requestId: r.request_id,
+    username: r.username || '', body: r.body || '',
+    createdAt: toTimestamp(r.created_at),
+  }));
+}
+
+export async function addRequestCommentInSupabase(data) {
+  await requestSupabase('request_comments', {
+    method: 'POST', prefer: 'return=minimal',
+    body: { request_id: data.requestId, username: data.username || '', body: data.body || '' },
+  });
+}
+
+export async function deleteRequestCommentInSupabase(id) {
+  await requestSupabase(`request_comments?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE', prefer: 'return=minimal',
+  });
+}
+
+export async function fetchRequestsByProjectKeyFromSupabase(projectKey) {
+  const rows = await requestSupabase(
+    `cross_dept_requests?project_key=eq.${encodeURIComponent(projectKey)}&order=created_at.desc&limit=200`
+  );
+  return Array.isArray(rows) ? rows.map(mapRequestRow) : [];
+}
+
+function mapSuggRow(row = {}) {
+  return {
+    id: row.id,
+    content: row.content || '',
+    createdBy: row.created_by || 'anonymous',
+    isAnonymous: !!row.is_anonymous,
+    archived: !!row.archived,
+    adminReply: row.admin_reply || null,
+    repliedBy: row.replied_by || null,
+    repliedAt: toTimestamp(row.replied_at),
+    createdAt: toTimestamp(row.created_at),
+    category: row.category || 'other',
+  };
+}
+
+export async function fetchSuggestionsFromSupabase() {
+  const rows = await requestSupabase(
+    'suggestion_box?order=created_at.desc&limit=200',
+    { diagKey: 'sugg.list', diagLabel: '目安箱', diagScope: 'suggestion_box' }
+  );
+  return Array.isArray(rows) ? rows.map(mapSuggRow) : [];
+}
+
+export async function createSuggestionInSupabase(data) {
+  const id = createSupabaseClientId('sugg');
+  await requestSupabase('suggestion_box', {
+    method: 'POST', prefer: 'return=minimal',
+    body: {
+      id,
+      content: data.content || '',
+      created_by: data.createdBy || 'anonymous',
+      is_anonymous: !!data.isAnonymous,
+      archived: false,
+      category: data.category || 'other',
+    },
+  });
+  return id;
+}
+
+export async function updateSuggestionInSupabase(id, data) {
+  const payload = {};
+  if ('archived' in data)    payload.archived     = !!data.archived;
+  if ('adminReply' in data)  payload.admin_reply  = data.adminReply || null;
+  if ('repliedBy' in data)   payload.replied_by   = data.repliedBy || null;
+  if ('repliedAt' in data)   payload.replied_at   = data.repliedAt || null;
+  await requestSupabase(`suggestion_box?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH', prefer: 'return=minimal', body: payload,
+  });
+}
+
+export async function deleteSuggestionInSupabase(id) {
+  await requestSupabase(`suggestion_box?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE', prefer: 'return=minimal',
+  });
+}
+
+// ==================== ファイル転送 / Drive ====================
+
+export async function fetchMyDriveLinkFromSupabase(username) {
+  const rows = await requestSupabase(
+    `user_drive_links?username=eq.${encodeURIComponent(username)}&select=url&limit=1`
+  );
+  if (!Array.isArray(rows) || rows.length === 0) return '';
+  return rows[0].url || '';
+}
+
+export async function saveMyDriveLinkInSupabase(username, url) {
+  await requestSupabase('user_drive_links', {
+    method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
+    body: { username, url: url || '' },
+  });
+}
+
+export async function fetchDriveContactsFromSupabase(username) {
+  const rows = await requestSupabase(
+    `user_drive_contacts?username=eq.${encodeURIComponent(username)}&select=contact_username,url,saved_at`
+  );
+  if (!Array.isArray(rows)) return {};
+  const map = {};
+  rows.forEach(r => { map[r.contact_username] = { url: r.url || '', savedAt: new Date(r.saved_at || 0).getTime() }; });
+  return map;
+}
+
+export async function saveDriveContactInSupabase(username, contactUsername, url) {
+  await requestSupabase('user_drive_contacts', {
+    method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
+    body: { username, contact_username: contactUsername, url: url || '' },
+  });
+}
+
+export async function deleteDriveContactInSupabase(username, contactUsername) {
+  await requestSupabase(
+    `user_drive_contacts?username=eq.${encodeURIComponent(username)}&contact_username=eq.${encodeURIComponent(contactUsername)}`,
+    { method: 'DELETE', prefer: 'return=minimal' }
+  );
+}
+
+export async function fetchDriveSharesFromSupabase(username) {
+  const enc = encodeURIComponent(username);
+  const rows = await requestSupabase(
+    `drive_shares?or=(from.eq.${enc},to.eq.${enc})&order=created_at.desc&limit=100`
+  );
+  if (!Array.isArray(rows)) return { incoming: [], outgoing: [] };
+  const mapShare = r => ({
+    id: r.id,
+    from: r.from || '',
+    to: r.to || '',
+    driveUrl: r.drive_url || '',
+    message: r.message || '',
+    status: r.status || 'pending',
+    viewedAt: toTimestamp(r.viewed_at),
+    createdAt: toTimestamp(r.created_at),
+  });
+  return {
+    incoming: rows.filter(r => r.to === username).map(mapShare),
+    outgoing: rows.filter(r => r.from === username).map(mapShare),
+  };
+}
+
+export async function addDriveShareInSupabase(from, to, driveUrl, message) {
+  await requestSupabase('drive_shares', {
+    method: 'POST', prefer: 'return=minimal',
+    body: { from, to, drive_url: driveUrl || '', message: message || '', status: 'pending' },
+  });
+}
+
+export async function updateDriveShareStatusInSupabase(id, status) {
+  const payload = { status };
+  if (status === 'viewed') payload.viewed_at = new Date().toISOString();
+  await requestSupabase(`drive_shares?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH', prefer: 'return=minimal', body: payload,
+  });
+}
+
+export async function deleteDriveShareInSupabase(id) {
+  await requestSupabase(`drive_shares?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE', prefer: 'return=minimal',
+  });
+}
+
+export async function fetchP2pSignalsFromSupabase(username) {
+  const rows = await requestSupabase(
+    `p2p_signals?to=eq.${encodeURIComponent(username)}&status=in.(pending,connected)&order=created_at.desc&limit=20`
+  );
+  if (!Array.isArray(rows)) return [];
+  return rows.map(r => ({
+    id: r.id,
+    from: r.from || '',
+    to: r.to || '',
+    fileName: r.file_name || '',
+    fileSize: r.file_size || 0,
+    fileType: r.file_type || '',
+    status: r.status || 'pending',
+    offer: r.offer || null,
+    answer: r.answer || null,
+    fromCandidates: Array.isArray(r.from_candidates) ? r.from_candidates : [],
+    toCandidates: Array.isArray(r.to_candidates) ? r.to_candidates : [],
+    createdAt: toTimestamp(r.created_at),
+  }));
+}
+
+export async function getP2pSignalFromSupabase(sessionId) {
+  const rows = await requestSupabase(
+    `p2p_signals?id=eq.${encodeURIComponent(sessionId)}&select=*&limit=1`
+  );
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    id: r.id, from: r.from || '', to: r.to || '',
+    fileName: r.file_name || '', fileSize: r.file_size || 0, fileType: r.file_type || '',
+    status: r.status || 'pending',
+    offer: r.offer || null, answer: r.answer || null,
+    fromCandidates: Array.isArray(r.from_candidates) ? r.from_candidates : [],
+    toCandidates: Array.isArray(r.to_candidates) ? r.to_candidates : [],
+  };
+}
+
+export async function createP2pSignalInSupabase(sessionId, data) {
+  await requestSupabase('p2p_signals', {
+    method: 'POST', prefer: 'return=minimal',
+    body: {
+      id: sessionId,
+      from: data.from || '',
+      to: data.to || '',
+      file_name: data.fileName || '',
+      file_size: data.fileSize || 0,
+      file_type: data.fileType || '',
+      status: 'pending',
+      offer: data.offer || null,
+      answer: null,
+      from_candidates: [],
+      to_candidates: [],
+    },
+  });
+}
+
+export async function updateP2pSignalInSupabase(sessionId, data) {
+  const payload = {};
+  if ('status' in data)  payload.status  = data.status;
+  if ('answer' in data)  payload.answer  = data.answer || null;
+  if ('offer' in data)   payload.offer   = data.offer || null;
+  await requestSupabase(`p2p_signals?id=eq.${encodeURIComponent(sessionId)}`, {
+    method: 'PATCH', prefer: 'return=minimal', body: payload,
+  });
+}
+
+export async function appendP2pCandidateInSupabase(sessionId, role, candidate) {
+  await callRpc('append_p2p_candidate', {
+    p_session_id: sessionId,
+    p_role: role,
+    p_candidate: candidate,
+  });
+}
+
+export async function deleteP2pSignalInSupabase(sessionId) {
+  await requestSupabase(`p2p_signals?id=eq.${encodeURIComponent(sessionId)}`, {
+    method: 'DELETE', prefer: 'return=minimal',
+  });
+}
+
+// ==================== メール / プロフィール ====================
+
+export async function fetchUserProfileFromSupabase(username) {
+  const rows = await requestSupabase(
+    `user_profiles?username=eq.${encodeURIComponent(username)}&select=*&limit=1`
+  );
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    realName: r.real_name || '',
+    department: r.department || '',
+    roleType: r.role_type || 'member',
+    email: r.email || '',
+    phone: r.phone || '',
+    signatureTemplate: r.signature_template || '',
+  };
+}
+
+export async function saveUserProfileToSupabase(username, data) {
+  const payload = { username };
+  if ('realName' in data)            payload.real_name           = data.realName || '';
+  if ('department' in data)          payload.department          = data.department || '';
+  if ('roleType' in data)            payload.role_type           = data.roleType || 'member';
+  if ('email' in data)               payload.email               = data.email || '';
+  if ('phone' in data)               payload.phone               = data.phone || '';
+  if ('signatureTemplate' in data)   payload.signature_template  = data.signatureTemplate || '';
+  await requestSupabase('user_profiles', {
+    method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates', body: payload,
+  });
+}
+
+export async function fetchEmailContactsFromSupabase(username) {
+  const rows = await requestSupabase(
+    `user_email_contacts?username=eq.${encodeURIComponent(username)}&order=company_name.asc`,
+    { diagKey: 'email.contacts', diagLabel: 'メール連絡先', diagScope: username }
+  );
+  if (!Array.isArray(rows)) return [];
+  return rows.map(r => ({
+    id: r.contact_id || r.id,
+    username: r.username || '',
+    companyName: r.company_name || '',
+    personName: r.person_name || '',
+    createdAt: toTimestamp(r.created_at),
+  }));
+}
+
+export async function createEmailContactInSupabase(username, data) {
+  const id = data.id || createSupabaseClientId('contact');
+  await requestSupabase('user_email_contacts', {
+    method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
+    body: {
+      contact_id: id,
+      username,
+      company_name: data.companyName || '',
+      person_name: data.personName || '',
+    },
+  });
+  return id;
+}
+
+// ==================== プロパティサマリー補助 ====================
+
+export async function fetchOrdersByProjectKeyFromSupabase(projectKey) {
+  const rows = await requestSupabase(
+    `orders?project_key=eq.${encodeURIComponent(projectKey)}&order=ordered_at.desc&limit=200`
+  );
+  if (!Array.isArray(rows)) return [];
+  return rows.map(r => ({
+    id: r.id,
+    supplierName: r.supplier_name || '',
+    orderType: r.order_type || 'factory',
+    siteName: r.site_name || null,
+    projectKey: r.project_key || '',
+    items: Array.isArray(r.items) ? r.items : [],
+    orderedBy: r.ordered_by || '',
+    orderedAt: r.ordered_at || null,
+    emailSent: !!r.email_sent,
+    deletedAt: r.deleted_at || null,
+    createdAt: toTimestamp(r.created_at),
+  }));
+}
