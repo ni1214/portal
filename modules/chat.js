@@ -273,7 +273,7 @@ export async function markRoomRead(roomId) {
 
 export function getRoomUnread(room) {
   if (!room.lastAt || !room.lastSender || room.lastSender === state.currentUsername) return 0;
-  const lastAt = room.lastAt?.toDate?.() || null;
+  const lastAt = typeof room.lastAt === 'string' ? new Date(room.lastAt) : (room.lastAt?.toDate?.() || null);
   if (!lastAt) return 0;
   const readTime = state.chatReadTimes[room.id] || null;
   return (!readTime || lastAt > readTime) ? 1 : 0;
@@ -339,8 +339,8 @@ function _renderRoomList(type) {
   }
 
   const sorted = filtered.sort((a, b) => {
-    const ta = a.lastAt?.toDate?.() || new Date(0);
-    const tb = b.lastAt?.toDate?.() || new Date(0);
+    const ta = a.lastAt ? (typeof a.lastAt === 'string' ? new Date(a.lastAt) : a.lastAt.toDate?.() || new Date(0)) : new Date(0);
+    const tb = b.lastAt ? (typeof b.lastAt === 'string' ? new Date(b.lastAt) : b.lastAt.toDate?.() || new Date(0)) : new Date(0);
     return tb - ta;
   });
 
@@ -387,7 +387,11 @@ function _renderRoomList(type) {
 
 // ===== ルーム表示 =====
 export async function openRoom(roomId, type) {
-  if (state._roomMsgUnsubscribe) { state._roomMsgUnsubscribe(); state._roomMsgUnsubscribe = null; }
+  if (state._roomMsgUnsubscribe) {
+    if (typeof state._roomMsgUnsubscribe === 'function') state._roomMsgUnsubscribe();
+    else clearInterval(state._roomMsgUnsubscribe);
+    state._roomMsgUnsubscribe = null;
+  }
   state.currentRoomId = roomId;
   state.currentRoomType = type;
   state.currentRoomMessages = [];
@@ -527,7 +531,7 @@ export function renderChatMessages() {
   let lastDate = '';
   state.currentRoomMessages.forEach(msg => {
     const isOwn = msg.username === state.currentUsername;
-    const ts = msg.createdAt?.toDate ? msg.createdAt.toDate() : new Date();
+    const ts = msg.createdAt ? (typeof msg.createdAt === 'string' ? new Date(msg.createdAt) : msg.createdAt.toDate?.() || new Date()) : new Date();
     const dateStr = ts.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' });
     const timeStr = ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     if (dateStr !== lastDate) {

@@ -555,7 +555,8 @@ export function renderDrivePanel() {
   const pending = state._driveIncoming.filter(s => s.status === 'pending');
   if (incomingTitle) incomingTitle.hidden = pending.length === 0;
   incomingEl.innerHTML = pending.map(s => {
-    const ts  = s.createdAt?.seconds ? new Date(s.createdAt.seconds * 1000).toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+    const _tsDate = s.createdAt ? (s.createdAt.seconds ? new Date(s.createdAt.seconds * 1000) : new Date(s.createdAt)) : null;
+    const ts  = _tsDate ? _tsDate.toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
     const msg = s.message ? `<div class="ft-drive-item-msg">${esc(s.message)}</div>` : '';
     return `<div class="ft-drive-item">
       <div class="ft-drive-item-header">

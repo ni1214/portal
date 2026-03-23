@@ -525,9 +525,8 @@ export function renderNotices(notices) {
     const isUnread = state.currentUsername && !state.readNoticeIds.has(n.id);
     const item = document.createElement('div');
     item.className = `notice-item${n.priority === 'urgent' ? ' urgent' : ''}${isUnread ? ' notice-unread' : ''}`;
-    const dateStr = n.createdAt?.toDate
-      ? n.createdAt.toDate().toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' })
-      : '';
+    const _nDate = n.createdAt ? (n.createdAt.toDate ? n.createdAt.toDate() : new Date(n.createdAt.seconds * 1000)) : null;
+    const dateStr = _nDate ? _nDate.toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' }) : '';
     const newBadge = isUnread ? `<span class="notice-new-badge">NEW</span>` : '';
     const editBtns = state.isEditMode
       ? `<button class="btn-notice-edit" data-id="${n.id}"><i class="fa-solid fa-pen"></i></button>`

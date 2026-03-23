@@ -39,10 +39,10 @@ export function normalizeProjectKeys(value) {
   return uniq;
 }
 
-// Firestore Timestamp をフォーマット
+// Firestore Timestamp / isoToFirestoreTs / Date / ISO文字列 をフォーマット
 export function _fmtTs(ts) {
   if (!ts) return '';
-  const d = ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000);
+  const d = ts instanceof Date ? ts : ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000);
   const y = d.getFullYear(), mo = d.getMonth() + 1, day = d.getDate();
   const h = String(d.getHours()).padStart(2, '0'), mi = String(d.getMinutes()).padStart(2, '0');
   return `${y}/${mo}/${day} ${h}:${mi}`;

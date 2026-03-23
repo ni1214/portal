@@ -24,3 +24,11 @@ create table if not exists public.chat_messages (
 );
 
 create index if not exists idx_chat_messages_room_id on public.chat_messages(room_id, created_at asc);
+
+-- チャット既読管理
+create table if not exists public.user_chat_reads (
+  username text not null,
+  room_key text not null,
+  read_at  timestamptz not null default timezone('utc', now()),
+  primary key (username, room_key)
+);

@@ -342,7 +342,8 @@ export function updateReqBadge() {
   let suggCount = 0;
   if (state.isSuggestionBoxViewer) {
     const lastViewed = state.lastViewedSuggestionsAt;
-    suggCount = state.suggestionList.filter(s => (s.createdAt?.seconds ?? 0) > lastViewed).length;
+    const _tsToSecs = (ts) => !ts ? 0 : ts instanceof Date ? Math.floor(ts.getTime() / 1000) : (ts.seconds ?? 0);
+    suggCount = state.suggestionList.filter(s => _tsToSecs(s.createdAt) > lastViewed).length;
   }
   const total = recvCount + sentCount + suggCount;
   badge.hidden = total === 0;
