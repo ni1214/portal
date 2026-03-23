@@ -3,13 +3,13 @@
 ## プロジェクト概要
 - **名前**: 生産管理課 ポータル
 - **公開先**: GitHub Pages (`https://github.com/ni1214/portal.git` / branch: `master`)
-- **バックエンド**: Firebase Firestore（プロジェクト: `kategu-sys-v15`）
+- **バックエンド**: Supabase（移行完了済み。Firebase は互換フォールバックとして残存するが新機能は Supabase のみ使う）
 - **スタック**: Vanilla JS (ES modules) + HTML + CSS — フレームワークなし
 - **主要ファイル**: `index.html` / `script.js` / `style.css`
 
 ## 開発方針（重要）
-- **基本方針**: GitHub Pages + Firebase 無料枠の範囲内で実装する
-- バックエンド処理が必要になっても、まず「Firebase/フロントで代替できないか」を先に検討する
+- **基本方針**: GitHub Pages + Supabase 無料枠の範囲内で実装する
+- バックエンド処理が必要になっても、まず「Supabase/フロントで代替できないか」を先に検討する
 - Vercel等に切り替えればより良い方法がある場合は「Vercelに切り替えれば〇〇もできます」と**条件付きで提案するだけ**にする
 - ユーザーはVercel等への移行を現時点では望んでいない
 
@@ -330,4 +330,11 @@ if (!ok) return;
 - ヘルプガイド (`#guide-modal` in `index.html`) は大きな機能追加時に更新すること
 - 返答は**日本語**で行うこと
 - 「記録して」と言われた場合は **CLAUDE.md** に記載する（MEMORY.md はローカル専用のため Git 経由で別 PC に引き継がれない）
-- **Supabase への SQL 実行は CLI を使う**: `npx supabase db query --linked -f ./supabase/xxx.sql`（プロジェクトはリンク済み。ブラウザや Supabase ダッシュボードを経由する必要はない）
+- **Supabase スキーマ変更・追加は必ず以下のフローで自律実行する（毎回ユーザーに確認不要）**:
+  1. `supabase/NNN_description.sql` にマイグレーションファイルを作成
+  2. **メインリポジトリから** CLI で適用: `cd C:/Users/frx/Desktop/portal && npx supabase db query --linked -f ./supabase/NNN_description.sql`
+     （worktree 内から実行すると `Cannot find project ref` エラーになる）
+  3. `git add` → `git commit` → `git push` まで自動で行う（ユーザーへの確認不要）
+  - ブラウザや Supabase ダッシュボードを経由する必要はない
+  - SQL ファイルは `supabase/` ディレクトリに連番で保存する（既存: 001〜015）
+- **コード変更後のコミット・プッシュも自律実行する**: バグ修正・機能追加が完了したら `git add → git commit → git push` まで自動で行う（ユーザーへの確認不要）
