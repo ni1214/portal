@@ -1732,3 +1732,59 @@ export async function removePublicAttendanceFromSupabase(ym, day, username) {
     body: { days: updated },
   });
 }
+
+// ===== タスクコメント =====
+export async function fetchTaskCommentsFromSupabase(taskId) {
+  const rows = await requestSupabase(
+    `task_comments?task_id=eq.${encodeURIComponent(taskId)}&order=created_at.asc&select=*`,
+    { diagKey: 'supabase.task_comments.fetch', diagLabel: 'Supabase タスクコメント取得', diagScope: 'task_comments' }
+  );
+  return (rows || []).map(r => ({
+    id: r.id, taskId: r.task_id, username: r.username, body: r.body, createdAt: r.created_at,
+  }));
+}
+
+export async function addTaskCommentInSupabase(taskId, username, body) {
+  const rows = await requestSupabase('task_comments', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: { task_id: taskId, username, body },
+  });
+  const r = Array.isArray(rows) ? rows[0] : rows;
+  return { id: r.id, taskId: r.task_id, username: r.username, body: r.body, createdAt: r.created_at };
+}
+
+export async function deleteTaskCommentInSupabase(commentId) {
+  await requestSupabase(`task_comments?id=eq.${encodeURIComponent(commentId)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
+
+// ===== 部門間依頼コメント =====
+export async function fetchRequestCommentsFromSupabase(requestId) {
+  const rows = await requestSupabase(
+    `request_comments?request_id=eq.${encodeURIComponent(requestId)}&order=created_at.asc&select=*`,
+    { diagKey: 'supabase.request_comments.fetch', diagLabel: 'Supabase 依頼コメント取得', diagScope: 'request_comments' }
+  );
+  return (rows || []).map(r => ({
+    id: r.id, requestId: r.request_id, username: r.username, body: r.body, createdAt: r.created_at,
+  }));
+}
+
+export async function addRequestCommentInSupabase(requestId, username, body) {
+  const rows = await requestSupabase('request_comments', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: { request_id: requestId, username, body },
+  });
+  const r = Array.isArray(rows) ? rows[0] : rows;
+  return { id: r.id, requestId: r.request_id, username: r.username, body: r.body, createdAt: r.created_at };
+}
+
+export async function deleteRequestCommentInSupabase(commentId) {
+  await requestSupabase(`request_comments?id=eq.${encodeURIComponent(commentId)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}

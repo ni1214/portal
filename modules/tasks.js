@@ -11,6 +11,9 @@ import {
   createAssignedTaskInSupabase,
   updateAssignedTaskInSupabase,
   deleteAssignedTaskInSupabase,
+  fetchTaskCommentsFromSupabase,
+  addTaskCommentInSupabase,
+  deleteTaskCommentInSupabase,
 } from './supabase.js';
 import { state, TASK_STATUS_LABEL } from './state.js';
 import { esc, getUserAvatarColor, normalizeProjectKey } from './utils.js';
@@ -95,6 +98,132 @@ function _filterTasksByProjectKey(list) {
   return list.filter(task =>
     normalizeProjectKey(task.projectKey || '').toLowerCase().includes(filter)
   );
+}
+
+// ===== タスクコメント =====
+function _taskCommentSectionHtml(taskId) {
+  if (!isSupabaseSharedCoreEnabled()) return '';
+  const isExpanded = state.expandedTaskCommentId === taskId;
+  const comments   = state.taskComments[taskId] || [];
+  const isLoading  = state.taskCommentsLoading[taskId] || false;
+  const count      = comments.length;
+
+  let inner = '';
+  if (isExpanded) {
+    if (isLoading) {
+      inner = '<div class="tc-loading"><span class="spinner"></span></div>';
+    } else {
+      const list = comments.map(c => `
+        <div class="tc-item">
+          <span class="tc-author" style="color:${getUserAvatarColor(c.username)}">${esc(c.username)}</span>
+          <span class="tc-body">${esc(c.body)}</span>
+          ${c.username === state.currentUsername
+            ? `<button class="tc-del" data-cid="${c.id}" data-task-id="${taskId}" title="削除"><i class="fa-solid fa-trash-can"></i></button>`
+            : ''}
+        </div>
+      `).join('');
+      inner = `
+        <div class="tc-list">${list || '<div class="tc-empty">コメントはまだありません</div>'}</div>
+        <div class="tc-input-row">
+          <input type="text" class="tc-input form-input" placeholder="コメントを入力…" data-task-id="${taskId}" autocomplete="off">
+          <button class="tc-send btn-modal-primary" data-task-id="${taskId}"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+      `;
+    }
+  }
+
+  return `
+    <div class="tc-wrapper">
+      <button class="tc-toggle${isExpanded ? ' tc-toggle--open' : ''}" data-task-id="${taskId}">
+        <i class="fa-regular fa-comment${isExpanded ? '-dots' : ''}"></i>
+        コメント${count ? ` <span class="tc-count">${count}</span>` : ''}
+      </button>
+      ${isExpanded ? `<div class="tc-area">${inner}</div>` : ''}
+    </div>
+  `;
+}
+
+async function _loadTaskComments(taskId) {
+  state.taskCommentsLoading = { ...state.taskCommentsLoading, [taskId]: true };
+  renderTaskTabContent();
+  try {
+    const comments = await fetchTaskCommentsFromSupabase(taskId);
+    state.taskComments = { ...state.taskComments, [taskId]: comments };
+  } catch (e) {
+    showToast('コメントの読み込みに失敗しました', 'error');
+  } finally {
+    state.taskCommentsLoading = { ...state.taskCommentsLoading, [taskId]: false };
+    renderTaskTabContent();
+  }
+}
+
+function _bindTaskCommentEvents(container) {
+  // トグル
+  container.querySelectorAll('.tc-toggle[data-task-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.taskId;
+      if (state.expandedTaskCommentId === id) {
+        state.expandedTaskCommentId = null;
+        renderTaskTabContent();
+        return;
+      }
+      state.expandedTaskCommentId = id;
+      if (!state.taskComments[id]) {
+        void _loadTaskComments(id);
+      } else {
+        renderTaskTabContent();
+      }
+    });
+  });
+
+  // 送信ボタン
+  container.querySelectorAll('.tc-send[data-task-id]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.taskId;
+      const input = container.querySelector(`.tc-input[data-task-id="${id}"]`);
+      const body = (input?.value || '').trim();
+      if (!body) return;
+      input.value = '';
+      try {
+        const comment = await addTaskCommentInSupabase(id, state.currentUsername, body);
+        state.taskComments = {
+          ...state.taskComments,
+          [id]: [...(state.taskComments[id] || []), comment],
+        };
+        renderTaskTabContent();
+      } catch (e) {
+        showToast('コメントの送信に失敗しました', 'error');
+      }
+    });
+  });
+
+  // Enterキー送信
+  container.querySelectorAll('.tc-input[data-task-id]').forEach(input => {
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        container.querySelector(`.tc-send[data-task-id="${input.dataset.taskId}"]`)?.click();
+      }
+    });
+  });
+
+  // 削除ボタン
+  container.querySelectorAll('.tc-del[data-cid]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const cid = btn.dataset.cid;
+      const taskId = btn.dataset.taskId;
+      try {
+        await deleteTaskCommentInSupabase(cid);
+        state.taskComments = {
+          ...state.taskComments,
+          [taskId]: (state.taskComments[taskId] || []).filter(c => c.id !== cid),
+        };
+        renderTaskTabContent();
+      } catch (e) {
+        showToast('削除に失敗しました', 'error');
+      }
+    });
+  });
 }
 
 function _taskFilterBarHtml(totalCount, filteredCount) {
@@ -523,10 +652,12 @@ export function _renderReceivedTasks(container) {
         ${_taskProjectKeyHtml(t)}
         ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
         <div class="task-item-actions">${actions}</div>
+        ${_taskCommentSectionHtml(t.id)}
       </div>`;
   }).join('');
 
   _bindTaskProjectFilterEvents();
+  _bindTaskCommentEvents(container);
   container.querySelectorAll('.task-action-accept').forEach(btn =>
     btn.addEventListener('click', () => acceptTask(btn.dataset.id)));
   container.querySelectorAll('.task-action-done').forEach(btn =>
@@ -600,10 +731,12 @@ export function _renderSentTasks(container) {
         ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
         ${sharedBadges}
         ${(editBtn || shareBtn || statusActions) ? `<div class="task-item-actions">${editBtn}${shareBtn}${statusActions}</div>` : ''}
+        ${_taskCommentSectionHtml(t.id)}
       </div>`;
   }).join('');
 
   _bindTaskProjectFilterEvents();
+  _bindTaskCommentEvents(container);
   container.querySelectorAll('.task-action-edit').forEach(btn =>
     btn.addEventListener('click', () => openTaskEditModal(btn.dataset.id)));
   container.querySelectorAll('.task-action-share').forEach(btn =>
@@ -660,10 +793,12 @@ export function _renderSharedTasks(container) {
         ${_taskProjectKeyHtml(t)}
         ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
         <div class="task-item-actions">${actions}</div>
+        ${_taskCommentSectionHtml(t.id)}
       </div>`;
   }).join('');
 
   _bindTaskProjectFilterEvents();
+  _bindTaskCommentEvents(container);
   container.querySelectorAll('.task-action-share-accept').forEach(btn =>
     btn.addEventListener('click', () => acceptSharedTask(btn.dataset.id)));
   container.querySelectorAll('.task-action-share-decline').forEach(btn =>

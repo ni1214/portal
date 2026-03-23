@@ -245,6 +245,14 @@ export const state = {
   _pendingSuggReply: null,
   lastViewedSuggestionsAt: 0,
 
+  // タスク・依頼コメント
+  taskComments: {},            // {taskId: [{id, username, body, createdAt}]}
+  taskCommentsLoading: {},     // {taskId: boolean}
+  expandedTaskCommentId: null, // 現在コメントを展開中のタスクID
+  requestComments: {},         // {requestId: [{id, username, body, createdAt}]}
+  requestCommentsLoading: {},  // {requestId: boolean}
+  expandedRequestCommentId: null,
+
   // メール返信AI
   DEFAULT_EMAIL_PROFILES: null,  // emailモジュールで初期化
   emailProfiles: [],

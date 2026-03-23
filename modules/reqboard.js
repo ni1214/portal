@@ -17,6 +17,9 @@ import {
   createSuggestionInSupabase,
   deleteSuggestionInSupabase,
   updateSuggestionInSupabase,
+  fetchRequestCommentsFromSupabase,
+  addRequestCommentInSupabase,
+  deleteRequestCommentInSupabase,
 } from './supabase.js';
 import {
   recordGetDocsRead,
@@ -531,6 +534,132 @@ export function renderReqContent() {
   }
 }
 
+// ===== 部門間依頼コメント =====
+function _requestCommentSectionHtml(requestId) {
+  if (!isSupabaseSharedCoreEnabled()) return '';
+  const isExpanded = state.expandedRequestCommentId === requestId;
+  const comments   = state.requestComments[requestId] || [];
+  const isLoading  = state.requestCommentsLoading[requestId] || false;
+  const count      = comments.length;
+
+  let inner = '';
+  if (isExpanded) {
+    if (isLoading) {
+      inner = '<div class="tc-loading"><span class="spinner"></span></div>';
+    } else {
+      const list = comments.map(c => `
+        <div class="tc-item">
+          <span class="tc-author" style="color:${getUserAvatarColor(c.username)}">${escHtml(c.username)}</span>
+          <span class="tc-body">${escHtml(c.body)}</span>
+          ${c.username === state.currentUsername
+            ? `<button class="rc-del" data-cid="${c.id}" data-req-id="${requestId}" title="削除"><i class="fa-solid fa-trash-can"></i></button>`
+            : ''}
+        </div>
+      `).join('');
+      inner = `
+        <div class="tc-list">${list || '<div class="tc-empty">コメントはまだありません</div>'}</div>
+        <div class="tc-input-row">
+          <input type="text" class="rc-input form-input" placeholder="コメントを入力…" data-req-id="${requestId}" autocomplete="off">
+          <button class="rc-send btn-modal-primary" data-req-id="${requestId}"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+      `;
+    }
+  }
+
+  return `
+    <div class="tc-wrapper">
+      <button class="rc-toggle${isExpanded ? ' tc-toggle--open' : ''}" data-req-id="${requestId}">
+        <i class="fa-regular fa-comment${isExpanded ? '-dots' : ''}"></i>
+        コメント${count ? ` <span class="tc-count">${count}</span>` : ''}
+      </button>
+      ${isExpanded ? `<div class="tc-area">${inner}</div>` : ''}
+    </div>
+  `;
+}
+
+async function _loadRequestComments(requestId) {
+  state.requestCommentsLoading = { ...state.requestCommentsLoading, [requestId]: true };
+  renderReqContent();
+  try {
+    const comments = await fetchRequestCommentsFromSupabase(requestId);
+    state.requestComments = { ...state.requestComments, [requestId]: comments };
+  } catch (e) {
+    showToast('コメントの読み込みに失敗しました', 'error');
+  } finally {
+    state.requestCommentsLoading = { ...state.requestCommentsLoading, [requestId]: false };
+    renderReqContent();
+  }
+}
+
+function _bindRequestCommentEvents(container) {
+  // トグル
+  container.querySelectorAll('.rc-toggle[data-req-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.reqId;
+      if (state.expandedRequestCommentId === id) {
+        state.expandedRequestCommentId = null;
+        renderReqContent();
+        return;
+      }
+      state.expandedRequestCommentId = id;
+      if (!state.requestComments[id]) {
+        void _loadRequestComments(id);
+      } else {
+        renderReqContent();
+      }
+    });
+  });
+
+  // 送信ボタン
+  container.querySelectorAll('.rc-send[data-req-id]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.reqId;
+      const input = container.querySelector(`.rc-input[data-req-id="${id}"]`);
+      const body = (input?.value || '').trim();
+      if (!body) return;
+      input.value = '';
+      try {
+        const comment = await addRequestCommentInSupabase(id, state.currentUsername, body);
+        state.requestComments = {
+          ...state.requestComments,
+          [id]: [...(state.requestComments[id] || []), comment],
+        };
+        renderReqContent();
+      } catch (e) {
+        showToast('コメントの送信に失敗しました', 'error');
+      }
+    });
+  });
+
+  // Enterキー送信
+  container.querySelectorAll('.rc-input[data-req-id]').forEach(input => {
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        container.querySelector(`.rc-send[data-req-id="${input.dataset.reqId}"]`)?.click();
+      }
+    });
+  });
+
+  // 削除ボタン
+  container.querySelectorAll('.rc-del[data-cid]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const cid = btn.dataset.cid;
+      const reqId = btn.dataset.reqId;
+      try {
+        await deleteRequestCommentInSupabase(cid);
+        state.requestComments = {
+          ...state.requestComments,
+          [reqId]: (state.requestComments[reqId] || []).filter(c => c.id !== cid),
+        };
+        renderReqContent();
+      } catch (e) {
+        showToast('削除に失敗しました', 'error');
+      }
+    });
+  });
+}
+
 function _reqStatusHtml(status) {
   const s = REQ_STATUS_LABEL[status] || { text: status, cls: '' };
   return `<span class="req-status-badge ${s.cls}">${s.text}</span>`;
@@ -830,9 +959,11 @@ export function _renderReceivedRequests(container) {
         <button class="btn-req-archive" data-id="${r.id}" title="アーカイブに移動"><i class="fa-solid fa-box-archive"></i> アーカイブ</button>
         <button class="btn-req-delete" data-id="${r.id}" title="削除"><i class="fa-solid fa-trash"></i></button>
       </div>
+      ${_requestCommentSectionHtml(r.id)}
     </div>
   `).join('');
   _bindRequestProjectFilterEvents();
+  _bindRequestCommentEvents(container);
   container.querySelectorAll('.btn-req-status').forEach(btn => {
     btn.addEventListener('click', () => openStatusModal(btn.dataset.id));
   });
@@ -884,9 +1015,11 @@ export function _renderSentRequests(container) {
         <button class="btn-req-archive" data-id="${r.id}" title="アーカイブに移動"><i class="fa-solid fa-box-archive"></i> アーカイブ</button>
         <button class="btn-req-delete" data-id="${r.id}" title="削除"><i class="fa-solid fa-trash"></i></button>
       </div>
+      ${_requestCommentSectionHtml(r.id)}
     </div>
   `).join('');
   _bindRequestProjectFilterEvents();
+  _bindRequestCommentEvents(container);
   container.querySelectorAll('.btn-req-status').forEach(btn => {
     btn.addEventListener('click', () => openStatusModal(btn.dataset.id));
   });

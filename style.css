@@ -14259,3 +14259,128 @@ html.font-xl { font-size: 21px; }
   #notify-toast-container { right: 8px; top: 64px; }
   .notify-confirm-dialog { padding: 20px 18px; }
 }
+
+/* ===== タスク・依頼 コメント ===== */
+.tc-wrapper {
+  margin-top: 8px;
+  border-top: 1px solid var(--border-glass);
+  padding-top: 6px;
+}
+
+.tc-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.tc-toggle:hover,
+.tc-toggle--open {
+  color: var(--accent-blue);
+  background: var(--bg-card-hover);
+}
+
+.tc-count {
+  background: var(--accent-blue);
+  color: #fff;
+  font-size: 0.68rem;
+  border-radius: 10px;
+  padding: 0 5px;
+  line-height: 1.5;
+}
+
+.tc-area {
+  margin-top: 6px;
+}
+
+.tc-loading {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.tc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 6px;
+}
+
+.tc-empty {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+
+.tc-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.82rem;
+  padding: 3px 4px;
+  border-radius: 6px;
+  background: var(--bg-glass);
+}
+
+.tc-author {
+  font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.tc-body {
+  flex: 1;
+  color: var(--text-primary);
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.tc-del {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.72rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+.tc-item:hover .tc-del { opacity: 1; }
+.tc-del:hover { color: var(--accent-orange); }
+
+.tc-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.tc-input-row .form-input,
+.tc-input-row input {
+  flex: 1;
+  font-size: 0.82rem;
+  padding: 5px 10px;
+  height: 32px;
+}
+
+.tc-input-row .btn-modal-primary,
+.tc-input-row .tc-send,
+.tc-input-row .rc-send {
+  padding: 5px 10px;
+  height: 32px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+[data-theme="light"] .tc-item {
+  background: rgba(0,0,0,0.04);
+}

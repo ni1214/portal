@@ -181,6 +181,30 @@ if (!ok) return;
 | `order_items/` | 鋼材マスタ（品名・規格・単位・デフォルト数量） |
 | `orders/` | 発注履歴（明細・送信状態・20日締め管理） |
 
+## Supabase テーブル一覧（移行済み・追加分）
+
+| テーブル | 用途 | SQLファイル |
+|---|---|---|
+| `user_accounts` | ユーザー登録・ニックネーム重複チェック | 001 |
+| `portal_config` | 管理者PIN・Gemini APIキー・departments[]・suggestionBoxViewers[] | 001 |
+| `public_cards` / `public_categories` | 公開カード・カテゴリ | 001 |
+| `notices` / `notice_reactions` | お知らせ・リアクション | 001 |
+| `private_sections` / `private_cards` | マイセクション・マイカード | 001 |
+| `personal_todos` | 個人TODO | 001 |
+| `user_preferences` | 個人設定（theme/fontSize/favorites等） | 001 |
+| `user_lock_pins` | PINロック | 001 |
+| `attendance_records` | 個人勤怠 | 005 |
+| `public_attendance_months` | 公開勤怠（月別） | 008 |
+| `company_cal_config` | 会社カレンダー設定（土曜出勤・祝日・行事） | 008 |
+| `cross_dept_requests` | 部門間依頼 | 006 |
+| `assigned_tasks` | タスク割り振り（sharedWith/sharedResponses） | 006 |
+| `suggestion_box` | 目安箱（archived/admin_reply対応済み） | 010 |
+| `order_suppliers` | 発注先マスタ | 007 |
+| `order_items` | 鋼材マスタ | 007 |
+| `orders` | 発注履歴 | 007 |
+| `task_comments` | タスクへのコメント（CASCADE DELETE） | 012 |
+| `request_comments` | 部門間依頼へのコメント（CASCADE DELETE） | 012 |
+
 ### 勤怠データフィールド（`users/{name}/attendance/{YYYY-MM-DD}`）
 | フィールド | 型 | 説明 |
 |---|---|---|
