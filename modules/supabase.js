@@ -1962,3 +1962,168 @@ export async function deleteRequestCommentInSupabase(commentId) {
     prefer: 'return=minimal',
   });
 }
+
+// ===== ファイル転送 / Drive共有 =====
+
+// --- Drive リンク ---
+export async function fetchMyDriveLinkFromSupabase(username) {
+  const rows = await requestSupabase(
+    `user_drive_links?username=eq.${encodeURIComponent(username)}&select=url`,
+    { method: 'GET' }
+  );
+  return (rows && rows[0] && rows[0].url) || '';
+}
+
+export async function saveMyDriveLinkInSupabase(username, url) {
+  await requestSupabase('user_drive_links', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=minimal',
+    body: { username, url },
+  });
+}
+
+// --- Drive 連絡先 ---
+export async function fetchDriveContactsFromSupabase(username) {
+  const rows = await requestSupabase(
+    `user_drive_contacts?username=eq.${encodeURIComponent(username)}&select=contact_username,url`,
+    { method: 'GET' }
+  );
+  const map = {};
+  (rows || []).forEach(r => { map[r.contact_username] = r.url; });
+  return map;
+}
+
+export async function saveDriveContactInSupabase(username, contactUsername, url) {
+  await requestSupabase('user_drive_contacts', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=minimal',
+    body: { username, contact_username: contactUsername, url },
+  });
+}
+
+export async function deleteDriveContactInSupabase(username, contactUsername) {
+  await requestSupabase(
+    `user_drive_contacts?username=eq.${encodeURIComponent(username)}&contact_username=eq.${encodeURIComponent(contactUsername)}`,
+    { method: 'DELETE', prefer: 'return=minimal' }
+  );
+}
+
+// --- Drive 共有通知 ---
+export async function fetchDriveSharesFromSupabase(username) {
+  const [incoming, outgoing] = await Promise.all([
+    requestSupabase(
+      `drive_shares?to=eq.${encodeURIComponent(username)}&order=created_at.desc`,
+      { method: 'GET' }
+    ),
+    requestSupabase(
+      `drive_shares?from=eq.${encodeURIComponent(username)}&order=created_at.desc`,
+      { method: 'GET' }
+    ),
+  ]);
+  const mapShare = r => ({
+    id: r.id, from: r.from, to: r.to, driveUrl: r.drive_url,
+    message: r.message, status: r.status, viewedAt: r.viewed_at, createdAt: r.created_at,
+  });
+  return {
+    incoming: (incoming || []).map(mapShare),
+    outgoing: (outgoing || []).map(mapShare),
+  };
+}
+
+export async function addDriveShareInSupabase(from, to, driveUrl, message) {
+  const rows = await requestSupabase('drive_shares', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: { from, to, drive_url: driveUrl, message, status: 'pending' },
+  });
+  const r = Array.isArray(rows) ? rows[0] : rows;
+  return { id: r.id, from: r.from, to: r.to, driveUrl: r.drive_url, message: r.message, status: r.status, createdAt: r.created_at };
+}
+
+export async function updateDriveShareStatusInSupabase(id, status) {
+  const body = { status };
+  if (status === 'viewed') body.viewed_at = new Date().toISOString();
+  await requestSupabase(`drive_shares?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body,
+  });
+}
+
+export async function deleteDriveShareInSupabase(id) {
+  await requestSupabase(`drive_shares?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
+
+// --- P2P シグナリング ---
+export async function fetchP2pSignalsFromSupabase(toUsername) {
+  const rows = await requestSupabase(
+    `p2p_signals?to=eq.${encodeURIComponent(toUsername)}&order=created_at.asc`,
+    { method: 'GET' }
+  );
+  return (rows || []).map(r => ({
+    id: r.id, from: r.from, to: r.to,
+    fileName: r.file_name, fileSize: r.file_size, fileType: r.file_type,
+    status: r.status, offer: r.offer, answer: r.answer,
+    fromCandidates: r.from_candidates || [],
+    toCandidates: r.to_candidates || [],
+    createdAt: r.created_at,
+  }));
+}
+
+export async function getP2pSignalFromSupabase(sessionId) {
+  const rows = await requestSupabase(
+    `p2p_signals?id=eq.${encodeURIComponent(sessionId)}`,
+    { method: 'GET' }
+  );
+  if (!rows || !rows[0]) return null;
+  const r = rows[0];
+  return {
+    id: r.id, from: r.from, to: r.to,
+    fileName: r.file_name, fileSize: r.file_size, fileType: r.file_type,
+    status: r.status, offer: r.offer, answer: r.answer,
+    fromCandidates: r.from_candidates || [],
+    toCandidates: r.to_candidates || [],
+    createdAt: r.created_at,
+  };
+}
+
+export async function createP2pSignalInSupabase(sessionId, { from, to, fileName, fileSize, fileType, offer }) {
+  await requestSupabase('p2p_signals', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: {
+      id: sessionId, from, to,
+      file_name: fileName, file_size: fileSize, file_type: fileType,
+      status: 'pending', offer, answer: null,
+      from_candidates: [], to_candidates: [],
+    },
+  });
+}
+
+export async function updateP2pSignalInSupabase(sessionId, updates) {
+  const body = {};
+  if (updates.answer !== undefined) body.answer = updates.answer;
+  if (updates.status !== undefined) body.status = updates.status;
+  await requestSupabase(`p2p_signals?id=eq.${encodeURIComponent(sessionId)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body,
+  });
+}
+
+export async function appendP2pCandidateInSupabase(sessionId, role, candidate) {
+  await requestSupabase('rpc/append_p2p_candidate', {
+    method: 'POST',
+    body: { p_session_id: sessionId, p_role: role, p_candidate: candidate },
+  });
+}
+
+export async function deleteP2pSignalInSupabase(sessionId) {
+  await requestSupabase(`p2p_signals?id=eq.${encodeURIComponent(sessionId)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
