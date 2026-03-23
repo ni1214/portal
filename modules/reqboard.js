@@ -7,6 +7,7 @@ import {
   applySupabaseRuntimeConfig,
   fetchPortalConfigFromSupabase,
   savePortalConfigToSupabase,
+  saveUserPreferencesToSupabase,
   fetchReceivedRequestsFromSupabase,
   fetchSentRequestsFromSupabase,
   fetchRequestHistoryFromSupabase,
@@ -1387,12 +1388,17 @@ export async function _markSuggestionsViewed() {
   if (!state.currentUsername || !state.isSuggestionBoxViewer) return;
   try {
     const now = new Date();
-    await setDoc(
-      doc(db, 'users', state.currentUsername, 'data', 'preferences'),
-      { lastViewedSuggestionsAt: now },
-      { merge: true }
-    );
-    state.lastViewedSuggestionsAt = Math.floor(now.getTime() / 1000);
+    const unixSec = Math.floor(now.getTime() / 1000);
+    if (isSupabaseSharedCoreEnabled()) {
+      await saveUserPreferencesToSupabase(state.currentUsername, { lastViewedSuggestionsAt: unixSec });
+    } else {
+      await setDoc(
+        doc(db, 'users', state.currentUsername, 'data', 'preferences'),
+        { lastViewedSuggestionsAt: now },
+        { merge: true }
+      );
+    }
+    state.lastViewedSuggestionsAt = unixSec;
     updateReqBadge();
   } catch (_) { /* silent */ }
 }

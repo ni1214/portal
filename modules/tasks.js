@@ -11,6 +11,7 @@ import {
   createAssignedTaskInSupabase,
   updateAssignedTaskInSupabase,
   deleteAssignedTaskInSupabase,
+  updateCrossDeptRequestInSupabase,
   fetchTaskCommentsFromSupabase,
   addTaskCommentInSupabase,
   deleteTaskCommentInSupabase,
@@ -76,6 +77,22 @@ export async function createTaskRecord(taskInput) {
 }
 
 async function syncRequestLink(taskId, updates) {
+  if (isSupabaseSharedCoreEnabled()) {
+    const task = await getAssignedTaskFromSupabase(taskId);
+    if (!task?.sourceRequestId) return task;
+    // Firebase serverTimestamp() sentinel をISO文字列に変換
+    const isoUpdates = Object.fromEntries(
+      Object.entries(updates).map(([k, v]) =>
+        [k, (v && typeof v === 'object' && '_methodName' in v) ? new Date().toISOString() : v]
+      )
+    );
+    await updateCrossDeptRequestInSupabase(task.sourceRequestId, {
+      ...isoUpdates,
+      updatedAt: new Date().toISOString(),
+      notifyCreator: true,
+    });
+    return task;
+  }
   const taskSnap = await getDoc(doc(db, 'assigned_tasks', taskId));
   if (!taskSnap.exists()) return null;
   const task = { id: taskSnap.id, ...taskSnap.data() };
@@ -987,14 +1004,25 @@ export async function deleteTask(taskId, confirmMsg) {
     }
     _removeTaskFromAllCaches(taskId);
     if (task?.sourceRequestId) {
-      await updateDoc(doc(db, 'cross_dept_requests', task.sourceRequestId), {
-        linkedTaskId: null,
-        linkedTaskStatus: task.status === 'done' ? 'done' : 'cancelled',
-        linkedTaskAssignedTo: task.assignedTo || null,
-        linkedTaskClosedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        notifyCreator: true,
-      });
+      if (isSupabaseSharedCoreEnabled()) {
+        await updateCrossDeptRequestInSupabase(task.sourceRequestId, {
+          linkedTaskId: null,
+          linkedTaskStatus: task.status === 'done' ? 'done' : 'cancelled',
+          linkedTaskAssignedTo: task.assignedTo || null,
+          linkedTaskClosedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          notifyCreator: true,
+        });
+      } else {
+        await updateDoc(doc(db, 'cross_dept_requests', task.sourceRequestId), {
+          linkedTaskId: null,
+          linkedTaskStatus: task.status === 'done' ? 'done' : 'cancelled',
+          linkedTaskAssignedTo: task.assignedTo || null,
+          linkedTaskClosedAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          notifyCreator: true,
+        });
+      }
     }
   } catch (err) { console.error('タスク削除エラー:', err); }
 }
