@@ -712,16 +712,20 @@ function _bindRequestProjectFilterEvents() {
   const input = document.getElementById('req-project-filter-input');
   const clearBtn = document.getElementById('req-project-filter-clear');
   if (input) {
-    input.addEventListener('input', e => {
+    if (input._reqFilterHandler) input.removeEventListener('input', input._reqFilterHandler);
+    input._reqFilterHandler = e => {
       state.reqProjectKeyFilter = normalizeProjectKey(e.target.value || '');
       renderReqContent();
-    });
+    };
+    input.addEventListener('input', input._reqFilterHandler);
   }
   if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
+    if (clearBtn._reqFilterClearHandler) clearBtn.removeEventListener('click', clearBtn._reqFilterClearHandler);
+    clearBtn._reqFilterClearHandler = () => {
       state.reqProjectKeyFilter = '';
       renderReqContent();
-    });
+    };
+    clearBtn.addEventListener('click', clearBtn._reqFilterClearHandler);
   }
 }
 

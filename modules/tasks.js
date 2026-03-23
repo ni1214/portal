@@ -260,16 +260,20 @@ function _bindTaskProjectFilterEvents() {
   const input = document.getElementById('task-project-filter-input');
   const clearBtn = document.getElementById('task-project-filter-clear');
   if (input) {
-    input.addEventListener('input', e => {
+    if (input._taskFilterHandler) input.removeEventListener('input', input._taskFilterHandler);
+    input._taskFilterHandler = e => {
       state.taskProjectKeyFilter = normalizeProjectKey(e.target.value || '');
       renderTaskTabContent();
-    });
+    };
+    input.addEventListener('input', input._taskFilterHandler);
   }
   if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
+    if (clearBtn._taskFilterClearHandler) clearBtn.removeEventListener('click', clearBtn._taskFilterClearHandler);
+    clearBtn._taskFilterClearHandler = () => {
       state.taskProjectKeyFilter = '';
       renderTaskTabContent();
-    });
+    };
+    clearBtn.addEventListener('click', clearBtn._taskFilterClearHandler);
   }
 }
 
