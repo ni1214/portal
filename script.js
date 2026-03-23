@@ -214,6 +214,9 @@ import {
   createUserTodoInSupabase,
   updateUserTodoInSupabase,
   deleteUserTodoInSupabase,
+  // ユーザー一覧・ポータル設定
+  fetchAllUserAccountsFromSupabase,
+  savePortalConfigToSupabase,
 } from './modules/supabase.js';
 import { showToast, showConfirm } from './modules/notify.js';
 
@@ -255,8 +258,14 @@ Object.assign(taskDeps, {
   // 共有ピッカー用: users_list を取得して renderSharePickerUsers に渡す
   loadUsersForSharePicker: async (alreadyShared, assignedTo, assignedBy) => {
     try {
-      const snap = await getDocs(collection(db, 'users_list'));
-      const allUsers = snap.docs.map(d => d.id);
+      let allUsers;
+      if (isSupabaseSharedCoreEnabled()) {
+        const accounts = await fetchAllUserAccountsFromSupabase();
+        allUsers = accounts.map(a => a.username);
+      } else {
+        const snap = await getDocs(collection(db, 'users_list'));
+        allUsers = snap.docs.map(d => d.id);
+      }
       renderSharePickerUsers(allUsers, alreadyShared, assignedTo, assignedBy);
     } catch (err) {
       console.error('共有ピッカーのユーザー取得エラー:', err);
@@ -1311,7 +1320,11 @@ async function saveMissionText() {
   const btn  = document.getElementById('admin-mission-save-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
   try {
-    await setDoc(doc(db, 'portal', 'config'), { missionText: text }, { merge: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await savePortalConfigToSupabase({ missionText: text });
+    } else {
+      await setDoc(doc(db, 'portal', 'config'), { missionText: text }, { merge: true });
+    }
     state.missionText = text;
     renderMissionBanner();
     if (btn) { btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存しました'; }
@@ -2887,9 +2900,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Firestore 読み込み
   try {
-    await migrateIfNeeded();
-    await migrateCategories();
-    await migrateAddBox();
+    if (!isSupabaseSharedCoreEnabled()) {
+      await migrateIfNeeded();
+      await migrateCategories();
+      await migrateAddBox();
+    }
     await loadCategories();
     await subscribeNotices();
     renderAllSections();
