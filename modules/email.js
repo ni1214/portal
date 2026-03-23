@@ -5,6 +5,16 @@ import {
 } from './config.js';
 import { state, USER_ROLE_OPTIONS, USER_ROLE_LABELS } from './state.js';
 import { esc } from './utils.js';
+import { showToast } from './notify.js';
+import {
+  isSupabaseSharedCoreEnabled,
+  fetchPortalConfigFromSupabase,
+  savePortalConfigToSupabase,
+  fetchUserProfileFromSupabase,
+  saveUserProfileToSupabase,
+  fetchEmailContactsFromSupabase,
+  createEmailContactInSupabase,
+} from './supabase.js';
 
 let deps = {};
 export function initEmail(d) { deps = d; }
@@ -68,9 +78,21 @@ export async function loadUserEmailProfile(username = state.currentUsername) {
   if (!username) return state.userEmailProfile;
 
   try {
-    const profSnap = await getDoc(doc(db, 'users', username, 'data', 'email_profile'));
-    if (profSnap.exists()) {
-      syncUserEmailProfile(profSnap.data());
+    if (isSupabaseSharedCoreEnabled()) {
+      const row = await fetchUserProfileFromSupabase(username).catch(err => {
+        console.warn('Supabase profile 読込失敗、Firestore fallback:', err);
+        return null;
+      });
+      if (row) {
+        syncUserEmailProfile(row);
+      } else {
+        // Supabase に無ければ Firestore から fallback
+        const profSnap = await getDoc(doc(db, 'users', username, 'data', 'email_profile'));
+        if (profSnap.exists()) syncUserEmailProfile(profSnap.data());
+      }
+    } else {
+      const profSnap = await getDoc(doc(db, 'users', username, 'data', 'email_profile'));
+      if (profSnap.exists()) syncUserEmailProfile(profSnap.data());
     }
   } catch (_) {}
 
@@ -82,8 +104,13 @@ export async function loadUserEmailProfile(username = state.currentUsername) {
 // ===== 初期データ読み込み =====
 export async function loadEmailData() {
   try {
-    const snap = await getDoc(doc(db, 'portal', 'config'));
-    geminiApiKey = snap.data()?.geminiApiKey || null;
+    if (isSupabaseSharedCoreEnabled()) {
+      const config = await fetchPortalConfigFromSupabase();
+      geminiApiKey = config.geminiApiKey || null;
+    } else {
+      const snap = await getDoc(doc(db, 'portal', 'config'));
+      geminiApiKey = snap.data()?.geminiApiKey || null;
+    }
   } catch (_) {}
 
   if (state.currentUsername) {
@@ -100,6 +127,16 @@ export async function loadEmailData() {
 // ===== 連絡先読み込み =====
 async function loadEmailContacts() {
   try {
+    if (isSupabaseSharedCoreEnabled()) {
+      const contacts = await fetchEmailContactsFromSupabase(state.currentUsername).catch(err => {
+        console.warn('Supabase 連絡先読込失敗、Firestore fallback:', err);
+        return null;
+      });
+      if (contacts !== null) {
+        emailContacts = contacts;
+        return;
+      }
+    }
     const snap = await getDocs(
       query(collection(db, 'users', state.currentUsername, 'email_contacts'), orderBy('createdAt', 'asc'))
     );
@@ -126,18 +163,27 @@ function renderContactSelect() {
 
 // ===== 連絡先保存 =====
 export async function saveNewContact() {
-  if (!state.currentUsername) { alert('ユーザーネームを設定してください'); return; }
+  if (!state.currentUsername) { showToast('ユーザーネームを設定してください', 'warning'); return; }
   const company = document.getElementById('email-contact-company')?.value.trim();
   const person  = document.getElementById('email-contact-person')?.value.trim();
-  if (!company && !person) { alert('会社名または担当者名を入力してください'); return; }
+  if (!company && !person) { showToast('会社名または担当者名を入力してください', 'warning'); return; }
 
-  const id = `contact_${Date.now()}`;
+  const baseId = `contact_${Date.now()}`;
   try {
-    await setDoc(doc(db, 'users', state.currentUsername, 'email_contacts', id), {
-      companyName: company || '',
-      personName:  person  || '',
-      createdAt:   serverTimestamp(),
-    });
+    let id = baseId;
+    if (isSupabaseSharedCoreEnabled()) {
+      id = await createEmailContactInSupabase(state.currentUsername, {
+        id: baseId,
+        companyName: company || '',
+        personName:  person  || '',
+      });
+    } else {
+      await setDoc(doc(db, 'users', state.currentUsername, 'email_contacts', id), {
+        companyName: company || '',
+        personName:  person  || '',
+        createdAt:   serverTimestamp(),
+      });
+    }
     emailContacts.push({ id, companyName: company || '', personName: person || '' });
     renderContactSelect();
     document.getElementById('email-contact-select').value = id;
@@ -149,7 +195,7 @@ export async function saveNewContact() {
     document.getElementById('email-contact-person').value  = '';
   } catch (err) {
     console.error('連絡先保存エラー:', err);
-    alert('保存に失敗しました');
+    showToast('保存に失敗しました', 'error');
   }
 }
 
@@ -339,7 +385,11 @@ export async function saveGeminiApiKey() {
   const key = document.getElementById('email-api-key-input').value.trim();
   if (!key) return;
   try {
-    await setDoc(doc(db, 'portal', 'config'), { geminiApiKey: key }, { merge: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await savePortalConfigToSupabase({ geminiApiKey: key });
+    } else {
+      await setDoc(doc(db, 'portal', 'config'), { geminiApiKey: key }, { merge: true });
+    }
     geminiApiKey = key;
     document.getElementById('email-api-key-input').value = '';
     updateApiKeyUI();
@@ -413,10 +463,14 @@ export async function saveUserEmailProfile() {
 
   if (state.currentUsername) {
     try {
-      await setDoc(
-        doc(db, 'users', state.currentUsername, 'data', 'email_profile'),
-        { ...userEmailProfile, updatedAt: serverTimestamp() }, { merge: true }
-      );
+      if (isSupabaseSharedCoreEnabled()) {
+        await saveUserProfileToSupabase(state.currentUsername, userEmailProfile);
+      } else {
+        await setDoc(
+          doc(db, 'users', state.currentUsername, 'data', 'email_profile'),
+          { ...userEmailProfile, updatedAt: serverTimestamp() }, { merge: true }
+        );
+      }
     } catch (err) { console.error('プロフィール保存エラー:', err); }
   }
   await deps.afterUserProfileSaved?.(state.userEmailProfile);

@@ -3,6 +3,14 @@ import { state } from './state.js';
 import {
   db, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteField
 } from './config.js';
+import {
+  isSupabaseSharedCoreEnabled,
+  fetchCompanyCalSettingsFromSupabase,
+  saveCompanyCalSettingsToSupabase,
+  fetchPublicAttendanceFromSupabase,
+  writePublicAttendanceToSupabase,
+  removePublicAttendanceFromSupabase,
+} from './supabase.js';
 import { esc } from './utils.js';
 import { verifyPIN } from './auth.js';
 
@@ -95,31 +103,46 @@ let _ccsFiscalYear = null;      // 現在表示中の年度開始年（4月）
 let _pendingHolidayStart = null; // 会社休日モードで1回目クリックした日付
 
 // ===== 会社カレンダー設定の購読 =====
+const EMPTY_CAL_CONFIG = Object.freeze({ workSaturdays: [], plannedLeaveSaturdays: [], holidayRanges: [], events: [] });
+
+function _applyCompanyCalConfig(cfg) {
+  state.companyCalConfig = cfg || EMPTY_CAL_CONFIG;
+  if (typeof deps.renderCalendar === 'function') deps.renderCalendar();
+  deps.onCompanyCalConfigChanged?.();
+  if (state.calTab === 'shared') renderSharedCalendar();
+  const body = document.getElementById('ccs-body');
+  if (body && !body.hidden) _renderAnnualGrid();
+}
+
 export function subscribeCompanyCalConfig() {
   if (state._companyCalUnsub) { state._companyCalUnsub(); state._companyCalUnsub = null; }
+  if (isSupabaseSharedCoreEnabled()) {
+    fetchCompanyCalSettingsFromSupabase()
+      .then(cfg => _applyCompanyCalConfig(cfg))
+      .catch(err => {
+        console.warn('Supabase 会社カレンダー読み込みエラー:', err);
+        _applyCompanyCalConfig(null);
+      });
+    return;
+  }
   state._companyCalUnsub = onSnapshot(companyCalRef(), snap => {
-    state.companyCalConfig = snap.exists() ? snap.data() : {
-      workSaturdays: [],
-      plannedLeaveSaturdays: [],
-      holidayRanges: [],
-      events: [],
-    };
-    // 再描画
-    if (typeof deps.renderCalendar === 'function') deps.renderCalendar();
-    // 勤務内容表/集計表など、会社カレンダー同期が必要な表示を更新
-    deps.onCompanyCalConfigChanged?.();
-    if (state.calTab === 'shared') renderSharedCalendar();
-    // 設定モーダルが開いていれば更新
-    const body = document.getElementById('ccs-body');
-    if (body && !body.hidden) _renderAnnualGrid();
+    _applyCompanyCalConfig(snap.exists() ? snap.data() : null);
   }, err => {
     console.warn('会社カレンダー読み込みエラー:', err);
-    state.companyCalConfig = { workSaturdays: [], plannedLeaveSaturdays: [], holidayRanges: [], events: [] };
+    _applyCompanyCalConfig(null);
   });
 }
 
 export function unsubscribeCompanyCalConfig() {
   if (state._companyCalUnsub) { state._companyCalUnsub(); state._companyCalUnsub = null; }
+}
+
+async function _refreshCompanyCalIfSupabase() {
+  if (!isSupabaseSharedCoreEnabled()) return;
+  try {
+    const cfg = await fetchCompanyCalSettingsFromSupabase();
+    _applyCompanyCalConfig(cfg);
+  } catch (_) {}
 }
 
 // ===== 公開出席への書き込み =====
@@ -128,9 +151,11 @@ export async function writePublicAttendance(dateStr, username, type) {
   const ym  = dateStr.slice(0, 7);
   const day = dateStr.slice(8, 10);
   try {
-    await setDoc(publicAttRef(ym), {
-      [day]: { [username]: type }
-    }, { merge: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await writePublicAttendanceToSupabase(ym, day, username, type);
+    } else {
+      await setDoc(publicAttRef(ym), { [day]: { [username]: type } }, { merge: true });
+    }
   } catch (err) { console.warn('公開出席書込みエラー:', err); }
 }
 
@@ -139,17 +164,23 @@ export async function removePublicAttendance(dateStr, username) {
   const ym  = dateStr.slice(0, 7);
   const day = dateStr.slice(8, 10);
   try {
-    await updateDoc(publicAttRef(ym), {
-      [`${day}.${username}`]: deleteField()
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      await removePublicAttendanceFromSupabase(ym, day, username);
+    } else {
+      await updateDoc(publicAttRef(ym), { [`${day}.${username}`]: deleteField() });
+    }
   } catch (_) {}
 }
 
 // ===== 公開出席の月単位取得 =====
 export async function fetchPublicAttendance(ym) {
   try {
-    const snap = await getDoc(publicAttRef(ym));
-    state.publicAttendance[ym] = snap.exists() ? snap.data() : {};
+    if (isSupabaseSharedCoreEnabled()) {
+      state.publicAttendance[ym] = await fetchPublicAttendanceFromSupabase(ym);
+    } else {
+      const snap = await getDoc(publicAttRef(ym));
+      state.publicAttendance[ym] = snap.exists() ? snap.data() : {};
+    }
   } catch (err) {
     console.warn('公開出席取得エラー:', err);
     state.publicAttendance[ym] = {};
@@ -461,15 +492,30 @@ async function _toggleWorkSaturday(dateStr) {
     // 計画付与 → 削除
     const newWs = ws.filter(d => d !== dateStr);
     const newPl = pl.filter(d => d !== dateStr);
-    await setDoc(companyCalRef(), { workSaturdays: newWs, plannedLeaveSaturdays: newPl }, { merge: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await saveCompanyCalSettingsToSupabase({ workSaturdays: newWs, plannedLeaveSaturdays: newPl });
+      await _refreshCompanyCalIfSupabase();
+    } else {
+      await setDoc(companyCalRef(), { workSaturdays: newWs, plannedLeaveSaturdays: newPl }, { merge: true });
+    }
   } else if (ws.includes(dateStr)) {
     // 出勤土曜 → 計画付与に昇格
     const newPl = [...pl, dateStr].sort();
-    await setDoc(companyCalRef(), { plannedLeaveSaturdays: newPl }, { merge: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await saveCompanyCalSettingsToSupabase({ plannedLeaveSaturdays: newPl });
+      await _refreshCompanyCalIfSupabase();
+    } else {
+      await setDoc(companyCalRef(), { plannedLeaveSaturdays: newPl }, { merge: true });
+    }
   } else {
     // 未登録 → 出勤土曜に追加
     const newWs = [...new Set([...ws, dateStr])].sort();
-    await setDoc(companyCalRef(), { workSaturdays: newWs }, { merge: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await saveCompanyCalSettingsToSupabase({ workSaturdays: newWs });
+      await _refreshCompanyCalIfSupabase();
+    } else {
+      await setDoc(companyCalRef(), { workSaturdays: newWs }, { merge: true });
+    }
   }
 }
 
@@ -497,7 +543,12 @@ async function _handleHolidayClick(dateStr) {
 
   const cfg    = state.companyCalConfig || {};
   const ranges = [...(cfg.holidayRanges || []), { start, end, label: label.trim() }];
-  await setDoc(companyCalRef(), { holidayRanges: ranges }, { merge: true });
+  if (isSupabaseSharedCoreEnabled()) {
+    await saveCompanyCalSettingsToSupabase({ holidayRanges: ranges });
+    await _refreshCompanyCalIfSupabase();
+  } else {
+    await setDoc(companyCalRef(), { holidayRanges: ranges }, { merge: true });
+  }
 }
 
 // ===== 行事クリック処理 =====
@@ -510,7 +561,12 @@ async function _handleEventClick(dateStr) {
   // 実際には後続の実装でカラーピッカーUIに置き換え可能
   const cfg    = state.companyCalConfig || {};
   const events = [...(cfg.events || []), { date: dateStr, label: label.trim(), color: color || '#a78bfa' }];
-  await setDoc(companyCalRef(), { events }, { merge: true });
+  if (isSupabaseSharedCoreEnabled()) {
+    await saveCompanyCalSettingsToSupabase({ events });
+    await _refreshCompanyCalIfSupabase();
+  } else {
+    await setDoc(companyCalRef(), { events }, { merge: true });
+  }
 }
 
 // ===== 簡易カラー選択（prompt fallback） =====

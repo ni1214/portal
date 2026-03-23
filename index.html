@@ -1375,17 +1375,10 @@
           <div class="security-error" id="admin-invite-error" hidden></div>
         </div>
 
-        <!-- データ接続設定 -->
+        <!-- Supabase 接続設定 -->
         <div class="admin-section">
-          <span class="admin-panel-subtitle"><i class="fa-solid fa-database"></i> データ接続設定</span>
-          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">今の段階では「共有リンク / 公開カテゴリ / 公開カード」だけ切替対象です。普段は Firebase のままでも問題ありません。</p>
-          <div class="form-group">
-            <label class="form-label" for="admin-supabase-mode">共有リンクの保存先</label>
-            <select id="admin-supabase-mode" class="form-input">
-              <option value="firebase">Firebase</option>
-              <option value="supabase">Supabase</option>
-            </select>
-          </div>
+          <span class="admin-panel-subtitle"><i class="fa-solid fa-database"></i> Supabase 接続設定</span>
+          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">全データを Supabase で管理します。URL と APIキーを設定してください。</p>
           <div class="form-group">
             <label class="form-label" for="admin-supabase-url">Supabase URL</label>
             <input type="url" id="admin-supabase-url" class="form-input" placeholder="https://xxxxx.supabase.co" autocomplete="off">
@@ -1395,8 +1388,8 @@
             <textarea id="admin-supabase-key" class="form-input admin-supabase-key-input" rows="3" placeholder="sb_publishable_..." spellcheck="false"></textarea>
           </div>
           <div class="admin-supabase-status-row">
-            <span class="admin-invite-status" id="admin-supabase-status">Firebase 待機</span>
-            <span class="admin-invite-hint" id="admin-supabase-hint">いまは Firebase を使います。切り替えても対象は共有リンク系だけです。</span>
+            <span class="admin-invite-status" id="admin-supabase-status">Supabase 未設定</span>
+            <span class="admin-invite-hint" id="admin-supabase-hint">URL と APIキーを入力して保存してください。</span>
           </div>
           <div class="admin-invite-current-wrap">
             <span class="admin-invite-current-label">現在のキー表示</span>

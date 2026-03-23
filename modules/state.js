@@ -85,7 +85,7 @@ export const state = {
 
   // ニックネーム・個人データ
   currentUsername: localStorage.getItem('portal-username') || null,
-  dataBackendMode: 'firebase',
+  dataBackendMode: 'supabase',
   supabaseUrl: '',
   supabaseApiKey: '',
   supabaseConfigured: false,
@@ -244,6 +244,14 @@ export const state = {
   reqTaskifyAssignee: '',
   _pendingSuggReply: null,
   lastViewedSuggestionsAt: 0,
+
+  // タスク・依頼コメント
+  taskComments: {},            // {taskId: [{id, username, body, createdAt}]}
+  taskCommentsLoading: {},     // {taskId: boolean}
+  expandedTaskCommentId: null, // 現在コメントを展開中のタスクID
+  requestComments: {},         // {requestId: [{id, username, body, createdAt}]}
+  requestCommentsLoading: {},  // {requestId: boolean}
+  expandedRequestCommentId: null,
 
   // メール返信AI
   DEFAULT_EMAIL_PROFILES: null,  // emailモジュールで初期化

@@ -196,7 +196,29 @@ import {
   updateSharedCardInSupabase,
   deleteSharedCardInSupabase,
   createSupabaseClientId,
+  // Step 4: 個人データ
+  fetchUserPreferencesFromSupabase,
+  saveUserPreferencesToSupabase,
+  fetchSectionOrderFromSupabase,
+  saveSectionOrderToSupabase,
+  fetchPrivateSectionsFromSupabase,
+  fetchPrivateCardsFromSupabase,
+  createPrivateSectionInSupabase,
+  updatePrivateSectionInSupabase,
+  deletePrivateSectionInSupabase,
+  createPrivateCardInSupabase,
+  updatePrivateCardInSupabase,
+  deletePrivateCardInSupabase,
+  // Step 4残: user_todos
+  fetchUserTodosFromSupabase,
+  createUserTodoInSupabase,
+  updateUserTodoInSupabase,
+  deleteUserTodoInSupabase,
+  // ユーザー一覧・ポータル設定
+  fetchAllUserAccountsFromSupabase,
+  savePortalConfigToSupabase,
 } from './modules/supabase.js';
+import { showToast, showConfirm } from './modules/notify.js';
 
 
 // ========== 依存注入 ==========
@@ -236,8 +258,14 @@ Object.assign(taskDeps, {
   // 共有ピッカー用: users_list を取得して renderSharePickerUsers に渡す
   loadUsersForSharePicker: async (alreadyShared, assignedTo, assignedBy) => {
     try {
-      const snap = await getDocs(collection(db, 'users_list'));
-      const allUsers = snap.docs.map(d => d.id);
+      let allUsers;
+      if (isSupabaseSharedCoreEnabled()) {
+        const accounts = await fetchAllUserAccountsFromSupabase();
+        allUsers = accounts.map(a => a.username);
+      } else {
+        const snap = await getDocs(collection(db, 'users_list'));
+        allUsers = snap.docs.map(d => d.id);
+      }
       renderSharePickerUsers(allUsers, alreadyShared, assignedTo, assignedBy);
     } catch (err) {
       console.error('共有ピッカーのユーザー取得エラー:', err);
@@ -451,6 +479,14 @@ function loadTodos(username) {
   if (state._todoUnsubscribe) { state._todoUnsubscribe(); state._todoUnsubscribe = null; }
   if (!username) { state.personalTodos = []; renderTodoSection(); return; }
 
+  if (isSupabaseSharedCoreEnabled()) {
+    fetchUserTodosFromSupabase(username).then(todos => {
+      state.personalTodos = todos;
+      renderTodoSection();
+    }).catch(err => console.error('Supabase TODO読み込みエラー:', err));
+    return;
+  }
+
   const q = query(
     collection(db, 'users', username, 'todos'),
     orderBy('createdAt', 'asc')
@@ -465,6 +501,15 @@ function loadTodos(username) {
 
 async function addTodo(text, dueDate) {
   if (!state.currentUsername || !text.trim()) return;
+  if (isSupabaseSharedCoreEnabled()) {
+    const id = await createUserTodoInSupabase(state.currentUsername, {
+      text: text.trim(),
+      dueDate: dueDate || null,
+    });
+    state.personalTodos = [...state.personalTodos, { id, text: text.trim(), done: false, dueDate: dueDate || null }];
+    renderTodoSection();
+    return;
+  }
   await addDoc(collection(db, 'users', state.currentUsername, 'todos'), {
     text:      text.trim(),
     done:      false,
@@ -475,6 +520,13 @@ async function addTodo(text, dueDate) {
 
 async function toggleTodo(todoId, currentDone) {
   if (!state.currentUsername) return;
+  if (isSupabaseSharedCoreEnabled()) {
+    const newDone = !currentDone;
+    await updateUserTodoInSupabase(todoId, { done: newDone });
+    state.personalTodos = state.personalTodos.map(t => t.id === todoId ? { ...t, done: newDone } : t);
+    renderTodoSection();
+    return;
+  }
   await updateDoc(doc(db, 'users', state.currentUsername, 'todos', todoId), {
     done: !currentDone,
   });
@@ -482,6 +534,12 @@ async function toggleTodo(todoId, currentDone) {
 
 async function deleteTodo(todoId) {
   if (!state.currentUsername) return;
+  if (isSupabaseSharedCoreEnabled()) {
+    await deleteUserTodoInSupabase(todoId);
+    state.personalTodos = state.personalTodos.filter(t => t.id !== todoId);
+    renderTodoSection();
+    return;
+  }
   await deleteDoc(doc(db, 'users', state.currentUsername, 'todos', todoId));
 }
 
@@ -591,7 +649,7 @@ function renderTodoSection() {
 }
 
 
-// ========== 個人設定 Firestore 保存（デバウンス付き） ==========
+// ========== 個人設定保存（デバウンス付き） ==========
 let _prefSaveTimer = null;
 function savePreferencesToFirestore() {
   const targetUsername = state.currentUsername;
@@ -602,21 +660,25 @@ function savePreferencesToFirestore() {
     try {
       const theme    = localStorage.getItem('portal-theme')     || 'dark';
       const fontSize = localStorage.getItem('portal-font-size') || 'font-md';
-      await setDoc(
-        doc(db, 'users', targetUsername, 'data', 'preferences'),
-        {
-          theme,
-          fontSize,
-          favOnly:           state.favoritesOnlyMode,
-          favorites:         state.personalFavorites,
-          collapsedSections:   state.collapsedSections,
-          collapseSeeded:      state._collapseSeeded,
-          hiddenCards:         state.hiddenCards,
-          missionBannerHidden: state.missionBannerHidden,
-          updatedAt: serverTimestamp()
-        },
-        { merge: true }
-      );
+      const prefs = {
+        theme,
+        fontSize,
+        favOnly:           state.favoritesOnlyMode,
+        favorites:         state.personalFavorites,
+        collapsedSections: state.collapsedSections,
+        collapseSeeded:    state._collapseSeeded,
+        hiddenCards:       state.hiddenCards,
+        missionBannerHidden: state.missionBannerHidden,
+      };
+      if (isSupabaseSharedCoreEnabled()) {
+        await saveUserPreferencesToSupabase(targetUsername, prefs);
+      } else {
+        await setDoc(
+          doc(db, 'users', targetUsername, 'data', 'preferences'),
+          { ...prefs, updatedAt: serverTimestamp() },
+          { merge: true }
+        );
+      }
     } catch (err) {
       console.error('設定保存エラー:', err);
     }
@@ -644,40 +706,82 @@ async function loadPersonalData(username, lockOnSwitch = false) {
       updateFtBadge();
     }
 
-    const [orderSnap, prefSnap, privSecSnap, privCardSnap] = await Promise.all([
-      getDoc(doc(db, 'users', username, 'data', 'section_order')),
-      getDoc(doc(db, 'users', username, 'data', 'preferences')),
-      getDocs(collection(db, 'users', username, 'private_sections')),
-      getDocs(collection(db, 'users', username, 'private_cards')),
-    ]);
+    if (isSupabaseSharedCoreEnabled()) {
+      // Supabase モード: 個人データを並行取得
+      const [sbOrder, sbPrefs, sbSections, sbCards] = await Promise.all([
+        fetchSectionOrderFromSupabase(username).catch(err => { console.warn('sectionOrder fallback:', err); return null; }),
+        fetchUserPreferencesFromSupabase(username).catch(err => { console.warn('prefs fallback:', err); return null; }),
+        fetchPrivateSectionsFromSupabase(username).catch(err => { console.warn('privSections fallback:', err); return null; }),
+        fetchPrivateCardsFromSupabase(username).catch(err => { console.warn('privCards fallback:', err); return null; }),
+      ]);
 
-    state.personalSectionOrder = orderSnap.exists() ? (orderSnap.data().order || []) : [];
+      // section_order
+      state.personalSectionOrder = Array.isArray(sbOrder) ? sbOrder : [];
 
-    if (prefSnap.exists()) {
-      const p = prefSnap.data();
-      state.personalFavorites   = Array.isArray(p.favorites) ? p.favorites : [];
-      state.favoritesOnlyMode   = !!p.favOnly;
-      state._collapseSeeded     = p.collapseSeeded === true;
-      state.collapsedSections   = Array.isArray(p.collapsedSections) ? p.collapsedSections : [];
-      state.hiddenCards         = Array.isArray(p.hiddenCards) ? p.hiddenCards : [];
-      state.missionBannerHidden = p.missionBannerHidden !== false; // 未設定なら折りたたみ
-      if (p.theme)    applyTheme(p.theme, false);
-      if (p.fontSize) applyFontSize(p.fontSize, false);
-      if (p.lastViewedSuggestionsAt) {
-        state.lastViewedSuggestionsAt = p.lastViewedSuggestionsAt.seconds ?? Math.floor(p.lastViewedSuggestionsAt / 1000);
+      // preferences
+      if (sbPrefs) {
+        state.personalFavorites   = sbPrefs.favorites;
+        state.favoritesOnlyMode   = sbPrefs.favOnly;
+        state._collapseSeeded     = sbPrefs.collapseSeeded;
+        state.collapsedSections   = sbPrefs.collapsedSections;
+        state.hiddenCards         = sbPrefs.hiddenCards;
+        state.missionBannerHidden = sbPrefs.missionBannerHidden;
+        if (sbPrefs.theme)    applyTheme(sbPrefs.theme, false);
+        if (sbPrefs.fontSize) applyFontSize(sbPrefs.fontSize, false);
+        if (sbPrefs.lastViewedSuggestionsAt) {
+          state.lastViewedSuggestionsAt = sbPrefs.lastViewedSuggestionsAt;
+        }
+      } else {
+        const localFavs = (() => { try { return JSON.parse(localStorage.getItem('portal-favorites') || '[]'); } catch { return []; } })();
+        state.personalFavorites = localFavs;
+        state.favoritesOnlyMode = localStorage.getItem('portal-fav-only') === '1';
+        savePreferencesToFirestore();
+      }
+
+      // private sections / cards
+      if (Array.isArray(sbSections)) {
+        state.privateCategories = sbSections;
+      }
+      if (Array.isArray(sbCards)) {
+        state.privateCards = sbCards;
       }
     } else {
-      const localFavs = (() => {
-        try { return JSON.parse(localStorage.getItem('portal-favorites') || '[]'); } catch { return []; }
-      })();
-      const localFavOnly = localStorage.getItem('portal-fav-only') === '1';
-      state.personalFavorites = localFavs;
-      state.favoritesOnlyMode = localFavOnly;
-      savePreferencesToFirestore();
-    }
+      // Firebase モード（既存処理）
+      const [orderSnap, prefSnap, privSecSnap, privCardSnap] = await Promise.all([
+        getDoc(doc(db, 'users', username, 'data', 'section_order')),
+        getDoc(doc(db, 'users', username, 'data', 'preferences')),
+        getDocs(collection(db, 'users', username, 'private_sections')),
+        getDocs(collection(db, 'users', username, 'private_cards')),
+      ]);
 
-    state.privateCategories = privSecSnap.docs.map(d => ({ docId: d.id, isPrivate: true, ...d.data() }));
-    state.privateCards      = privCardSnap.docs.map(d => ({ id: d.id, isPrivate: true, ...d.data() }));
+      state.personalSectionOrder = orderSnap.exists() ? (orderSnap.data().order || []) : [];
+
+      if (prefSnap.exists()) {
+        const p = prefSnap.data();
+        state.personalFavorites   = Array.isArray(p.favorites) ? p.favorites : [];
+        state.favoritesOnlyMode   = !!p.favOnly;
+        state._collapseSeeded     = p.collapseSeeded === true;
+        state.collapsedSections   = Array.isArray(p.collapsedSections) ? p.collapsedSections : [];
+        state.hiddenCards         = Array.isArray(p.hiddenCards) ? p.hiddenCards : [];
+        state.missionBannerHidden = p.missionBannerHidden !== false;
+        if (p.theme)    applyTheme(p.theme, false);
+        if (p.fontSize) applyFontSize(p.fontSize, false);
+        if (p.lastViewedSuggestionsAt) {
+          state.lastViewedSuggestionsAt = p.lastViewedSuggestionsAt.seconds ?? Math.floor(p.lastViewedSuggestionsAt / 1000);
+        }
+      } else {
+        const localFavs = (() => {
+          try { return JSON.parse(localStorage.getItem('portal-favorites') || '[]'); } catch { return []; }
+        })();
+        const localFavOnly = localStorage.getItem('portal-fav-only') === '1';
+        state.personalFavorites = localFavs;
+        state.favoritesOnlyMode = localFavOnly;
+        savePreferencesToFirestore();
+      }
+
+      state.privateCategories = privSecSnap.docs.map(d => ({ docId: d.id, isPrivate: true, ...d.data() }));
+      state.privateCards      = privCardSnap.docs.map(d => ({ id: d.id, isPrivate: true, ...d.data() }));
+    }
     await ensureFavoritePublicCardsLoaded();
 
     renderAllSections();
@@ -705,27 +809,44 @@ async function loadPersonalData(username, lockOnSwitch = false) {
 
 async function savePersonalSectionOrder(username, order) {
   if (!username) return;
-  await setDoc(doc(db, 'users', username, 'data', 'section_order'), { order, updatedAt: serverTimestamp() });
+  if (isSupabaseSharedCoreEnabled()) {
+    await saveSectionOrderToSupabase(username, order);
+  } else {
+    await setDoc(doc(db, 'users', username, 'data', 'section_order'), { order, updatedAt: serverTimestamp() });
+  }
 }
 
 
 // ========== プライベートセクション CRUD ==========
 async function addPrivateSection(data) {
   if (!state.currentUsername) return;
-  const ref = await addDoc(collection(db, 'users', state.currentUsername, 'private_sections'), { ...data, createdAt: serverTimestamp() });
-  state.privateCategories.push({ docId: ref.id, isPrivate: true, ...data });
+  if (isSupabaseSharedCoreEnabled()) {
+    const id = await createPrivateSectionInSupabase(state.currentUsername, data);
+    state.privateCategories.push({ docId: id, id, isPrivate: true, ...data });
+  } else {
+    const ref = await addDoc(collection(db, 'users', state.currentUsername, 'private_sections'), { ...data, createdAt: serverTimestamp() });
+    state.privateCategories.push({ docId: ref.id, isPrivate: true, ...data });
+  }
 }
 
 async function updatePrivateSection(docId, data) {
   if (!state.currentUsername) return;
-  await updateDoc(doc(db, 'users', state.currentUsername, 'private_sections', docId), { ...data, updatedAt: serverTimestamp() });
+  if (isSupabaseSharedCoreEnabled()) {
+    await updatePrivateSectionInSupabase(docId, data);
+  } else {
+    await updateDoc(doc(db, 'users', state.currentUsername, 'private_sections', docId), { ...data, updatedAt: serverTimestamp() });
+  }
   const idx = state.privateCategories.findIndex(c => c.docId === docId);
   if (idx !== -1) state.privateCategories[idx] = { ...state.privateCategories[idx], ...data };
 }
 
 async function deletePrivateSection(docId) {
   if (!state.currentUsername) return;
-  await deleteDoc(doc(db, 'users', state.currentUsername, 'private_sections', docId));
+  if (isSupabaseSharedCoreEnabled()) {
+    await deletePrivateSectionInSupabase(docId);
+  } else {
+    await deleteDoc(doc(db, 'users', state.currentUsername, 'private_sections', docId));
+  }
   state.privateCategories = state.privateCategories.filter(c => c.docId !== docId);
 }
 
@@ -735,15 +856,24 @@ async function addPrivateCard(data) {
     ? state.privateCards.filter(c => c.parentId === data.parentId)
     : state.privateCards.filter(c => c.sectionId === data.sectionId && !c.parentId);
   const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(c => c.order || 0)) + 1 : 0;
-  const newData = { ...data, parentId: data.parentId || null, order: maxOrder, updatedAt: serverTimestamp() };
-  const ref = await addDoc(collection(db, 'users', state.currentUsername, 'private_cards'), newData);
-  state.privateCards.push({ id: ref.id, isPrivate: true, ...newData });
+  const newData = { ...data, parentId: data.parentId || null, order: maxOrder };
+  if (isSupabaseSharedCoreEnabled()) {
+    const id = await createPrivateCardInSupabase(state.currentUsername, newData);
+    state.privateCards.push({ id, isPrivate: true, ...newData });
+  } else {
+    const ref = await addDoc(collection(db, 'users', state.currentUsername, 'private_cards'), { ...newData, updatedAt: serverTimestamp() });
+    state.privateCards.push({ id: ref.id, isPrivate: true, ...newData });
+  }
   renderAllSections();
 }
 
 async function savePrivateCard(cardId, data) {
   if (!state.currentUsername) return;
-  await updateDoc(doc(db, 'users', state.currentUsername, 'private_cards', cardId), { ...data, updatedAt: serverTimestamp() });
+  if (isSupabaseSharedCoreEnabled()) {
+    await updatePrivateCardInSupabase(cardId, data);
+  } else {
+    await updateDoc(doc(db, 'users', state.currentUsername, 'private_cards', cardId), { ...data, updatedAt: serverTimestamp() });
+  }
   const idx = state.privateCards.findIndex(c => c.id === cardId);
   if (idx !== -1) state.privateCards[idx] = { ...state.privateCards[idx], ...data };
   renderAllSections();
@@ -751,7 +881,11 @@ async function savePrivateCard(cardId, data) {
 
 async function deletePrivateCard(cardId) {
   if (!state.currentUsername) return;
-  await deleteDoc(doc(db, 'users', state.currentUsername, 'private_cards', cardId));
+  if (isSupabaseSharedCoreEnabled()) {
+    await deletePrivateCardInSupabase(cardId);
+  } else {
+    await deleteDoc(doc(db, 'users', state.currentUsername, 'private_cards', cardId));
+  }
   state.privateCards = state.privateCards.filter(c => c.id !== cardId);
   renderAllSections();
 }
@@ -1186,14 +1320,18 @@ async function saveMissionText() {
   const btn  = document.getElementById('admin-mission-save-btn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
   try {
-    await setDoc(doc(db, 'portal', 'config'), { missionText: text }, { merge: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await savePortalConfigToSupabase({ missionText: text });
+    } else {
+      await setDoc(doc(db, 'portal', 'config'), { missionText: text }, { merge: true });
+    }
     state.missionText = text;
     renderMissionBanner();
     if (btn) { btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存しました'; }
     setTimeout(() => { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存'; } }, 1500);
   } catch (err) {
     console.error('ミッションテキスト保存エラー:', err);
-    alert('保存に失敗しました');
+    showToast('保存に失敗しました', 'error');
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存'; }
   }
 }
@@ -2762,11 +2900,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Firestore 読み込み
   try {
-    await migrateIfNeeded();
-    await migrateCategories();
-    await migrateAddBox();
+    if (!isSupabaseSharedCoreEnabled()) {
+      await migrateIfNeeded();
+      await migrateCategories();
+      await migrateAddBox();
+    }
     await loadCategories();
-    subscribeNotices();
+    await subscribeNotices();
     renderAllSections();
     renderFavorites();
   } catch (err) {
@@ -2892,7 +3032,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('admin-invite-clear-btn').addEventListener('click', async () => {
     const msgEl = document.getElementById('admin-invite-error');
     msgEl.hidden = true;
-    if (!confirm('招待コードを解除しますか？')) return;
+    if (!await showConfirm('招待コードを解除しますか？', { danger: true })) return;
     try {
       await clearInviteCode();
     } catch (err) {
@@ -2905,7 +3045,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('admin-supabase-save-btn').addEventListener('click', async () => {
     const btn = document.getElementById('admin-supabase-save-btn');
     const errEl = document.getElementById('admin-supabase-error');
-    const modeEl = document.getElementById('admin-supabase-mode');
     const urlEl = document.getElementById('admin-supabase-url');
     const keyEl = document.getElementById('admin-supabase-key');
     errEl.hidden = true;
@@ -2914,12 +3053,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       await saveSupabaseRuntimeConfig({
-        mode: modeEl?.value || 'firebase',
         url: urlEl?.value || '',
         apiKey: keyEl?.value || '',
       });
       await reloadSharedCoreData();
-      renderSupabaseAdminState('保存しました。共有リンク系の保存先を更新しました。');
+      renderSupabaseAdminState('保存しました。Supabase 接続を更新しました。');
       btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存済み';
     } catch (err) {
       errEl.textContent = err?.message || 'Supabase 設定の保存に失敗しました。';
@@ -2930,6 +3068,43 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保存';
       }, errEl.hidden ? 1200 : 0);
+    }
+  });
+
+  // カテゴリ修復ボタン（Supabase 上のカテゴリラベルが文字化けしている場合に修復）
+  document.getElementById('admin-repair-categories-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('admin-repair-categories-btn');
+    const errEl = document.getElementById('admin-supabase-error');
+    errEl.hidden = true;
+    if (!isSupabaseSharedCoreEnabled()) {
+      showToast('Supabase が有効のときのみ使えます', 'warning');
+      return;
+    }
+    if (!await showConfirm('Supabase のカテゴリラベルをデフォルト値で上書きします。よろしいですか？')) return;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+    try {
+      for (const cat of DEFAULT_CATEGORIES) {
+        await updateSharedCategoryInSupabase(cat.id, {
+          label: cat.label,
+          icon: cat.icon,
+          colorIndex: cat.colorIndex,
+          order: cat.order,
+          isExternal: cat.isExternal ?? false,
+        });
+      }
+      await reloadSharedCoreData();
+      showToast('カテゴリラベルを修復しました', 'success');
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> 修復済み';
+    } catch (err) {
+      errEl.textContent = err?.message || 'カテゴリ修復に失敗しました。';
+      errEl.hidden = false;
+      btn.innerHTML = '<i class="fa-solid fa-wrench"></i> カテゴリ修復';
+    } finally {
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-wrench"></i> カテゴリ修復';
+      }, errEl.hidden ? 1500 : 0);
     }
   });
 
@@ -3343,7 +3518,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderAllSections();
     } catch (err) {
       console.error('マイカテゴリ保存エラー:', err);
-      alert('保存に失敗しました。');
+      showToast('保存に失敗しました。', 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = '保存';
@@ -3444,7 +3619,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeCardModal();
     } catch (err) {
       console.error('保存エラー:', err);
-      alert('保存に失敗しました。もう一度お試しください。');
+      showToast('保存に失敗しました。もう一度お試しください。', 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = '保存';
@@ -3484,7 +3659,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       .filter(Boolean);
     if (!title) { document.getElementById('notice-title').focus(); return; }
     if (targetScope === 'departments' && targetDepartments.length === 0) {
-      alert('配信先部署を1つ以上選んでください。');
+      showToast('配信先部署を1つ以上選んでください。', 'warning');
       document.querySelector('.notice-target-checkbox')?.focus();
       return;
     }
@@ -3507,7 +3682,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       refreshNoticeVisibility();
     } catch (err) {
       console.error('お知らせ保存エラー:', err);
-      alert('保存に失敗しました。');
+      showToast('保存に失敗しました。', 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = '保存';
@@ -3552,7 +3727,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderAllSections();
     } catch (err) {
       console.error('カテゴリ保存エラー:', err);
-      alert('保存に失敗しました。');
+      showToast('保存に失敗しました。', 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = '保存';
@@ -3564,7 +3739,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cat = state.allCategories.find(c => c.docId === state.editingCategoryId);
     const hasCards = state.allCards.some(c => c.category === cat?.id);
     if (hasCards) {
-      alert('このカテゴリにはカードがあります。先にカードを削除または移動してください。');
+      showToast('このカテゴリにはカードがあります。先にカードを削除または移動してください。', 'warning');
       return;
     }
     if (await confirmDelete(`「${cat?.label}」を削除しますか？`)) {

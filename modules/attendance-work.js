@@ -5,12 +5,24 @@ import {
   query, where, orderBy, onSnapshot, serverTimestamp
 } from './config.js';
 import { esc, normalizeProjectKey, normalizeProjectKeys } from './utils.js';
+import { showToast, showConfirm } from './notify.js';
 import {
   recordGetDocsRead,
   recordListenerStart,
   recordListenerSnapshot,
   wrapTrackedListenerUnsubscribe,
 } from './read-diagnostics.js';
+import {
+  isSupabaseSharedCoreEnabled,
+  fetchAttendanceEntriesFromSupabase,
+  fetchAttendanceSitesFromSupabase,
+  createAttendanceSiteInSupabase,
+  updateAttendanceSiteInSupabase,
+  deleteAttendanceSiteInSupabase,
+  fetchAllUserAccountsFromSupabase,
+  fetchMultipleMonthsAttendanceSummaryFromSupabase,
+  cleanupOldAttendanceInSupabase,
+} from './supabase.js';
 
 let deps = {};
 let eventsBound = false;
@@ -435,11 +447,11 @@ async function importSitesFromExcelFile() {
 
   const file = fileInput.files?.[0];
   if (!file) {
-    alert('Excelファイルを選択してください。');
+    showToast('Excelファイルを選択してください。', 'warning');
     return;
   }
   if (!window.XLSX) {
-    alert('Excel解析ライブラリの読み込みに失敗しました。ページを再読み込みしてください。');
+    showToast('Excel解析ライブラリの読み込みに失敗しました。ページを再読み込みしてください。', 'error');
     return;
   }
 
@@ -462,11 +474,11 @@ async function importSitesFromExcelFile() {
     setImportStatus(`解析完了: ${summary}`);
 
     if (parsed.uniqueSiteCount === 0) {
-      alert('有効な現場データを検出できませんでした。');
+      showToast('有効な現場データを検出できませんでした。', 'warning');
       return;
     }
 
-    const go = confirm(`${summary}\n\nこの内容で登録現場へ取り込みますか？`);
+    const go = await showConfirm(`${summary}\n\nこの内容で登録現場へ取り込みますか？`);
     if (!go) {
       setImportStatus('取込をキャンセルしました。');
       return;
@@ -475,13 +487,13 @@ async function importSitesFromExcelFile() {
     setImportStatus('Firestoreへ取り込み中...');
     const result = await importSitesToFirestore(parsed);
     setImportStatus(`取込完了: 追加 ${result.inserted}件 / 更新 ${result.updated}件 / 解析 ${parsed.uniqueSiteCount}件`);
-    alert(`登録現場の取込が完了しました。\n追加: ${result.inserted}件\n更新: ${result.updated}件`);
+    showToast(`登録現場の取込が完了しました。追加: ${result.inserted}件 更新: ${result.updated}件`, 'success');
     fileInput.value = '';
     updateSiteImportFileLabel();
   } catch (err) {
     console.error('Excel取込エラー:', err);
     setImportStatus('取込に失敗しました。ファイル形式または内容を確認してください。');
-    alert('Excel取込に失敗しました。');
+    showToast('Excel取込に失敗しました。', 'error');
   } finally {
     button.disabled = false;
   }
@@ -501,6 +513,16 @@ function renderEmpty(containerId, message) {
 async function loadUserPeriodAttendance(username, period) {
   if (!username) return {};
   const yms = getPeriodYearMonths(period);
+  if (isSupabaseSharedCoreEnabled()) {
+    const entries = await fetchAttendanceEntriesFromSupabase(username, yms);
+    const map = {};
+    for (const [dateStr, entry] of Object.entries(entries)) {
+      if (dateStr >= period.startStr && dateStr <= period.endStr) {
+        map[dateStr] = entry;
+      }
+    }
+    return map;
+  }
   const snaps = await Promise.all(
     yms.map(ym =>
       getDocs(
@@ -565,6 +587,12 @@ async function cleanupOldAttendanceForCurrentUser() {
   if (!state.currentUsername) return { deleted: 0 };
 
   const cutoffDateStr = getAttendanceCleanupCutoffDateStr();
+
+  if (isSupabaseSharedCoreEnabled()) {
+    const deleted = await cleanupOldAttendanceInSupabase(state.currentUsername, cutoffDateStr);
+    return { deleted, cutoffDateStr };
+  }
+
   const cutoffYm = cutoffDateStr.slice(0, 7);
   const attendanceCol = collection(db, 'users', state.currentUsername, 'attendance');
 
@@ -811,45 +839,49 @@ async function renderWorkSummaryLegacy() {
   container.innerHTML = '<div class="calw-loading">勤務内容を集計中...</div>';
 
   try {
-    const usersSnap = await getDocs(collection(db, 'users_list'));
-    recordGetDocsRead('calw.summary-users', '勤務内容表ユーザー一覧', 'users_list', usersSnap.size, usersSnap.docs);
-    const users = usersSnap.docs.map(d => d.id).filter(Boolean);
+    let users, attendanceRows;
     const yms = getPeriodYearMonths(period);
 
-    let attendanceRows = [];
-    try {
-      const attSnap = await getDocs(
-        query(
-          collectionGroup(db, 'attendance'),
-          where('yearMonth', 'in', yms)
-        )
-      );
-      recordGetDocsRead('calw.summary-attendance', '勤務内容表集計', yms.join(','), attSnap.size, attSnap.docs);
-      attendanceRows = attSnap.docs
-        .map(d => ({
-          username: d.ref.parent?.parent?.id || '',
-          dateStr: d.id,
-          data: d.data(),
-        }))
-        .filter(row => (
-          !!row.username &&
-          row.dateStr >= period.startStr &&
-          row.dateStr <= period.endStr
-        ));
-    } catch (err) {
-      console.warn('勤務内容集計: collectionGroup取得失敗。ユーザー別取得へフォールバックします。', err);
-      const userEntries = await Promise.all(
-        users.map(async username => {
-          const map = await loadUserPeriodAttendance(username, period);
-          return { username, map };
-        })
-      );
+    if (isSupabaseSharedCoreEnabled()) {
+      const [accounts, entries] = await Promise.all([
+        fetchAllUserAccountsFromSupabase(),
+        fetchMultipleMonthsAttendanceSummaryFromSupabase(yms),
+      ]);
+      users = accounts.map(a => a.username).filter(Boolean);
+      attendanceRows = entries
+        .filter(e => e.dateStr >= period.startStr && e.dateStr <= period.endStr)
+        .map(e => ({ username: e.username, dateStr: e.dateStr, data: e }));
+    } else {
+      const usersSnap = await getDocs(collection(db, 'users_list'));
+      recordGetDocsRead('calw.summary-users', '勤務内容表ユーザー一覧', 'users_list', usersSnap.size, usersSnap.docs);
+      users = usersSnap.docs.map(d => d.id).filter(Boolean);
       attendanceRows = [];
-      userEntries.forEach(({ username, map }) => {
-        Object.entries(map).forEach(([dateStr, data]) => {
-          attendanceRows.push({ username, dateStr, data });
+      try {
+        const attSnap = await getDocs(
+          query(collectionGroup(db, 'attendance'), where('yearMonth', 'in', yms))
+        );
+        recordGetDocsRead('calw.summary-attendance', '勤務内容表集計', yms.join(','), attSnap.size, attSnap.docs);
+        attendanceRows = attSnap.docs
+          .map(d => ({
+            username: d.ref.parent?.parent?.id || '',
+            dateStr: d.id,
+            data: d.data(),
+          }))
+          .filter(row => !!row.username && row.dateStr >= period.startStr && row.dateStr <= period.endStr);
+      } catch (err) {
+        console.warn('勤務内容集計: collectionGroup取得失敗。ユーザー別取得へフォールバックします。', err);
+        const userEntries = await Promise.all(
+          users.map(async username => {
+            const map = await loadUserPeriodAttendance(username, period);
+            return { username, map };
+          })
+        );
+        userEntries.forEach(({ username, map }) => {
+          Object.entries(map).forEach(([dateStr, data]) => {
+            attendanceRows.push({ username, dateStr, data });
+          });
         });
-      });
+      }
     }
 
     // users_list にないユーザーが混ざっていても表に出せるようにする
@@ -1100,45 +1132,49 @@ async function renderWorkSummary(force = false) {
   renderWorkSummaryPrompt(period);
 
   try {
-    const usersSnap = await getDocs(collection(db, 'users_list'));
-    recordGetDocsRead('calw.summary-users', '勤務内容表ユーザー一覧', 'users_list', usersSnap.size, usersSnap.docs);
-    const users = usersSnap.docs.map(d => d.id).filter(Boolean);
+    let users, attendanceRows;
     const yms = getPeriodYearMonths(period);
 
-    let attendanceRows = [];
-    try {
-      const attSnap = await getDocs(
-        query(
-          collectionGroup(db, 'attendance'),
-          where('yearMonth', 'in', yms)
-        )
-      );
-      recordGetDocsRead('calw.summary-attendance', '勤務内容表集計', yms.join(','), attSnap.size, attSnap.docs);
-      attendanceRows = attSnap.docs
-        .map(d => ({
-          username: d.ref.parent?.parent?.id || '',
-          dateStr: d.id,
-          data: d.data(),
-        }))
-        .filter(row => (
-          !!row.username &&
-          row.dateStr >= period.startStr &&
-          row.dateStr <= period.endStr
-        ));
-    } catch (err) {
-      console.warn('勤務内容集計の collectionGroup 取得に失敗したため、ユーザー別取得へフォールバックします。', err);
-      const userEntries = await Promise.all(
-        users.map(async username => {
-          const map = await loadUserPeriodAttendance(username, period);
-          return { username, map };
-        })
-      );
+    if (isSupabaseSharedCoreEnabled()) {
+      const [accounts, entries] = await Promise.all([
+        fetchAllUserAccountsFromSupabase(),
+        fetchMultipleMonthsAttendanceSummaryFromSupabase(yms),
+      ]);
+      users = accounts.map(a => a.username).filter(Boolean);
+      attendanceRows = entries
+        .filter(e => e.dateStr >= period.startStr && e.dateStr <= period.endStr)
+        .map(e => ({ username: e.username, dateStr: e.dateStr, data: e }));
+    } else {
+      const usersSnap = await getDocs(collection(db, 'users_list'));
+      recordGetDocsRead('calw.summary-users', '勤務内容表ユーザー一覧', 'users_list', usersSnap.size, usersSnap.docs);
+      users = usersSnap.docs.map(d => d.id).filter(Boolean);
       attendanceRows = [];
-      userEntries.forEach(({ username, map }) => {
-        Object.entries(map).forEach(([dateStr, data]) => {
-          attendanceRows.push({ username, dateStr, data });
+      try {
+        const attSnap = await getDocs(
+          query(collectionGroup(db, 'attendance'), where('yearMonth', 'in', yms))
+        );
+        recordGetDocsRead('calw.summary-attendance', '勤務内容表集計', yms.join(','), attSnap.size, attSnap.docs);
+        attendanceRows = attSnap.docs
+          .map(d => ({
+            username: d.ref.parent?.parent?.id || '',
+            dateStr: d.id,
+            data: d.data(),
+          }))
+          .filter(row => !!row.username && row.dateStr >= period.startStr && row.dateStr <= period.endStr);
+      } catch (err) {
+        console.warn('勤務内容集計の collectionGroup 取得に失敗したため、ユーザー別取得へフォールバックします。', err);
+        const userEntries = await Promise.all(
+          users.map(async username => {
+            const map = await loadUserPeriodAttendance(username, period);
+            return { username, map };
+          })
+        );
+        userEntries.forEach(({ username, map }) => {
+          Object.entries(map).forEach(([dateStr, data]) => {
+            attendanceRows.push({ username, dateStr, data });
+          });
         });
-      });
+      }
     }
 
     const userSet = new Set(users);
@@ -1282,7 +1318,7 @@ function buildSummaryCsv(snapshot) {
 async function exportSummaryCsv() {
   const snapshot = await ensureSummarySnapshot();
   if (!snapshot) {
-    alert('集計データがありません。');
+    showToast('集計データがありません。', 'warning');
     return;
   }
 
@@ -1366,13 +1402,13 @@ function buildSummaryPrintHtml(snapshot) {
 async function printSummaryTable() {
   const snapshot = await ensureSummarySnapshot();
   if (!snapshot) {
-    alert('印刷できる集計データがありません。');
+    showToast('印刷できる集計データがありません。', 'warning');
     return;
   }
 
   const win = window.open('', '_blank', 'noopener,noreferrer,width=1280,height=900');
   if (!win) {
-    alert('印刷ウィンドウを開けませんでした。ポップアップブロックを確認してください。');
+    showToast('印刷ウィンドウを開けませんでした。ポップアップブロックを確認してください。', 'error');
     return;
   }
 
@@ -1422,7 +1458,7 @@ async function addAttendanceSiteFromForm() {
 
   if (!name) {
     nameEl.focus();
-    alert('現場名を入力してください。');
+    showToast('現場名を入力してください。', 'warning');
     return;
   }
 
@@ -1433,22 +1469,34 @@ async function addAttendanceSiteFromForm() {
 
   btn.disabled = true;
   try {
-    await addDoc(collection(db, 'attendance_sites'), {
-      code: code || '',
-      name,
-      active: true,
-      sortOrder: maxOrder + 1,
-      updatedBy: state.currentUsername || '',
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      const newSite = await createAttendanceSiteInSupabase({
+        code: code || '',
+        name,
+        active: true,
+        sortOrder: maxOrder + 1,
+        updatedBy: state.currentUsername || '',
+      });
+      state.attendanceSites = [...(state.attendanceSites || []), newSite];
+      renderAttendanceSiteTable();
+    } else {
+      await addDoc(collection(db, 'attendance_sites'), {
+        code: code || '',
+        name,
+        active: true,
+        sortOrder: maxOrder + 1,
+        updatedBy: state.currentUsername || '',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
     markWorkSummaryStale();
     codeEl.value = '';
     nameEl.value = '';
     nameEl.focus();
   } catch (err) {
     console.error('登録現場追加エラー:', err);
-    alert('登録現場の追加に失敗しました。');
+    showToast('登録現場の追加に失敗しました。', 'error');
   } finally {
     btn.disabled = false;
   }
@@ -1466,41 +1514,73 @@ async function editAttendanceSite(siteId) {
   const code = nextCode.trim();
   const name = nextName.trim();
   if (!name) {
-    alert('現場名は必須です。');
+    showToast('現場名は必須です。', 'warning');
     return;
   }
 
   try {
-    await updateDoc(doc(db, 'attendance_sites', siteId), {
-      code: code || '',
-      name,
-      updatedBy: state.currentUsername || '',
-      updatedAt: serverTimestamp(),
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateAttendanceSiteInSupabase(siteId, {
+        code: code || '',
+        name,
+        updatedBy: state.currentUsername || '',
+      });
+      state.attendanceSites = (state.attendanceSites || []).map(s =>
+        s.id === siteId ? { ...s, code: code || '', name, updatedBy: state.currentUsername || '' } : s
+      );
+      renderAttendanceSiteTable();
+    } else {
+      await updateDoc(doc(db, 'attendance_sites', siteId), {
+        code: code || '',
+        name,
+        updatedBy: state.currentUsername || '',
+        updatedAt: serverTimestamp(),
+      });
+    }
     markWorkSummaryStale();
   } catch (err) {
     console.error('登録現場更新エラー:', err);
-    alert('登録現場の更新に失敗しました。');
+    showToast('登録現場の更新に失敗しました。', 'error');
   }
 }
 
 async function deleteAttendanceSite(siteId) {
   const site = (state.attendanceSites || []).find(s => s.id === siteId);
   if (!site) return;
-  const ok = confirm(`「${site.name || '現場'}」を削除しますか？\n既存の勤務内容データは未登録現場として集計されます。`);
+  const ok = await showConfirm(`「${site.name || '現場'}」を削除しますか？\n既存の勤務内容データは未登録現場として集計されます。`, { danger: true });
   if (!ok) return;
 
   try {
-    await deleteDoc(doc(db, 'attendance_sites', siteId));
+    if (isSupabaseSharedCoreEnabled()) {
+      await deleteAttendanceSiteInSupabase(siteId);
+      state.attendanceSites = (state.attendanceSites || []).filter(s => s.id !== siteId);
+      renderAttendanceSiteTable();
+    } else {
+      await deleteDoc(doc(db, 'attendance_sites', siteId));
+    }
     markWorkSummaryStale();
   } catch (err) {
     console.error('登録現場削除エラー:', err);
-    alert('登録現場の削除に失敗しました。');
+    showToast('登録現場の削除に失敗しました。', 'error');
   }
 }
 
 function subscribeAttendanceSites() {
   if (state._attendanceSitesSub) return;
+  if (isSupabaseSharedCoreEnabled()) {
+    fetchAttendanceSitesFromSupabase().then(sites => {
+      state.attendanceSites = sites;
+      if (state.calTab !== 'personal') return;
+      if (state.calPersonalTab === 'sites') renderAttendanceSiteTable();
+      if (state.calPersonalTab === 'work') void renderWorkTable();
+      if (state.calPersonalTab === 'summary') markWorkSummaryStale();
+    }).catch(err => {
+      console.error('登録現場取得エラー(Supabase):', err);
+      state.attendanceSites = [];
+      if (state.calPersonalTab === 'sites') renderAttendanceSiteTable();
+    });
+    return;
+  }
   recordListenerStart('calw.sites', '登録現場マスタ', 'attendance_sites');
   state._attendanceSitesSub = wrapTrackedListenerUnsubscribe('calw.sites', onSnapshot(
     query(collection(db, 'attendance_sites'), orderBy('sortOrder', 'asc')),

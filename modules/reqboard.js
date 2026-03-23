@@ -2,13 +2,33 @@
 import { db, doc, getDoc, setDoc, addDoc, deleteDoc, updateDoc, collection, query, where, orderBy, serverTimestamp, onSnapshot, getDocs } from './config.js';
 import { state, REQ_STATUS_LABEL } from './state.js';
 import { esc, escHtml, getUserAvatarColor, normalizeProjectKey, _fmtTs } from './utils.js';
-import { applySupabaseRuntimeConfig } from './supabase.js';
+import {
+  isSupabaseSharedCoreEnabled,
+  applySupabaseRuntimeConfig,
+  fetchPortalConfigFromSupabase,
+  savePortalConfigToSupabase,
+  saveUserPreferencesToSupabase,
+  fetchReceivedRequestsFromSupabase,
+  fetchSentRequestsFromSupabase,
+  fetchRequestHistoryFromSupabase,
+  createCrossDeptRequestInSupabase,
+  updateCrossDeptRequestInSupabase,
+  deleteCrossDeptRequestInSupabase,
+  fetchSuggestionsFromSupabase,
+  createSuggestionInSupabase,
+  deleteSuggestionInSupabase,
+  updateSuggestionInSupabase,
+  fetchRequestCommentsFromSupabase,
+  addRequestCommentInSupabase,
+  deleteRequestCommentInSupabase,
+} from './supabase.js';
 import {
   recordGetDocsRead,
   recordListenerStart,
   recordListenerSnapshot,
   wrapTrackedListenerUnsubscribe,
 } from './read-diagnostics.js';
+import { showToast, showConfirm } from './notify.js';
 export const deps = {};
 
 let liveReceivedRequests = [];
@@ -22,11 +42,24 @@ const LINKED_TASK_STATUS_LABEL = {
 };
 
 export async function loadConfigDepartmentsAndViewers() {
+  // Supabase接続済みならportal_configをSupabaseから読む
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const data = await fetchPortalConfigFromSupabase();
+      if (Array.isArray(data.departments) && data.departments.length > 0) {
+        state.currentDepartments = data.departments;
+      }
+      state.suggestionBoxViewers = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
+      state.isSuggestionBoxViewer = state.currentUsername ? state.suggestionBoxViewers.includes(state.currentUsername) : false;
+      state.missionText = data.missionText || '';
+      return;
+    } catch (err) { console.error('Supabase config読み込みエラー:', err); }
+  }
+  // フォールバック: Firebase
   try {
     const snap = await getDoc(doc(db, 'portal', 'config'));
     if (snap.exists()) {
       const data = snap.data();
-      applySupabaseRuntimeConfig(data);
       if (Array.isArray(data.departments) && data.departments.length > 0) {
         state.currentDepartments = data.departments;
       }
@@ -127,6 +160,27 @@ async function _loadRequestHistory(side, force = false) {
     renderReqContent();
   }
 
+  // Supabase 分岐
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const all = await fetchRequestHistoryFromSupabase(side, { myDept, username: state.currentUsername });
+      // liveReceivedRequests / liveSentRequests に既にある id のものを除外
+      const historyOnly = all.filter(req =>
+        side === 'received' ? !_isReceivedRequestLive(req) : !_isSentRequestLive(req)
+      );
+      state.reqHistoryCache = { ...state.reqHistoryCache, [side]: historyOnly };
+      state.reqHistoryLoaded = { ...state.reqHistoryLoaded, [side]: true };
+      _syncAllRequests();
+    } catch (err) {
+      console.error(`Supabase request history error (${side}):`, err);
+    } finally {
+      state.reqHistoryLoading = { ...state.reqHistoryLoading, [side]: false };
+      if (state.reqModalOpen && state.activeReqTab === 'request') renderReqContent();
+    }
+    return;
+  }
+
+  // Firestore の既存コード
   try {
     const historyQuery = side === 'received'
       ? query(collection(db, 'cross_dept_requests'), where('toDept', '==', myDept))
@@ -174,8 +228,47 @@ export function startRequestListeners(username) {
   _resetRequestHistoryState();
   if (state._suggUnsub)        { state._suggUnsub();         state._suggUnsub = null; }
 
-  // 自分の部署宛て依頼を監視
+  // Supabase 分岐
   const myDept = state.userEmailProfile ? state.userEmailProfile.department : null;
+  if (isSupabaseSharedCoreEnabled()) {
+    // 受信依頼（自分の部署宛て, submitted, archived=false）
+    if (myDept) {
+      fetchReceivedRequestsFromSupabase(myDept).then(rows => {
+        liveReceivedRequests = rows;
+        _syncReceivedRequests();
+        updateReqBadge();
+        if (state.reqModalOpen && state.activeReqTab === 'request' && state.activeReqSubTab === 'received') renderReqContent();
+      }).catch(err => console.error('Supabase 受信依頼取得エラー:', err));
+    }
+    // 送信依頼（notifyCreator=true, archived=false）
+    fetchSentRequestsFromSupabase(username).then(rows => {
+      liveSentRequests = rows;
+      _syncSentRequests();
+      updateReqBadge();
+      if (state.reqModalOpen && state.activeReqTab === 'request' && state.activeReqSubTab === 'sent') renderReqContent();
+    }).catch(err => console.error('Supabase 送信依頼取得エラー:', err));
+    // 目安箱（Supabase: ポーリングなし・一度だけ取得）
+    if (state.isSuggestionBoxViewer) {
+      fetchSuggestionsFromSupabase().then(suggestions => {
+        state.suggestionList = suggestions.map(s => ({
+          id: s.id,
+          content: s.content,
+          author: s.isAnonymous ? '匿名' : s.createdBy,
+          isAnonymous: s.isAnonymous,
+          archived: s.archived,
+          adminReply: s.adminReply,
+          repliedBy: s.repliedBy,
+          repliedAt: s.repliedAt,
+          createdAt: s.createdAt,
+        }));
+        updateReqBadge();
+        if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();
+      }).catch(err => console.error('Supabase 目安箱取得エラー:', err));
+    }
+    return;
+  }
+
+  // Firestore の既存コード（onSnapshot 3つ）
   if (myDept) {
     const rQ = query(
       collection(db, 'cross_dept_requests'),
@@ -222,7 +315,7 @@ export function startRequestListeners(username) {
       if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();
     }, err => console.error('suggestion_box listener error:', err)));
   }
-}
+}  // end startRequestListeners
 
 export function stopRequestListeners() {
   if (state._reqReceivedUnsub) { state._reqReceivedUnsub(); state._reqReceivedUnsub = null; }
@@ -250,7 +343,8 @@ export function updateReqBadge() {
   let suggCount = 0;
   if (state.isSuggestionBoxViewer) {
     const lastViewed = state.lastViewedSuggestionsAt;
-    suggCount = state.suggestionList.filter(s => (s.createdAt?.seconds ?? 0) > lastViewed).length;
+    const _tsToSecs = (ts) => !ts ? 0 : ts instanceof Date ? Math.floor(ts.getTime() / 1000) : (ts.seconds ?? 0);
+    suggCount = state.suggestionList.filter(s => _tsToSecs(s.createdAt) > lastViewed).length;
   }
   const total = recvCount + sentCount + suggCount;
   badge.hidden = total === 0;
@@ -311,6 +405,17 @@ export function switchReqSubTab(subtab) {
 export async function archiveRequest(id) {
   try {
     const current = _getRequestById(id);
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateCrossDeptRequestInSupabase(id, { archived: true });
+      if (current) {
+        _removeRequestFromAllCaches(id);
+        const updated = { ...current, archived: true, updatedAt: { seconds: Math.floor(Date.now() / 1000) } };
+        const myDept = state.userEmailProfile ? state.userEmailProfile.department : '';
+        if (current.toDept === myDept) _upsertRequestHistory('received', updated);
+        if (current.createdBy === state.currentUsername) _upsertRequestHistory('sent', updated);
+      }
+      return;
+    }
     await updateDoc(doc(db, 'cross_dept_requests', id), { archived: true, updatedAt: serverTimestamp() });
     if (current) {
       _removeRequestFromAllCaches(id);
@@ -319,12 +424,23 @@ export async function archiveRequest(id) {
       if (current.toDept === myDept) _upsertRequestHistory('received', updated);
       if (current.createdBy === state.currentUsername) _upsertRequestHistory('sent', updated);
     }
-  } catch (err) { console.error('アーカイブエラー:', err); alert('アーカイブに失敗しました'); }
+  } catch (err) { console.error('アーカイブエラー:', err); showToast('アーカイブに失敗しました', 'error'); }
 }
 
 export async function unarchiveRequest(id) {
   try {
     const current = _getRequestById(id);
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateCrossDeptRequestInSupabase(id, { archived: false });
+      if (current) {
+        _removeRequestFromAllCaches(id);
+        const updated = { ...current, archived: false, updatedAt: { seconds: Math.floor(Date.now() / 1000) } };
+        const myDept = state.userEmailProfile ? state.userEmailProfile.department : '';
+        if (current.toDept === myDept) _upsertRequestHistory('received', updated);
+        if (current.createdBy === state.currentUsername) _upsertRequestHistory('sent', updated);
+      }
+      return;
+    }
     await updateDoc(doc(db, 'cross_dept_requests', id), { archived: false, updatedAt: serverTimestamp() });
     if (current) {
       _removeRequestFromAllCaches(id);
@@ -333,34 +449,60 @@ export async function unarchiveRequest(id) {
       if (current.toDept === myDept) _upsertRequestHistory('received', updated);
       if (current.createdBy === state.currentUsername) _upsertRequestHistory('sent', updated);
     }
-  } catch (err) { console.error('アーカイブ解除エラー:', err); alert('解除に失敗しました'); }
+  } catch (err) { console.error('アーカイブ解除エラー:', err); showToast('解除に失敗しました', 'error'); }
 }
 
 export async function deleteRequest(id) {
-  if (!confirm('この依頼を完全に削除しますか？この操作は取り消せません。')) return;
+  if (!await showConfirm('この依頼を完全に削除しますか？この操作は取り消せません。', { danger: true })) return;
   try {
+    if (isSupabaseSharedCoreEnabled()) {
+      await deleteCrossDeptRequestInSupabase(id);
+      _removeRequestFromAllCaches(id);
+      return;
+    }
     await deleteDoc(doc(db, 'cross_dept_requests', id));
     _removeRequestFromAllCaches(id);
-  } catch (err) { console.error('削除エラー:', err); alert('削除に失敗しました'); }
+  } catch (err) { console.error('削除エラー:', err); showToast('削除に失敗しました', 'error'); }
 }
 
 export async function archiveSuggestion(id) {
   try {
-    await updateDoc(doc(db, 'suggestion_box', id), { archived: true });
-  } catch (err) { console.error('アーカイブエラー:', err); alert('アーカイブに失敗しました'); }
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateSuggestionInSupabase(id, { archived: true });
+      const s = state.suggestionList.find(x => x.id === id);
+      if (s) s.archived = true;
+    } else {
+      await updateDoc(doc(db, 'suggestion_box', id), { archived: true });
+    }
+    if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();
+  } catch (err) { console.error('アーカイブエラー:', err); showToast('アーカイブに失敗しました', 'error'); }
 }
 
 export async function unarchiveSuggestion(id) {
   try {
-    await updateDoc(doc(db, 'suggestion_box', id), { archived: false });
-  } catch (err) { console.error('アーカイブ解除エラー:', err); alert('解除に失敗しました'); }
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateSuggestionInSupabase(id, { archived: false });
+      const s = state.suggestionList.find(x => x.id === id);
+      if (s) s.archived = false;
+    } else {
+      await updateDoc(doc(db, 'suggestion_box', id), { archived: false });
+    }
+    if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();
+  } catch (err) { console.error('アーカイブ解除エラー:', err); showToast('解除に失敗しました', 'error'); }
 }
 
 export async function deleteSuggestion(id) {
-  if (!confirm('この投稿を完全に削除しますか？この操作は取り消せません。')) return;
+  if (!await showConfirm('この投稿を完全に削除しますか？この操作は取り消せません。', { danger: true })) return;
   try {
+    if (isSupabaseSharedCoreEnabled()) {
+      await deleteSuggestionInSupabase(id);
+      state.suggestionList = (state.suggestionList || []).filter(s => s.id !== id);
+      updateReqBadge();
+      if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();
+      return;
+    }
     await deleteDoc(doc(db, 'suggestion_box', id));
-  } catch (err) { console.error('削除エラー:', err); alert('削除に失敗しました'); }
+  } catch (err) { console.error('削除エラー:', err); showToast('削除に失敗しました', 'error'); }
 }
 
 function _syncReqTabUI() {
@@ -392,6 +534,132 @@ export function renderReqContent() {
     if (!container) return;
     _renderSuggestionPanel(container);
   }
+}
+
+// ===== 部門間依頼コメント =====
+function _requestCommentSectionHtml(requestId) {
+  if (!isSupabaseSharedCoreEnabled()) return '';
+  const isExpanded = state.expandedRequestCommentId === requestId;
+  const comments   = state.requestComments[requestId] || [];
+  const isLoading  = state.requestCommentsLoading[requestId] || false;
+  const count      = comments.length;
+
+  let inner = '';
+  if (isExpanded) {
+    if (isLoading) {
+      inner = '<div class="tc-loading"><span class="spinner"></span></div>';
+    } else {
+      const list = comments.map(c => `
+        <div class="tc-item">
+          <span class="tc-author" style="color:${getUserAvatarColor(c.username)}">${escHtml(c.username)}</span>
+          <span class="tc-body">${escHtml(c.body)}</span>
+          ${c.username === state.currentUsername
+            ? `<button class="rc-del" data-cid="${c.id}" data-req-id="${requestId}" title="削除"><i class="fa-solid fa-trash-can"></i></button>`
+            : ''}
+        </div>
+      `).join('');
+      inner = `
+        <div class="tc-list">${list || '<div class="tc-empty">コメントはまだありません</div>'}</div>
+        <div class="tc-input-row">
+          <input type="text" class="rc-input form-input" placeholder="コメントを入力…" data-req-id="${requestId}" autocomplete="off">
+          <button class="rc-send btn-modal-primary" data-req-id="${requestId}"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+      `;
+    }
+  }
+
+  return `
+    <div class="tc-wrapper">
+      <button class="rc-toggle${isExpanded ? ' tc-toggle--open' : ''}" data-req-id="${requestId}">
+        <i class="fa-regular fa-comment${isExpanded ? '-dots' : ''}"></i>
+        コメント${count ? ` <span class="tc-count">${count}</span>` : ''}
+      </button>
+      ${isExpanded ? `<div class="tc-area">${inner}</div>` : ''}
+    </div>
+  `;
+}
+
+async function _loadRequestComments(requestId) {
+  state.requestCommentsLoading = { ...state.requestCommentsLoading, [requestId]: true };
+  renderReqContent();
+  try {
+    const comments = await fetchRequestCommentsFromSupabase(requestId);
+    state.requestComments = { ...state.requestComments, [requestId]: comments };
+  } catch (e) {
+    showToast('コメントの読み込みに失敗しました', 'error');
+  } finally {
+    state.requestCommentsLoading = { ...state.requestCommentsLoading, [requestId]: false };
+    renderReqContent();
+  }
+}
+
+function _bindRequestCommentEvents(container) {
+  // トグル
+  container.querySelectorAll('.rc-toggle[data-req-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.reqId;
+      if (state.expandedRequestCommentId === id) {
+        state.expandedRequestCommentId = null;
+        renderReqContent();
+        return;
+      }
+      state.expandedRequestCommentId = id;
+      if (!state.requestComments[id]) {
+        void _loadRequestComments(id);
+      } else {
+        renderReqContent();
+      }
+    });
+  });
+
+  // 送信ボタン
+  container.querySelectorAll('.rc-send[data-req-id]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.reqId;
+      const input = container.querySelector(`.rc-input[data-req-id="${id}"]`);
+      const body = (input?.value || '').trim();
+      if (!body) return;
+      input.value = '';
+      try {
+        const comment = await addRequestCommentInSupabase(id, state.currentUsername, body);
+        state.requestComments = {
+          ...state.requestComments,
+          [id]: [...(state.requestComments[id] || []), comment],
+        };
+        renderReqContent();
+      } catch (e) {
+        showToast('コメントの送信に失敗しました', 'error');
+      }
+    });
+  });
+
+  // Enterキー送信
+  container.querySelectorAll('.rc-input[data-req-id]').forEach(input => {
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        container.querySelector(`.rc-send[data-req-id="${input.dataset.reqId}"]`)?.click();
+      }
+    });
+  });
+
+  // 削除ボタン
+  container.querySelectorAll('.rc-del[data-cid]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const cid = btn.dataset.cid;
+      const reqId = btn.dataset.reqId;
+      try {
+        await deleteRequestCommentInSupabase(cid);
+        state.requestComments = {
+          ...state.requestComments,
+          [reqId]: (state.requestComments[reqId] || []).filter(c => c.id !== cid),
+        };
+        renderReqContent();
+      } catch (e) {
+        showToast('削除に失敗しました', 'error');
+      }
+    });
+  });
 }
 
 function _reqStatusHtml(status) {
@@ -445,16 +713,20 @@ function _bindRequestProjectFilterEvents() {
   const input = document.getElementById('req-project-filter-input');
   const clearBtn = document.getElementById('req-project-filter-clear');
   if (input) {
-    input.addEventListener('input', e => {
+    if (input._reqFilterHandler) input.removeEventListener('input', input._reqFilterHandler);
+    input._reqFilterHandler = e => {
       state.reqProjectKeyFilter = normalizeProjectKey(e.target.value || '');
       renderReqContent();
-    });
+    };
+    input.addEventListener('input', input._reqFilterHandler);
   }
   if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
+    if (clearBtn._reqFilterClearHandler) clearBtn.removeEventListener('click', clearBtn._reqFilterClearHandler);
+    clearBtn._reqFilterClearHandler = () => {
       state.reqProjectKeyFilter = '';
       renderReqContent();
-    });
+    };
+    clearBtn.addEventListener('click', clearBtn._reqFilterClearHandler);
   }
 }
 
@@ -522,7 +794,7 @@ export async function openReqTaskifyModal(reqId) {
   const req = state.receivedRequests.find(r => r.id === reqId);
   if (!req) return;
   if (!_canCreateTaskFromRequest(req)) {
-    alert('この依頼は現在タスク化できません');
+    showToast('この依頼は現在タスク化できません', 'warning');
     return;
   }
   state._pendingReqTaskify = { reqId };
@@ -568,11 +840,11 @@ export async function submitRequestTaskify() {
   const req = reqId ? _getRequestById(reqId) : null;
   if (!req) return;
   if (!_canCreateTaskFromRequest(req)) {
-    alert('この依頼は現在タスク化できません');
+    showToast('この依頼は現在タスク化できません', 'warning');
     return;
   }
   if (!state.reqTaskifyAssignee) {
-    alert('担当者を選択してください');
+    showToast('担当者を選択してください', 'warning');
     return;
   }
 
@@ -609,22 +881,36 @@ export async function submitRequestTaskify() {
           sharedResponses: {},
         });
 
-    await updateDoc(doc(db, 'cross_dept_requests', req.id), {
-      status: 'accepted',
-      statusUpdatedBy: state.currentUsername,
-      updatedAt: serverTimestamp(),
-      notifyCreator: true,
-      linkedTaskId: taskRef.id,
-      linkedTaskStatus: 'pending',
-      linkedTaskAssignedTo: state.reqTaskifyAssignee,
-      linkedTaskLinkedAt: serverTimestamp(),
-      linkedTaskLinkedBy: state.currentUsername,
-      linkedTaskClosedAt: null,
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateCrossDeptRequestInSupabase(req.id, {
+        status: 'accepted',
+        statusUpdatedBy: state.currentUsername,
+        notifyCreator: true,
+        linkedTaskId: taskRef.id,
+        linkedTaskStatus: 'pending',
+        linkedTaskAssignedTo: state.reqTaskifyAssignee,
+        linkedTaskLinkedAt: new Date().toISOString(),
+        linkedTaskLinkedBy: state.currentUsername,
+        linkedTaskClosedAt: null,
+      });
+    } else {
+      await updateDoc(doc(db, 'cross_dept_requests', req.id), {
+        status: 'accepted',
+        statusUpdatedBy: state.currentUsername,
+        updatedAt: serverTimestamp(),
+        notifyCreator: true,
+        linkedTaskId: taskRef.id,
+        linkedTaskStatus: 'pending',
+        linkedTaskAssignedTo: state.reqTaskifyAssignee,
+        linkedTaskLinkedAt: serverTimestamp(),
+        linkedTaskLinkedBy: state.currentUsername,
+        linkedTaskClosedAt: null,
+      });
+    }
     closeReqTaskifyModal();
   } catch (err) {
     console.error('依頼タスク化エラー:', err);
-    alert('タスク化に失敗しました');
+    showToast('タスク化に失敗しました', 'error');
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -679,9 +965,11 @@ export function _renderReceivedRequests(container) {
         <button class="btn-req-archive" data-id="${r.id}" title="アーカイブに移動"><i class="fa-solid fa-box-archive"></i> アーカイブ</button>
         <button class="btn-req-delete" data-id="${r.id}" title="削除"><i class="fa-solid fa-trash"></i></button>
       </div>
+      ${_requestCommentSectionHtml(r.id)}
     </div>
   `).join('');
   _bindRequestProjectFilterEvents();
+  _bindRequestCommentEvents(container);
   container.querySelectorAll('.btn-req-status').forEach(btn => {
     btn.addEventListener('click', () => openStatusModal(btn.dataset.id));
   });
@@ -733,9 +1021,11 @@ export function _renderSentRequests(container) {
         <button class="btn-req-archive" data-id="${r.id}" title="アーカイブに移動"><i class="fa-solid fa-box-archive"></i> アーカイブ</button>
         <button class="btn-req-delete" data-id="${r.id}" title="削除"><i class="fa-solid fa-trash"></i></button>
       </div>
+      ${_requestCommentSectionHtml(r.id)}
     </div>
   `).join('');
   _bindRequestProjectFilterEvents();
+  _bindRequestCommentEvents(container);
   container.querySelectorAll('.btn-req-status').forEach(btn => {
     btn.addEventListener('click', () => openStatusModal(btn.dataset.id));
   });
@@ -866,6 +1156,25 @@ export async function submitRequest() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>';
   try {
+    if (isSupabaseSharedCoreEnabled()) {
+      await createCrossDeptRequestInSupabase({
+        title,
+        projectKey,
+        toDept,
+        fromDept: state.userEmailProfile?.department || '',
+        content,
+        proposal: proposal || '',
+        remarks:  remarks  || '',
+        createdBy: state.currentUsername,
+      });
+      // 送信タブを表示
+      switchReqSubTab('sent');
+      // 履歴をリフレッシュ
+      _resetRequestHistoryState();
+      void _loadRequestHistory('sent');
+      return;
+    }
+    // Firestore の既存コード
     await addDoc(collection(db, 'cross_dept_requests'), {
       title,
       projectKey,
@@ -892,7 +1201,7 @@ export async function submitRequest() {
     switchReqSubTab('sent');
   } catch (err) {
     console.error('依頼投稿エラー:', err);
-    alert('投稿に失敗しました。もう一度お試しください。');
+    showToast('投稿に失敗しました。もう一度お試しください。', 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 投稿する';
@@ -923,7 +1232,7 @@ export function openStatusModal(reqId) {
 
 export async function updateRequestStatus() {
   if (!state._pendingStatusChange?.status) {
-    alert('ステータスを選択してください');
+    showToast('ステータスを選択してください', 'warning');
     return;
   }
   const { reqId, status } = state._pendingStatusChange;
@@ -931,6 +1240,24 @@ export async function updateRequestStatus() {
   try {
     const current = _getRequestById(reqId);
     const isCreator = state.sentRequests.some(r => r.id === reqId);
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateCrossDeptRequestInSupabase(reqId, {
+        status,
+        statusNote: note,
+        statusUpdatedBy: state.currentUsername,
+        notifyCreator: !isCreator,
+      });
+      if (current) {
+        _removeRequestFromAllCaches(reqId);
+        const updated = { ...current, status, statusNote: note, statusUpdatedBy: state.currentUsername, updatedAt: { seconds: Math.floor(Date.now() / 1000) }, notifyCreator: !isCreator };
+        const myDept = state.userEmailProfile ? state.userEmailProfile.department : '';
+        if (current.toDept === myDept) _upsertRequestHistory('received', updated);
+        if (current.createdBy === state.currentUsername) _upsertRequestHistory('sent', updated);
+      }
+      document.getElementById('req-status-modal').classList.remove('visible');
+      state._pendingStatusChange = null;
+      return;
+    }
     await updateDoc(doc(db, 'cross_dept_requests', reqId), {
       status,
       statusNote: note,
@@ -956,13 +1283,21 @@ export async function updateRequestStatus() {
     state._pendingStatusChange = null;
   } catch (err) {
     console.error('ステータス更新エラー:', err);
-    alert('更新に失敗しました');
+    showToast('更新に失敗しました', 'error');
   }
 }
 
 export async function markRequestSeen(reqId) {
   try {
     const current = state.sentRequests.find(req => req.id === reqId);
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateCrossDeptRequestInSupabase(reqId, { notifyCreator: false });
+      if (current) {
+        _removeRequestFromAllCaches(reqId);
+        _upsertRequestHistory('sent', { ...current, notifyCreator: false });
+      }
+      return;
+    }
     await updateDoc(doc(db, 'cross_dept_requests', reqId), { notifyCreator: false });
     if (current) {
       _removeRequestFromAllCaches(reqId);
@@ -982,21 +1317,31 @@ export async function submitSuggestion(category) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>';
   try {
-    await addDoc(collection(db, 'suggestion_box'), {
-      content,
-      category: category || 'other',
-      isAnonymous: anonymous,
-      author: anonymous ? '匿名' : (state.currentUsername || '匿名'),
-      createdAt: serverTimestamp(),
-      adminReply: '',
-      repliedAt: null,
-      repliedBy: '',
-    });
-    document.getElementById('sugg-content').value = '';
-    alert('投稿しました。ありがとうございます！');
+    if (isSupabaseSharedCoreEnabled()) {
+      await createSuggestionInSupabase({
+        content,
+        createdBy: state.currentUsername || 'anonymous',
+        isAnonymous: anonymous,
+      });
+      document.getElementById('sugg-content').value = '';
+      showToast('投稿しました。ありがとうございます！', 'success');
+    } else {
+      await addDoc(collection(db, 'suggestion_box'), {
+        content,
+        category: category || 'other',
+        isAnonymous: anonymous,
+        author: anonymous ? '匿名' : (state.currentUsername || '匿名'),
+        createdAt: serverTimestamp(),
+        adminReply: '',
+        repliedAt: null,
+        repliedBy: '',
+      });
+      document.getElementById('sugg-content').value = '';
+      showToast('投稿しました。ありがとうございます！', 'success');
+    }
   } catch (err) {
     console.error('目安箱投稿エラー:', err);
-    alert('投稿に失敗しました。もう一度お試しください。');
+    showToast('投稿に失敗しました。もう一度お試しください。', 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 投稿する';
@@ -1013,16 +1358,29 @@ export async function sendSuggReply() {
   const text = document.getElementById('sugg-reply-text').value.trim();
   if (!text || !state._pendingSuggReply) return;
   try {
-    await updateDoc(doc(db, 'suggestion_box', state._pendingSuggReply), {
-      adminReply: text,
-      repliedAt: serverTimestamp(),
-      repliedBy: state.currentUsername,
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      const now = new Date().toISOString();
+      await updateSuggestionInSupabase(state._pendingSuggReply, {
+        adminReply: text,
+        repliedAt: now,
+        repliedBy: state.currentUsername,
+      });
+      const s = state.suggestionList.find(x => x.id === state._pendingSuggReply);
+      if (s) { s.adminReply = text; s.repliedBy = state.currentUsername; s.repliedAt = new Date(now); }
+    } else {
+      await updateDoc(doc(db, 'suggestion_box', state._pendingSuggReply), {
+        adminReply: text,
+        repliedAt: serverTimestamp(),
+        repliedBy: state.currentUsername,
+      });
+    }
     document.getElementById('sugg-reply-modal').classList.remove('visible');
     state._pendingSuggReply = null;
+    if (state.reqModalOpen && state.activeReqTab === 'suggestion') renderReqContent();
+    showToast('返信を送信しました', 'success');
   } catch (err) {
     console.error('返信エラー:', err);
-    alert('返信に失敗しました');
+    showToast('返信に失敗しました', 'error');
   }
 }
 
@@ -1030,20 +1388,36 @@ export async function _markSuggestionsViewed() {
   if (!state.currentUsername || !state.isSuggestionBoxViewer) return;
   try {
     const now = new Date();
-    await setDoc(
-      doc(db, 'users', state.currentUsername, 'data', 'preferences'),
-      { lastViewedSuggestionsAt: now },
-      { merge: true }
-    );
-    state.lastViewedSuggestionsAt = Math.floor(now.getTime() / 1000);
+    const unixSec = Math.floor(now.getTime() / 1000);
+    if (isSupabaseSharedCoreEnabled()) {
+      await saveUserPreferencesToSupabase(state.currentUsername, { lastViewedSuggestionsAt: unixSec });
+    } else {
+      await setDoc(
+        doc(db, 'users', state.currentUsername, 'data', 'preferences'),
+        { lastViewedSuggestionsAt: now },
+        { merge: true }
+      );
+    }
+    state.lastViewedSuggestionsAt = unixSec;
     updateReqBadge();
   } catch (_) { /* silent */ }
 }
 
 // 管理者パネル：目安箱閲覧者管理
 export async function renderAdminSuggBoxSection() {
-  const snap = await getDoc(doc(db, 'portal', 'config'));
-  const viewers = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
+  let viewers = [];
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const data = await fetchPortalConfigFromSupabase();
+      viewers = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
+    } catch (_) {
+      const snap = await getDoc(doc(db, 'portal', 'config'));
+      viewers = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
+    }
+  } else {
+    const snap = await getDoc(doc(db, 'portal', 'config'));
+    viewers = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
+  }
   const container = document.getElementById('admin-suggbox-viewers');
   if (!container) return;
   if (viewers.length === 0) {
@@ -1059,7 +1433,15 @@ export async function renderAdminSuggBoxSection() {
       btn.addEventListener('click', async () => {
         const name = btn.dataset.name;
         const newList = viewers.filter(v => v !== name);
-        await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
+        if (isSupabaseSharedCoreEnabled()) {
+          try {
+            await savePortalConfigToSupabase({ suggestionBoxViewers: newList });
+          } catch (_) {
+            await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
+          }
+        } else {
+          await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
+        }
         state.suggestionBoxViewers = newList;
         state.isSuggestionBoxViewer = state.currentUsername ? newList.includes(state.currentUsername) : false;
         renderAdminSuggBoxSection();
@@ -1072,11 +1454,30 @@ export async function addSuggBoxViewer() {
   const input = document.getElementById('admin-suggbox-add-input');
   const name = input.value.trim();
   if (!name) return;
-  const snap = await getDoc(doc(db, 'portal', 'config'));
-  const current = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
-  if (current.includes(name)) { alert('すでに登録されています'); return; }
+  let current = [];
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const data = await fetchPortalConfigFromSupabase();
+      current = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
+    } catch (_) {
+      const snap = await getDoc(doc(db, 'portal', 'config'));
+      current = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
+    }
+  } else {
+    const snap = await getDoc(doc(db, 'portal', 'config'));
+    current = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
+  }
+  if (current.includes(name)) { showToast('すでに登録されています', 'warning'); return; }
   const newList = [...current, name];
-  await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      await savePortalConfigToSupabase({ suggestionBoxViewers: newList });
+    } catch (_) {
+      await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
+    }
+  } else {
+    await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
+  }
   state.suggestionBoxViewers = newList;
   state.isSuggestionBoxViewer = state.currentUsername ? newList.includes(state.currentUsername) : false;
   input.value = '';

@@ -3,7 +3,12 @@ import {
 } from './config.js';
 import {
   isSupabaseSharedCoreEnabled,
-  fetchOrdersFromSupabase,
+  fetchAttendanceSitesFromSupabase,
+  fetchAttendanceByProjectKeyFromSupabase,
+  fetchAttendanceEntriesFromSupabase,
+  fetchRequestsByProjectKeyFromSupabase,
+  fetchTasksByProjectKeyFromSupabase,
+  fetchOrdersByProjectKeyFromSupabase,
 } from './supabase.js';
 import { state, REQ_STATUS_LABEL, TASK_STATUS_LABEL } from './state.js';
 import { esc, normalizeProjectKey, _fmtTs } from './utils.js';
@@ -88,11 +93,6 @@ async function searchPropertySummary(rawValue = null, options = {}) {
   renderPropertySummary();
 
   try {
-    const [requestSnap, taskSnap] = await Promise.all([
-      getDocs(query(collection(db, 'cross_dept_requests'), where('projectKey', '==', projectKey))),
-      getDocs(query(collection(db, 'assigned_tasks'), where('projectKey', '==', projectKey))),
-    ]);
-
     let attendanceRecords = await loadAttendanceByProjectKey(state.currentUsername, projectKey, siteMap);
     let attendanceFallbackUsed = false;
     if (attendanceRecords.length === 0) {
@@ -103,32 +103,50 @@ async function searchPropertySummary(rawValue = null, options = {}) {
     const currentUser = state.currentUsername || '';
     const myDept = state.userEmailProfile?.department || '';
 
-    const requests = requestSnap.docs
-      .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
-      .filter(item => item.createdBy === currentUser || (myDept && item.toDept === myDept))
-      .sort((a, b) => getDateValue(b.updatedAt || b.createdAt) - getDateValue(a.updatedAt || a.createdAt));
+    let requests, tasks, orders;
 
-    const tasks = taskSnap.docs
-      .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
-      .filter(item =>
-        item.assignedBy === currentUser ||
-        item.assignedTo === currentUser ||
-        (Array.isArray(item.sharedWith) && item.sharedWith.includes(currentUser))
-      )
-      .sort((a, b) => getDateValue(b.doneAt || b.acceptedAt || b.createdAt) - getDateValue(a.doneAt || a.acceptedAt || a.createdAt));
-
-    let rawOrders;
     if (isSupabaseSharedCoreEnabled()) {
-      // Supabaseから全件取得してprojectKeyでクライアントフィルタ
-      const allOrders = await fetchOrdersFromSupabase(state.isAdmin ? null : currentUser, { includeDeleted: false });
-      rawOrders = allOrders.filter(o => normalizeProjectKey(o.projectKey || '') === projectKey);
+      const [rawReqs, rawTasks, rawOrders] = await Promise.all([
+        fetchRequestsByProjectKeyFromSupabase(projectKey),
+        fetchTasksByProjectKeyFromSupabase(projectKey),
+        fetchOrdersByProjectKeyFromSupabase(projectKey),
+      ]);
+      requests = rawReqs
+        .filter(item => item.createdBy === currentUser || (myDept && item.toDept === myDept))
+        .sort((a, b) => getDateValue(b.updatedAt || b.createdAt) - getDateValue(a.updatedAt || a.createdAt));
+      tasks = rawTasks
+        .filter(item =>
+          item.assignedBy === currentUser ||
+          item.assignedTo === currentUser ||
+          (Array.isArray(item.sharedWith) && item.sharedWith.includes(currentUser))
+        )
+        .sort((a, b) => getDateValue(b.doneAt || b.acceptedAt || b.createdAt) - getDateValue(a.doneAt || a.acceptedAt || a.createdAt));
+      orders = rawOrders
+        .filter(item => state.isAdmin || item.orderedBy === currentUser)
+        .sort((a, b) => getDateValue(b.orderedAt) - getDateValue(a.orderedAt));
     } else {
-      const orderSnap = await getDocs(query(collection(db, 'orders'), where('projectKey', '==', projectKey)));
-      rawOrders = orderSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
-        .filter(item => state.isAdmin || item.orderedBy === currentUser);
+      const [requestSnap, taskSnap, orderSnap] = await Promise.all([
+        getDocs(query(collection(db, 'cross_dept_requests'), where('projectKey', '==', projectKey))),
+        getDocs(query(collection(db, 'assigned_tasks'), where('projectKey', '==', projectKey))),
+        getDocs(query(collection(db, 'orders'), where('projectKey', '==', projectKey))),
+      ]);
+      requests = requestSnap.docs
+        .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+        .filter(item => item.createdBy === currentUser || (myDept && item.toDept === myDept))
+        .sort((a, b) => getDateValue(b.updatedAt || b.createdAt) - getDateValue(a.updatedAt || a.createdAt));
+      tasks = taskSnap.docs
+        .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+        .filter(item =>
+          item.assignedBy === currentUser ||
+          item.assignedTo === currentUser ||
+          (Array.isArray(item.sharedWith) && item.sharedWith.includes(currentUser))
+        )
+        .sort((a, b) => getDateValue(b.doneAt || b.acceptedAt || b.createdAt) - getDateValue(a.doneAt || a.acceptedAt || a.createdAt));
+      orders = orderSnap.docs
+        .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+        .filter(item => state.isAdmin || item.orderedBy === currentUser)
+        .sort((a, b) => getDateValue(b.orderedAt) - getDateValue(a.orderedAt));
     }
-    const orders = rawOrders
-      .sort((a, b) => getDateValue(b.orderedAt) - getDateValue(a.orderedAt));
 
     const siteMatch = resolution.siteMatch
       || [...siteMap.values()].find(site => normalizeProjectKey(site.code || '') === projectKey)
@@ -173,10 +191,50 @@ async function loadAttendanceSiteMap() {
     return _cachedSiteMap;
   }
 
+  if (isSupabaseSharedCoreEnabled()) {
+    const sites = await fetchAttendanceSitesFromSupabase();
+    _cachedSiteMap = new Map(sites.map(site => [site.id, site]));
+    return _cachedSiteMap;
+  }
+
   const snap = await getDocs(query(collection(db, 'attendance_sites')));
   const sites = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
   _cachedSiteMap = new Map(sites.map(site => [site.id, site]));
   return _cachedSiteMap;
+}
+
+/** Supabase勤怠エントリ → property-summary 形式に変換 */
+function _mapSupabaseAttendanceEntry(entry, siteMap, username) {
+  const workSiteHours = (entry.workSiteHours && typeof entry.workSiteHours === 'object') ? entry.workSiteHours : {};
+  const siteEntries = Object.entries(workSiteHours)
+    .map(([siteId, hours]) => {
+      const numericHours = Number(hours);
+      if (!Number.isFinite(numericHours) || numericHours <= 0) return null;
+      const site = siteMap.get(siteId);
+      return {
+        siteId,
+        code: site?.code || '',
+        name: site?.name || `未登録現場(${siteId})`,
+        hours: numericHours,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => Number(a.code || 0) - Number(b.code || 0));
+  if (siteEntries.length === 0) return null;
+  const dateStr = entry.dateStr;
+  const sortKey = getDateValue(dateStr ? new Date(`${dateStr}T00:00:00`) : entry.updatedAt);
+  return {
+    id: `sb:att:${username}:${dateStr}`,
+    username: username || '不明',
+    dateStr,
+    type: entry.type || null,
+    hayade: entry.hayade || null,
+    zangyo: entry.zangyo || null,
+    note: entry.note || '',
+    siteEntries,
+    totalHours: siteEntries.reduce((sum, e) => sum + e.hours, 0),
+    sortKey,
+  };
 }
 
 function normalizeSearchText(value) {
@@ -315,6 +373,13 @@ async function refreshSiteCandidates(rawQuery) {
 
 async function loadAttendanceByProjectKey(username, projectKey, siteMap) {
   if (!username) return [];
+  if (isSupabaseSharedCoreEnabled()) {
+    const entries = await fetchAttendanceByProjectKeyFromSupabase(username, projectKey);
+    return entries
+      .map(entry => _mapSupabaseAttendanceEntry(entry, siteMap, username))
+      .filter(Boolean)
+      .sort((a, b) => b.sortKey - a.sortKey);
+  }
   const snap = await getDocs(
     query(collection(db, 'users', username, 'attendance'), where('projectKeys', 'array-contains', projectKey))
   );
@@ -328,6 +393,13 @@ async function loadAttendanceBySiteCode(username, projectKey, siteMap) {
   if (!username) return [];
   const months = getRecentYearMonths(ATTENDANCE_FALLBACK_MONTHS);
   if (months.length === 0) return [];
+  if (isSupabaseSharedCoreEnabled()) {
+    const entryMap = await fetchAttendanceEntriesFromSupabase(username, months);
+    return Object.values(entryMap)
+      .map(entry => _mapSupabaseAttendanceEntry(entry, siteMap, username))
+      .filter(record => record && record.siteEntries.some(e => normalizeProjectKey(e.code || '') === projectKey))
+      .sort((a, b) => b.sortKey - a.sortKey);
+  }
   const snap = await getDocs(
     query(collection(db, 'users', username, 'attendance'), where('yearMonth', 'in', months))
   );

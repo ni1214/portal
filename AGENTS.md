@@ -559,11 +559,39 @@ assigned_tasks/{taskId}
   - `supabaseUrl`: Supabase project URL
   - `supabasePublishableKey`: フロントで使う API key（publishable 推奨）
   - `supabaseAnonKey`: 旧メモ互換の fallback。新規保存は `supabasePublishableKey` を優先
-- **この段階で Supabase 切替対象にするのは shared core のみ**
-  - `public_categories`
-  - `public_cards`
+- **Supabase 切替済み対象（Step 3 = Phase A 完了）**
+  - `public_categories` ✅
+  - `public_cards` ✅
+  - `notices` ✅（2026-03-19 追加。realtime なし、一回読み込み）
+  - `notice_reactions` ✅（行単位 insert/delete。Firebase の arrayUnion は使わない）
+  - `user_notice_reads` ✅（`username` + `notice_id` 行単位）
 - 管理画面の `データ接続設定` から保存する
 - 実装側は「読込だけ fallback 可 / 保存系は選んだ backend に固定」を守る
+
+### notices Supabase の注意点
+- `subscribeNotices()` は Supabase モードで `async function` に変更済み。呼び出し元は `await` 必須
+- `acknowledged_by` は PATCH で配列ごと上書き（optimistic 更新後に state の値を送る）
+- `notice_reactions` は `(notice_id, emoji, username)` 行単位。Firebase の `{ emoji: [username] }` map へは JS 側で groupBy して変換
+
+## 2026-03-19 Supabase Step 4 完了（個人データ Supabase 対応）
+
+### 切替済み個人データ
+| Supabase テーブル | Firebase パス | 変更先 |
+|---|---|---|
+| `user_accounts` | `users_list/{name}` | `modules/auth.js` |
+| `user_lock_pins` | `users/{name}/data/lock_pin` | `modules/auth.js` |
+| `user_preferences` | `users/{name}/data/preferences` | `script.js` |
+| `user_section_orders` | `users/{name}/data/section_order` | `script.js` |
+| `user_profiles` | `users/{name}/data/email_profile` | `modules/email.js` |
+| `private_sections` | `users/{name}/private_sections` | `script.js` |
+| `private_cards` | `users/{name}/private_cards` | `script.js` |
+
+### 注意点
+- `registerUserLogin` は Supabase モードでも Firebase `users_list` に並行書込み（users_list 依存の他機能のため）
+- 読込は全て Supabase fallback → Firestore の順で行う（Supabase 障害時の安全網）
+- `user_preferences` は `lastViewedSuggestionsAt` を ISO 文字列 ↔ `seconds` で変換
+- `private_cards` の `category` フィールドは Supabase の `section_id` にマッピング
+- 未対応: `user_todos`（別モジュール `tasks.js` に関連）/ `user_email_contacts` / `user_drive_links`
 
 ## Supabase 移行追記（2026-03-18 / 個人データ続き）
 - `supabase/004_fix_private_cards_hierarchy.sql` を remote 適用済み
@@ -692,3 +720,53 @@ assigned_tasks/{taskId}
 - `tools/invoke-supabase-sql-statements.mjs` の前処理を修正
   - SQL 先頭の `--` コメント行を除去してから statement 分割するようにした
   - これで少件数の generated SQL でも silent no-op を起こしにくくした
+
+## 2026-03-19 Step 4 残り完了（user_todos / user_email_contacts Supabase 対応）
+
+### 追加した Supabase 関数（modules/supabase.js）
+- `fetchUserTodosFromSupabase(username)` — `user_todos` を作成日昇順で取得
+- `createUserTodoInSupabase(username, data)` — TODO 作成
+- `updateUserTodoInSupabase(id, data)` — TODO 更新（done / text / dueDate）
+- `deleteUserTodoInSupabase(id)` — TODO 削除
+- `fetchEmailContactsFromSupabase(username)` — `user_email_contacts` を作成日昇順で取得
+- `createEmailContactInSupabase(username, data)` — メール連絡先作成
+
+### 変更したモジュール
+| モジュール | 変更内容 |
+|---|---|
+| `script.js` | `loadTodos` / `addTodo` / `toggleTodo` / `deleteTodo` に Supabase 分岐を追加 |
+| `modules/email.js` | `loadEmailContacts` / `saveNewContact` に Supabase 分岐を追加 |
+
+### Supabase モードでの挙動
+- `loadTodos`: onSnapshot を使わず `fetchUserTodosFromSupabase` で一回取得 → `state.personalTodos` に反映 → `renderTodoSection()`
+- `addTodo` / `toggleTodo` / `deleteTodo`: Supabase 更新後に `state.personalTodos` をローカル更新 → `renderTodoSection()` で即時反映（再フェッチ不要）
+- `loadEmailContacts`: Supabase → Firestore fallback の順で取得
+- `saveNewContact`: Supabase モード時は `createEmailContactInSupabase` を使用
+
+### 必要な Supabase テーブル（まだ作成していない場合は SQL Editor で実行）
+```sql
+-- user_todos
+create table if not exists public.user_todos (
+  id          text primary key,
+  username    text not null,
+  text        text not null default '',
+  done        boolean not null default false,
+  due_date    text,
+  created_at  timestamptz not null default now()
+);
+create index if not exists user_todos_username_idx on public.user_todos (username);
+
+-- user_email_contacts
+create table if not exists public.user_email_contacts (
+  id           text primary key,
+  username     text not null,
+  company_name text not null default '',
+  person_name  text not null default '',
+  created_at   timestamptz not null default now()
+);
+create index if not exists user_email_contacts_username_idx on public.user_email_contacts (username);
+```
+
+### 残りの未対応個人データ
+- `user_drive_links` / `user_drive_contacts` — file-transfer.js 関連（優先度低）
+- `user_chat_reads` — chat.js 関連（Phase D で対応）

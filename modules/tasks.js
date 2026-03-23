@@ -1,5 +1,21 @@
 // ========== タスク割り振り ==========
 import { db, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, collection, query, where, orderBy, serverTimestamp, onSnapshot } from './config.js';
+import {
+  isSupabaseSharedCoreEnabled,
+  fetchReceivedTasksFromSupabase,
+  fetchSentTasksFromSupabase,
+  fetchSentDoneNotifyTasksFromSupabase,
+  fetchSharedTasksFromSupabase,
+  fetchTaskHistoryFromSupabase,
+  getAssignedTaskFromSupabase,
+  createAssignedTaskInSupabase,
+  updateAssignedTaskInSupabase,
+  deleteAssignedTaskInSupabase,
+  updateCrossDeptRequestInSupabase,
+  fetchTaskCommentsFromSupabase,
+  addTaskCommentInSupabase,
+  deleteTaskCommentInSupabase,
+} from './supabase.js';
 import { state, TASK_STATUS_LABEL } from './state.js';
 import { esc, getUserAvatarColor, normalizeProjectKey } from './utils.js';
 import {
@@ -8,6 +24,7 @@ import {
   recordListenerSnapshot,
   wrapTrackedListenerUnsubscribe,
 } from './read-diagnostics.js';
+import { showToast, showConfirm } from './notify.js';
 export const deps = {};
 
 const ACTIVE_TASK_STATUSES = ['pending', 'accepted'];
@@ -52,10 +69,30 @@ function buildTaskPayload({
 }
 
 export async function createTaskRecord(taskInput) {
+  if (isSupabaseSharedCoreEnabled()) {
+    const id = await createAssignedTaskInSupabase(buildTaskPayload(taskInput));
+    return { id };  // DocumentReference 互換 ( .id プロパティ )
+  }
   return addDoc(collection(db, 'assigned_tasks'), buildTaskPayload(taskInput));
 }
 
 async function syncRequestLink(taskId, updates) {
+  if (isSupabaseSharedCoreEnabled()) {
+    const task = await getAssignedTaskFromSupabase(taskId);
+    if (!task?.sourceRequestId) return task;
+    // Firebase serverTimestamp() sentinel をISO文字列に変換
+    const isoUpdates = Object.fromEntries(
+      Object.entries(updates).map(([k, v]) =>
+        [k, (v && typeof v === 'object' && '_methodName' in v) ? new Date().toISOString() : v]
+      )
+    );
+    await updateCrossDeptRequestInSupabase(task.sourceRequestId, {
+      ...isoUpdates,
+      updatedAt: new Date().toISOString(),
+      notifyCreator: true,
+    });
+    return task;
+  }
   const taskSnap = await getDoc(doc(db, 'assigned_tasks', taskId));
   if (!taskSnap.exists()) return null;
   const task = { id: taskSnap.id, ...taskSnap.data() };
@@ -78,6 +115,132 @@ function _filterTasksByProjectKey(list) {
   return list.filter(task =>
     normalizeProjectKey(task.projectKey || '').toLowerCase().includes(filter)
   );
+}
+
+// ===== タスクコメント =====
+function _taskCommentSectionHtml(taskId) {
+  if (!isSupabaseSharedCoreEnabled()) return '';
+  const isExpanded = state.expandedTaskCommentId === taskId;
+  const comments   = state.taskComments[taskId] || [];
+  const isLoading  = state.taskCommentsLoading[taskId] || false;
+  const count      = comments.length;
+
+  let inner = '';
+  if (isExpanded) {
+    if (isLoading) {
+      inner = '<div class="tc-loading"><span class="spinner"></span></div>';
+    } else {
+      const list = comments.map(c => `
+        <div class="tc-item">
+          <span class="tc-author" style="color:${getUserAvatarColor(c.username)}">${esc(c.username)}</span>
+          <span class="tc-body">${esc(c.body)}</span>
+          ${c.username === state.currentUsername
+            ? `<button class="tc-del" data-cid="${c.id}" data-task-id="${taskId}" title="削除"><i class="fa-solid fa-trash-can"></i></button>`
+            : ''}
+        </div>
+      `).join('');
+      inner = `
+        <div class="tc-list">${list || '<div class="tc-empty">コメントはまだありません</div>'}</div>
+        <div class="tc-input-row">
+          <input type="text" class="tc-input form-input" placeholder="コメントを入力…" data-task-id="${taskId}" autocomplete="off">
+          <button class="tc-send btn-modal-primary" data-task-id="${taskId}"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+      `;
+    }
+  }
+
+  return `
+    <div class="tc-wrapper">
+      <button class="tc-toggle${isExpanded ? ' tc-toggle--open' : ''}" data-task-id="${taskId}">
+        <i class="fa-regular fa-comment${isExpanded ? '-dots' : ''}"></i>
+        コメント${count ? ` <span class="tc-count">${count}</span>` : ''}
+      </button>
+      ${isExpanded ? `<div class="tc-area">${inner}</div>` : ''}
+    </div>
+  `;
+}
+
+async function _loadTaskComments(taskId) {
+  state.taskCommentsLoading = { ...state.taskCommentsLoading, [taskId]: true };
+  renderTaskTabContent();
+  try {
+    const comments = await fetchTaskCommentsFromSupabase(taskId);
+    state.taskComments = { ...state.taskComments, [taskId]: comments };
+  } catch (e) {
+    showToast('コメントの読み込みに失敗しました', 'error');
+  } finally {
+    state.taskCommentsLoading = { ...state.taskCommentsLoading, [taskId]: false };
+    renderTaskTabContent();
+  }
+}
+
+function _bindTaskCommentEvents(container) {
+  // トグル
+  container.querySelectorAll('.tc-toggle[data-task-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.taskId;
+      if (state.expandedTaskCommentId === id) {
+        state.expandedTaskCommentId = null;
+        renderTaskTabContent();
+        return;
+      }
+      state.expandedTaskCommentId = id;
+      if (!state.taskComments[id]) {
+        void _loadTaskComments(id);
+      } else {
+        renderTaskTabContent();
+      }
+    });
+  });
+
+  // 送信ボタン
+  container.querySelectorAll('.tc-send[data-task-id]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.taskId;
+      const input = container.querySelector(`.tc-input[data-task-id="${id}"]`);
+      const body = (input?.value || '').trim();
+      if (!body) return;
+      input.value = '';
+      try {
+        const comment = await addTaskCommentInSupabase(id, state.currentUsername, body);
+        state.taskComments = {
+          ...state.taskComments,
+          [id]: [...(state.taskComments[id] || []), comment],
+        };
+        renderTaskTabContent();
+      } catch (e) {
+        showToast('コメントの送信に失敗しました', 'error');
+      }
+    });
+  });
+
+  // Enterキー送信
+  container.querySelectorAll('.tc-input[data-task-id]').forEach(input => {
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        container.querySelector(`.tc-send[data-task-id="${input.dataset.taskId}"]`)?.click();
+      }
+    });
+  });
+
+  // 削除ボタン
+  container.querySelectorAll('.tc-del[data-cid]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const cid = btn.dataset.cid;
+      const taskId = btn.dataset.taskId;
+      try {
+        await deleteTaskCommentInSupabase(cid);
+        state.taskComments = {
+          ...state.taskComments,
+          [taskId]: (state.taskComments[taskId] || []).filter(c => c.id !== cid),
+        };
+        renderTaskTabContent();
+      } catch (e) {
+        showToast('削除に失敗しました', 'error');
+      }
+    });
+  });
 }
 
 function _taskFilterBarHtml(totalCount, filteredCount) {
@@ -114,16 +277,20 @@ function _bindTaskProjectFilterEvents() {
   const input = document.getElementById('task-project-filter-input');
   const clearBtn = document.getElementById('task-project-filter-clear');
   if (input) {
-    input.addEventListener('input', e => {
+    if (input._taskFilterHandler) input.removeEventListener('input', input._taskFilterHandler);
+    input._taskFilterHandler = e => {
       state.taskProjectKeyFilter = normalizeProjectKey(e.target.value || '');
       renderTaskTabContent();
-    });
+    };
+    input.addEventListener('input', input._taskFilterHandler);
   }
   if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
+    if (clearBtn._taskFilterClearHandler) clearBtn.removeEventListener('click', clearBtn._taskFilterClearHandler);
+    clearBtn._taskFilterClearHandler = () => {
       state.taskProjectKeyFilter = '';
       renderTaskTabContent();
-    });
+    };
+    clearBtn.addEventListener('click', clearBtn._taskFilterClearHandler);
   }
 }
 
@@ -247,6 +414,28 @@ async function _loadTaskHistory(tab, force = false) {
     renderTaskTabContent();
   }
 
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const all = await fetchTaskHistoryFromSupabase(tab, state.currentUsername);
+      // live のものは除外
+      const historyOnly = all.filter(t =>
+        tab === 'received' ? !_isReceivedTaskLive(t) :
+        tab === 'sent'     ? !_isSentTaskLive(t) :
+        !_isSharedTaskLive(t)
+      );
+      state.taskHistoryCache = { ...state.taskHistoryCache, [tab]: historyOnly };
+      state.taskHistoryLoaded = { ...state.taskHistoryLoaded, [tab]: true };
+      _syncAllTaskLists();
+    } catch (err) {
+      console.error(`Supabase task history error (${tab}):`, err);
+    } finally {
+      state.taskHistoryLoading = { ...state.taskHistoryLoading, [tab]: false };
+      if (state.taskModalOpen) renderTaskTabContent();
+    }
+    return;
+  }
+
+  // Firestore の既存コード...
   try {
     let historyQuery = null;
     if (tab === 'received') {
@@ -296,6 +485,28 @@ export function startTaskListeners(username) {
   if (!username) return;
   _resetTaskHistoryState();
 
+  if (isSupabaseSharedCoreEnabled()) {
+    Promise.all([
+      fetchReceivedTasksFromSupabase(username),
+      fetchSentTasksFromSupabase(username),
+      fetchSentDoneNotifyTasksFromSupabase(username),
+      fetchSharedTasksFromSupabase(username),
+    ]).then(([received, sent, sentDone, shared]) => {
+      liveReceivedTasks = received;
+      liveSentTasks = sent;
+      liveSentDoneNotifyTasks = sentDone;
+      liveSharedTasks = shared;
+      _syncReceivedTasks();
+      _syncSentTasks();
+      _syncSharedTasks();
+      updateTaskBadge();
+      deps.renderTodoSection?.();
+      if (state.taskModalOpen) renderTaskTabContent();
+    }).catch(err => console.error('Supabase タスク初期取得エラー:', err));
+    return;
+  }
+
+  // Firestore の既存コード（onSnapshot 4つ）はそのまま残す
   // orderBy を外してクライアント側でソート（複合インデックス不要）
   const rQ = query(
     collection(db, 'assigned_tasks'),
@@ -462,10 +673,12 @@ export function _renderReceivedTasks(container) {
         ${_taskProjectKeyHtml(t)}
         ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
         <div class="task-item-actions">${actions}</div>
+        ${_taskCommentSectionHtml(t.id)}
       </div>`;
   }).join('');
 
   _bindTaskProjectFilterEvents();
+  _bindTaskCommentEvents(container);
   container.querySelectorAll('.task-action-accept').forEach(btn =>
     btn.addEventListener('click', () => acceptTask(btn.dataset.id)));
   container.querySelectorAll('.task-action-done').forEach(btn =>
@@ -539,10 +752,12 @@ export function _renderSentTasks(container) {
         ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
         ${sharedBadges}
         ${(editBtn || shareBtn || statusActions) ? `<div class="task-item-actions">${editBtn}${shareBtn}${statusActions}</div>` : ''}
+        ${_taskCommentSectionHtml(t.id)}
       </div>`;
   }).join('');
 
   _bindTaskProjectFilterEvents();
+  _bindTaskCommentEvents(container);
   container.querySelectorAll('.task-action-edit').forEach(btn =>
     btn.addEventListener('click', () => openTaskEditModal(btn.dataset.id)));
   container.querySelectorAll('.task-action-share').forEach(btn =>
@@ -599,10 +814,12 @@ export function _renderSharedTasks(container) {
         ${_taskProjectKeyHtml(t)}
         ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
         <div class="task-item-actions">${actions}</div>
+        ${_taskCommentSectionHtml(t.id)}
       </div>`;
   }).join('');
 
   _bindTaskProjectFilterEvents();
+  _bindTaskCommentEvents(container);
   container.querySelectorAll('.task-action-share-accept').forEach(btn =>
     btn.addEventListener('click', () => acceptSharedTask(btn.dataset.id)));
   container.querySelectorAll('.task-action-share-decline').forEach(btn =>
@@ -657,7 +874,7 @@ export async function openTaskUserPicker() {
 }
 
 export async function submitNewTask() {
-  if (!state.newTaskAssignee) { alert('担当者を選択してください。'); return; }
+  if (!state.newTaskAssignee) { showToast('担当者を選択してください。', 'warning'); return; }
   const title = document.getElementById('new-task-title')?.value.trim();
   if (!title) { document.getElementById('new-task-title')?.focus(); return; }
   const description = document.getElementById('new-task-desc')?.value.trim() || '';
@@ -677,6 +894,15 @@ export async function submitNewTask() {
       projectKey,
       sourceType: 'manual',
     });
+    // Supabase モードは onSnapshot がないため liveSentTasks を手動更新
+    if (isSupabaseSharedCoreEnabled()) {
+      const refreshed = await fetchSentTasksFromSupabase(state.currentUsername);
+      liveSentTasks = refreshed;
+      // 履歴キャッシュをリセットして次回タブ切替時に再取得させる
+      state.taskHistoryLoaded = { ...state.taskHistoryLoaded, sent: false };
+      state.taskHistoryCache  = { ...state.taskHistoryCache,  sent: [] };
+      _syncSentTasks();
+    }
     // フォームをリセット
     state.newTaskAssignee = '';
     const titleEl = document.getElementById('new-task-title');
@@ -692,7 +918,7 @@ export async function submitNewTask() {
     switchTaskTab('sent');
   } catch (err) {
     console.error('タスク作成エラー:', err);
-    alert('送信に失敗しました: ' + err.message);
+    showToast('送信に失敗しました: ' + err.message, 'error');
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> タスクを依頼する';
   }
@@ -700,10 +926,17 @@ export async function submitNewTask() {
 
 export async function acceptTask(taskId) {
   try {
-    await updateDoc(doc(db, 'assigned_tasks', taskId), {
-      status: 'accepted',
-      acceptedAt: serverTimestamp(),
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateAssignedTaskInSupabase(taskId, {
+        status: 'accepted',
+        acceptedAt: new Date().toISOString(),
+      });
+    } else {
+      await updateDoc(doc(db, 'assigned_tasks', taskId), {
+        status: 'accepted',
+        acceptedAt: serverTimestamp(),
+      });
+    }
     await syncRequestLink(taskId, {
       linkedTaskStatus: 'accepted',
       linkedTaskClosedAt: null,
@@ -712,13 +945,20 @@ export async function acceptTask(taskId) {
 }
 
 export async function completeTask(taskId) {
-  if (!confirm('このタスクを完了として報告しますか？')) return;
+  if (!await showConfirm('このタスクを完了として報告しますか？')) return;
   try {
     const current = state.receivedTasks.find(task => task.id === taskId);
-    await updateDoc(doc(db, 'assigned_tasks', taskId), {
-      status: 'done',
-      doneAt: serverTimestamp(),
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateAssignedTaskInSupabase(taskId, {
+        status: 'done',
+        doneAt: new Date().toISOString(),
+      });
+    } else {
+      await updateDoc(doc(db, 'assigned_tasks', taskId), {
+        status: 'done',
+        doneAt: serverTimestamp(),
+      });
+    }
     if (current) {
       _upsertTaskHistory('received', {
         ...current,
@@ -736,7 +976,11 @@ export async function completeTask(taskId) {
 export async function acknowledgeTask(taskId) {
   try {
     const current = state.sentTasks.find(task => task.id === taskId);
-    await updateDoc(doc(db, 'assigned_tasks', taskId), { notifiedDone: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateAssignedTaskInSupabase(taskId, { notifiedDone: true });
+    } else {
+      await updateDoc(doc(db, 'assigned_tasks', taskId), { notifiedDone: true });
+    }
     if (current) {
       _upsertTaskHistory('sent', {
         ...current,
@@ -747,21 +991,38 @@ export async function acknowledgeTask(taskId) {
 }
 
 export async function deleteTask(taskId, confirmMsg) {
-  if (!confirm(confirmMsg)) return;
+  if (!await showConfirm(confirmMsg, { danger: true })) return;
   try {
-    const taskSnap = await getDoc(doc(db, 'assigned_tasks', taskId));
-    const task = taskSnap.exists() ? { id: taskSnap.id, ...taskSnap.data() } : null;
-    await deleteDoc(doc(db, 'assigned_tasks', taskId));
+    let task;
+    if (isSupabaseSharedCoreEnabled()) {
+      task = await getAssignedTaskFromSupabase(taskId);
+      await deleteAssignedTaskInSupabase(taskId);
+    } else {
+      const taskSnap = await getDoc(doc(db, 'assigned_tasks', taskId));
+      task = taskSnap.exists() ? { id: taskSnap.id, ...taskSnap.data() } : null;
+      await deleteDoc(doc(db, 'assigned_tasks', taskId));
+    }
     _removeTaskFromAllCaches(taskId);
     if (task?.sourceRequestId) {
-      await updateDoc(doc(db, 'cross_dept_requests', task.sourceRequestId), {
-        linkedTaskId: null,
-        linkedTaskStatus: task.status === 'done' ? 'done' : 'cancelled',
-        linkedTaskAssignedTo: task.assignedTo || null,
-        linkedTaskClosedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        notifyCreator: true,
-      });
+      if (isSupabaseSharedCoreEnabled()) {
+        await updateCrossDeptRequestInSupabase(task.sourceRequestId, {
+          linkedTaskId: null,
+          linkedTaskStatus: task.status === 'done' ? 'done' : 'cancelled',
+          linkedTaskAssignedTo: task.assignedTo || null,
+          linkedTaskClosedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          notifyCreator: true,
+        });
+      } else {
+        await updateDoc(doc(db, 'cross_dept_requests', task.sourceRequestId), {
+          linkedTaskId: null,
+          linkedTaskStatus: task.status === 'done' ? 'done' : 'cancelled',
+          linkedTaskAssignedTo: task.assignedTo || null,
+          linkedTaskClosedAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          notifyCreator: true,
+        });
+      }
     }
   } catch (err) { console.error('タスク削除エラー:', err); }
 }
@@ -796,16 +1057,25 @@ export async function submitTaskEdit() {
   const btn = document.getElementById('task-edit-save-btn');
   btn.disabled = true;
   try {
-    await updateDoc(doc(db, 'assigned_tasks', taskId), {
-      title,
-      projectKey: normalizeProjectKey(document.getElementById('task-edit-project-key')?.value || ''),
-      description: document.getElementById('task-edit-desc')?.value.trim() || '',
-      dueDate:     document.getElementById('task-edit-due')?.value || '',
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateAssignedTaskInSupabase(taskId, {
+        title,
+        projectKey: normalizeProjectKey(document.getElementById('task-edit-project-key')?.value || ''),
+        description: document.getElementById('task-edit-desc')?.value.trim() || '',
+        dueDate: document.getElementById('task-edit-due')?.value || '',
+      });
+    } else {
+      await updateDoc(doc(db, 'assigned_tasks', taskId), {
+        title,
+        projectKey: normalizeProjectKey(document.getElementById('task-edit-project-key')?.value || ''),
+        description: document.getElementById('task-edit-desc')?.value.trim() || '',
+        dueDate:     document.getElementById('task-edit-due')?.value || '',
+      });
+    }
     closeTaskEditModal();
   } catch (err) {
     console.error('タスク編集エラー:', err);
-    alert('保存に失敗しました: ' + err.message);
+    showToast('保存に失敗しました: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }
@@ -916,7 +1186,7 @@ export async function submitTaskShare() {
     document.querySelectorAll('#task-share-user-list input[type=checkbox]:checked')
   ).map(cb => cb.value);
 
-  if (!selected.length) { alert('共有する相手を選択してください。'); return; }
+  if (!selected.length) { showToast('共有する相手を選択してください。', 'warning'); return; }
 
   const alreadyShared   = task.sharedWith || [];
   const alreadyResponses = task.sharedResponses || {};
@@ -930,14 +1200,21 @@ export async function submitTaskShare() {
   const btn = document.getElementById('task-share-confirm-btn');
   btn.disabled = true;
   try {
-    await updateDoc(doc(db, 'assigned_tasks', taskId), {
-      sharedWith:      newSharedWith,
-      sharedResponses: newResponses,
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      await updateAssignedTaskInSupabase(taskId, {
+        sharedWith: newSharedWith,
+        sharedResponses: newResponses,
+      });
+    } else {
+      await updateDoc(doc(db, 'assigned_tasks', taskId), {
+        sharedWith:      newSharedWith,
+        sharedResponses: newResponses,
+      });
+    }
     closeTaskSharePicker();
   } catch (err) {
     console.error('タスク共有エラー:', err);
-    alert('共有に失敗しました: ' + err.message);
+    showToast('共有に失敗しました: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }
@@ -946,9 +1223,14 @@ export async function submitTaskShare() {
 export async function acceptSharedTask(taskId) {
   try {
     const current = state.sharedTasks.find(task => task.id === taskId);
-    await updateDoc(doc(db, 'assigned_tasks', taskId), {
-      [`sharedResponses.${state.currentUsername}`]: 'accepted',
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      const newResponses = { ...(current?.sharedResponses || {}), [state.currentUsername]: 'accepted' };
+      await updateAssignedTaskInSupabase(taskId, { sharedResponses: newResponses });
+    } else {
+      await updateDoc(doc(db, 'assigned_tasks', taskId), {
+        [`sharedResponses.${state.currentUsername}`]: 'accepted',
+      });
+    }
     if (current) {
       _upsertTaskHistory('shared', {
         ...current,
@@ -964,9 +1246,14 @@ export async function acceptSharedTask(taskId) {
 export async function declineSharedTask(taskId) {
   try {
     const current = state.sharedTasks.find(task => task.id === taskId);
-    await updateDoc(doc(db, 'assigned_tasks', taskId), {
-      [`sharedResponses.${state.currentUsername}`]: 'declined',
-    });
+    if (isSupabaseSharedCoreEnabled()) {
+      const newResponses = { ...(current?.sharedResponses || {}), [state.currentUsername]: 'declined' };
+      await updateAssignedTaskInSupabase(taskId, { sharedResponses: newResponses });
+    } else {
+      await updateDoc(doc(db, 'assigned_tasks', taskId), {
+        [`sharedResponses.${state.currentUsername}`]: 'declined',
+      });
+    }
     if (current) {
       _upsertTaskHistory('shared', {
         ...current,

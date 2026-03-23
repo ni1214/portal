@@ -1,9 +1,19 @@
 // ========== 認証・ユーザー管理・ロック画面 ==========
-import { db, doc, getDoc, setDoc, getDocs, deleteDoc, updateDoc, collection, query, where, writeBatch, serverTimestamp, onSnapshot } from './config.js';
+import { db, doc, getDoc, setDoc, getDocs, updateDoc, collection, query, where, writeBatch, serverTimestamp } from './config.js';
 import { state } from './state.js';
 import {
   applySupabaseRuntimeConfig,
   isSupabaseSharedCoreEnabled,
+  loadSupabaseConfigFromStorage,
+  fetchPortalConfigFromSupabase,
+  savePortalConfigToSupabase,
+  checkUserExistsInSupabase,
+  registerUserLoginInSupabase,
+  getUserLockPinFromSupabase,
+  saveLockPinToSupabase,
+  fetchAllUserAccountsFromSupabase,
+  deleteUserFromSupabase,
+  migrateUsernameInSupabase,
   fetchPrivateSectionsFromSupabase,
   fetchPrivateCardsFromSupabase,
   createPrivateSectionInSupabase,
@@ -11,6 +21,7 @@ import {
   deletePrivateSectionInSupabase,
   deletePrivateCardInSupabase,
 } from './supabase.js';
+import { showToast, showConfirm } from './notify.js';
 
 // Cross-module function references (set by script.js after all modules load)
 export const deps = {};
@@ -30,30 +41,74 @@ export async function hashPIN(pin) {
 }
 
 export async function verifyPIN(pin) {
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const data = await fetchPortalConfigFromSupabase();
+      if (!data.pinHash) return false;
+      return (await hashPIN(pin)) === data.pinHash;
+    } catch (_) {}
+  }
   const snap = await getDoc(doc(db, 'portal', 'config'));
   if (!snap.exists() || !snap.data().pinHash) return false;
   return (await hashPIN(pin)) === snap.data().pinHash;
 }
 
 export async function setPIN(pin) {
-  await setDoc(doc(db, 'portal', 'config'), { pinHash: await hashPIN(pin) }, { merge: true });
+  const hash = await hashPIN(pin);
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      await savePortalConfigToSupabase({ pinHash: hash });
+      return;
+    } catch (_) {}
+  }
+  await setDoc(doc(db, 'portal', 'config'), { pinHash: hash }, { merge: true });
 }
 
 export async function isPINConfigured() {
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const data = await fetchPortalConfigFromSupabase();
+      return !!data.pinHash;
+    } catch (_) {}
+  }
   const snap = await getDoc(doc(db, 'portal', 'config'));
   return snap.exists() && !!snap.data().pinHash;
 }
 
 export async function loadInviteCodeConfig() {
-  const snap = await getDoc(doc(db, 'portal', 'config'));
-  const data = snap.exists() ? snap.data() : {};
-  applySupabaseRuntimeConfig(data);
-  state.inviteCodeHash = data.inviteCodeHash || null;
-  state.inviteCodePlain = data.inviteCodePlain || '';
-  state.inviteCodeRequired = !!state.inviteCodeHash;
-  state.adminInviteConfigured = state.inviteCodeRequired;
-  updateInviteAdminState();
-  return data;
+  // まずlocalStorageからSupabase接続情報を復元
+  const stored = loadSupabaseConfigFromStorage();
+  if (stored) applySupabaseRuntimeConfig(stored);
+
+  // Supabase接続済みならportal_configをSupabaseから読む
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const data = await fetchPortalConfigFromSupabase();
+      state.inviteCodeHash = data.inviteCodeHash || null;
+      state.inviteCodePlain = data.inviteCodePlain || '';
+      state.inviteCodeRequired = !!state.inviteCodeHash;
+      state.adminInviteConfigured = state.inviteCodeRequired;
+      updateInviteAdminState();
+      return data;
+    } catch (err) {
+      console.error('Supabase portal_config読み込みエラー:', err);
+    }
+  }
+  // フォールバック: Firebase（移行期間中のみ）
+  try {
+    const snap = await getDoc(doc(db, 'portal', 'config'));
+    const data = snap.exists() ? snap.data() : {};
+    applySupabaseRuntimeConfig(data);
+    state.inviteCodeHash = data.inviteCodeHash || null;
+    state.inviteCodePlain = data.inviteCodePlain || '';
+    state.inviteCodeRequired = !!state.inviteCodeHash;
+    state.adminInviteConfigured = state.inviteCodeRequired;
+    updateInviteAdminState();
+    return data;
+  } catch (err) {
+    console.error('Firebase portal/config読み込みエラー:', err);
+    return {};
+  }
 }
 
 function hasTrustedInviteAccess() {
@@ -212,11 +267,27 @@ export async function saveInviteCode(code) {
     throw new Error('4桁の数字を入力してください。');
   }
   const hash = await hashPIN(normalized);
-  await setDoc(doc(db, 'portal', 'config'), {
-    inviteCodeHash: hash,
-    inviteCodePlain: normalized,
-    inviteUpdatedAt: serverTimestamp(),
-  }, { merge: true });
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      await savePortalConfigToSupabase({
+        inviteCodeHash: hash,
+        inviteCodePlain: normalized,
+        inviteUpdatedAt: new Date().toISOString(),
+      });
+    } catch (_) {
+      await setDoc(doc(db, 'portal', 'config'), {
+        inviteCodeHash: hash,
+        inviteCodePlain: normalized,
+        inviteUpdatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+  } else {
+    await setDoc(doc(db, 'portal', 'config'), {
+      inviteCodeHash: hash,
+      inviteCodePlain: normalized,
+      inviteUpdatedAt: serverTimestamp(),
+    }, { merge: true });
+  }
   state.inviteCodeHash = hash;
   state.inviteCodePlain = normalized;
   state.inviteCodeRequired = true;
@@ -225,11 +296,27 @@ export async function saveInviteCode(code) {
 }
 
 export async function clearInviteCode() {
-  await setDoc(doc(db, 'portal', 'config'), {
-    inviteCodeHash: null,
-    inviteCodePlain: null,
-    inviteUpdatedAt: serverTimestamp(),
-  }, { merge: true });
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      await savePortalConfigToSupabase({
+        inviteCodeHash: null,
+        inviteCodePlain: null,
+        inviteUpdatedAt: new Date().toISOString(),
+      });
+    } catch (_) {
+      await setDoc(doc(db, 'portal', 'config'), {
+        inviteCodeHash: null,
+        inviteCodePlain: null,
+        inviteUpdatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+  } else {
+    await setDoc(doc(db, 'portal', 'config'), {
+      inviteCodeHash: null,
+      inviteCodePlain: null,
+      inviteUpdatedAt: serverTimestamp(),
+    }, { merge: true });
+  }
   state.inviteCodeHash = null;
   state.inviteCodePlain = '';
   state.inviteCodeRequired = false;
@@ -251,6 +338,10 @@ export async function clearInviteCode() {
  * - dm_rooms / chat_rooms の members 配列
  */
 export async function migrateToNewUsername(oldName, newName) {
+  if (isSupabaseSharedCoreEnabled()) {
+    return migrateUsernameInSupabase(oldName, newName);
+  }
+
   const batch = writeBatch(db);
 
   // 1. data サブドキュメントをコピー
@@ -438,8 +529,14 @@ export async function saveUsername(name) {
   hideUsernameError();
 
   try {
-    const snap = await getDoc(doc(db, 'users_list', name));
-    if (snap.exists()) {
+    let alreadyExists = false;
+    if (isSupabaseSharedCoreEnabled()) {
+      alreadyExists = await checkUserExistsInSupabase(name);
+    } else {
+      const snap = await getDoc(doc(db, 'users_list', name));
+      alreadyExists = snap.exists();
+    }
+    if (alreadyExists) {
       showUsernameError('このユーザーネームはすでに使用されています。');
       // 自分のアカウント再ログイン用ボタンを表示
       document.getElementById('username-reclaim').hidden = false;
@@ -475,6 +572,15 @@ export async function saveUsername(name) {
 export async function getUserPreloginLockInfo(username) {
   const normalized = `${username || ''}`.trim();
   if (!normalized) return { requiresPin: false, hash: null };
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const row = await getUserLockPinFromSupabase(normalized);
+      if (!row) return { requiresPin: false, hash: null };
+      return { requiresPin: !!row.enabled && !!row.hash, hash: row.hash || null };
+    } catch (err) {
+      console.warn('Supabase lock_pin 読込失敗、Firestore fallback:', err);
+    }
+  }
   const snap = await getDoc(doc(db, 'users', normalized, 'data', 'lock_pin'));
   if (!snap.exists()) return { requiresPin: false, hash: null };
   const data = snap.data();
@@ -602,8 +708,20 @@ export async function loginExistingUsername(name, options = {}) {
     !options.fromStored
   );
   try {
-    const userSnap = await getDoc(doc(db, 'users_list', normalized));
-    if (!userSnap.exists()) {
+    let userExists = false;
+    if (isSupabaseSharedCoreEnabled()) {
+      try {
+        userExists = await checkUserExistsInSupabase(normalized);
+      } catch (err) {
+        console.warn('Supabase user_accounts 確認失敗、Firestore fallback:', err);
+        const userSnap = await getDoc(doc(db, 'users_list', normalized));
+        userExists = userSnap.exists();
+      }
+    } else {
+      const userSnap = await getDoc(doc(db, 'users_list', normalized));
+      userExists = userSnap.exists();
+    }
+    if (!userExists) {
       if (options.fromStored) {
         localStorage.removeItem('portal-username');
         restoreUsernameModalForRetry(normalized, true);
@@ -658,13 +776,35 @@ export async function loadLockSettings(username, lockImmediately = false) {
   // ユーザー切り替え時に前のユーザーの設定をリセット
   state.lockPinHash = null; state.lockPinEnabled = false; state.lockEnabled = false; state.autoLockMinutes = 5;
   try {
-    const snap = await getDoc(doc(db, 'users', username, 'data', 'lock_pin'));
-    if (snap.exists()) {
-      const data = snap.data();
-      state.lockPinHash      = data.hash || null;
-      state.lockPinEnabled   = !!state.lockPinHash;
-      state.lockEnabled      = data.enabled ?? false;
-      state.autoLockMinutes  = data.autoLockMinutes ?? 5;
+    if (isSupabaseSharedCoreEnabled()) {
+      try {
+        const row = await getUserLockPinFromSupabase(username);
+        if (row) {
+          state.lockPinHash     = row.hash || null;
+          state.lockPinEnabled  = !!state.lockPinHash;
+          state.lockEnabled     = !!row.enabled;
+          state.autoLockMinutes = row.auto_lock_minutes ?? 5;
+        }
+      } catch (err) {
+        console.warn('Supabase lock_pin 読込失敗、Firestore fallback:', err);
+        const snap = await getDoc(doc(db, 'users', username, 'data', 'lock_pin'));
+        if (snap.exists()) {
+          const data = snap.data();
+          state.lockPinHash     = data.hash || null;
+          state.lockPinEnabled  = !!state.lockPinHash;
+          state.lockEnabled     = data.enabled ?? false;
+          state.autoLockMinutes = data.autoLockMinutes ?? 5;
+        }
+      }
+    } else {
+      const snap = await getDoc(doc(db, 'users', username, 'data', 'lock_pin'));
+      if (snap.exists()) {
+        const data = snap.data();
+        state.lockPinHash      = data.hash || null;
+        state.lockPinEnabled   = !!state.lockPinHash;
+        state.lockEnabled      = data.enabled ?? false;
+        state.autoLockMinutes  = data.autoLockMinutes ?? 5;
+      }
     }
   } catch (_) {}
   document.getElementById('btn-lock-header').hidden = !(state.lockEnabled && state.lockPinEnabled && state.currentUsername);
@@ -682,10 +822,18 @@ export async function loadLockSettings(username, lockImmediately = false) {
 export async function saveLockSettings() {
   if (!state.currentUsername) return;
   try {
-    await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), {
-      enabled: state.lockEnabled,
-      autoLockMinutes: state.autoLockMinutes
-    }, { merge: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await saveLockPinToSupabase(state.currentUsername, {
+        enabled: state.lockEnabled,
+        hash: state.lockPinHash,
+        autoLockMinutes: state.autoLockMinutes,
+      });
+    } else {
+      await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), {
+        enabled: state.lockEnabled,
+        autoLockMinutes: state.autoLockMinutes
+      }, { merge: true });
+    }
   } catch (err) { console.error('設定保存エラー:', err); }
 }
 
@@ -712,7 +860,15 @@ export function checkAutoLock() {
 export async function setLockPin(newPin) {
   const hash = await hashPIN(newPin);
   try {
-    await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), { hash }, { merge: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await saveLockPinToSupabase(state.currentUsername, {
+        hash,
+        enabled: state.lockEnabled,
+        autoLockMinutes: state.autoLockMinutes,
+      });
+    } else {
+      await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), { hash }, { merge: true });
+    }
     state.lockPinHash    = hash;
     state.lockPinEnabled = true;
     state.lockRecommendationPending = false;
@@ -724,7 +880,15 @@ export async function setLockPin(newPin) {
 
 export async function removeLockPin() {
   try {
-    await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), { hash: null }, { merge: true });
+    if (isSupabaseSharedCoreEnabled()) {
+      await saveLockPinToSupabase(state.currentUsername, {
+        hash: null,
+        enabled: false,
+        autoLockMinutes: state.autoLockMinutes,
+      });
+    } else {
+      await setDoc(doc(db, 'users', state.currentUsername, 'data', 'lock_pin'), { hash: null }, { merge: true });
+    }
     state.lockPinHash    = null;
     state.lockPinEnabled = false;
     document.getElementById('btn-lock-header').hidden = true;
@@ -926,6 +1090,10 @@ export function closeAdminModal() {
 }
 
 export async function deleteUserData(username) {
+  if (isSupabaseSharedCoreEnabled()) {
+    await deleteUserFromSupabase(username);
+    return;
+  }
   // 1. users_list エントリ + data サブドキュメントを一括削除
   const batch1 = writeBatch(db);
   batch1.delete(doc(db, 'users_list', username));
@@ -983,11 +1151,16 @@ export async function loadUsersForAdmin() {
   const listEl = document.getElementById('admin-user-list');
   listEl.innerHTML = '<div class="admin-loading">読み込み中...</div>';
   try {
-    const snap = await getDocs(collection(db, 'users_list'));
-    if (snap.empty) { listEl.innerHTML = '<div class="admin-loading">ユーザーなし</div>'; return; }
+    let users = [];
+    if (isSupabaseSharedCoreEnabled()) {
+      users = (await fetchAllUserAccountsFromSupabase()).map(r => r.username);
+    } else {
+      const snap = await getDocs(collection(db, 'users_list'));
+      users = snap.docs.map(d => d.id);
+    }
+    if (!users.length) { listEl.innerHTML = '<div class="admin-loading">ユーザーなし</div>'; return; }
     listEl.innerHTML = '';
-    for (const d of snap.docs) {
-      const name = d.id;
+    for (const name of users) {
       const item = document.createElement('div');
       item.className = 'admin-user-item';
       item.innerHTML = `
@@ -1004,11 +1177,15 @@ export async function loadUsersForAdmin() {
       // PINリセット
       item.querySelector('.btn-admin-reset-pin').addEventListener('click', async (e) => {
         const btn = e.currentTarget;
-        if (!confirm(`${name} さんのPINをリセットしますか？`)) return;
+        if (!await showConfirm(`${name} さんのPINをリセットしますか？`, { danger: true })) return;
         btn.disabled = true;
         btn.textContent = '処理中...';
         try {
-          await setDoc(doc(db, 'users', name, 'data', 'lock_pin'), { hash: null, enabled: false }, { merge: true });
+          if (isSupabaseSharedCoreEnabled()) {
+            await saveLockPinToSupabase(name, { hash: null, enabled: false, autoLockMinutes: 5 });
+          } else {
+            await setDoc(doc(db, 'users', name, 'data', 'lock_pin'), { hash: null, enabled: false }, { merge: true });
+          }
           btn.textContent = 'リセット済み ✓';
           if (name === state.currentUsername) {
             state.lockPinHash = null; state.lockPinEnabled = false; state.lockEnabled = false;
@@ -1021,7 +1198,7 @@ export async function loadUsersForAdmin() {
       // ユーザー削除
       item.querySelector('.btn-admin-delete-user').addEventListener('click', async (e) => {
         const btn = e.currentTarget;
-        if (!confirm(`「${name}」のアカウントとすべての個人データを削除しますか？\nこの操作は取り消せません。`)) return;
+        if (!await showConfirm(`「${name}」のアカウントとすべての個人データを削除しますか？\nこの操作は取り消せません。`, { danger: true })) return;
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 削除中...';
         try {
@@ -1041,7 +1218,7 @@ export async function loadUsersForAdmin() {
           console.error('ユーザー削除エラー:', err);
           btn.disabled = false;
           btn.innerHTML = '<i class="fa-solid fa-trash-can"></i> 削除';
-          alert('削除に失敗しました。');
+          showToast('削除に失敗しました。', 'error');
         }
       });
 
@@ -1105,16 +1282,16 @@ export function updateUsernameDisplay() {
 export async function registerUserLogin(username) {
   if (!username) return;
   try {
-    const ref  = doc(db, 'users_list', username);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
-      await setDoc(ref, {
-        displayName: username,
-        createdAt:   serverTimestamp(),
-        lastLogin:   serverTimestamp(),
-      });
+    if (isSupabaseSharedCoreEnabled()) {
+      await registerUserLoginInSupabase(username);
     } else {
-      await updateDoc(ref, { lastLogin: serverTimestamp() });
+      const ref  = doc(db, 'users_list', username);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        await setDoc(ref, { displayName: username, createdAt: serverTimestamp(), lastLogin: serverTimestamp() });
+      } else {
+        await updateDoc(ref, { lastLogin: serverTimestamp() });
+      }
     }
   } catch (err) {
     console.error('ユーザー登録エラー:', err);
