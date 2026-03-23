@@ -5,6 +5,10 @@ const BACKEND_FIREBASE = 'firebase';
 const BACKEND_SUPABASE = 'supabase';
 const SUPABASE_STORAGE_KEY = 'portal-supabase-v2';
 
+// デフォルト資格情報 — 新規デバイス・新規ユーザーでも即座に Supabase を使う
+const DEFAULT_SUPABASE_URL = 'https://ydcxgxzeavumvubrqmlq.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_TuZiMD49GBC9NMSf-tyWYA_NKq8430v';
+
 const CATEGORY_SELECT = 'id,label,icon,color_index,order_index,is_external';
 const CARD_SELECT = 'id,label,icon,url,category_id,parent_id,order_index,category_order,is_external_tool';
 
@@ -195,14 +199,21 @@ export function saveSupabaseConfigToStorage(url, apiKey, mode) {
 export function loadSupabaseConfigFromStorage() {
   try {
     const raw = localStorage.getItem(SUPABASE_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return {
-      supabaseUrl: parsed.url || '',
-      supabasePublishableKey: parsed.apiKey || '',
-      dataBackendMode: parsed.mode || 'supabase',
-    };
-  } catch (_) { return null; }
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        supabaseUrl: parsed.url || DEFAULT_SUPABASE_URL,
+        supabasePublishableKey: parsed.apiKey || DEFAULT_SUPABASE_KEY,
+        dataBackendMode: BACKEND_SUPABASE,
+      };
+    }
+  } catch (_) {}
+  // localStorage 未設定でもデフォルト資格情報で Supabase を使う
+  return {
+    supabaseUrl: DEFAULT_SUPABASE_URL,
+    supabasePublishableKey: DEFAULT_SUPABASE_KEY,
+    dataBackendMode: BACKEND_SUPABASE,
+  };
 }
 
 export function applySupabaseRuntimeConfig(config = {}) {
