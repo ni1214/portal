@@ -723,12 +723,22 @@ export async function loginExistingUsername(name, options = {}) {
     }
     if (!userExists) {
       if (options.fromStored) {
-        localStorage.removeItem('portal-username');
-        restoreUsernameModalForRetry(normalized, true);
+        if (isSupabaseSharedCoreEnabled()) {
+          // 初回登録の非同期完了前に再読込しても復元できるようにする。
+          try {
+            await registerUserLoginInSupabase(normalized);
+            userExists = true;
+          } catch (_) {}
+        }
+        if (!userExists) {
+          localStorage.removeItem('portal-username');
+          restoreUsernameModalForRetry(normalized, true);
+          return false;
+        }
       } else {
         showUsernameError('このユーザーネームは見つかりません。');
+        return false;
       }
-      return false;
     }
 
     const lockInfo = await getUserPreloginLockInfo(normalized);
@@ -783,7 +793,7 @@ export async function loadLockSettings(username, lockImmediately = false) {
           state.lockPinHash     = row.hash || null;
           state.lockPinEnabled  = !!state.lockPinHash;
           state.lockEnabled     = !!row.enabled;
-          state.autoLockMinutes = row.auto_lock_minutes ?? 5;
+          state.autoLockMinutes = row.autoLockMinutes ?? 5;
         }
       } catch (err) {
         console.warn('Supabase lock_pin 読込失敗、Firestore fallback:', err);
