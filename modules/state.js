@@ -297,11 +297,7 @@ export const state = {
   workSummaryNeedsRefresh: true,   // 再集計が必要か
   workSummaryLoading: false,       // 集計処理中か
   workSummaryRows: [],             // 集計表表示用キャッシュ
-  workSummaryNeedsRefresh: true,   // 再集計が必要か
-  workSummaryLoading: false,       // 集計処理中か
-  workSummaryRows: [],             // 集計表表示用キャッシュ
   workSummaryUsers: [],            // 集計表ユーザー列
-  workSummaryPeriodLabel: '',      // 集計対象期間ラベル
 
   // 管理者認証
   isAdmin: false,   // 管理者PIN認証済みフラグ
