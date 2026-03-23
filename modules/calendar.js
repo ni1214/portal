@@ -86,6 +86,18 @@ export function subscribeTodayAttendance(username) {
 
   const todayStr = getTodayDateStr();
   state.todayAttendanceDate = todayStr;
+  if (isSupabaseSharedCoreEnabled()) {
+    fetchAttendanceEntriesFromSupabase(username, [todayStr.slice(0, 7)]).then(entries => {
+      const todayEntry = (entries || []).find(entry => (entry?.date || entry?.dateStr) === todayStr) || null;
+      syncTodayAttendanceState(todayStr, todayEntry ? buildAttendanceStateForStore(todayStr, todayEntry) : null);
+      deps.renderTodayDashboard?.();
+    }).catch(err => {
+      console.warn('Today attendance load failed (Supabase):', err);
+      syncTodayAttendanceState(todayStr, null);
+      deps.renderTodayDashboard?.();
+    });
+    return;
+  }
   recordListenerStart('cal.today', '今日の勤怠', `attendance:${username}`);
   state._todayAttendanceSub = wrapTrackedListenerUnsubscribe('cal.today', onSnapshot(attendancePath(username, todayStr), snap => {
     recordListenerSnapshot('cal.today', snap.exists() ? 1 : 0, todayStr, snap.exists() ? [{ id: snap.id, ...snap.data() }] : []);
@@ -126,7 +138,7 @@ export async function saveAttendance(dateStr, data) {
         await deps.removePublicAttendance?.(dateStr, state.currentUsername);
       }
       deps.markWorkSummaryStale?.();
-      state.attendanceData[dateStr] = data;
+      state.attendanceData[dateStr] = { ...data, yearMonth };
       syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
       renderCalendar();
       updateCalendarSummary();
@@ -210,6 +222,38 @@ function buildYearMonth(year, month) {
   return `${year}-${String(month + 1).padStart(2, '0')}`;
 }
 
+function buildYearMonthRange(startYm, endYm) {
+  if (!startYm || !endYm) return [];
+  const [startYear, startMonth] = startYm.split('-').map(Number);
+  const [endYear, endMonth] = endYm.split('-').map(Number);
+  if (!Number.isFinite(startYear) || !Number.isFinite(startMonth) || !Number.isFinite(endYear) || !Number.isFinite(endMonth)) {
+    return [];
+  }
+
+  const items = [];
+  let year = startYear;
+  let month = startMonth;
+  while (year < endYear || (year === endYear && month <= endMonth)) {
+    items.push(`${year}-${String(month).padStart(2, '0')}`);
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+  }
+  return items;
+}
+
+function indexAttendanceEntriesByDate(entries = []) {
+  const map = {};
+  (entries || []).forEach(entry => {
+    const dateStr = entry?.date || entry?.dateStr || '';
+    if (!dateStr) return;
+    map[dateStr] = entry;
+  });
+  return map;
+}
+
 export function subscribeAttendance(username) {
   if (!username) return;
   if (state._attendanceSub) { state._attendanceSub(); state._attendanceSub = null; }
@@ -218,10 +262,7 @@ export function subscribeAttendance(username) {
   const ym = buildYearMonth(state.calendarYear, state.calendarMonth);
   if (isSupabaseSharedCoreEnabled()) {
     fetchAttendanceEntriesFromSupabase(username, [ym]).then(entries => {
-      state.attendanceData = {};
-      for (const [dateStr, entry] of Object.entries(entries)) {
-        state.attendanceData[dateStr] = entry;
-      }
+      state.attendanceData = indexAttendanceEntriesByDate(entries);
       renderCalendar();
       updateCalendarSummary();
       deps.renderTodayDashboard?.();
@@ -262,7 +303,7 @@ async function fetchPrevMonthAttendance() {
   if (isSupabaseSharedCoreEnabled()) {
     try {
       const entries = await fetchAttendanceEntriesFromSupabase(state.currentUsername, [ym]);
-      state.prevMonthAttendance = { _fetched: true, ...entries };
+      state.prevMonthAttendance = { _fetched: true, ...indexAttendanceEntriesByDate(entries) };
     } catch (err) {
       console.warn('前月勤怠取得エラー(Supabase):', err);
       state.prevMonthAttendance = { _fetched: true };
@@ -292,6 +333,20 @@ export async function fetchFiscalYearPaidLeave() {
   const fiscalStart = `${fiscalYear}-04`;
   const fiscalEnd   = `${fiscalYear + 1}-03`;
   try {
+    if (isSupabaseSharedCoreEnabled()) {
+      const entries = await fetchAttendanceEntriesFromSupabase(
+        state.currentUsername,
+        buildYearMonthRange(fiscalStart, fiscalEnd)
+      );
+      let total = 0;
+      entries.forEach(att => {
+        if (att.type === '有給') total += 1;
+        if (att.type === '半休午前' || att.type === '半休午後') total += 0.5;
+      });
+      state.fiscalYearPaidLeave = total;
+      _updateFiscalDisplay();
+      return;
+    }
     const snap = await getDocs(
       query(collection(db, 'users', state.currentUsername, 'attendance'),
             where('yearMonth', '>=', fiscalStart),
@@ -868,16 +923,27 @@ async function loadRecentWorkSites(force = false) {
   recentWorkSiteCache.promise = (async () => {
     try {
       const { startYm, endYm } = getRecentWorkSiteYearMonthRange();
-      const snap = await getDocs(query(
-        collection(db, 'users', username, 'attendance'),
-        where('yearMonth', '>=', startYm),
-        where('yearMonth', '<=', endYm)
-      ));
       const activeSiteIds = new Set(getSortedActiveSites().map(site => site.id));
       const usageMap = new Map();
 
-      snap.docs
-        .map(d => ({ dateStr: d.id, data: d.data() }))
+      let attendanceRows = [];
+      if (isSupabaseSharedCoreEnabled()) {
+        const entries = await fetchAttendanceEntriesFromSupabase(username, buildYearMonthRange(startYm, endYm));
+        attendanceRows = entries.map(entry => ({
+          dateStr: entry?.date || entry?.dateStr || '',
+          data: entry,
+        }));
+      } else {
+        const snap = await getDocs(query(
+          collection(db, 'users', username, 'attendance'),
+          where('yearMonth', '>=', startYm),
+          where('yearMonth', '<=', endYm)
+        ));
+        attendanceRows = snap.docs.map(d => ({ dateStr: d.id, data: d.data() }));
+      }
+
+      attendanceRows
+        .filter(row => !!row.dateStr)
         .sort((a, b) => b.dateStr.localeCompare(a.dateStr))
         .forEach(({ dateStr, data }) => {
           const workMap = sanitizeWorkSiteHours(data.workSiteHours);

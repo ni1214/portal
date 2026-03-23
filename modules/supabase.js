@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { recordTransferFetch } from './read-diagnostics.js';
+import { db, collection, collectionGroup, getDocs, query, where } from './config.js';
 
 const BACKEND_FIREBASE = 'firebase';
 const BACKEND_SUPABASE = 'supabase';
@@ -1403,6 +1404,7 @@ function mapAttendanceRow(row = {}) {
     id: `${row.username}_${row.entry_date}`,
     username: row.username || '',
     date: row.entry_date || '',
+    dateStr: row.entry_date || '',
     type: row.type || null,
     hayade: row.hayade || null,
     zangyo: row.zangyo || null,
@@ -1414,14 +1416,136 @@ function mapAttendanceRow(row = {}) {
   };
 }
 
+function mapLegacyAttendanceDoc(username, dateStr, data = {}) {
+  return {
+    id: `${username}_${dateStr}`,
+    username: username || '',
+    date: dateStr || '',
+    dateStr: dateStr || '',
+    type: data.type || null,
+    hayade: data.hayade || null,
+    zangyo: data.zangyo || null,
+    note: data.note || null,
+    workSiteHours: (data.workSiteHours && typeof data.workSiteHours === 'object') ? data.workSiteHours : {},
+    projectKeys: Array.isArray(data.projectKeys) ? data.projectKeys : [],
+    yearMonth: data.yearMonth || (dateStr ? dateStr.slice(0, 7) : ''),
+    updatedAt: data.updatedAt || null,
+  };
+}
+
+function mergeAttendanceEntries(primaryRows = [], legacyRows = []) {
+  const byKey = new Map();
+  for (const entry of legacyRows) {
+    if (!entry?.username || !entry?.date) continue;
+    byKey.set(`${entry.username}__${entry.date}`, entry);
+  }
+  for (const entry of primaryRows) {
+    if (!entry?.username || !entry?.date) continue;
+    byKey.set(`${entry.username}__${entry.date}`, entry);
+  }
+  return [...byKey.values()].sort((a, b) => {
+    if (a.username !== b.username) return a.username.localeCompare(b.username);
+    return a.date.localeCompare(b.date);
+  });
+}
+
+function normalizeYearMonths(yearMonths) {
+  const list = Array.isArray(yearMonths) ? yearMonths : [yearMonths];
+  return [...new Set(list.filter(Boolean))];
+}
+
+async function fetchLegacyAttendanceEntriesFromFirebase(username, yearMonths) {
+  const yms = normalizeYearMonths(yearMonths);
+  if (!username || !yms.length) return [];
+
+  const snaps = await Promise.all(
+    yms.map(ym =>
+      getDocs(
+        query(
+          collection(db, 'users', username, 'attendance'),
+          where('yearMonth', '==', ym)
+        )
+      )
+    )
+  );
+
+  const rows = [];
+  snaps.forEach(snap => {
+    snap.docs.forEach(docSnap => {
+      rows.push(mapLegacyAttendanceDoc(username, docSnap.id, docSnap.data()));
+    });
+  });
+  return rows;
+}
+
+async function fetchLegacyAttendanceSummaryFromFirebase(yearMonths) {
+  const yms = normalizeYearMonths(yearMonths);
+  if (!yms.length) return [];
+
+  const rows = [];
+  const chunkSize = 10;
+  for (let i = 0; i < yms.length; i += chunkSize) {
+    const chunk = yms.slice(i, i + chunkSize);
+    const snap = await getDocs(
+      query(
+        collectionGroup(db, 'attendance'),
+        where('yearMonth', 'in', chunk)
+      )
+    );
+    snap.docs.forEach(docSnap => {
+      const username = docSnap.ref.parent?.parent?.id || '';
+      if (!username) return;
+      rows.push(mapLegacyAttendanceDoc(username, docSnap.id, docSnap.data()));
+    });
+  }
+  return rows;
+}
+
+async function backfillLegacyAttendanceEntriesToSupabase(username, supabaseRows = [], legacyRows = []) {
+  const supabaseKeys = new Set(
+    (supabaseRows || [])
+      .map(entry => entry?.date)
+      .filter(Boolean)
+  );
+  const missingRows = (legacyRows || []).filter(entry => entry?.date && !supabaseKeys.has(entry.date));
+  if (!username || !missingRows.length) return;
+
+  await Promise.allSettled(
+    missingRows.map(entry =>
+      upsertAttendanceEntryInSupabase(username, entry.date, {
+        type: entry.type,
+        hayade: entry.hayade,
+        zangyo: entry.zangyo,
+        note: entry.note,
+        workSiteHours: entry.workSiteHours,
+        projectKeys: entry.projectKeys,
+        yearMonth: entry.yearMonth,
+      })
+    )
+  );
+}
+
 export async function fetchAttendanceEntriesFromSupabase(username, yearMonths) {
-  const yms = Array.isArray(yearMonths) ? yearMonths : [yearMonths];
-  const encoded = encodeURIComponent(JSON.stringify(yms));
+  const yms = normalizeYearMonths(yearMonths);
+  if (!username || !yms.length) return [];
+
+  const encoded = encodeURIComponent(encodeInFilter(yms));
   const rows = await requestSupabase(
     `attendance_entries?username=eq.${encodeURIComponent(username)}&year_month=in.${encoded}&order=entry_date.asc`,
     { diagKey: 'attendance.entries', diagLabel: '勤怠', diagScope: username }
   );
-  return Array.isArray(rows) ? rows.map(mapAttendanceRow) : [];
+  const supabaseRows = Array.isArray(rows) ? rows.map(mapAttendanceRow) : [];
+
+  let legacyRows = [];
+  try {
+    legacyRows = await fetchLegacyAttendanceEntriesFromFirebase(username, yms);
+  } catch (_) {}
+
+  if (legacyRows.length) {
+    await backfillLegacyAttendanceEntriesToSupabase(username, supabaseRows, legacyRows);
+  }
+
+  return mergeAttendanceEntries(supabaseRows, legacyRows);
 }
 
 export async function upsertAttendanceEntryInSupabase(username, date, data) {
@@ -1491,8 +1615,23 @@ export async function deleteAttendanceSiteInSupabase(id) {
   });
 }
 
-export async function fetchMultipleMonthsAttendanceSummaryFromSupabase(username, yearMonths) {
-  return fetchAttendanceEntriesFromSupabase(username, yearMonths);
+export async function fetchMultipleMonthsAttendanceSummaryFromSupabase(yearMonths) {
+  const yms = normalizeYearMonths(yearMonths);
+  if (!yms.length) return [];
+
+  const encoded = encodeURIComponent(encodeInFilter(yms));
+  const rows = await requestSupabase(
+    `attendance_entries?year_month=in.${encoded}&order=entry_date.asc`,
+    { diagKey: 'attendance.summary', diagLabel: '勤怠集計', diagScope: yms.join(',') }
+  );
+  const supabaseRows = Array.isArray(rows) ? rows.map(mapAttendanceRow) : [];
+
+  let legacyRows = [];
+  try {
+    legacyRows = await fetchLegacyAttendanceSummaryFromFirebase(yms);
+  } catch (_) {}
+
+  return mergeAttendanceEntries(supabaseRows, legacyRows);
 }
 
 export async function cleanupOldAttendanceInSupabase(username, cutoffDate) {

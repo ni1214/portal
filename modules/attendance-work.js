@@ -516,7 +516,9 @@ async function loadUserPeriodAttendance(username, period) {
   if (isSupabaseSharedCoreEnabled()) {
     const entries = await fetchAttendanceEntriesFromSupabase(username, yms);
     const map = {};
-    for (const [dateStr, entry] of Object.entries(entries)) {
+    for (const entry of entries) {
+      const dateStr = entry?.date || entry?.dateStr || '';
+      if (!dateStr) continue;
       if (dateStr >= period.startStr && dateStr <= period.endStr) {
         map[dateStr] = entry;
       }
