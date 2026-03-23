@@ -10,6 +10,23 @@ import {
   recordListenerSnapshot,
   wrapTrackedListenerUnsubscribe,
 } from './read-diagnostics.js';
+import {
+  isSupabaseSharedCoreEnabled,
+  fetchChatRoomsFromSupabase,
+  getChatRoomFromSupabase,
+  upsertDmRoomInSupabase,
+  ensureDmMembersInSupabase,
+  removeSelfFromDmRoomInSupabase,
+  createGroupRoomInSupabase,
+  updateChatRoomLastInSupabase,
+  fetchChatMessagesFromSupabase,
+  addChatMessageInSupabase,
+  deleteOldestChatMessageInSupabase,
+  deleteChatMessageInSupabase,
+  fetchChatReadTimesFromSupabase,
+  markChatRoomReadInSupabase,
+  fetchAllUserAccountsFromSupabase,
+} from './supabase.js';
 
 // 他モジュールへの依存（循環参照回避）
 export const deps = {};
@@ -123,29 +140,51 @@ export function startChatListeners(username) {
   stopChatListeners();
   subscribeUsersList();
 
-  const dmQ = query(collection(db, 'dm_rooms'), where('members', 'array-contains', username));
-  recordListenerStart('chat.dm-rooms', 'DM一覧', `dm_rooms:${username}`);
-  state._dmRoomsUnsubscribe = wrapTrackedListenerUnsubscribe('chat.dm-rooms', onSnapshot(dmQ, snap => {
-    recordListenerSnapshot('chat.dm-rooms', snap.size, username, snap.docs);
-    state.dmRooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (state.chatPanelOpen) renderChatSidebar();
-    updateChatBadge();
-  }));
+  if (isSupabaseSharedCoreEnabled()) {
+    const poll = async () => {
+      try {
+        const [dm, grp] = await Promise.all([
+          fetchChatRoomsFromSupabase(username, 'dm'),
+          fetchChatRoomsFromSupabase(username, 'group'),
+        ]);
+        state.dmRooms    = dm;
+        state.groupRooms = grp;
+        if (state.chatPanelOpen) renderChatSidebar();
+        updateChatBadge();
+      } catch (_) {}
+    };
+    poll();
+    state._dmRoomsUnsubscribe = setInterval(poll, 10000);
+  } else {
+    const dmQ = query(collection(db, 'dm_rooms'), where('members', 'array-contains', username));
+    recordListenerStart('chat.dm-rooms', 'DM一覧', `dm_rooms:${username}`);
+    state._dmRoomsUnsubscribe = wrapTrackedListenerUnsubscribe('chat.dm-rooms', onSnapshot(dmQ, snap => {
+      recordListenerSnapshot('chat.dm-rooms', snap.size, username, snap.docs);
+      state.dmRooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (state.chatPanelOpen) renderChatSidebar();
+      updateChatBadge();
+    }));
 
-  const grpQ = query(collection(db, 'chat_rooms'), where('members', 'array-contains', username));
-  recordListenerStart('chat.group-rooms', 'グループ一覧', `chat_rooms:${username}`);
-  state._groupRoomsUnsubscribe = wrapTrackedListenerUnsubscribe('chat.group-rooms', onSnapshot(grpQ, snap => {
-    recordListenerSnapshot('chat.group-rooms', snap.size, username, snap.docs);
-    state.groupRooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (state.chatPanelOpen) renderChatSidebar();
-    updateChatBadge();
-  }));
+    const grpQ = query(collection(db, 'chat_rooms'), where('members', 'array-contains', username));
+    recordListenerStart('chat.group-rooms', 'グループ一覧', `chat_rooms:${username}`);
+    state._groupRoomsUnsubscribe = wrapTrackedListenerUnsubscribe('chat.group-rooms', onSnapshot(grpQ, snap => {
+      recordListenerSnapshot('chat.group-rooms', snap.size, username, snap.docs);
+      state.groupRooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (state.chatPanelOpen) renderChatSidebar();
+      updateChatBadge();
+    }));
+  }
 }
 
 export function stopChatListeners() {
-  if (state._dmRoomsUnsubscribe) { state._dmRoomsUnsubscribe(); state._dmRoomsUnsubscribe = null; }
-  if (state._groupRoomsUnsubscribe) { state._groupRoomsUnsubscribe(); state._groupRoomsUnsubscribe = null; }
-  if (state._roomMsgUnsubscribe) { state._roomMsgUnsubscribe(); state._roomMsgUnsubscribe = null; }
+  if (isSupabaseSharedCoreEnabled()) {
+    if (state._dmRoomsUnsubscribe) { clearInterval(state._dmRoomsUnsubscribe); state._dmRoomsUnsubscribe = null; }
+    if (state._roomMsgUnsubscribe) { clearInterval(state._roomMsgUnsubscribe); state._roomMsgUnsubscribe = null; }
+  } else {
+    if (state._dmRoomsUnsubscribe) { state._dmRoomsUnsubscribe(); state._dmRoomsUnsubscribe = null; }
+    if (state._groupRoomsUnsubscribe) { state._groupRoomsUnsubscribe(); state._groupRoomsUnsubscribe = null; }
+    if (state._roomMsgUnsubscribe) { state._roomMsgUnsubscribe(); state._roomMsgUnsubscribe = null; }
+  }
   state.currentRoomId = null;
   state.currentRoomType = null;
   state.currentRoomMessages = [];
@@ -156,30 +195,42 @@ export function stopChatListeners() {
 // ===== ユーザーリスト監視 =====
 export function subscribeUsersList() {
   if (state._usersListUnsub) return;
-  recordListenerStart('chat.users-list', 'ユーザー一覧', 'users_list');
-  state._usersListUnsub = wrapTrackedListenerUnsubscribe('chat.users-list', onSnapshot(collection(db, 'users_list'), snap => {
-    recordListenerSnapshot('chat.users-list', snap.size, 'users_list', snap.docs);
-    state._knownUsernames = new Set(snap.docs.map(d => d.id));
-    // 現在開いているDMルームの相手が存在しないユーザーならパネルを閉じる
-    if (state.currentRoomId && state.currentRoomType === 'dm') {
-      const room = state.dmRooms.find(r => r.id === state.currentRoomId);
-      if (room) {
-        const other = (room.members || []).find(m => m !== state.currentUsername);
-        if (other && !state._knownUsernames.has(other)) {
-          state.currentRoomId = null;
-          state.currentRoomType = null;
-          const roomView = document.getElementById('chat-room-view');
-          if (roomView) roomView.setAttribute('hidden', '');
+  if (isSupabaseSharedCoreEnabled()) {
+    // Supabase: 一度だけ取得（ユーザー一覧は頻繁に変わらない）
+    state._usersListUnsub = true; // フラグとして使う
+    fetchAllUserAccountsFromSupabase().then(users => {
+      state._knownUsernames = new Set(users.map(u => u.username));
+      if (state.chatPanelOpen) renderChatSidebar();
+      updateChatBadge();
+    }).catch(() => {});
+  } else {
+    recordListenerStart('chat.users-list', 'ユーザー一覧', 'users_list');
+    state._usersListUnsub = wrapTrackedListenerUnsubscribe('chat.users-list', onSnapshot(collection(db, 'users_list'), snap => {
+      recordListenerSnapshot('chat.users-list', snap.size, 'users_list', snap.docs);
+      state._knownUsernames = new Set(snap.docs.map(d => d.id));
+      if (state.currentRoomId && state.currentRoomType === 'dm') {
+        const room = state.dmRooms.find(r => r.id === state.currentRoomId);
+        if (room) {
+          const other = (room.members || []).find(m => m !== state.currentUsername);
+          if (other && !state._knownUsernames.has(other)) {
+            state.currentRoomId = null;
+            state.currentRoomType = null;
+            const roomView = document.getElementById('chat-room-view');
+            if (roomView) roomView.setAttribute('hidden', '');
+          }
         }
       }
-    }
-    if (state.chatPanelOpen) renderChatSidebar();
-    updateChatBadge(); // バッジとリストの整合性を保つ
-  }));
+      if (state.chatPanelOpen) renderChatSidebar();
+      updateChatBadge();
+    }));
+  }
 }
 
 export function stopUsersListListener() {
-  if (state._usersListUnsub) { state._usersListUnsub(); state._usersListUnsub = null; }
+  if (state._usersListUnsub) {
+    if (typeof state._usersListUnsub === 'function') state._usersListUnsub();
+    state._usersListUnsub = null;
+  }
   state._knownUsernames = null;
 }
 
@@ -187,12 +238,16 @@ export function stopUsersListListener() {
 export async function loadChatReadTimes(username) {
   if (!username) return;
   try {
-    const snap = await getDoc(doc(db, 'users', username, 'data', 'chat_reads'));
-    if (snap.exists()) {
-      state.chatReadTimes = {};
-      Object.entries(snap.data()).forEach(([roomId, ts]) => {
-        state.chatReadTimes[roomId] = ts?.toDate?.() || null;
-      });
+    if (isSupabaseSharedCoreEnabled()) {
+      state.chatReadTimes = await fetchChatReadTimesFromSupabase(username);
+    } else {
+      const snap = await getDoc(doc(db, 'users', username, 'data', 'chat_reads'));
+      if (snap.exists()) {
+        state.chatReadTimes = {};
+        Object.entries(snap.data()).forEach(([roomId, ts]) => {
+          state.chatReadTimes[roomId] = ts?.toDate?.() || null;
+        });
+      }
     }
     updateChatBadge();
   } catch (_) {}
@@ -204,11 +259,15 @@ export async function markRoomRead(roomId) {
   if (state.chatPanelOpen) renderChatSidebar();
   if (!state.currentUsername) return;
   try {
-    await setDoc(
-      doc(db, 'users', state.currentUsername, 'data', 'chat_reads'),
-      { [roomId]: serverTimestamp() },
-      { merge: true }
-    );
+    if (isSupabaseSharedCoreEnabled()) {
+      await markChatRoomReadInSupabase(state.currentUsername, roomId);
+    } else {
+      await setDoc(
+        doc(db, 'users', state.currentUsername, 'data', 'chat_reads'),
+        { [roomId]: serverTimestamp() },
+        { merge: true }
+      );
+    }
   } catch (_) {}
 }
 
@@ -368,17 +427,29 @@ export async function openRoom(roomId, type) {
     if (fileBtn) fileBtn.hidden = true;
   }
 
-  const colRef = type === 'dm'
-    ? collection(db, 'dm_rooms', roomId, 'messages')
-    : collection(db, 'chat_rooms', roomId, 'messages');
-  const msgQ = query(colRef, orderBy('createdAt', 'asc'), limit(CHAT_MSG_MAX));
-
-  state._roomMsgUnsubscribe = onSnapshot(msgQ, snap => {
-    state.currentRoomMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderChatMessages();
-    scrollChatToBottom();
-    markRoomRead(roomId);
-  });
+  if (isSupabaseSharedCoreEnabled()) {
+    const pollMsg = async () => {
+      try {
+        state.currentRoomMessages = await fetchChatMessagesFromSupabase(roomId, CHAT_MSG_MAX);
+        renderChatMessages();
+        scrollChatToBottom();
+        markRoomRead(roomId);
+      } catch (_) {}
+    };
+    pollMsg();
+    state._roomMsgUnsubscribe = setInterval(pollMsg, 5000);
+  } else {
+    const colRef = type === 'dm'
+      ? collection(db, 'dm_rooms', roomId, 'messages')
+      : collection(db, 'chat_rooms', roomId, 'messages');
+    const msgQ = query(colRef, orderBy('createdAt', 'asc'), limit(CHAT_MSG_MAX));
+    state._roomMsgUnsubscribe = onSnapshot(msgQ, snap => {
+      state.currentRoomMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderChatMessages();
+      scrollChatToBottom();
+      markRoomRead(roomId);
+    });
+  }
 
   renderChatSidebar();
 }
@@ -391,23 +462,37 @@ export async function sendChatMessage() {
   if (!text) return;
   input.value = '';
 
-  const colRef = state.currentRoomType === 'dm'
-    ? collection(db, 'dm_rooms', state.currentRoomId, 'messages')
-    : collection(db, 'chat_rooms', state.currentRoomId, 'messages');
-  const roomRef = state.currentRoomType === 'dm'
-    ? doc(db, 'dm_rooms', state.currentRoomId)
-    : doc(db, 'chat_rooms', state.currentRoomId);
-
   try {
-    if (state.currentRoomMessages.length >= CHAT_MSG_MAX) {
-      const oldest = state.currentRoomMessages[0];
-      const oldRef = state.currentRoomType === 'dm'
-        ? doc(db, 'dm_rooms', state.currentRoomId, 'messages', oldest.id)
-        : doc(db, 'chat_rooms', state.currentRoomId, 'messages', oldest.id);
-      await deleteDoc(oldRef);
+    if (isSupabaseSharedCoreEnabled()) {
+      if (state.currentRoomMessages.length >= CHAT_MSG_MAX) {
+        await deleteOldestChatMessageInSupabase(state.currentRoomId);
+      }
+      const msg = await addChatMessageInSupabase(state.currentRoomId, state.currentUsername, text);
+      state.currentRoomMessages = [...state.currentRoomMessages.slice(-(CHAT_MSG_MAX - 1)), msg];
+      await updateChatRoomLastInSupabase(state.currentRoomId, text, state.currentUsername);
+      // ローカル状態に即時反映
+      const room = [...state.dmRooms, ...state.groupRooms].find(r => r.id === state.currentRoomId);
+      if (room) { room.lastMessage = text; room.lastAt = new Date().toISOString(); room.lastSender = state.currentUsername; }
+      renderChatMessages();
+      scrollChatToBottom();
+      markRoomRead(state.currentRoomId);
+    } else {
+      const colRef = state.currentRoomType === 'dm'
+        ? collection(db, 'dm_rooms', state.currentRoomId, 'messages')
+        : collection(db, 'chat_rooms', state.currentRoomId, 'messages');
+      const roomRef = state.currentRoomType === 'dm'
+        ? doc(db, 'dm_rooms', state.currentRoomId)
+        : doc(db, 'chat_rooms', state.currentRoomId);
+      if (state.currentRoomMessages.length >= CHAT_MSG_MAX) {
+        const oldest = state.currentRoomMessages[0];
+        const oldRef = state.currentRoomType === 'dm'
+          ? doc(db, 'dm_rooms', state.currentRoomId, 'messages', oldest.id)
+          : doc(db, 'chat_rooms', state.currentRoomId, 'messages', oldest.id);
+        await deleteDoc(oldRef);
+      }
+      await addDoc(colRef, { username: state.currentUsername, text, createdAt: serverTimestamp() });
+      await setDoc(roomRef, { lastMessage: text, lastAt: serverTimestamp(), lastSender: state.currentUsername }, { merge: true });
     }
-    await addDoc(colRef, { username: state.currentUsername, text, createdAt: serverTimestamp() });
-    await setDoc(roomRef, { lastMessage: text, lastAt: serverTimestamp(), lastSender: state.currentUsername }, { merge: true });
   } catch (err) { console.error('チャット送信エラー:', err); }
 }
 
@@ -416,11 +501,18 @@ export async function deleteChatMessage(msgId) {
   if (!state.currentRoomId) return;
   const ok = await deps.confirmDelete?.('このメッセージを削除しますか？');
   if (!ok) return;
-  const msgRef = state.currentRoomType === 'dm'
-    ? doc(db, 'dm_rooms', state.currentRoomId, 'messages', msgId)
-    : doc(db, 'chat_rooms', state.currentRoomId, 'messages', msgId);
-  try { await deleteDoc(msgRef); }
-  catch (err) { console.error('メッセージ削除エラー:', err); }
+  try {
+    if (isSupabaseSharedCoreEnabled()) {
+      await deleteChatMessageInSupabase(msgId);
+      state.currentRoomMessages = state.currentRoomMessages.filter(m => m.id !== msgId);
+      renderChatMessages();
+    } else {
+      const msgRef = state.currentRoomType === 'dm'
+        ? doc(db, 'dm_rooms', state.currentRoomId, 'messages', msgId)
+        : doc(db, 'chat_rooms', state.currentRoomId, 'messages', msgId);
+      await deleteDoc(msgRef);
+    }
+  } catch (err) { console.error('メッセージ削除エラー:', err); }
 }
 
 // ===== メッセージ描画 =====
@@ -492,17 +584,28 @@ export async function deleteDmRoom(roomId) {
   if (!state.currentUsername || !roomId) return;
   if (!await showConfirm('このDMを削除しますか？（自分の一覧からのみ消えます）', { danger: true })) return;
   try {
-    const roomRef = doc(db, 'dm_rooms', roomId);
-    await updateDoc(roomRef, { members: arrayRemove(state.currentUsername) });
-    // 現在開いているルームだったら閉じる
+    if (isSupabaseSharedCoreEnabled()) {
+      const room = state.dmRooms.find(r => r.id === roomId);
+      await removeSelfFromDmRoomInSupabase(roomId, state.currentUsername, room?.members || []);
+      state.dmRooms = state.dmRooms.filter(r => r.id !== roomId);
+    } else {
+      const roomRef = doc(db, 'dm_rooms', roomId);
+      await updateDoc(roomRef, { members: arrayRemove(state.currentUsername) });
+    }
     if (state.currentRoomId === roomId) {
       state.currentRoomId = null;
       state.currentRoomType = null;
-      if (state._roomMsgUnsubscribe) { state._roomMsgUnsubscribe(); state._roomMsgUnsubscribe = null; }
+      if (isSupabaseSharedCoreEnabled()) {
+        if (state._roomMsgUnsubscribe) { clearInterval(state._roomMsgUnsubscribe); state._roomMsgUnsubscribe = null; }
+      } else {
+        if (state._roomMsgUnsubscribe) { state._roomMsgUnsubscribe(); state._roomMsgUnsubscribe = null; }
+      }
       document.getElementById('chat-no-room').hidden = false;
       const roomView = document.getElementById('chat-room-view');
       if (roomView) roomView.setAttribute('hidden', '');
     }
+    if (state.chatPanelOpen) renderChatSidebar();
+    updateChatBadge();
   } catch (e) {
     console.error('DM削除失敗:', e);
     showToast('削除に失敗しました', 'error');
@@ -511,7 +614,6 @@ export async function deleteDmRoom(roomId) {
 
 export async function openOrCreateDm(targetUser) {
   if (!state.currentUsername || !targetUser) return;
-  // 既存のDMルームをmembersで検索（名前変更後の旧ルームIDにも対応）
   const existingRoom = state.dmRooms.find(r =>
     Array.isArray(r.members) &&
     r.members.includes(state.currentUsername) &&
@@ -522,19 +624,29 @@ export async function openOrCreateDm(targetUser) {
     roomId = existingRoom.id;
   } else {
     roomId = getDmRoomId(state.currentUsername, targetUser);
-    const roomRef = doc(db, 'dm_rooms', roomId);
-    const snap = await getDoc(roomRef);
-    if (!snap.exists()) {
-      await setDoc(roomRef, {
-        members: [state.currentUsername, targetUser].sort(),
-        createdAt: serverTimestamp(),
-        lastMessage: '',
-        lastAt: null,
-        lastSender: ''
-      });
+    if (isSupabaseSharedCoreEnabled()) {
+      const existing = await getChatRoomFromSupabase(roomId);
+      if (!existing) {
+        await upsertDmRoomInSupabase(roomId, [state.currentUsername, targetUser].sort());
+      } else {
+        // どちらかが削除していた場合は再追加
+        const members = [...new Set([...existing.members, state.currentUsername, targetUser])];
+        await ensureDmMembersInSupabase(roomId, members);
+      }
     } else {
-      // どちらかが削除していた場合は再追加
-      await updateDoc(roomRef, { members: arrayUnion(state.currentUsername, targetUser) });
+      const roomRef = doc(db, 'dm_rooms', roomId);
+      const snap = await getDoc(roomRef);
+      if (!snap.exists()) {
+        await setDoc(roomRef, {
+          members: [state.currentUsername, targetUser].sort(),
+          createdAt: serverTimestamp(),
+          lastMessage: '',
+          lastAt: null,
+          lastSender: ''
+        });
+      } else {
+        await updateDoc(roomRef, { members: arrayUnion(state.currentUsername, targetUser) });
+      }
     }
   }
   if (!state.chatPanelOpen) {
@@ -585,20 +697,22 @@ export async function createGroupRoom() {
   if (!_newGroupSelected.length) { showToast('メンバーを1人以上選んでください。', 'warning'); return; }
   const members = [...new Set([state.currentUsername, ..._newGroupSelected])];
   try {
-    const roomRef = await addDoc(collection(db, 'chat_rooms'), {
-      name,
-      members,
-      createdBy: state.currentUsername,
-      createdAt: serverTimestamp(),
-      lastMessage: '',
-      lastAt: null,
-      lastSender: ''
-    });
+    let roomId;
+    if (isSupabaseSharedCoreEnabled()) {
+      const room = await createGroupRoomInSupabase(name, members, state.currentUsername);
+      roomId = room.id;
+    } else {
+      const roomRef = await addDoc(collection(db, 'chat_rooms'), {
+        name, members, createdBy: state.currentUsername,
+        createdAt: serverTimestamp(), lastMessage: '', lastAt: null, lastSender: ''
+      });
+      roomId = roomRef.id;
+    }
     document.getElementById('new-group-modal').classList.remove('visible');
     if (!state.chatPanelOpen) {
       await openChatPanel();
     }
-    await openRoom(roomRef.id, 'group');
+    await openRoom(roomId, 'group');
   } catch (err) { console.error('グループ作成エラー:', err); showToast('作成に失敗しました。', 'error'); }
 }
 
@@ -609,9 +723,14 @@ export async function loadUsersForChatPicker(listElId, searchElId, onSelect, exc
   listEl.innerHTML = '<div class="new-dm-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>';
   let users = [];
   try {
-    const snap = await getDocs(collection(db, 'users_list'));
-    recordGetDocsRead('chat.user-picker', 'ユーザーピッカー', 'users_list', snap.size, snap.docs);
-    users = snap.docs.map(d => d.id);
+    if (isSupabaseSharedCoreEnabled()) {
+      const accounts = await fetchAllUserAccountsFromSupabase();
+      users = accounts.map(a => a.username);
+    } else {
+      const snap = await getDocs(collection(db, 'users_list'));
+      recordGetDocsRead('chat.user-picker', 'ユーザーピッカー', 'users_list', snap.size, snap.docs);
+      users = snap.docs.map(d => d.id);
+    }
     if (excludeSelf) users = users.filter(u => u !== state.currentUsername);
   } catch (_) {
     listEl.innerHTML = '<div class="new-dm-empty">読み込み失敗</div>';

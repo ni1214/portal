@@ -2127,3 +2127,152 @@ export async function deleteP2pSignalInSupabase(sessionId) {
     prefer: 'return=minimal',
   });
 }
+
+// ===== チャット（DM・グループ）=====
+
+function _mapRoom(r) {
+  return {
+    id: r.id, type: r.type, name: r.name,
+    members: r.members || [],
+    createdBy: r.created_by,
+    lastMessage: r.last_message, lastAt: r.last_at, lastSender: r.last_sender,
+    createdAt: r.created_at,
+  };
+}
+
+function _mapMessage(r) {
+  return { id: r.id, roomId: r.room_id, username: r.username, text: r.text, createdAt: r.created_at };
+}
+
+// ユーザーが参加しているルーム一覧取得（typeで絞り込み）
+export async function fetchChatRoomsFromSupabase(username, type) {
+  const rows = await requestSupabase(
+    `chat_rooms?members=cs.${encodeURIComponent(`{${username}}`)}&type=eq.${type}&order=last_at.desc.nullslast`,
+    { method: 'GET' }
+  );
+  return (rows || []).map(_mapRoom);
+}
+
+// ルーム1件取得（ID指定）
+export async function getChatRoomFromSupabase(roomId) {
+  const rows = await requestSupabase(
+    `chat_rooms?id=eq.${encodeURIComponent(roomId)}`,
+    { method: 'GET' }
+  );
+  return rows && rows[0] ? _mapRoom(rows[0]) : null;
+}
+
+// DMルーム作成 or 取得
+export async function upsertDmRoomInSupabase(roomId, members) {
+  await requestSupabase('chat_rooms', {
+    method: 'POST',
+    prefer: 'resolution=ignore-duplicates,return=minimal',
+    body: {
+      id: roomId, type: 'dm', name: '', members,
+      created_by: members[0], last_message: '', last_at: null, last_sender: '',
+    },
+  });
+}
+
+// DMルームのメンバー再追加（どちらかが削除した場合）
+export async function ensureDmMembersInSupabase(roomId, members) {
+  await requestSupabase(`chat_rooms?id=eq.${encodeURIComponent(roomId)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: { members },
+  });
+}
+
+// DMルームから自分を削除（members配列から除外）
+export async function removeSelfFromDmRoomInSupabase(roomId, username, currentMembers) {
+  const updated = (currentMembers || []).filter(m => m !== username);
+  await requestSupabase(`chat_rooms?id=eq.${encodeURIComponent(roomId)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: { members: updated },
+  });
+}
+
+// グループルーム作成
+export async function createGroupRoomInSupabase(name, members, createdBy) {
+  const rows = await requestSupabase('chat_rooms', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: {
+      id: crypto.randomUUID(), type: 'group', name, members,
+      created_by: createdBy, last_message: '', last_at: null, last_sender: '',
+    },
+  });
+  const r = Array.isArray(rows) ? rows[0] : rows;
+  return _mapRoom(r);
+}
+
+// ルームのlast_message更新
+export async function updateChatRoomLastInSupabase(roomId, text, sender) {
+  await requestSupabase(`chat_rooms?id=eq.${encodeURIComponent(roomId)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: { last_message: text, last_at: new Date().toISOString(), last_sender: sender },
+  });
+}
+
+// メッセージ一覧取得（最新N件、昇順）
+export async function fetchChatMessagesFromSupabase(roomId, maxCount) {
+  const rows = await requestSupabase(
+    `chat_messages?room_id=eq.${encodeURIComponent(roomId)}&order=created_at.asc&limit=${maxCount}`,
+    { method: 'GET' }
+  );
+  return (rows || []).map(_mapMessage);
+}
+
+// メッセージ送信
+export async function addChatMessageInSupabase(roomId, username, text) {
+  const rows = await requestSupabase('chat_messages', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: { room_id: roomId, username, text },
+  });
+  const r = Array.isArray(rows) ? rows[0] : rows;
+  return _mapMessage(r);
+}
+
+// 最古のメッセージを削除（200件制限）
+export async function deleteOldestChatMessageInSupabase(roomId) {
+  const rows = await requestSupabase(
+    `chat_messages?room_id=eq.${encodeURIComponent(roomId)}&order=created_at.asc&limit=1&select=id`,
+    { method: 'GET' }
+  );
+  if (!rows || !rows[0]) return;
+  await requestSupabase(`chat_messages?id=eq.${encodeURIComponent(rows[0].id)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
+
+// メッセージ削除（ID指定）
+export async function deleteChatMessageInSupabase(msgId) {
+  await requestSupabase(`chat_messages?id=eq.${encodeURIComponent(msgId)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
+
+// 既読時刻の読み込み
+export async function fetchChatReadTimesFromSupabase(username) {
+  const rows = await requestSupabase(
+    `user_chat_reads?username=eq.${encodeURIComponent(username)}&select=room_key,read_at`,
+    { method: 'GET' }
+  );
+  const map = {};
+  (rows || []).forEach(r => { map[r.room_key] = r.read_at ? new Date(r.read_at) : null; });
+  return map;
+}
+
+// 既読時刻の更新
+export async function markChatRoomReadInSupabase(username, roomId) {
+  await requestSupabase('user_chat_reads', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=minimal',
+    body: { username, room_key: roomId, read_at: new Date().toISOString() },
+  });
+}
