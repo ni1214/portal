@@ -3045,7 +3045,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('admin-supabase-save-btn').addEventListener('click', async () => {
     const btn = document.getElementById('admin-supabase-save-btn');
     const errEl = document.getElementById('admin-supabase-error');
-    const modeEl = document.getElementById('admin-supabase-mode');
     const urlEl = document.getElementById('admin-supabase-url');
     const keyEl = document.getElementById('admin-supabase-key');
     errEl.hidden = true;
@@ -3054,12 +3053,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       await saveSupabaseRuntimeConfig({
-        mode: modeEl?.value || 'firebase',
         url: urlEl?.value || '',
         apiKey: keyEl?.value || '',
       });
       await reloadSharedCoreData();
-      renderSupabaseAdminState('保存しました。共有リンク系の保存先を更新しました。');
+      renderSupabaseAdminState('保存しました。Supabase 接続を更新しました。');
       btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存済み';
     } catch (err) {
       errEl.textContent = err?.message || 'Supabase 設定の保存に失敗しました。';

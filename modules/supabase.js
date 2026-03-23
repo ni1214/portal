@@ -206,7 +206,7 @@ export function loadSupabaseConfigFromStorage() {
 }
 
 export function applySupabaseRuntimeConfig(config = {}) {
-  state.dataBackendMode = normalizeBackendMode(config.dataBackendMode);
+  state.dataBackendMode = BACKEND_SUPABASE; // モード選択廃止: 常にSupabase
   state.supabaseUrl = normalizeUrl(config.supabaseUrl);
   state.supabaseApiKey = resolveApiKey(config);
   state.supabaseConfigured = !!(state.supabaseUrl && state.supabaseApiKey);
@@ -220,7 +220,7 @@ export function applySupabaseRuntimeConfig(config = {}) {
 }
 
 export function isSupabaseSharedCoreEnabled() {
-  return state.dataBackendMode === BACKEND_SUPABASE && state.supabaseConfigured;
+  return state.supabaseConfigured; // モード選択廃止: URL+キー設定済みなら常に有効
 }
 
 export function createSupabaseClientId(prefix = 'id') {
@@ -228,29 +228,24 @@ export function createSupabaseClientId(prefix = 'id') {
 }
 
 export function renderSupabaseAdminState(message = '') {
-  const modeEl = document.getElementById('admin-supabase-mode');
   const urlEl = document.getElementById('admin-supabase-url');
   const keyEl = document.getElementById('admin-supabase-key');
   const statusEl = document.getElementById('admin-supabase-status');
   const hintEl = document.getElementById('admin-supabase-hint');
   const previewEl = document.getElementById('admin-supabase-key-preview');
 
-  if (modeEl && modeEl.value !== state.dataBackendMode) modeEl.value = state.dataBackendMode;
   if (urlEl && urlEl.value !== state.supabaseUrl) urlEl.value = state.supabaseUrl;
   if (keyEl && keyEl.value !== state.supabaseApiKey) keyEl.value = state.supabaseApiKey;
 
   if (statusEl) {
-    const modeLabel = state.dataBackendMode === BACKEND_SUPABASE ? 'Supabase' : 'Firebase';
-    statusEl.textContent = state.supabaseConfigured
-      ? `${modeLabel} 有効`
-      : `${modeLabel} 待機`;
+    statusEl.textContent = state.supabaseConfigured ? 'Supabase 有効' : 'Supabase 未設定';
     statusEl.classList.toggle('is-configured', state.supabaseConfigured);
   }
 
   if (hintEl) {
-    hintEl.textContent = message || (state.dataBackendMode === BACKEND_SUPABASE
-      ? '現在は「共有リンク / 公開カテゴリ / 公開カード」のみ Supabase に切り替えます。'
-      : 'いまは Firebase を使います。切り替えても対象は共有リンク系だけです。');
+    hintEl.textContent = message || (state.supabaseConfigured
+      ? 'Supabase に接続済みです。全データが Supabase を使用します。'
+      : 'URL と APIキーを入力して保存してください。');
   }
 
   if (previewEl) {
@@ -258,18 +253,17 @@ export function renderSupabaseAdminState(message = '') {
   }
 }
 
-export async function saveSupabaseRuntimeConfig({ mode, url, apiKey }) {
-  const nextMode = normalizeBackendMode(mode);
+export async function saveSupabaseRuntimeConfig({ url, apiKey }) {
   const nextUrl = normalizeUrl(url);
   const nextApiKey = normalizeApiKey(apiKey);
 
-  validateRuntimeConfig(nextMode, nextUrl, nextApiKey);
+  validateRuntimeConfig(BACKEND_SUPABASE, nextUrl, nextApiKey);
 
-  // localStorage に保存（Firebase依存を廃止）
-  saveSupabaseConfigToStorage(nextUrl, nextApiKey, nextMode);
+  // localStorage に保存
+  saveSupabaseConfigToStorage(nextUrl, nextApiKey, BACKEND_SUPABASE);
 
   return applySupabaseRuntimeConfig({
-    dataBackendMode: nextMode,
+    dataBackendMode: BACKEND_SUPABASE,
     supabaseUrl: nextUrl,
     supabasePublishableKey: nextApiKey,
   });
