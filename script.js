@@ -688,7 +688,7 @@ function savePreferencesToFirestore() {
 async function loadPersonalData(username, lockOnSwitch = false) {
   if (!username) return;
   try {
-    registerUserLogin(username);
+    await registerUserLogin(username);
     if (lockOnSwitch) {
       stopChatListeners();
       stopFtListener();
@@ -2790,6 +2790,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   updateClock();
   setInterval(updateClock, 1000);
+  const storedUsername = state.currentUsername;
+  if (storedUsername) {
+    state.currentUsername = null;
+  }
 
   // 常に編集モード
   document.body.classList.add('edit-mode');
@@ -2850,10 +2854,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     showUsernameModal(true);
   });
-  const storedUsername = state.currentUsername;
-  if (storedUsername) {
-    state.currentUsername = null;
-  }
   updateUsernameDisplay();
 
   document.getElementById('auth-invite-submit').addEventListener('click', async () => {

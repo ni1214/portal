@@ -561,6 +561,11 @@ export async function saveUsername(name) {
     }
   }
 
+  if (!state.currentUsername) {
+    submitText.textContent = 'Saving...';
+    await registerUserLogin(name);
+  }
+
   submitBtn.disabled = false;
   spinner.hidden = true;
   await applyUsername(name, {
@@ -731,8 +736,8 @@ export async function loginExistingUsername(name, options = {}) {
           } catch (_) {}
         }
         if (!userExists) {
-          localStorage.removeItem('portal-username');
-          restoreUsernameModalForRetry(normalized, true);
+          restoreUsernameModalForRetry(normalized, false);
+          showUsernameError('保存済みログインの復元に失敗しました。時間をおいてもう一度お試しください。');
           return false;
         }
       } else {
@@ -1290,7 +1295,7 @@ export function updateUsernameDisplay() {
 
 // Firestore の users_list にログイン記録（管理者が全員を把握できる）
 export async function registerUserLogin(username) {
-  if (!username) return;
+  if (!username) return false;
   try {
     if (isSupabaseSharedCoreEnabled()) {
       await registerUserLoginInSupabase(username);
