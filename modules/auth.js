@@ -13,6 +13,7 @@ import {
   saveLockPinToSupabase,
   fetchAllUserAccountsFromSupabase,
   deleteUserFromSupabase,
+  migrateUsernameInSupabase,
 } from './supabase.js';
 import { showToast, showConfirm } from './notify.js';
 
@@ -331,6 +332,10 @@ export async function clearInviteCode() {
  * - dm_rooms / chat_rooms の members 配列
  */
 export async function migrateToNewUsername(oldName, newName) {
+  if (isSupabaseSharedCoreEnabled()) {
+    return migrateUsernameInSupabase(oldName, newName);
+  }
+
   const batch = writeBatch(db);
 
   // 1. data サブドキュメントをコピー

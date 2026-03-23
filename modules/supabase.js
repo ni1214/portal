@@ -1794,6 +1794,119 @@ export async function removePublicAttendanceFromSupabase(ym, day, username) {
   });
 }
 
+// ===== ユーザーネーム変更（全データ移行） =====
+export async function migrateUsernameInSupabase(oldName, newName) {
+  // 1. 新しい user_accounts を作成
+  await requestSupabase('user_accounts', {
+    method: 'POST',
+    prefer: 'return=minimal,resolution=ignore-duplicates',
+    body: { username: newName, created_at: new Date().toISOString(), last_login: new Date().toISOString() },
+  });
+
+  // 2〜8. 各個人テーブルをコピー（username 差し替え）
+  const personalTables = [
+    'user_preferences',
+    'user_section_order',
+    'user_lock_pins',
+    'private_sections',
+    'private_cards',
+    'personal_todos',
+  ];
+  for (const table of personalTables) {
+    try {
+      const rows = await requestSupabase(
+        `${table}?username=eq.${encodeURIComponent(oldName)}&select=*`,
+        { diagKey: `migrate.${table}`, diagLabel: `migrate ${table}`, diagScope: table }
+      );
+      if (!Array.isArray(rows) || rows.length === 0) continue;
+      for (const row of rows) {
+        await requestSupabase(table, {
+          method: 'POST',
+          prefer: 'return=minimal,resolution=ignore-duplicates',
+          body: { ...row, username: newName },
+        });
+      }
+    } catch (e) {
+      console.warn(`migrate ${table} error:`, e);
+    }
+  }
+
+  // 9. attendance_entries をコピー（composite PK: username + entry_date）
+  try {
+    const rows = await requestSupabase(
+      `attendance_entries?username=eq.${encodeURIComponent(oldName)}&select=*`,
+      { diagKey: 'migrate.attendance', diagLabel: 'migrate attendance', diagScope: 'attendance_entries' }
+    );
+    if (Array.isArray(rows)) {
+      for (const row of rows) {
+        await requestSupabase('attendance_entries', {
+          method: 'POST',
+          prefer: 'return=minimal,resolution=ignore-duplicates',
+          body: { ...row, username: newName },
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('migrate attendance_entries error:', e);
+  }
+
+  // 10. 旧 user_accounts を削除（CASCADE で個人データも削除）
+  await requestSupabase(`user_accounts?username=eq.${encodeURIComponent(oldName)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+
+  // 11. assigned_tasks: assigned_to を更新
+  try {
+    await requestSupabase(`assigned_tasks?assigned_to=eq.${encodeURIComponent(oldName)}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: { assigned_to: newName },
+    });
+  } catch (e) { console.warn('migrate tasks assigned_to error:', e); }
+
+  // 12. assigned_tasks: assigned_by を更新
+  try {
+    await requestSupabase(`assigned_tasks?assigned_by=eq.${encodeURIComponent(oldName)}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: { assigned_by: newName },
+    });
+  } catch (e) { console.warn('migrate tasks assigned_by error:', e); }
+
+  // 13. assigned_tasks: shared_with 配列・shared_responses キーを更新
+  try {
+    const sharedTasks = await requestSupabase(
+      `assigned_tasks?shared_with=cs.${encodeURIComponent(`{${oldName}}`)}&select=id,shared_with,shared_responses`,
+      { diagKey: 'migrate.tasks.shared', diagLabel: 'migrate shared tasks', diagScope: 'assigned_tasks' }
+    );
+    if (Array.isArray(sharedTasks)) {
+      for (const task of sharedTasks) {
+        const newSharedWith = (task.shared_with || []).map(u => u === oldName ? newName : u);
+        const oldResponses = task.shared_responses || {};
+        const newResponses = {};
+        for (const [k, v] of Object.entries(oldResponses)) {
+          newResponses[k === oldName ? newName : k] = v;
+        }
+        await requestSupabase(`assigned_tasks?id=eq.${encodeURIComponent(task.id)}`, {
+          method: 'PATCH',
+          prefer: 'return=minimal',
+          body: { shared_with: newSharedWith, shared_responses: newResponses },
+        });
+      }
+    }
+  } catch (e) { console.warn('migrate tasks shared_with error:', e); }
+
+  // 14. cross_dept_requests: created_by を更新
+  try {
+    await requestSupabase(`cross_dept_requests?created_by=eq.${encodeURIComponent(oldName)}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: { created_by: newName },
+    });
+  } catch (e) { console.warn('migrate requests created_by error:', e); }
+}
+
 // ===== タスクコメント =====
 export async function fetchTaskCommentsFromSupabase(taskId) {
   const rows = await requestSupabase(
