@@ -1,7 +1,16 @@
 // ========== 認証・ユーザー管理・ロック画面 ==========
 import { db, doc, getDoc, setDoc, getDocs, deleteDoc, updateDoc, collection, query, where, writeBatch, serverTimestamp, onSnapshot } from './config.js';
 import { state } from './state.js';
-import { applySupabaseRuntimeConfig } from './supabase.js';
+import {
+  applySupabaseRuntimeConfig,
+  isSupabaseSharedCoreEnabled,
+  fetchPrivateSectionsFromSupabase,
+  fetchPrivateCardsFromSupabase,
+  createPrivateSectionInSupabase,
+  createPrivateCardInSupabase,
+  deletePrivateSectionInSupabase,
+  deletePrivateCardInSupabase,
+} from './supabase.js';
 
 // Cross-module function references (set by script.js after all modules load)
 export const deps = {};
@@ -257,22 +266,42 @@ export async function migrateToNewUsername(oldName, newName) {
   }
 
   // 2. private_sections をコピー
-  try {
-    const psSnap = await getDocs(collection(db, 'users', oldName, 'private_sections'));
-    psSnap.forEach(d => {
-      batch.set(doc(db, 'users', newName, 'private_sections', d.id), d.data());
-      batch.delete(doc(db, 'users', oldName, 'private_sections', d.id));
-    });
-  } catch (_) {}
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const sections = await fetchPrivateSectionsFromSupabase(oldName);
+      await Promise.all(sections.map(async s => {
+        await createPrivateSectionInSupabase(newName, s);
+        await deletePrivateSectionInSupabase(s.id);
+      }));
+    } catch (_) {}
+  } else {
+    try {
+      const psSnap = await getDocs(collection(db, 'users', oldName, 'private_sections'));
+      psSnap.forEach(d => {
+        batch.set(doc(db, 'users', newName, 'private_sections', d.id), d.data());
+        batch.delete(doc(db, 'users', oldName, 'private_sections', d.id));
+      });
+    } catch (_) {}
+  }
 
   // 3. private_cards をコピー
-  try {
-    const pcSnap = await getDocs(collection(db, 'users', oldName, 'private_cards'));
-    pcSnap.forEach(d => {
-      batch.set(doc(db, 'users', newName, 'private_cards', d.id), d.data());
-      batch.delete(doc(db, 'users', oldName, 'private_cards', d.id));
-    });
-  } catch (_) {}
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const cards = await fetchPrivateCardsFromSupabase(oldName);
+      await Promise.all(cards.map(async c => {
+        await createPrivateCardInSupabase(newName, c);
+        await deletePrivateCardInSupabase(c.id);
+      }));
+    } catch (_) {}
+  } else {
+    try {
+      const pcSnap = await getDocs(collection(db, 'users', oldName, 'private_cards'));
+      pcSnap.forEach(d => {
+        batch.set(doc(db, 'users', newName, 'private_cards', d.id), d.data());
+        batch.delete(doc(db, 'users', oldName, 'private_cards', d.id));
+      });
+    } catch (_) {}
+  }
 
   // 4. users_list を更新（旧削除 → 新作成）
   batch.delete(doc(db, 'users_list', oldName));
@@ -906,24 +935,38 @@ export async function deleteUserData(username) {
   await batch1.commit();
 
   // 2. private_sections
-  try {
-    const psSnap = await getDocs(collection(db, 'users', username, 'private_sections'));
-    if (!psSnap.empty) {
-      const b = writeBatch(db);
-      psSnap.forEach(d => b.delete(d.ref));
-      await b.commit();
-    }
-  } catch (_) {}
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const sections = await fetchPrivateSectionsFromSupabase(username);
+      await Promise.all(sections.map(s => deletePrivateSectionInSupabase(s.id)));
+    } catch (_) {}
+  } else {
+    try {
+      const psSnap = await getDocs(collection(db, 'users', username, 'private_sections'));
+      if (!psSnap.empty) {
+        const b = writeBatch(db);
+        psSnap.forEach(d => b.delete(d.ref));
+        await b.commit();
+      }
+    } catch (_) {}
+  }
 
   // 3. private_cards
-  try {
-    const pcSnap = await getDocs(collection(db, 'users', username, 'private_cards'));
-    if (!pcSnap.empty) {
-      const b = writeBatch(db);
-      pcSnap.forEach(d => b.delete(d.ref));
-      await b.commit();
-    }
-  } catch (_) {}
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const cards = await fetchPrivateCardsFromSupabase(username);
+      await Promise.all(cards.map(c => deletePrivateCardInSupabase(c.id)));
+    } catch (_) {}
+  } else {
+    try {
+      const pcSnap = await getDocs(collection(db, 'users', username, 'private_cards'));
+      if (!pcSnap.empty) {
+        const b = writeBatch(db);
+        pcSnap.forEach(d => b.delete(d.ref));
+        await b.commit();
+      }
+    } catch (_) {}
+  }
 
   // 4. email_profiles
   try {
