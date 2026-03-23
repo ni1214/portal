@@ -342,3 +342,490 @@ export async function deleteSharedCardInSupabase(id) {
     prefer: 'return=minimal',
   });
 }
+
+// ========== 個人データ（プライベートセクション・カード・TODO・設定）==========
+
+export function loadSupabaseConfigFromStorage() {
+  try {
+    const raw = localStorage.getItem('portal-supabase-config');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+// --- マッピング関数 ---
+
+function mapPrivateSectionRow(row = {}) {
+  return {
+    docId: String(row.id),
+    id: String(row.id),
+    label: row.label || '',
+    icon: row.icon || 'fa-solid fa-star',
+    colorIndex: Number.isFinite(row.color_index) ? row.color_index : 1,
+    order: Number.isFinite(row.order_index) ? row.order_index : 0,
+    isPrivate: true,
+  };
+}
+
+function mapPrivateCardRow(row = {}) {
+  return {
+    id: String(row.id),
+    label: row.label || '',
+    icon: row.icon || 'fa-solid fa-link',
+    url: row.url || '#',
+    sectionId: row.section_id || null,
+    parentId: row.parent_id || null,
+    order: Number.isFinite(row.order_index) ? row.order_index : 0,
+    isPrivate: true,
+  };
+}
+
+function mapTodoRow(row = {}) {
+  return {
+    id: String(row.id),
+    text: row.text || '',
+    done: !!row.done,
+    dueDate: row.due_date || null,
+  };
+}
+
+// --- プライベートセクション ---
+
+export async function fetchPrivateSectionsFromSupabase(username) {
+  const encoded = encodeURIComponent(buildFilterValue(username));
+  const rows = await requestSupabase(
+    `private_sections?username=eq.${encoded}&select=id,label,icon,color_index,order_index&order=order_index.asc`,
+    {
+      diagKey: 'supabase.private_sections',
+      diagLabel: 'Supabase マイセクション',
+      diagScope: `private_sections/${username}`,
+    }
+  );
+  return Array.isArray(rows) ? rows.map(mapPrivateSectionRow) : [];
+}
+
+export async function createPrivateSectionInSupabase(username, data) {
+  const rows = await requestSupabase('private_sections', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: {
+      username,
+      label: data.label || '',
+      icon: data.icon || 'fa-solid fa-star',
+      color_index: Number.isFinite(data.colorIndex) ? data.colorIndex : 1,
+      order_index: Number.isFinite(data.order) ? data.order : 0,
+    },
+  });
+  return Array.isArray(rows) && rows[0] ? String(rows[0].id) : null;
+}
+
+export async function updatePrivateSectionInSupabase(id, data) {
+  const payload = {};
+  if ('label' in data) payload.label = data.label || '';
+  if ('icon' in data) payload.icon = data.icon || 'fa-solid fa-star';
+  if ('colorIndex' in data) payload.color_index = Number.isFinite(data.colorIndex) ? data.colorIndex : 1;
+  if ('order' in data) payload.order_index = Number.isFinite(data.order) ? data.order : 0;
+  await requestSupabase(`private_sections?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+}
+
+export async function deletePrivateSectionInSupabase(id) {
+  await requestSupabase(`private_sections?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
+
+// --- プライベートカード ---
+
+export async function fetchPrivateCardsFromSupabase(username) {
+  const encoded = encodeURIComponent(buildFilterValue(username));
+  const rows = await requestSupabase(
+    `private_cards?username=eq.${encoded}&select=id,label,icon,url,section_id,parent_id,order_index&order=order_index.asc`,
+    {
+      diagKey: 'supabase.private_cards',
+      diagLabel: 'Supabase マイカード',
+      diagScope: `private_cards/${username}`,
+    }
+  );
+  return Array.isArray(rows) ? rows.map(mapPrivateCardRow) : [];
+}
+
+export async function createPrivateCardInSupabase(username, data) {
+  const rows = await requestSupabase('private_cards', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: {
+      username,
+      label: data.label || '',
+      icon: data.icon || 'fa-solid fa-link',
+      url: data.url || '#',
+      section_id: data.sectionId || null,
+      parent_id: data.parentId || null,
+      order_index: Number.isFinite(data.order) ? data.order : 0,
+    },
+  });
+  return Array.isArray(rows) && rows[0] ? String(rows[0].id) : null;
+}
+
+export async function updatePrivateCardInSupabase(id, data) {
+  const payload = {};
+  if ('label' in data) payload.label = data.label || '';
+  if ('icon' in data) payload.icon = data.icon || 'fa-solid fa-link';
+  if ('url' in data) payload.url = data.url || '#';
+  if ('sectionId' in data) payload.section_id = data.sectionId || null;
+  if ('parentId' in data) payload.parent_id = data.parentId || null;
+  if ('order' in data) payload.order_index = Number.isFinite(data.order) ? data.order : 0;
+  await requestSupabase(`private_cards?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+}
+
+export async function deletePrivateCardInSupabase(id) {
+  await requestSupabase(`private_cards?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
+
+// --- 個人TODO ---
+
+export async function fetchUserTodosFromSupabase(username) {
+  const encoded = encodeURIComponent(buildFilterValue(username));
+  const rows = await requestSupabase(
+    `user_todos?username=eq.${encoded}&select=id,text,done,due_date&order=created_at.asc`,
+    {
+      diagKey: 'supabase.user_todos',
+      diagLabel: 'Supabase 個人TODO',
+      diagScope: `user_todos/${username}`,
+    }
+  );
+  return Array.isArray(rows) ? rows.map(mapTodoRow) : [];
+}
+
+export async function createUserTodoInSupabase(username, data) {
+  const rows = await requestSupabase('user_todos', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: {
+      username,
+      text: data.text || '',
+      done: !!data.done,
+      due_date: data.dueDate || null,
+    },
+  });
+  return Array.isArray(rows) && rows[0] ? String(rows[0].id) : null;
+}
+
+export async function updateUserTodoInSupabase(id, data) {
+  const payload = {};
+  if ('text' in data) payload.text = data.text || '';
+  if ('done' in data) payload.done = !!data.done;
+  if ('dueDate' in data) payload.due_date = data.dueDate || null;
+  await requestSupabase(`user_todos?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+}
+
+export async function deleteUserTodoInSupabase(id) {
+  await requestSupabase(`user_todos?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
+
+// ===== portal_config（管理設定） =====
+
+const PORTAL_CONFIG_SELECT = 'pin_hash,gemini_api_key,departments,suggestion_box_viewers,mission_text,gas_order_url,order_seed_version';
+
+export async function fetchPortalConfigFromSupabase() {
+  const rows = await requestSupabase(
+    `portal_config?id=eq.1&select=${encodeURIComponent(PORTAL_CONFIG_SELECT)}`,
+    { diagKey: 'supabase.portal_config', diagLabel: 'Supabase 管理設定', diagScope: 'portal_config' }
+  );
+  if (!Array.isArray(rows) || !rows.length) return {};
+  const r = rows[0];
+  return {
+    pinHash: r.pin_hash || null,
+    geminiApiKey: r.gemini_api_key || '',
+    departments: Array.isArray(r.departments) ? r.departments : [],
+    suggestionBoxViewers: Array.isArray(r.suggestion_box_viewers) ? r.suggestion_box_viewers : [],
+    missionText: r.mission_text || '',
+    gasOrderUrl: r.gas_order_url || '',
+    orderSeedVersion: typeof r.order_seed_version === 'number' ? r.order_seed_version : 0,
+  };
+}
+
+export async function savePortalConfigToSupabase(fields = {}) {
+  const body = {};
+  if ('pinHash' in fields)              body.pin_hash = fields.pinHash || null;
+  if ('geminiApiKey' in fields)         body.gemini_api_key = fields.geminiApiKey || '';
+  if ('departments' in fields)          body.departments = Array.isArray(fields.departments) ? fields.departments : [];
+  if ('suggestionBoxViewers' in fields) body.suggestion_box_viewers = Array.isArray(fields.suggestionBoxViewers) ? fields.suggestionBoxViewers : [];
+  if ('missionText' in fields)          body.mission_text = fields.missionText ?? '';
+  if ('gasOrderUrl' in fields)          body.gas_order_url = fields.gasOrderUrl || '';
+  if ('orderSeedVersion' in fields)     body.order_seed_version = Number(fields.orderSeedVersion) || 0;
+  if (Object.keys(body).length === 0) return;
+  await requestSupabase('portal_config?id=eq.1', {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body,
+  });
+}
+
+// --- 個人設定 ---
+
+function mapPreferencesRow(row = {}) {
+  const prefs = {};
+  if (row.theme != null) prefs.theme = row.theme;
+  if (row.font_size != null) prefs.fontSize = row.font_size;
+  if (row.fav_only != null) prefs.favOnly = !!row.fav_only;
+  if (Array.isArray(row.favorites)) prefs.favorites = row.favorites;
+  if (Array.isArray(row.collapsed_sections)) prefs.collapsedSections = row.collapsed_sections;
+  if (row.collapse_seeded != null) prefs.collapseSeeded = !!row.collapse_seeded;
+  if (Array.isArray(row.hidden_cards)) prefs.hiddenCards = row.hidden_cards;
+  if (row.mission_banner_hidden != null) prefs.missionBannerHidden = !!row.mission_banner_hidden;
+  if (row.last_viewed_suggestions_at != null) prefs.lastViewedSuggestionsAt = row.last_viewed_suggestions_at;
+  return prefs;
+}
+
+export async function fetchUserPreferencesFromSupabase(username) {
+  const encoded = encodeURIComponent(buildFilterValue(username));
+  const rows = await requestSupabase(
+    `user_preferences?username=eq.${encoded}&select=theme,font_size,fav_only,favorites,collapsed_sections,collapse_seeded,hidden_cards,mission_banner_hidden,last_viewed_suggestions_at&limit=1`,
+    {
+      diagKey: 'supabase.user_preferences',
+      diagLabel: 'Supabase 個人設定',
+      diagScope: `user_preferences/${username}`,
+    }
+  );
+  if (Array.isArray(rows) && rows[0]) return mapPreferencesRow(rows[0]);
+  return null;
+}
+
+export async function saveUserPreferencesToSupabase(username, prefs = {}) {
+  const payload = { username };
+  if ('theme' in prefs) payload.theme = prefs.theme;
+  if ('fontSize' in prefs) payload.font_size = prefs.fontSize;
+  if ('favOnly' in prefs) payload.fav_only = !!prefs.favOnly;
+  if ('favorites' in prefs) payload.favorites = prefs.favorites;
+  if ('collapsedSections' in prefs) payload.collapsed_sections = prefs.collapsedSections;
+  if ('collapseSeeded' in prefs) payload.collapse_seeded = !!prefs.collapseSeeded;
+  if ('hiddenCards' in prefs) payload.hidden_cards = prefs.hiddenCards;
+  if ('missionBannerHidden' in prefs) payload.mission_banner_hidden = !!prefs.missionBannerHidden;
+  if ('lastViewedSuggestionsAt' in prefs) payload.last_viewed_suggestions_at = prefs.lastViewedSuggestionsAt;
+  // Upsert: username が主キー（ON CONFLICT DO UPDATE）
+  await requestSupabase('user_preferences', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=minimal',
+    body: payload,
+  });
+}
+
+// ===== 鋼材発注（order_suppliers / order_items / orders）=====
+
+function isoToFirestoreTs(isoStr) {
+  if (!isoStr) return null;
+  const ms = Date.parse(isoStr);
+  return Number.isFinite(ms) ? { seconds: Math.floor(ms / 1000), nanoseconds: 0 } : null;
+}
+
+// ---- order_suppliers ----
+
+const SUPPLIER_SELECT = 'id,name,email,tel,address,active,created_at,updated_at';
+
+function mapSupplierRow(row = {}) {
+  return {
+    id:      row.id,
+    name:    row.name    || '',
+    email:   row.email   || '',
+    tel:     row.tel     || '',
+    address: row.address || '',
+    active:  row.active !== false,
+  };
+}
+
+export async function fetchOrderSuppliersFromSupabase() {
+  const rows = await requestSupabase(
+    `order_suppliers?active=eq.true&select=${encodeURIComponent(SUPPLIER_SELECT)}&order=name.asc`,
+    { diagKey: 'supabase.order_suppliers', diagLabel: 'Supabase 発注先', diagScope: 'order_suppliers' }
+  );
+  return Array.isArray(rows) ? rows.map(mapSupplierRow) : [];
+}
+
+export async function createOrderSupplierInSupabase(data) {
+  const id = data.id || createSupabaseClientId('sup');
+  await requestSupabase('order_suppliers', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: {
+      id,
+      name:    data.name    || '',
+      email:   data.email   || '',
+      tel:     data.tel     || '',
+      address: data.address || '',
+      active:  true,
+    },
+  });
+  return id;
+}
+
+export async function updateOrderSupplierInSupabase(id, data) {
+  const payload = {};
+  if ('name' in data)    payload.name    = data.name    || '';
+  if ('email' in data)   payload.email   = data.email   || '';
+  if ('tel' in data)     payload.tel     = data.tel     || '';
+  if ('address' in data) payload.address = data.address || '';
+  if ('active' in data)  payload.active  = !!data.active;
+  await requestSupabase(`order_suppliers?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+}
+
+// ---- order_items ----
+
+const ITEM_SELECT = 'id,supplier_id,item_category,name,spec,unit,default_qty,order_type,material_type,available_lengths,sort_order,active,created_at,updated_at';
+
+function mapItemRow(row = {}) {
+  return {
+    id:               row.id,
+    supplierId:       row.supplier_id || null,
+    itemCategory:     row.item_category || '',
+    name:             row.name   || '',
+    spec:             row.spec   || '',
+    unit:             row.unit   || '',
+    defaultQty:       Number.isFinite(row.default_qty) ? Number(row.default_qty) : 1,
+    orderType:        row.order_type    || 'both',
+    materialType:     row.material_type || 'steel',
+    availableLengths: Array.isArray(row.available_lengths) ? row.available_lengths : [],
+    sortOrder:        Number.isFinite(row.sort_order) ? row.sort_order : 0,
+    active:           row.active !== false,
+  };
+}
+
+export async function fetchOrderItemsFromSupabase() {
+  const rows = await requestSupabase(
+    `order_items?select=${encodeURIComponent(ITEM_SELECT)}&order=sort_order.asc,item_category.asc,spec.asc`,
+    { diagKey: 'supabase.order_items', diagLabel: 'Supabase 鋼材マスタ', diagScope: 'order_items' }
+  );
+  return Array.isArray(rows) ? rows.map(mapItemRow) : [];
+}
+
+export async function upsertOrderItemInSupabase(data) {
+  const id = data.id || createSupabaseClientId('item');
+  await requestSupabase('order_items', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=minimal',
+    body: {
+      id,
+      supplier_id:       data.supplierId     || null,
+      item_category:     data.itemCategory   || '',
+      name:              data.name           || '',
+      spec:              data.spec           || '',
+      unit:              data.unit           || '',
+      default_qty:       Number.isFinite(data.defaultQty) ? data.defaultQty : 1,
+      order_type:        data.orderType      || 'both',
+      material_type:     data.materialType   || 'steel',
+      available_lengths: Array.isArray(data.availableLengths) ? data.availableLengths : [],
+      sort_order:        Number.isFinite(data.sortOrder) ? data.sortOrder : 0,
+      active:            data.active !== false,
+    },
+  });
+  return id;
+}
+
+export async function deactivateOrderItemInSupabase(id) {
+  await requestSupabase(`order_items?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: { active: false },
+  });
+}
+
+// ---- orders ----
+
+const ORDER_SELECT = 'id,supplier_id,supplier_name,supplier_email,order_type,site_name,project_key,items,ordered_by,note,ordered_at,email_sent,email_sent_at,deleted_at,deleted_by,created_at,updated_at';
+
+function mapOrderRow(row = {}) {
+  return {
+    id:            row.id,
+    supplierId:    row.supplier_id    || null,
+    supplierName:  row.supplier_name  || '',
+    supplierEmail: row.supplier_email || '',
+    orderType:     row.order_type     || 'factory',
+    siteName:      row.site_name      || null,
+    projectKey:    row.project_key    || '',
+    items:         Array.isArray(row.items) ? row.items : [],
+    orderedBy:     row.ordered_by     || '',
+    note:          row.note           || '',
+    orderedAt:     isoToFirestoreTs(row.ordered_at),
+    emailSent:     !!row.email_sent,
+    emailSentAt:   row.email_sent_at  ? isoToFirestoreTs(row.email_sent_at) : null,
+    deletedAt:     row.deleted_at     ? isoToFirestoreTs(row.deleted_at) : null,
+    deletedBy:     row.deleted_by     || null,
+    createdAt:     isoToFirestoreTs(row.created_at),
+    updatedAt:     isoToFirestoreTs(row.updated_at),
+  };
+}
+
+export async function fetchOrdersFromSupabase(username, { includeDeleted = false } = {}) {
+  const parts = [];
+  if (username) parts.push(`ordered_by=eq.${encodeURIComponent(username)}`);
+  if (!includeDeleted) parts.push('deleted_at=is.null');
+  const filterStr = parts.length ? parts.join('&') + '&' : '';
+  const rows = await requestSupabase(
+    `orders?${filterStr}select=${encodeURIComponent(ORDER_SELECT)}&order=ordered_at.desc`,
+    { diagKey: 'supabase.orders', diagLabel: 'Supabase 発注履歴', diagScope: 'orders' }
+  );
+  return Array.isArray(rows) ? rows.map(mapOrderRow) : [];
+}
+
+export async function createOrderInSupabase(data) {
+  const id = data.id || createSupabaseClientId('order');
+  const now = new Date().toISOString();
+  await requestSupabase('orders', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: {
+      id,
+      supplier_id:    data.supplierId    || null,
+      supplier_name:  data.supplierName  || '',
+      supplier_email: data.supplierEmail || '',
+      order_type:     data.orderType     || 'factory',
+      site_name:      data.siteName      || null,
+      project_key:    data.projectKey    || '',
+      items:          Array.isArray(data.items) ? data.items : [],
+      ordered_by:     data.orderedBy     || '',
+      note:           data.note          || '',
+      ordered_at:     data.orderedAt     || now,
+      email_sent:     !!data.emailSent,
+      email_sent_at:  data.emailSentAt   || null,
+    },
+  });
+  return id;
+}
+
+export async function updateOrderInSupabase(id, data) {
+  const payload = {};
+  if ('emailSent' in data)    payload.email_sent     = !!data.emailSent;
+  if ('emailSentAt' in data)  payload.email_sent_at  = data.emailSentAt || null;
+  if ('deletedAt' in data)    payload.deleted_at     = data.deletedAt || null;
+  if ('deletedBy' in data)    payload.deleted_by     = data.deletedBy || null;
+  if ('note' in data)         payload.note           = data.note || '';
+  await requestSupabase(`orders?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+}
