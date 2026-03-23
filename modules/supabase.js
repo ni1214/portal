@@ -74,6 +74,13 @@ function encodeInFilter(ids = []) {
   return `(${ids.map(buildFilterValue).join(',')})`;
 }
 
+function encodeArrayContainsFilter(values = []) {
+  const items = (values || [])
+    .filter(value => value != null && `${value}` !== '')
+    .map(value => `"${`${value}`.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`);
+  return encodeURIComponent(`{${items.join(',')}}`);
+}
+
 function summarizeError(text = '') {
   const compact = `${text || ''}`.replace(/\s+/g, ' ').trim();
   return compact.length > 180 ? `${compact.slice(0, 177)}...` : compact;
@@ -1107,7 +1114,7 @@ export async function fetchSentTasksFromSupabase(username) {
 }
 
 export async function fetchSharedTasksFromSupabase(username) {
-  const encoded = encodeURIComponent(JSON.stringify([username]));
+  const encoded = encodeArrayContainsFilter([username]);
   const rows = await requestSupabase(
     `assigned_tasks?shared_with=cs.${encoded}&status=in.(pending,accepted,done)&order=created_at.desc&limit=100`,
     { diagKey: 'task.shared', diagLabel: '共有されたタスク', diagScope: username }
@@ -1120,7 +1127,7 @@ export async function fetchTaskHistoryFromSupabase(tab, username) {
   if (tab === 'received') filter = `assigned_to=eq.${encodeURIComponent(username)}&status=in.(done,cancelled)`;
   else if (tab === 'sent')   filter = `assigned_by=eq.${encodeURIComponent(username)}&status=in.(done,cancelled)`;
   else {
-    const encoded = encodeURIComponent(JSON.stringify([username]));
+    const encoded = encodeArrayContainsFilter([username]);
     filter = `shared_with=cs.${encoded}&status=in.(done,cancelled)`;
   }
   const rows = await requestSupabase(
@@ -1250,7 +1257,7 @@ function mapChatRoomRow(row = {}) {
 }
 
 export async function fetchChatRoomsFromSupabase(username, type = null) {
-  const encoded = encodeURIComponent(JSON.stringify([username]));
+  const encoded = encodeArrayContainsFilter([username]);
   let path = `chat_rooms?members=cs.${encoded}&order=last_at.desc.nullslast&limit=100`;
   if (type) path += `&type=eq.${encodeURIComponent(type)}`;
   const rows = await requestSupabase(path, {
@@ -1496,7 +1503,7 @@ export async function cleanupOldAttendanceInSupabase(username, cutoffDate) {
 }
 
 export async function fetchAttendanceByProjectKeyFromSupabase(projectKey) {
-  const encoded = encodeURIComponent(JSON.stringify([projectKey]));
+  const encoded = encodeArrayContainsFilter([projectKey]);
   const rows = await requestSupabase(
     `attendance_entries?project_keys=cs.${encoded}&select=*&order=entry_date.desc&limit=500`
   );

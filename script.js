@@ -3072,8 +3072,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // カテゴリ修復ボタン（Supabase 上のカテゴリラベルが文字化けしている場合に修復）
-  document.getElementById('admin-repair-categories-btn').addEventListener('click', async () => {
-    const btn = document.getElementById('admin-repair-categories-btn');
+  const repairCategoriesBtn = document.getElementById('admin-repair-categories-btn');
+  repairCategoriesBtn?.addEventListener('click', async () => {
+    const btn = repairCategoriesBtn;
     const errEl = document.getElementById('admin-supabase-error');
     errEl.hidden = true;
     if (!isSupabaseSharedCoreEnabled()) {
