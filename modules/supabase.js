@@ -982,6 +982,14 @@ function mapCdrRow(row = {}) {
 }
 
 /** 自分の部署宛て・アクティブな依頼 */
+export async function fetchRequestsByProjectKeyFromSupabase(projectKey) {
+  const rows = await requestSupabase(
+    `cross_dept_requests?project_key=eq.${encodeURIComponent(projectKey)}&select=${encodeURIComponent(CDR_SELECT)}&order=updated_at.desc`,
+    { diagKey: 'supabase.cdr.byProjectKey', diagLabel: 'Supabase 依頼(物件)', diagScope: 'cross_dept_requests' }
+  );
+  return Array.isArray(rows) ? rows.map(mapCdrRow) : [];
+}
+
 export async function fetchReceivedRequestsFromSupabase(myDept) {
   if (!myDept) return [];
   const rows = await requestSupabase(
@@ -1106,6 +1114,14 @@ function mapTaskRow(row = {}) {
 }
 
 const ACTIVE_TASK_STATUSES_SB = ['pending', 'accepted'];
+
+export async function fetchTasksByProjectKeyFromSupabase(projectKey) {
+  const rows = await requestSupabase(
+    `assigned_tasks?project_key=eq.${encodeURIComponent(projectKey)}&select=${encodeURIComponent(TASK_SELECT)}&order=created_at.desc`,
+    { diagKey: 'supabase.tasks.byProjectKey', diagLabel: 'Supabase タスク(物件)', diagScope: 'assigned_tasks' }
+  );
+  return Array.isArray(rows) ? rows.map(mapTaskRow) : [];
+}
 
 export async function fetchReceivedTasksFromSupabase(username) {
   if (!username) return [];
@@ -1327,6 +1343,16 @@ export async function fetchAttendanceEntriesFromSupabase(username, yearMonths) {
   return map;
 }
 
+/** 物件コードで個人勤怠を検索（property-summary用） */
+export async function fetchAttendanceByProjectKeyFromSupabase(username, projectKey) {
+  if (!username || !projectKey) return [];
+  const rows = await requestSupabase(
+    `attendance_entries?username=eq.${encodeURIComponent(username)}&project_keys=cs.${encodeURIComponent(`{${projectKey}}`)}&select=${encodeURIComponent(ENTRY_SELECT)}&order=entry_date.desc`,
+    { diagKey: 'supabase.attendance.byProjectKey', diagLabel: 'Supabase 勤怠(物件)', diagScope: 'attendance_entries' }
+  );
+  return Array.isArray(rows) ? rows.map(r => mapEntryRow(r)) : [];
+}
+
 /** 個人勤怠を upsert（on conflict (username, entry_date) → update） */
 export async function upsertAttendanceEntryInSupabase(username, dateStr, data) {
   if (!username || !dateStr) return;
@@ -1513,6 +1539,14 @@ export async function fetchOrdersFromSupabase(username) {
   const rows = await requestSupabase(
     `orders?${filter}deleted_at=is.null&select=${encodeURIComponent(ORDER_SELECT)}&order=ordered_at.desc`,
     { diagKey: 'supabase.orders', diagLabel: 'Supabase 発注履歴', diagScope: 'orders' }
+  );
+  return Array.isArray(rows) ? rows.map(mapOrderRow) : [];
+}
+
+export async function fetchOrdersByProjectKeyFromSupabase(projectKey) {
+  const rows = await requestSupabase(
+    `orders?project_key=eq.${encodeURIComponent(projectKey)}&deleted_at=is.null&select=${encodeURIComponent(ORDER_SELECT)}&order=ordered_at.desc`,
+    { diagKey: 'supabase.orders.byProjectKey', diagLabel: 'Supabase 発注(物件)', diagScope: 'orders' }
   );
   return Array.isArray(rows) ? rows.map(mapOrderRow) : [];
 }
