@@ -1,7 +1,6 @@
 import { state } from './state.js';
 import { recordTransferFetch } from './read-diagnostics.js';
 
-const BACKEND_FIREBASE = 'firebase';
 const BACKEND_SUPABASE = 'supabase';
 const SUPABASE_STORAGE_KEY = 'portal-supabase-v2';
 
@@ -13,7 +12,7 @@ const CATEGORY_SELECT = 'id,label,icon,color_index,order_index,is_external';
 const CARD_SELECT = 'id,label,icon,url,category_id,parent_id,order_index,category_order,is_external_tool';
 
 function normalizeBackendMode(value) {
-  return value === BACKEND_SUPABASE ? BACKEND_SUPABASE : BACKEND_FIREBASE;
+  return BACKEND_SUPABASE;
 }
 
 function normalizeUrl(value) {

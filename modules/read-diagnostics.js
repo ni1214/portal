@@ -244,7 +244,7 @@ function buildSummaryHtml(diag) {
     <div class="rd-overview-callout">
       <div class="rd-overview-callout-title">この診断で見ているもの</div>
       <div class="rd-overview-callout-body">
-        Supabase や Firebase の請求値そのものではなく、取得したデータを JSON 化したときの推定転送量です。
+        Supabase の請求値そのものではなく、取得したデータを JSON 化したときの推定転送量です。
         どの画面が重いか、ホーム初期表示がどのくらい太いか、30人運用でどこが危なそうかを見つけるための診断です。
       </div>
     </div>

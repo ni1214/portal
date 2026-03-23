@@ -2074,11 +2074,15 @@ async function reorderCards(srcId, targetId) {
   catCards.splice(srcIdx, 1);
   catCards.splice(tgtIdx, 0, src);
 
-  const batch = writeBatch(db);
-  catCards.forEach((c, i) => {
-    batch.update(doc(db, 'cards', c.id), { order: i, updatedAt: serverTimestamp() });
-  });
-  await batch.commit();
+  if (isSupabaseSharedCoreEnabled()) {
+    await Promise.all(catCards.map((c, i) => updateSharedCardInSupabase(c.id, { order: i })));
+  } else {
+    const batch = writeBatch(db);
+    catCards.forEach((c, i) => {
+      batch.update(doc(db, 'cards', c.id), { order: i, updatedAt: serverTimestamp() });
+    });
+    await batch.commit();
+  }
   const reordered = catCards.map((c, i) => ({ ...c, order: i }));
   const otherCards = state.allCards.filter(c => c.category !== src.category);
   state.allCards = sortCards([...otherCards, ...reordered]);

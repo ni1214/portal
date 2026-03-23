@@ -95,35 +95,7 @@ export async function loadInviteCodeConfig() {
       return {};
     }
   }
-
-  // Supabase接続済みならportal_configをSupabaseから読む
-  if (isSupabaseSharedCoreEnabled()) {
-    try {
-      const data = await fetchPortalConfigFromSupabase();
-      state.inviteCodeHash = data.inviteCodeHash || null;
-      state.inviteCodePlain = data.inviteCodePlain || '';
-      state.inviteCodeRequired = !!state.inviteCodeHash;
-      state.adminInviteConfigured = state.inviteCodeRequired;
-      updateInviteAdminState();
-      return data;
-    } catch (err) {
-      console.error('Supabase portal_config読み込みエラー:', err);
-    }
-  }
-  // フォールバック: Firebase（移行期間中のみ）
-  try {
-    const snap = await getDoc(doc(db, 'portal', 'config'));
-    const data = snap.exists() ? snap.data() : {};
-    state.inviteCodeHash = data.inviteCodeHash || null;
-    state.inviteCodePlain = data.inviteCodePlain || '';
-    state.inviteCodeRequired = !!state.inviteCodeHash;
-    state.adminInviteConfigured = state.inviteCodeRequired;
-    updateInviteAdminState();
-    return data;
-  } catch (err) {
-    console.error('Firebase portal/config読み込みエラー:', err);
-    return {};
-  }
+  return {};
 }
 
 function hasTrustedInviteAccess() {
@@ -754,13 +726,7 @@ export async function loginExistingUsername(name, options = {}) {
   try {
     let userExists = false;
     if (isSupabaseSharedCoreEnabled()) {
-      try {
-        userExists = await checkUserExistsInSupabase(normalized);
-      } catch (err) {
-        console.warn('Supabase user_accounts 確認失敗、Firestore fallback:', err);
-        const userSnap = await getDoc(doc(db, 'users_list', normalized));
-        userExists = userSnap.exists();
-      }
+      userExists = await checkUserExistsInSupabase(normalized);
     } else {
       const userSnap = await getDoc(doc(db, 'users_list', normalized));
       userExists = userSnap.exists();
@@ -862,15 +828,7 @@ export async function loadLockSettings(username, lockImmediately = false) {
           state.autoLockMinutes = row.autoLockMinutes ?? 5;
         }
       } catch (err) {
-        console.warn('Supabase lock_pin 読込失敗、Firestore fallback:', err);
-        const snap = await getDoc(doc(db, 'users', username, 'data', 'lock_pin'));
-        if (snap.exists()) {
-          const data = snap.data();
-          state.lockPinHash     = data.hash || null;
-          state.lockPinEnabled  = !!state.lockPinHash;
-          state.lockEnabled     = data.enabled ?? false;
-          state.autoLockMinutes = data.autoLockMinutes ?? 5;
-        }
+        console.warn('Supabase lock_pin 読込失敗:', err);
       }
     } else {
       const snap = await getDoc(doc(db, 'users', username, 'data', 'lock_pin'));

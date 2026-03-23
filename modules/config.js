@@ -1,32 +1,102 @@
-// ========== Firebase Imports ==========
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import {
-  getFirestore, collection, collectionGroup, doc, documentId,
-  getDocs, getDoc, setDoc, addDoc, deleteDoc, updateDoc,
-  query, where, orderBy, limit, writeBatch, serverTimestamp, onSnapshot,
-  arrayUnion, arrayRemove, deleteField
-} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+// ========== Supabase-only runtime compatibility layer ==========
+const FIREBASE_REMOVED_MESSAGE = 'Firebase runtime has been removed. Use Supabase helpers instead.';
 
-// ========== Firebase 設定 ==========
-const firebaseConfig = {
-  apiKey: "AIzaSyBDrBUN2elbCAdxfbnTFWQNWF4xhz9yaJ0",
-  authDomain: "kategu-sys-v15.firebaseapp.com",
-  projectId: "kategu-sys-v15",
-  storageBucket: "kategu-sys-v15.firebasestorage.app",
-  messagingSenderId: "992448511434",
-  appId: "1:992448511434:web:ef53560b55264f1e656333"
-};
+export const db = Object.freeze({ backend: 'supabase-only' });
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+function buildDescriptor(kind, args = []) {
+  return Object.freeze({ __disabledBackend: 'firebase', kind, args });
+}
 
-// Re-export Firestore functions for use by all modules
-export {
-  collection, collectionGroup, doc, documentId,
-  getDocs, getDoc, setDoc, addDoc, deleteDoc, updateDoc,
-  query, where, orderBy, limit, writeBatch, serverTimestamp, onSnapshot,
-  arrayUnion, arrayRemove, deleteField
-};
+function throwFirebaseRemoved(methodName) {
+  throw new Error(`${methodName}: ${FIREBASE_REMOVED_MESSAGE}`);
+}
+
+export function collection(...args) {
+  return buildDescriptor('collection', args);
+}
+
+export function collectionGroup(...args) {
+  return buildDescriptor('collectionGroup', args);
+}
+
+export function doc(...args) {
+  return buildDescriptor('doc', args);
+}
+
+export function documentId() {
+  return '__document_id__';
+}
+
+export function query(...args) {
+  return buildDescriptor('query', args);
+}
+
+export function where(...args) {
+  return buildDescriptor('where', args);
+}
+
+export function orderBy(...args) {
+  return buildDescriptor('orderBy', args);
+}
+
+export function limit(...args) {
+  return buildDescriptor('limit', args);
+}
+
+export async function getDocs() {
+  throwFirebaseRemoved('getDocs');
+}
+
+export async function getDoc() {
+  throwFirebaseRemoved('getDoc');
+}
+
+export async function setDoc() {
+  throwFirebaseRemoved('setDoc');
+}
+
+export async function addDoc() {
+  throwFirebaseRemoved('addDoc');
+}
+
+export async function deleteDoc() {
+  throwFirebaseRemoved('deleteDoc');
+}
+
+export async function updateDoc() {
+  throwFirebaseRemoved('updateDoc');
+}
+
+export function writeBatch() {
+  return {
+    set() {},
+    update() {},
+    delete() {},
+    async commit() {
+      throwFirebaseRemoved('writeBatch.commit');
+    },
+  };
+}
+
+export function serverTimestamp() {
+  return { _methodName: 'serverTimestamp' };
+}
+
+export function onSnapshot() {
+  throwFirebaseRemoved('onSnapshot');
+}
+
+export function arrayUnion(...values) {
+  return { _methodName: 'arrayUnion', _elements: values };
+}
+
+export function arrayRemove(...values) {
+  return { _methodName: 'arrayRemove', _elements: values };
+}
+
+export function deleteField() {
+  return { _methodName: 'deleteField' };
+}
 
 // ========== 天気設定 ==========
 export const WEATHER_API_KEY = '4131c5bca956c19b2b60b014b4045c12';

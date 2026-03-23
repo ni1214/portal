@@ -1005,7 +1005,7 @@
           <ul class="guide-list">
             <li>ユーザーネームを設定すると、各セクションヘッダー左端に<strong>「≡」ハンドル</strong>が表示されます。</li>
             <li>このハンドルをドラッグすると<strong>セクションの表示順を自分だけ変更</strong>できます。</li>
-            <li>並び順はFirestoreに保存されるため、リロードしても維持されます。</li>
+                <li>並び順はSupabaseに保存されるため、リロードしても維持されます。</li>
           </ul>
         </div>
 
@@ -1016,7 +1016,7 @@
             <li>マイカテゴリは<strong>自分だけに表示</strong>され、他のユーザーには一切見えません。</li>
             <li>マイカテゴリ内のカードは<strong>右クリックで編集・削除</strong>できます。</li>
             <li>セクション名横の<strong>鉛筆ボタン</strong>でセクション自体を編集・削除できます。</li>
-            <li>データはFirestoreに保存されるため、<strong>リロードしても消えません</strong>。</li>
+                <li>データはSupabaseに保存されるため、<strong>リロードしても消えません</strong>。</li>
           </ul>
         </div>
 
@@ -1049,7 +1049,7 @@
             <li>共有カレンダーで設定した会社休日・計画付与は、個人カレンダーの日詳細と勤務内容表/勤務内容集計表に同期表示されます。</li>
             <li><strong>勤務内容集計表</strong>では全ユーザーの入力結果を現場別・人別に集計し、工数（時間）を確認できます。読み取りを抑えるため、必要な時だけ「集計する」を押して読み込みます。</li>
             <li><strong>勤務内容集計表</strong>は集計後にCSV出力と印刷を利用できます。</li>
-            <li><strong>登録現場</strong>タブで現場コード・現場名を追加/編集/削除できます（Firestoreに保存）。</li>
+                <li><strong>登録現場</strong>タブで現場コード・現場名を追加/編集/削除できます（Supabaseに保存）。</li>
             <li>登録現場タブの<strong>「Excel解析して取込」</strong>で、現場マスタを一括登録できます（重複コードは名称を自動統合）。</li>
             <li>部門間依頼・タスク・鋼材発注・個人カレンダーでは<strong>物件No（現場コード）</strong>を入れておくと、後から物件ごとに追いやすくなります。部門間依頼とタスクは各一覧の上部から物件Noで絞り込みもできます。</li>
           </ul>
@@ -2389,7 +2389,7 @@
         <button class="modal-close" id="rd-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="rd-note">
-        Supabase や Firebase の請求値そのものではなく、取得データを JSON 化したときの推定転送量ベースの概算です。どこが重いか、5GB/月に対してどのくらいか、30人利用だとどう見えるかを判断するための画面です。
+          Supabase の請求値そのものではなく、取得データを JSON 化したときの推定転送量ベースの概算です。どこが重いか、5GB/月に対してどのくらいか、30人利用だとどう見えるかを判断するための画面です。
       </div>
       <div id="rd-summary"></div>
       <div class="rd-section">
@@ -2408,7 +2408,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <!-- Script (type="module" for Firebase ESM) -->
+  <!-- Script (type="module") -->
   <script type="module" src="script.js"></script>
 </body>
 
