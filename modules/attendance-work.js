@@ -19,6 +19,9 @@ import {
   createAttendanceSiteInSupabase,
   updateAttendanceSiteInSupabase,
   deleteAttendanceSiteInSupabase,
+  fetchAllUserAccountsFromSupabase,
+  fetchMultipleMonthsAttendanceSummaryFromSupabase,
+  cleanupOldAttendanceInSupabase,
 } from './supabase.js';
 
 let deps = {};
@@ -584,6 +587,12 @@ async function cleanupOldAttendanceForCurrentUser() {
   if (!state.currentUsername) return { deleted: 0 };
 
   const cutoffDateStr = getAttendanceCleanupCutoffDateStr();
+
+  if (isSupabaseSharedCoreEnabled()) {
+    const deleted = await cleanupOldAttendanceInSupabase(state.currentUsername, cutoffDateStr);
+    return { deleted, cutoffDateStr };
+  }
+
   const cutoffYm = cutoffDateStr.slice(0, 7);
   const attendanceCol = collection(db, 'users', state.currentUsername, 'attendance');
 
@@ -830,45 +839,49 @@ async function renderWorkSummaryLegacy() {
   container.innerHTML = '<div class="calw-loading">勤務内容を集計中...</div>';
 
   try {
-    const usersSnap = await getDocs(collection(db, 'users_list'));
-    recordGetDocsRead('calw.summary-users', '勤務内容表ユーザー一覧', 'users_list', usersSnap.size, usersSnap.docs);
-    const users = usersSnap.docs.map(d => d.id).filter(Boolean);
+    let users, attendanceRows;
     const yms = getPeriodYearMonths(period);
 
-    let attendanceRows = [];
-    try {
-      const attSnap = await getDocs(
-        query(
-          collectionGroup(db, 'attendance'),
-          where('yearMonth', 'in', yms)
-        )
-      );
-      recordGetDocsRead('calw.summary-attendance', '勤務内容表集計', yms.join(','), attSnap.size, attSnap.docs);
-      attendanceRows = attSnap.docs
-        .map(d => ({
-          username: d.ref.parent?.parent?.id || '',
-          dateStr: d.id,
-          data: d.data(),
-        }))
-        .filter(row => (
-          !!row.username &&
-          row.dateStr >= period.startStr &&
-          row.dateStr <= period.endStr
-        ));
-    } catch (err) {
-      console.warn('勤務内容集計: collectionGroup取得失敗。ユーザー別取得へフォールバックします。', err);
-      const userEntries = await Promise.all(
-        users.map(async username => {
-          const map = await loadUserPeriodAttendance(username, period);
-          return { username, map };
-        })
-      );
+    if (isSupabaseSharedCoreEnabled()) {
+      const [accounts, entries] = await Promise.all([
+        fetchAllUserAccountsFromSupabase(),
+        fetchMultipleMonthsAttendanceSummaryFromSupabase(yms),
+      ]);
+      users = accounts.map(a => a.username).filter(Boolean);
+      attendanceRows = entries
+        .filter(e => e.dateStr >= period.startStr && e.dateStr <= period.endStr)
+        .map(e => ({ username: e.username, dateStr: e.dateStr, data: e }));
+    } else {
+      const usersSnap = await getDocs(collection(db, 'users_list'));
+      recordGetDocsRead('calw.summary-users', '勤務内容表ユーザー一覧', 'users_list', usersSnap.size, usersSnap.docs);
+      users = usersSnap.docs.map(d => d.id).filter(Boolean);
       attendanceRows = [];
-      userEntries.forEach(({ username, map }) => {
-        Object.entries(map).forEach(([dateStr, data]) => {
-          attendanceRows.push({ username, dateStr, data });
+      try {
+        const attSnap = await getDocs(
+          query(collectionGroup(db, 'attendance'), where('yearMonth', 'in', yms))
+        );
+        recordGetDocsRead('calw.summary-attendance', '勤務内容表集計', yms.join(','), attSnap.size, attSnap.docs);
+        attendanceRows = attSnap.docs
+          .map(d => ({
+            username: d.ref.parent?.parent?.id || '',
+            dateStr: d.id,
+            data: d.data(),
+          }))
+          .filter(row => !!row.username && row.dateStr >= period.startStr && row.dateStr <= period.endStr);
+      } catch (err) {
+        console.warn('勤務内容集計: collectionGroup取得失敗。ユーザー別取得へフォールバックします。', err);
+        const userEntries = await Promise.all(
+          users.map(async username => {
+            const map = await loadUserPeriodAttendance(username, period);
+            return { username, map };
+          })
+        );
+        userEntries.forEach(({ username, map }) => {
+          Object.entries(map).forEach(([dateStr, data]) => {
+            attendanceRows.push({ username, dateStr, data });
+          });
         });
-      });
+      }
     }
 
     // users_list にないユーザーが混ざっていても表に出せるようにする
@@ -1119,45 +1132,49 @@ async function renderWorkSummary(force = false) {
   renderWorkSummaryPrompt(period);
 
   try {
-    const usersSnap = await getDocs(collection(db, 'users_list'));
-    recordGetDocsRead('calw.summary-users', '勤務内容表ユーザー一覧', 'users_list', usersSnap.size, usersSnap.docs);
-    const users = usersSnap.docs.map(d => d.id).filter(Boolean);
+    let users, attendanceRows;
     const yms = getPeriodYearMonths(period);
 
-    let attendanceRows = [];
-    try {
-      const attSnap = await getDocs(
-        query(
-          collectionGroup(db, 'attendance'),
-          where('yearMonth', 'in', yms)
-        )
-      );
-      recordGetDocsRead('calw.summary-attendance', '勤務内容表集計', yms.join(','), attSnap.size, attSnap.docs);
-      attendanceRows = attSnap.docs
-        .map(d => ({
-          username: d.ref.parent?.parent?.id || '',
-          dateStr: d.id,
-          data: d.data(),
-        }))
-        .filter(row => (
-          !!row.username &&
-          row.dateStr >= period.startStr &&
-          row.dateStr <= period.endStr
-        ));
-    } catch (err) {
-      console.warn('勤務内容集計の collectionGroup 取得に失敗したため、ユーザー別取得へフォールバックします。', err);
-      const userEntries = await Promise.all(
-        users.map(async username => {
-          const map = await loadUserPeriodAttendance(username, period);
-          return { username, map };
-        })
-      );
+    if (isSupabaseSharedCoreEnabled()) {
+      const [accounts, entries] = await Promise.all([
+        fetchAllUserAccountsFromSupabase(),
+        fetchMultipleMonthsAttendanceSummaryFromSupabase(yms),
+      ]);
+      users = accounts.map(a => a.username).filter(Boolean);
+      attendanceRows = entries
+        .filter(e => e.dateStr >= period.startStr && e.dateStr <= period.endStr)
+        .map(e => ({ username: e.username, dateStr: e.dateStr, data: e }));
+    } else {
+      const usersSnap = await getDocs(collection(db, 'users_list'));
+      recordGetDocsRead('calw.summary-users', '勤務内容表ユーザー一覧', 'users_list', usersSnap.size, usersSnap.docs);
+      users = usersSnap.docs.map(d => d.id).filter(Boolean);
       attendanceRows = [];
-      userEntries.forEach(({ username, map }) => {
-        Object.entries(map).forEach(([dateStr, data]) => {
-          attendanceRows.push({ username, dateStr, data });
+      try {
+        const attSnap = await getDocs(
+          query(collectionGroup(db, 'attendance'), where('yearMonth', 'in', yms))
+        );
+        recordGetDocsRead('calw.summary-attendance', '勤務内容表集計', yms.join(','), attSnap.size, attSnap.docs);
+        attendanceRows = attSnap.docs
+          .map(d => ({
+            username: d.ref.parent?.parent?.id || '',
+            dateStr: d.id,
+            data: d.data(),
+          }))
+          .filter(row => !!row.username && row.dateStr >= period.startStr && row.dateStr <= period.endStr);
+      } catch (err) {
+        console.warn('勤務内容集計の collectionGroup 取得に失敗したため、ユーザー別取得へフォールバックします。', err);
+        const userEntries = await Promise.all(
+          users.map(async username => {
+            const map = await loadUserPeriodAttendance(username, period);
+            return { username, map };
+          })
+        );
+        userEntries.forEach(({ username, map }) => {
+          Object.entries(map).forEach(([dateStr, data]) => {
+            attendanceRows.push({ username, dateStr, data });
+          });
         });
-      });
+      }
     }
 
     const userSet = new Set(users);

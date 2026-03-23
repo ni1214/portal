@@ -1391,6 +1391,33 @@ export async function fetchMonthlyAttendanceSummaryFromSupabase(yearMonth) {
   return Array.isArray(rows) ? rows.map(r => ({ ...mapEntryRow(r), username: r.username })) : [];
 }
 
+/** 全ユーザーの複数月勤怠一括取得（集計表用） */
+export async function fetchMultipleMonthsAttendanceSummaryFromSupabase(yearMonths) {
+  if (!Array.isArray(yearMonths) || yearMonths.length === 0) return [];
+  const ymList = yearMonths.map(ym => encodeURIComponent(ym)).join(',');
+  const rows = await requestSupabase(
+    `attendance_entries?year_month=in.(${ymList})&select=${encodeURIComponent(ENTRY_SELECT)}&order=username.asc,entry_date.asc`,
+    { diagKey: 'supabase.attendance_multi_summary', diagLabel: 'Supabase 複数月勤怠集計', diagScope: 'attendance_entries' }
+  );
+  return Array.isArray(rows) ? rows.map(r => ({ ...mapEntryRow(r), username: r.username })) : [];
+}
+
+/** 古い個人勤怠を一括削除（cutoffDateStr より前のレコード）*/
+export async function cleanupOldAttendanceInSupabase(username, cutoffDateStr) {
+  if (!username || !cutoffDateStr) return 0;
+  const rows = await requestSupabase(
+    `attendance_entries?username=eq.${encodeURIComponent(username)}&entry_date=lt.${encodeURIComponent(cutoffDateStr)}&select=entry_date`,
+    { diagKey: 'supabase.attendance_cleanup_count', diagLabel: 'Supabase 古い勤怠件数確認', diagScope: 'attendance_entries' }
+  );
+  const count = Array.isArray(rows) ? rows.length : 0;
+  if (count === 0) return 0;
+  await requestSupabase(
+    `attendance_entries?username=eq.${encodeURIComponent(username)}&entry_date=lt.${encodeURIComponent(cutoffDateStr)}`,
+    { method: 'DELETE', prefer: 'return=minimal' }
+  );
+  return count;
+}
+
 // ---- order_suppliers ----
 
 const SUPPLIER_SELECT = 'id,name,email,tel,address,active,created_at,updated_at';
