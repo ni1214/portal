@@ -76,24 +76,18 @@ function syncUserEmailProfile(raw = {}) {
 export async function loadUserEmailProfile(username = state.currentUsername) {
   syncUserEmailProfile();
   if (!username) return state.userEmailProfile;
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const row = await fetchUserProfileFromSupabase(username);
+      if (row) syncUserEmailProfile(row);
+    } catch (_) {}
 
+    if (emailModalLoaded) renderProfileTab();
+    return state.userEmailProfile;
+  }
   try {
-    if (isSupabaseSharedCoreEnabled()) {
-      const row = await fetchUserProfileFromSupabase(username).catch(err => {
-        console.warn('Supabase profile 読込失敗、Firestore fallback:', err);
-        return null;
-      });
-      if (row) {
-        syncUserEmailProfile(row);
-      } else {
-        // Supabase に無ければ Firestore から fallback
-        const profSnap = await getDoc(doc(db, 'users', username, 'data', 'email_profile'));
-        if (profSnap.exists()) syncUserEmailProfile(profSnap.data());
-      }
-    } else {
-      const profSnap = await getDoc(doc(db, 'users', username, 'data', 'email_profile'));
-      if (profSnap.exists()) syncUserEmailProfile(profSnap.data());
-    }
+    const profSnap = await getDoc(doc(db, 'users', username, 'data', 'email_profile'));
+    if (profSnap.exists()) syncUserEmailProfile(profSnap.data());
   } catch (_) {}
 
   if (emailModalLoaded) renderProfileTab();
@@ -128,14 +122,8 @@ export async function loadEmailData() {
 async function loadEmailContacts() {
   try {
     if (isSupabaseSharedCoreEnabled()) {
-      const contacts = await fetchEmailContactsFromSupabase(state.currentUsername).catch(err => {
-        console.warn('Supabase 連絡先読込失敗、Firestore fallback:', err);
-        return null;
-      });
-      if (contacts !== null) {
-        emailContacts = contacts;
-        return;
-      }
+      emailContacts = await fetchEmailContactsFromSupabase(state.currentUsername);
+      return;
     }
     const snap = await getDocs(
       query(collection(db, 'users', state.currentUsername, 'email_contacts'), orderBy('createdAt', 'asc'))

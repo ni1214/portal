@@ -1,6 +1,5 @@
 import { state } from './state.js';
 import { recordTransferFetch } from './read-diagnostics.js';
-import { db, collection, collectionGroup, getDocs, query, where } from './config.js';
 
 const BACKEND_FIREBASE = 'firebase';
 const BACKEND_SUPABASE = 'supabase';
@@ -567,7 +566,7 @@ export async function deleteUserTodoInSupabase(id) {
 
 // ===== portal_config（管理設定） =====
 
-const PORTAL_CONFIG_SELECT = 'pin_hash,gemini_api_key,departments,suggestion_box_viewers,mission_text,gas_order_url,order_seed_version';
+const PORTAL_CONFIG_SELECT = 'pin_hash,invite_code_hash,invite_code_plain,invite_updated_at,gemini_api_key,departments,suggestion_box_viewers,mission_text,gas_order_url,order_seed_version';
 
 export async function fetchPortalConfigFromSupabase() {
   const rows = await requestSupabase(
@@ -578,6 +577,9 @@ export async function fetchPortalConfigFromSupabase() {
   const r = rows[0];
   return {
     pinHash: r.pin_hash || null,
+    inviteCodeHash: r.invite_code_hash || null,
+    inviteCodePlain: r.invite_code_plain || '',
+    inviteUpdatedAt: r.invite_updated_at || null,
     geminiApiKey: r.gemini_api_key || '',
     departments: Array.isArray(r.departments) ? r.departments : [],
     suggestionBoxViewers: Array.isArray(r.suggestion_box_viewers) ? r.suggestion_box_viewers : [],
@@ -590,6 +592,9 @@ export async function fetchPortalConfigFromSupabase() {
 export async function savePortalConfigToSupabase(fields = {}) {
   const body = {};
   if ('pinHash' in fields)              body.pin_hash = fields.pinHash || null;
+  if ('inviteCodeHash' in fields)       body.invite_code_hash = fields.inviteCodeHash || null;
+  if ('inviteCodePlain' in fields)      body.invite_code_plain = fields.inviteCodePlain || null;
+  if ('inviteUpdatedAt' in fields)      body.invite_updated_at = fields.inviteUpdatedAt || null;
   if ('geminiApiKey' in fields)         body.gemini_api_key = fields.geminiApiKey || '';
   if ('departments' in fields)          body.departments = Array.isArray(fields.departments) ? fields.departments : [];
   if ('suggestionBoxViewers' in fields) body.suggestion_box_viewers = Array.isArray(fields.suggestionBoxViewers) ? fields.suggestionBoxViewers : [];
@@ -1416,113 +1421,9 @@ function mapAttendanceRow(row = {}) {
   };
 }
 
-function mapLegacyAttendanceDoc(username, dateStr, data = {}) {
-  return {
-    id: `${username}_${dateStr}`,
-    username: username || '',
-    date: dateStr || '',
-    dateStr: dateStr || '',
-    type: data.type || null,
-    hayade: data.hayade || null,
-    zangyo: data.zangyo || null,
-    note: data.note || null,
-    workSiteHours: (data.workSiteHours && typeof data.workSiteHours === 'object') ? data.workSiteHours : {},
-    projectKeys: Array.isArray(data.projectKeys) ? data.projectKeys : [],
-    yearMonth: data.yearMonth || (dateStr ? dateStr.slice(0, 7) : ''),
-    updatedAt: data.updatedAt || null,
-  };
-}
-
-function mergeAttendanceEntries(primaryRows = [], legacyRows = []) {
-  const byKey = new Map();
-  for (const entry of legacyRows) {
-    if (!entry?.username || !entry?.date) continue;
-    byKey.set(`${entry.username}__${entry.date}`, entry);
-  }
-  for (const entry of primaryRows) {
-    if (!entry?.username || !entry?.date) continue;
-    byKey.set(`${entry.username}__${entry.date}`, entry);
-  }
-  return [...byKey.values()].sort((a, b) => {
-    if (a.username !== b.username) return a.username.localeCompare(b.username);
-    return a.date.localeCompare(b.date);
-  });
-}
-
 function normalizeYearMonths(yearMonths) {
   const list = Array.isArray(yearMonths) ? yearMonths : [yearMonths];
   return [...new Set(list.filter(Boolean))];
-}
-
-async function fetchLegacyAttendanceEntriesFromFirebase(username, yearMonths) {
-  const yms = normalizeYearMonths(yearMonths);
-  if (!username || !yms.length) return [];
-
-  const snaps = await Promise.all(
-    yms.map(ym =>
-      getDocs(
-        query(
-          collection(db, 'users', username, 'attendance'),
-          where('yearMonth', '==', ym)
-        )
-      )
-    )
-  );
-
-  const rows = [];
-  snaps.forEach(snap => {
-    snap.docs.forEach(docSnap => {
-      rows.push(mapLegacyAttendanceDoc(username, docSnap.id, docSnap.data()));
-    });
-  });
-  return rows;
-}
-
-async function fetchLegacyAttendanceSummaryFromFirebase(yearMonths) {
-  const yms = normalizeYearMonths(yearMonths);
-  if (!yms.length) return [];
-
-  const rows = [];
-  const chunkSize = 10;
-  for (let i = 0; i < yms.length; i += chunkSize) {
-    const chunk = yms.slice(i, i + chunkSize);
-    const snap = await getDocs(
-      query(
-        collectionGroup(db, 'attendance'),
-        where('yearMonth', 'in', chunk)
-      )
-    );
-    snap.docs.forEach(docSnap => {
-      const username = docSnap.ref.parent?.parent?.id || '';
-      if (!username) return;
-      rows.push(mapLegacyAttendanceDoc(username, docSnap.id, docSnap.data()));
-    });
-  }
-  return rows;
-}
-
-async function backfillLegacyAttendanceEntriesToSupabase(username, supabaseRows = [], legacyRows = []) {
-  const supabaseKeys = new Set(
-    (supabaseRows || [])
-      .map(entry => entry?.date)
-      .filter(Boolean)
-  );
-  const missingRows = (legacyRows || []).filter(entry => entry?.date && !supabaseKeys.has(entry.date));
-  if (!username || !missingRows.length) return;
-
-  await Promise.allSettled(
-    missingRows.map(entry =>
-      upsertAttendanceEntryInSupabase(username, entry.date, {
-        type: entry.type,
-        hayade: entry.hayade,
-        zangyo: entry.zangyo,
-        note: entry.note,
-        workSiteHours: entry.workSiteHours,
-        projectKeys: entry.projectKeys,
-        yearMonth: entry.yearMonth,
-      })
-    )
-  );
 }
 
 export async function fetchAttendanceEntriesFromSupabase(username, yearMonths) {
@@ -1534,18 +1435,7 @@ export async function fetchAttendanceEntriesFromSupabase(username, yearMonths) {
     `attendance_entries?username=eq.${encodeURIComponent(username)}&year_month=in.${encoded}&order=entry_date.asc`,
     { diagKey: 'attendance.entries', diagLabel: '勤怠', diagScope: username }
   );
-  const supabaseRows = Array.isArray(rows) ? rows.map(mapAttendanceRow) : [];
-
-  let legacyRows = [];
-  try {
-    legacyRows = await fetchLegacyAttendanceEntriesFromFirebase(username, yms);
-  } catch (_) {}
-
-  if (legacyRows.length) {
-    await backfillLegacyAttendanceEntriesToSupabase(username, supabaseRows, legacyRows);
-  }
-
-  return mergeAttendanceEntries(supabaseRows, legacyRows);
+  return Array.isArray(rows) ? rows.map(mapAttendanceRow) : [];
 }
 
 export async function upsertAttendanceEntryInSupabase(username, date, data) {
@@ -1624,14 +1514,7 @@ export async function fetchMultipleMonthsAttendanceSummaryFromSupabase(yearMonth
     `attendance_entries?year_month=in.${encoded}&order=entry_date.asc`,
     { diagKey: 'attendance.summary', diagLabel: '勤怠集計', diagScope: yms.join(',') }
   );
-  const supabaseRows = Array.isArray(rows) ? rows.map(mapAttendanceRow) : [];
-
-  let legacyRows = [];
-  try {
-    legacyRows = await fetchLegacyAttendanceSummaryFromFirebase(yms);
-  } catch (_) {}
-
-  return mergeAttendanceEntries(supabaseRows, legacyRows);
+  return Array.isArray(rows) ? rows.map(mapAttendanceRow) : [];
 }
 
 export async function cleanupOldAttendanceInSupabase(username, cutoffDate) {
@@ -1685,26 +1568,32 @@ export async function fetchPublicAttendanceFromSupabase(yearMonth) {
   const rows = await requestSupabase(
     `public_attendance_months?year_month=eq.${encodeURIComponent(yearMonth)}&select=year_month,days&limit=1`
   );
-  if (!Array.isArray(rows) || rows.length === 0) return null;
-  return { yearMonth: rows[0].year_month, days: rows[0].days || {} };
+  if (!Array.isArray(rows) || rows.length === 0) return {};
+  return (rows[0].days && typeof rows[0].days === 'object') ? rows[0].days : {};
 }
 
-export async function writePublicAttendanceToSupabase(username, yearMonth, dayData) {
-  // 既存データをマージして保存
-  const existing = await fetchPublicAttendanceFromSupabase(yearMonth);
-  const days = (existing?.days) || {};
-  days[username] = dayData;
+export async function writePublicAttendanceToSupabase(yearMonth, day, username, type) {
+  if (!yearMonth || !day || !username || !type) return;
+  const days = { ...(await fetchPublicAttendanceFromSupabase(yearMonth)) };
+  const dayKey = `${day}`.padStart(2, '0');
+  const current = (days[dayKey] && typeof days[dayKey] === 'object') ? { ...days[dayKey] } : {};
+  current[username] = type;
+  days[dayKey] = current;
   await requestSupabase('public_attendance_months', {
     method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
     body: { year_month: yearMonth, days },
   });
 }
 
-export async function removePublicAttendanceFromSupabase(username, yearMonth) {
-  const existing = await fetchPublicAttendanceFromSupabase(yearMonth);
-  if (!existing) return;
-  const days = { ...(existing.days || {}) };
-  delete days[username];
+export async function removePublicAttendanceFromSupabase(yearMonth, day, username) {
+  if (!yearMonth || !day || !username) return;
+  const days = { ...(await fetchPublicAttendanceFromSupabase(yearMonth)) };
+  const dayKey = `${day}`.padStart(2, '0');
+  const current = (days[dayKey] && typeof days[dayKey] === 'object') ? { ...days[dayKey] } : null;
+  if (!current || !current[username]) return;
+  delete current[username];
+  if (Object.keys(current).length === 0) delete days[dayKey];
+  else days[dayKey] = current;
   await requestSupabase('public_attendance_months', {
     method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
     body: { year_month: yearMonth, days },

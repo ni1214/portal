@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Firebase Cutover</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      background: #0d1117;
+      color: #e6edf3;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      background:
+        radial-gradient(circle at top right, rgba(56, 139, 253, 0.15), transparent 32%),
+        #0d1117;
+    }
+    .panel {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      background: rgba(22, 27, 34, 0.95);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: 24px;
+    }
+    p {
+      margin: 0 0 16px;
+      color: #9fb0c3;
+    }
+    pre {
+      margin: 0;
+      padding: 16px;
+      border-radius: 12px;
+      overflow: auto;
+      background: rgba(1, 4, 9, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.45;
+    }
+    .report {
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <main class="panel">
+    <h1>Firebase to Supabase Cutover</h1>
+    <p>Open this page only for maintenance. It runs a one-time data sync from Firebase into Supabase.</p>
+    <pre id="progress">Booting...</pre>
+    <pre id="report" class="report" hidden></pre>
+  </main>
+
+  <script type="module">
+    import { initFirebaseCutover, runFirebaseCutoverToSupabase } from '../modules/firebase-cutover.js';
+
+    const progressEl = document.getElementById('progress');
+    const reportEl = document.getElementById('report');
+
+    function append(line) {
+      progressEl.textContent += `\n${line}`;
+    }
+
+    initFirebaseCutover({ onProgress: append });
+
+    try {
+      progressEl.textContent = 'Starting cutover...';
+      const report = await runFirebaseCutoverToSupabase({ onProgress: append });
+      document.body.dataset.status = 'done';
+      reportEl.hidden = false;
+      reportEl.textContent = JSON.stringify(report, null, 2);
+      window.__cutoverReport = report;
+      append('Cutover finished.');
+    } catch (error) {
+      document.body.dataset.status = 'error';
+      append(`ERROR: ${error?.message || error}`);
+      console.error(error);
+    }
+  </script>
+</body>
+</html>

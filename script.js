@@ -184,6 +184,8 @@ import {
 
 import {
   isSupabaseSharedCoreEnabled,
+  applySupabaseRuntimeConfig,
+  loadSupabaseConfigFromStorage,
   renderSupabaseAdminState,
   saveSupabaseRuntimeConfig,
   fetchSharedCategoriesFromSupabase,
@@ -218,6 +220,11 @@ import {
   fetchAllUserAccountsFromSupabase,
   savePortalConfigToSupabase,
 } from './modules/supabase.js';
+
+const initialSupabaseConfig = loadSupabaseConfigFromStorage();
+if (initialSupabaseConfig) {
+  applySupabaseRuntimeConfig(initialSupabaseConfig);
+}
 import { showToast, showConfirm } from './modules/notify.js';
 
 
@@ -1060,12 +1067,12 @@ async function loadCategories() {
   if (isSupabaseSharedCoreEnabled()) {
     try {
       const categories = await fetchSharedCategoriesFromSupabase();
-      if (categories.length > 0) {
-        state.allCategories = categories;
-        return;
-      }
+      state.allCategories = categories.length > 0 ? categories : [...DEFAULT_CATEGORIES];
+      return;
     } catch (err) {
       console.error('Supabase category load error:', err);
+      state.allCategories = [...DEFAULT_CATEGORIES];
+      return;
     }
   }
 
@@ -1134,13 +1141,14 @@ async function ensureSharedCardsLoaded(force = false) {
       try {
         const cards = await fetchSharedCardsFromSupabase();
         state.allCards = sortCards(cards);
-        state.sharedCardsLoaded = true;
-        rerenderCards();
-        renderSharedHome();
-        return state.allCards;
       } catch (err) {
         console.error('Supabase shared card load error:', err);
+        state.allCards = [];
       }
+      state.sharedCardsLoaded = true;
+      rerenderCards();
+      renderSharedHome();
+      return state.allCards;
     }
 
     const q = query(collection(db, 'cards'), orderBy('categoryOrder'));
@@ -1179,15 +1187,14 @@ async function ensureFavoritePublicCardsLoaded() {
     } catch (err) {
       console.error('Supabase favorite card load error:', err);
     }
-  }
-  if (!loadedCards.length) {
-  for (let i = 0; i < targetIds.length; i += 10) {
+  } else if (!loadedCards.length) {
+    for (let i = 0; i < targetIds.length; i += 10) {
     const chunk = targetIds.slice(i, i + 10);
     const favQuery = query(collection(db, 'cards'), where(documentId(), 'in', chunk));
     const snap = await getDocs(favQuery);
     recordGetDocsRead('cards.favorites', 'お気に入り公開カード', 'cards', snap.size, snap.docs);
     loadedCards.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  }
+    }
   }
 
   if (!loadedCards.length) return;

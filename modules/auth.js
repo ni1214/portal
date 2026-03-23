@@ -46,7 +46,9 @@ export async function verifyPIN(pin) {
       const data = await fetchPortalConfigFromSupabase();
       if (!data.pinHash) return false;
       return (await hashPIN(pin)) === data.pinHash;
-    } catch (_) {}
+    } catch (_) {
+      return false;
+    }
   }
   const snap = await getDoc(doc(db, 'portal', 'config'));
   if (!snap.exists() || !snap.data().pinHash) return false;
@@ -56,10 +58,8 @@ export async function verifyPIN(pin) {
 export async function setPIN(pin) {
   const hash = await hashPIN(pin);
   if (isSupabaseSharedCoreEnabled()) {
-    try {
-      await savePortalConfigToSupabase({ pinHash: hash });
-      return;
-    } catch (_) {}
+    await savePortalConfigToSupabase({ pinHash: hash });
+    return;
   }
   await setDoc(doc(db, 'portal', 'config'), { pinHash: hash }, { merge: true });
 }
@@ -69,7 +69,9 @@ export async function isPINConfigured() {
     try {
       const data = await fetchPortalConfigFromSupabase();
       return !!data.pinHash;
-    } catch (_) {}
+    } catch (_) {
+      return false;
+    }
   }
   const snap = await getDoc(doc(db, 'portal', 'config'));
   return snap.exists() && !!snap.data().pinHash;
@@ -79,6 +81,20 @@ export async function loadInviteCodeConfig() {
   // まずlocalStorageからSupabase接続情報を復元
   const stored = loadSupabaseConfigFromStorage();
   if (stored) applySupabaseRuntimeConfig(stored);
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const data = await fetchPortalConfigFromSupabase();
+      state.inviteCodeHash = data.inviteCodeHash || null;
+      state.inviteCodePlain = data.inviteCodePlain || '';
+      state.inviteCodeRequired = !!state.inviteCodeHash;
+      state.adminInviteConfigured = state.inviteCodeRequired;
+      updateInviteAdminState();
+      return data;
+    } catch (err) {
+      console.error('Supabase invite config load error:', err);
+      return {};
+    }
+  }
 
   // Supabase接続済みならportal_configをSupabaseから読む
   if (isSupabaseSharedCoreEnabled()) {
@@ -98,7 +114,6 @@ export async function loadInviteCodeConfig() {
   try {
     const snap = await getDoc(doc(db, 'portal', 'config'));
     const data = snap.exists() ? snap.data() : {};
-    applySupabaseRuntimeConfig(data);
     state.inviteCodeHash = data.inviteCodeHash || null;
     state.inviteCodePlain = data.inviteCodePlain || '';
     state.inviteCodeRequired = !!state.inviteCodeHash;
@@ -268,19 +283,11 @@ export async function saveInviteCode(code) {
   }
   const hash = await hashPIN(normalized);
   if (isSupabaseSharedCoreEnabled()) {
-    try {
-      await savePortalConfigToSupabase({
-        inviteCodeHash: hash,
-        inviteCodePlain: normalized,
-        inviteUpdatedAt: new Date().toISOString(),
-      });
-    } catch (_) {
-      await setDoc(doc(db, 'portal', 'config'), {
-        inviteCodeHash: hash,
-        inviteCodePlain: normalized,
-        inviteUpdatedAt: serverTimestamp(),
-      }, { merge: true });
-    }
+    await savePortalConfigToSupabase({
+      inviteCodeHash: hash,
+      inviteCodePlain: normalized,
+      inviteUpdatedAt: new Date().toISOString(),
+    });
   } else {
     await setDoc(doc(db, 'portal', 'config'), {
       inviteCodeHash: hash,
@@ -297,19 +304,11 @@ export async function saveInviteCode(code) {
 
 export async function clearInviteCode() {
   if (isSupabaseSharedCoreEnabled()) {
-    try {
-      await savePortalConfigToSupabase({
-        inviteCodeHash: null,
-        inviteCodePlain: null,
-        inviteUpdatedAt: new Date().toISOString(),
-      });
-    } catch (_) {
-      await setDoc(doc(db, 'portal', 'config'), {
-        inviteCodeHash: null,
-        inviteCodePlain: null,
-        inviteUpdatedAt: serverTimestamp(),
-      }, { merge: true });
-    }
+    await savePortalConfigToSupabase({
+      inviteCodeHash: null,
+      inviteCodePlain: null,
+      inviteUpdatedAt: new Date().toISOString(),
+    });
   } else {
     await setDoc(doc(db, 'portal', 'config'), {
       inviteCodeHash: null,
@@ -578,13 +577,9 @@ export async function getUserPreloginLockInfo(username) {
   const normalized = `${username || ''}`.trim();
   if (!normalized) return { requiresPin: false, hash: null };
   if (isSupabaseSharedCoreEnabled()) {
-    try {
-      const row = await getUserLockPinFromSupabase(normalized);
-      if (!row) return { requiresPin: false, hash: null };
-      return { requiresPin: !!row.enabled && !!row.hash, hash: row.hash || null };
-    } catch (err) {
-      console.warn('Supabase lock_pin 読込失敗、Firestore fallback:', err);
-    }
+    const row = await getUserLockPinFromSupabase(normalized);
+    if (!row) return { requiresPin: false, hash: null };
+    return { requiresPin: !!row.enabled && !!row.hash, hash: row.hash || null };
   }
   const snap = await getDoc(doc(db, 'users', normalized, 'data', 'lock_pin'));
   if (!snap.exists()) return { requiresPin: false, hash: null };
@@ -712,6 +707,50 @@ export async function loginExistingUsername(name, options = {}) {
     state.currentUsername !== normalized &&
     !options.fromStored
   );
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      let userExists = await checkUserExistsInSupabase(normalized);
+      if (!userExists && options.fromStored) {
+        try {
+          await registerUserLoginInSupabase(normalized);
+          userExists = true;
+        } catch (_) {}
+      }
+      if (!userExists) {
+        if (options.fromStored) {
+          restoreUsernameModalForRetry(normalized, false);
+          showUsernameError('保存されているユーザーの復元に失敗しました。時間をおいてもう一度お試しください。');
+          return false;
+        }
+        showUsernameError('このユーザーネームは見つかりません。');
+        return false;
+      }
+      const lockInfo = await getUserLockPinFromSupabase(normalized);
+      if (requirePreloginPin && lockInfo?.enabled && lockInfo?.hash) {
+        state.pendingLoginHash = lockInfo.hash;
+        preLoginContext = {
+          username: normalized,
+          hash: lockInfo.hash,
+          fromStored: !!options.fromStored,
+          resolve: options.resolve || null,
+        };
+        openPreloginPinModal(normalized, !!options.fromStored);
+        return new Promise(resolve => {
+          if (preLoginContext) preLoginContext.resolve = resolve;
+        });
+      }
+      await applyUsername(normalized);
+      return true;
+    } catch (err) {
+      console.error('Existing username login failed:', err);
+      if (options.fromStored) {
+        restoreUsernameModalForRetry(normalized, false);
+      } else {
+        showUsernameError('ログイン確認に失敗しました。時間をおいてもう一度お試しください。');
+      }
+      return false;
+    }
+  }
   try {
     let userExists = false;
     if (isSupabaseSharedCoreEnabled()) {
@@ -790,6 +829,28 @@ export async function loadLockSettings(username, lockImmediately = false) {
   if (!username) return;
   // ユーザー切り替え時に前のユーザーの設定をリセット
   state.lockPinHash = null; state.lockPinEnabled = false; state.lockEnabled = false; state.autoLockMinutes = 5;
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      const row = await getUserLockPinFromSupabase(username);
+      if (row) {
+        state.lockPinHash = row.hash || null;
+        state.lockPinEnabled = !!state.lockPinHash;
+        state.lockEnabled = !!row.enabled;
+        state.autoLockMinutes = row.autoLockMinutes ?? 5;
+      }
+    } catch (err) {
+      console.error('Supabase lock settings load error:', err);
+    }
+    document.getElementById('btn-lock-header').hidden = !(state.lockEnabled && state.lockPinEnabled && state.currentUsername);
+    if (state.lockEnabled && state.lockPinEnabled) {
+      startActivityTracking();
+      const shouldLock = lockImmediately || (sessionStorage.getItem('portal-locked') === username);
+      if (shouldLock) lockPortal();
+    } else {
+      sessionStorage.removeItem('portal-locked');
+    }
+    return;
+  }
   try {
     if (isSupabaseSharedCoreEnabled()) {
       try {

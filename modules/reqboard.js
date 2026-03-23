@@ -42,7 +42,6 @@ const LINKED_TASK_STATUS_LABEL = {
 };
 
 export async function loadConfigDepartmentsAndViewers() {
-  // Supabase接続済みならportal_configをSupabaseから読む
   if (isSupabaseSharedCoreEnabled()) {
     try {
       const data = await fetchPortalConfigFromSupabase();
@@ -52,10 +51,11 @@ export async function loadConfigDepartmentsAndViewers() {
       state.suggestionBoxViewers = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
       state.isSuggestionBoxViewer = state.currentUsername ? state.suggestionBoxViewers.includes(state.currentUsername) : false;
       state.missionText = data.missionText || '';
-      return;
-    } catch (err) { console.error('Supabase config読み込みエラー:', err); }
+    } catch (err) {
+      console.error('Supabase config load error:', err);
+    }
+    return;
   }
-  // フォールバック: Firebase
   try {
     const snap = await getDoc(doc(db, 'portal', 'config'));
     if (snap.exists()) {

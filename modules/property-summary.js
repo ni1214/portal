@@ -374,7 +374,7 @@ async function refreshSiteCandidates(rawQuery) {
 async function loadAttendanceByProjectKey(username, projectKey, siteMap) {
   if (!username) return [];
   if (isSupabaseSharedCoreEnabled()) {
-    const entries = await fetchAttendanceByProjectKeyFromSupabase(username, projectKey);
+    const entries = await fetchAttendanceByProjectKeyFromSupabase(projectKey);
     return entries
       .map(entry => _mapSupabaseAttendanceEntry(entry, siteMap, username))
       .filter(Boolean)
@@ -394,8 +394,8 @@ async function loadAttendanceBySiteCode(username, projectKey, siteMap) {
   const months = getRecentYearMonths(ATTENDANCE_FALLBACK_MONTHS);
   if (months.length === 0) return [];
   if (isSupabaseSharedCoreEnabled()) {
-    const entryMap = await fetchAttendanceEntriesFromSupabase(username, months);
-    return Object.values(entryMap)
+    const entries = await fetchAttendanceEntriesFromSupabase(username, months);
+    return entries
       .map(entry => _mapSupabaseAttendanceEntry(entry, siteMap, username))
       .filter(record => record && record.siteEntries.some(e => normalizeProjectKey(e.code || '') === projectKey))
       .sort((a, b) => b.sortKey - a.sortKey);
