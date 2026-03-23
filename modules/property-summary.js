@@ -1,6 +1,10 @@
 import {
   db, collection, getDocs, query, where,
 } from './config.js';
+import {
+  isSupabaseSharedCoreEnabled,
+  fetchOrdersFromSupabase,
+} from './supabase.js';
 import { state, REQ_STATUS_LABEL, TASK_STATUS_LABEL } from './state.js';
 import { esc, normalizeProjectKey, _fmtTs } from './utils.js';
 
@@ -84,10 +88,9 @@ async function searchPropertySummary(rawValue = null, options = {}) {
   renderPropertySummary();
 
   try {
-    const [requestSnap, taskSnap, orderSnap] = await Promise.all([
+    const [requestSnap, taskSnap] = await Promise.all([
       getDocs(query(collection(db, 'cross_dept_requests'), where('projectKey', '==', projectKey))),
       getDocs(query(collection(db, 'assigned_tasks'), where('projectKey', '==', projectKey))),
-      getDocs(query(collection(db, 'orders'), where('projectKey', '==', projectKey))),
     ]);
 
     let attendanceRecords = await loadAttendanceByProjectKey(state.currentUsername, projectKey, siteMap);
@@ -114,9 +117,17 @@ async function searchPropertySummary(rawValue = null, options = {}) {
       )
       .sort((a, b) => getDateValue(b.doneAt || b.acceptedAt || b.createdAt) - getDateValue(a.doneAt || a.acceptedAt || a.createdAt));
 
-    const orders = orderSnap.docs
-      .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
-      .filter(item => state.isAdmin || item.orderedBy === currentUser)
+    let rawOrders;
+    if (isSupabaseSharedCoreEnabled()) {
+      // Supabaseから全件取得してprojectKeyでクライアントフィルタ
+      const allOrders = await fetchOrdersFromSupabase(state.isAdmin ? null : currentUser, { includeDeleted: false });
+      rawOrders = allOrders.filter(o => normalizeProjectKey(o.projectKey || '') === projectKey);
+    } else {
+      const orderSnap = await getDocs(query(collection(db, 'orders'), where('projectKey', '==', projectKey)));
+      rawOrders = orderSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+        .filter(item => state.isAdmin || item.orderedBy === currentUser);
+    }
+    const orders = rawOrders
       .sort((a, b) => getDateValue(b.orderedAt) - getDateValue(a.orderedAt));
 
     const siteMatch = resolution.siteMatch

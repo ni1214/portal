@@ -1290,6 +1290,7 @@ function printDraftOrder() {
 // ===== 履歴モーダル =====
 // 1年以上古い履歴と、30日を過ぎた削除済み履歴を自動削除（バックグラウンド実行）
 async function purgeOldOrders() {
+  if (isSupabaseSharedCoreEnabled()) return; // Supabaseモードでは自動パージ未実装
   try {
     const orderCutoff = new Date();
     orderCutoff.setFullYear(orderCutoff.getFullYear() - 1);
@@ -1662,7 +1663,11 @@ function renderAdminItems() {
 
 async function addOrUpdateItem(id, data) {
   try {
-    if (id) {
+    if (isSupabaseSharedCoreEnabled()) {
+      // 既存データとマージしてupsert（sortOrder・defaultQty等を保持）
+      const existing = id ? _items.find(it => it.id === id) : null;
+      await upsertOrderItemInSupabase({ ...(existing || {}), ...data, ...(id ? { id } : {}) });
+    } else if (id) {
       await updateDoc(doc(db, 'order_items', id), data);
     } else {
       await addDoc(collection(db, 'order_items'), { ...data, active: true });
@@ -1677,7 +1682,11 @@ async function addOrUpdateItem(id, data) {
 async function deleteItem(id) {
   if (!confirm('この鋼材を削除しますか？')) return;
   try {
-    await updateDoc(doc(db, 'order_items', id), { active: false });
+    if (isSupabaseSharedCoreEnabled()) {
+      await deactivateOrderItemInSupabase(id);
+    } else {
+      await updateDoc(doc(db, 'order_items', id), { active: false });
+    }
     await loadMasters();
     renderAdminItems();
   } catch (err) {
@@ -1954,7 +1963,11 @@ function bindOrderEvents() {
     const newAddr  = prompt('住所:', supp.address || '');
     if (newAddr === null) return;
     try {
-      await updateDoc(doc(db, 'order_suppliers', id), { name: newName, email: newEmail, tel: newTel, address: newAddr });
+      if (isSupabaseSharedCoreEnabled()) {
+        await updateOrderSupplierInSupabase(id, { name: newName, email: newEmail, tel: newTel, address: newAddr });
+      } else {
+        await updateDoc(doc(db, 'order_suppliers', id), { name: newName, email: newEmail, tel: newTel, address: newAddr });
+      }
       await loadMasters();
       renderAdminSuppliers();
     } catch (err) {
@@ -1970,9 +1983,13 @@ function bindOrderEvents() {
     const addr  = document.getElementById('ord-supp-add-addr')?.value.trim() || '';
     if (!name || !email) { alert('会社名とメールアドレスは必須です。'); return; }
     try {
-      await addDoc(collection(db, 'order_suppliers'), {
-        name, email, tel, address: addr, active: true, createdAt: serverTimestamp()
-      });
+      if (isSupabaseSharedCoreEnabled()) {
+        await createOrderSupplierInSupabase({ name, email, tel, address: addr });
+      } else {
+        await addDoc(collection(db, 'order_suppliers'), {
+          name, email, tel, address: addr, active: true, createdAt: serverTimestamp()
+        });
+      }
       await loadMasters();
       renderAdminSuppliers();
       ['ord-supp-add-name','ord-supp-add-email','ord-supp-add-tel','ord-supp-add-addr'].forEach(id => {
