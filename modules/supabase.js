@@ -1999,3 +1999,21 @@ export async function fetchOrdersByProjectKeyFromSupabase(projectKey) {
     createdAt: toTimestamp(r.created_at),
   }));
 }
+
+// ========== セクション並び順 ==========
+
+export async function fetchSectionOrderFromSupabase(username) {
+  const rows = await requestSupabase(
+    `user_section_orders?username=eq.${encodeURIComponent(username)}&select=order_ids`
+  );
+  if (!Array.isArray(rows) || rows.length === 0) return [];
+  return Array.isArray(rows[0].order_ids) ? rows[0].order_ids : [];
+}
+
+export async function saveSectionOrderToSupabase(username, order) {
+  await requestSupabase('user_section_orders', {
+    method: 'POST',
+    prefer: 'return=minimal,resolution=merge-duplicates',
+    body: { username, order_ids: Array.isArray(order) ? order : [] },
+  });
+}
