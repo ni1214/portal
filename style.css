@@ -17183,3 +17183,265 @@ button.portal-home-panel:hover,
   background: color-mix(in srgb, var(--portal-home-elevated) 80%, transparent) !important;
   border-color: rgba(65, 71, 82, 0.4) !important;
 }
+
+/* ===== Stitch HTML 直訳CSS（Tailwind値を正確変換） ===== */
+
+/* body: グラデーション→フラット #10141a */
+body {
+  background: #10141a !important;
+  background-attachment: unset !important;
+}
+
+/* header: フラット #10141a + 細い下線 */
+.header {
+  background: #10141a !important;
+  border-bottom: 1px solid rgba(65, 71, 82, 0.10) !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+  padding: 0 24px !important;
+  height: 64px !important;
+}
+
+.header-inner {
+  height: 64px;
+  align-items: center;
+}
+
+/* main: p-6 max-w-7xl mx-auto に合わせる */
+.main {
+  padding: 0 !important;
+}
+
+.mission-banner {
+  margin: 0 0 0 !important;
+  padding: 24px 24px 0 !important;
+  max-width: 1280px;
+}
+
+/* search hero: フル幅・Stitch検索バースタイル */
+.home-search-hero {
+  max-width: 1280px !important;
+  margin: 0 auto 0 !important;
+  padding: 24px 24px 0 !important;
+}
+
+/* 検索バー本体: h-12(48px)・bg #31353c・radius 12px */
+.home-search-container {
+  min-height: 48px !important;
+  height: 48px !important;
+  background: #31353c !important;
+  border: 1px solid rgba(65, 71, 82, 0.20) !important;
+  border-radius: 12px !important;
+  padding: 0 16px 0 48px !important;
+  box-shadow: none !important;
+  gap: 8px !important;
+  position: relative !important;
+}
+
+.home-search-container .search-icon {
+  position: absolute !important;
+  left: 16px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  font-size: 1rem !important;
+  color: #c0c7d4 !important;
+}
+
+.home-search-container .search-input {
+  font-size: 0.875rem !important;
+  color: #dfe2eb !important;
+  background: transparent !important;
+}
+
+.home-search-container .search-input::placeholder {
+  color: rgba(192, 199, 212, 0.60) !important;
+}
+
+/* content wrapper: p-6 max-w-7xl */
+.home-content-grid {
+  max-width: 1280px !important;
+  margin: 0 auto !important;
+  padding: 24px !important;
+  gap: 24px !important;
+}
+
+/* notice board: space-y-4 (16px gap) */
+#notice-board .notice-list {
+  gap: 12px !important;
+}
+
+/* notice card: glass-card rounded-lg(4px) p-4 flex gap-4 */
+#notice-board .notice-item {
+  background: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(65, 71, 82, 0.20) !important;
+  border-radius: 4px !important;
+  padding: 16px !important;
+  gap: 16px !important;
+  cursor: pointer;
+  transition: background 0.2s !important;
+}
+
+#notice-board .notice-item:hover {
+  background: #262a31 !important;
+  border-color: rgba(65, 71, 82, 0.35) !important;
+  transform: none !important;
+}
+
+/* notice icon: w-12 h-12 rounded(2px) */
+.notice-card-icon {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 2px !important;
+  font-size: 1.25rem !important;
+}
+
+.notice-card-icon--urgent {
+  background: rgba(147, 0, 10, 0.10) !important;
+  color: #ffb4ab !important;
+}
+
+.notice-card-icon--normal {
+  background: rgba(162, 201, 255, 0.10) !important;
+  color: #a2c9ff !important;
+}
+
+/* notice title: text-sm font-bold */
+#notice-board .notice-title {
+  font-size: 0.875rem !important;
+  font-weight: 700 !important;
+  color: #dfe2eb !important;
+  margin-bottom: 0 !important;
+}
+
+/* notice title hover: group-hover:text-primary */
+#notice-board .notice-item:hover .notice-title {
+  color: #a2c9ff !important;
+}
+
+/* notice body: text-xs text-on-surface-variant mt-1 line-clamp-1 */
+#notice-board .notice-body {
+  font-size: 0.75rem !important;
+  color: #c0c7d4 !important;
+  margin: 4px 0 0 !important;
+}
+
+/* notice badge: text-[10px] px-1.5 py-0.5 font-bold rounded(2px) */
+.notice-badge {
+  font-size: 10px !important;
+  padding: 2px 6px !important;
+  border-radius: 2px !important;
+}
+
+.badge-urgent {
+  background: #93000a !important;
+  color: #ffdad6 !important;
+}
+
+.badge-normal {
+  background: #2e4869 !important;
+  color: #9db7dd !important;
+}
+
+/* notice date: text-[10px] text-on-surface-variant */
+.notice-date {
+  font-size: 10px !important;
+  color: #c0c7d4 !important;
+}
+
+/* notice header (board header): Stitch section-header style */
+.notice-header {
+  font-size: 0.875rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  color: #dfe2eb !important;
+  border-bottom: 1px solid rgba(65, 71, 82, 0.20) !important;
+  padding-bottom: 10px !important;
+  margin-bottom: 12px !important;
+}
+
+/* area headers: Stitch section-title style */
+.area-header {
+  border-bottom: 1px solid rgba(65, 71, 82, 0.20) !important;
+  padding: 0 0 10px !important;
+  margin: 0 0 16px !important;
+}
+
+.area-header-title {
+  font-size: 0.875rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  color: #dfe2eb !important;
+}
+
+.area-shared .area-header-title i   { color: #a2c9ff !important; }
+.area-personal .area-header-title i { color: #a2c9ff !important; }
+
+/* todo/favorites: surface-container-low bg */
+#todo-section,
+#favorites-section {
+  background: #181c22 !important;
+  border: none !important;
+  border-radius: 4px !important;
+  padding: 4px !important;
+}
+
+/* card grid 2-col */
+.card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+/* card: surface-container style */
+.card {
+  background: #1c2026 !important;
+  border: none !important;
+  border-radius: 2px !important;
+}
+
+.card:hover {
+  background: #262a31 !important;
+  border: none !important;
+}
+
+/* space-body gap */
+.space-body {
+  gap: 16px !important;
+}
+
+/* light theme overrides */
+[data-theme="light"] body {
+  background: #f6f8fa !important;
+}
+
+[data-theme="light"] .header {
+  background: #f6f8fa !important;
+  border-bottom-color: rgba(65, 71, 82, 0.15) !important;
+}
+
+[data-theme="light"] .home-search-container {
+  background: #eaeef2 !important;
+  border-color: rgba(31, 35, 40, 0.15) !important;
+}
+
+[data-theme="light"] #notice-board .notice-item {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(31, 35, 40, 0.12) !important;
+}
+
+[data-theme="light"] #notice-board .notice-item:hover {
+  background: #eaeef2 !important;
+}
+
+[data-theme="light"] #todo-section,
+[data-theme="light"] #favorites-section {
+  background: #eaeef2 !important;
+}
+
+[data-theme="light"] .card {
+  background: #f6f8fa !important;
+}
+
+[data-theme="light"] .card:hover {
+  background: #eaeef2 !important;
+}
