@@ -16961,7 +16961,6 @@ button.portal-home-panel:hover,
 }
 
 /* 3. Hide こんにちは hero panel */
-.shared-home-panel,
 .portal-home-shell {
   display: none !important;
 }
@@ -17079,9 +17078,6 @@ button.portal-home-panel:hover,
 }
 
 /* 8. Hide old bento-rail dashboard (旧デザイン残骸を除去) */
-#dash-today-section {
-  display: none !important;
-}
 
 /* 9. Restore area section headers as clean Stitch案1 titles */
 .area-header {
@@ -18189,6 +18185,136 @@ body {
   background: color-mix(in srgb, var(--portal-home-card-hover) 82%, var(--portal-home-elevated)) !important;
 }
 
+#dash-today-section {
+  padding: 0 !important;
+}
+
+.notice-header {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: var(--portal-home-copy) !important;
+}
+
+.notice-header i {
+  color: var(--accent-orange) !important;
+}
+
+.notice-header > span:first-of-type {
+  color: var(--portal-home-title) !important;
+}
+
+.notice-unread-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--portal-home-line) 46%, transparent);
+  color: var(--portal-home-copy) !important;
+  margin-bottom: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.notice-unread-label--ack {
+  background: color-mix(in srgb, var(--accent-orange) 16%, transparent);
+  color: var(--accent-orange) !important;
+}
+
+.btn-read-all,
+.btn-add-notice {
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.btn-read-all {
+  background: color-mix(in srgb, var(--portal-home-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--portal-home-accent) 28%, transparent);
+  color: var(--portal-home-accent);
+}
+
+.btn-read-all:hover {
+  background: color-mix(in srgb, var(--portal-home-accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--portal-home-accent) 42%, transparent);
+}
+
+.btn-add-notice {
+  background: color-mix(in srgb, var(--portal-home-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--portal-home-accent) 24%, transparent);
+  color: var(--portal-home-accent);
+}
+
+.btn-add-notice:hover {
+  background: color-mix(in srgb, var(--portal-home-accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--portal-home-accent) 40%, transparent);
+}
+
+#notice-board .notice-title {
+  color: var(--portal-home-title) !important;
+}
+
+#notice-board .notice-body,
+#notice-board .notice-date {
+  color: var(--portal-home-copy) !important;
+}
+
+#notice-board .badge-normal {
+  background: color-mix(in srgb, var(--portal-home-accent) 14%, transparent) !important;
+  color: var(--portal-home-accent) !important;
+}
+
+#notice-board .badge-urgent {
+  background: color-mix(in srgb, var(--portal-home-danger) 14%, transparent) !important;
+  color: var(--portal-home-danger) !important;
+}
+
+#todo-section .todo-icon {
+  background: color-mix(in srgb, var(--portal-home-accent) 14%, transparent) !important;
+  color: var(--portal-home-accent) !important;
+}
+
+#todo-section .todo-count {
+  background: color-mix(in srgb, var(--portal-home-accent) 12%, transparent);
+  border: none;
+  color: var(--portal-home-accent);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+#todo-section .todo-toggle-btn {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--portal-home-line) 48%, transparent);
+  color: var(--portal-home-copy);
+}
+
+#todo-section .todo-toggle-btn:hover {
+  background: var(--portal-home-card-hover);
+  color: var(--portal-home-title);
+}
+
+#todo-section .todo-body {
+  padding: 6px 0 0;
+}
+
+#todo-section .todo-open-btn {
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: var(--portal-home-accent);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+#todo-section .todo-open-btn:hover {
+  opacity: 0.92;
+}
+
 @media (max-width: 1120px) {
   .portal-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -18213,6 +18339,11 @@ body {
     padding: 16px 16px 40px !important;
   }
 
+  .home-content-grid {
+    padding: 0 !important;
+    gap: 18px !important;
+  }
+
   .home-dashboard {
     margin-bottom: 20px;
   }
@@ -18234,10 +18365,17 @@ body {
     width: auto;
   }
 
+  .shared-home-shell.shared-home-shell--clean {
+    padding: 14px !important;
+  }
+
   .portal-summary-card,
   .shared-home-card,
-  .portal-personal-card {
+  .portal-personal-card,
+  #todo-section,
+  .notice-board {
     border-radius: 20px !important;
+    padding: 18px !important;
   }
 }
 
