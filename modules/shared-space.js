@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { esc } from './utils.js';
 
 export let deps = {};
+const HOME_DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
 export function initSharedSpace(d = {}) {
   deps = { ...deps, ...d };
@@ -15,11 +16,36 @@ export function renderSharedHome() {
   if (!host) return;
 
   const noticeSummary = getNoticeSummary();
+  const requestSummary = getRequestSummary();
   const publicCategories = getPublicCategories().slice(0, 6);
+  const linksSummary = getLinksSummary(publicCategories);
   const weatherSummary = getWeatherSummary();
+  const overview = getHomeOverview(noticeSummary, weatherSummary);
 
   host.innerHTML = `
     <section class="portal-shared-shell">
+      <section class="portal-home-overview">
+        <div class="portal-home-overview-copy">
+          <p class="portal-home-overview-eyebrow">${esc(overview.eyebrow)}</p>
+          <h1 class="portal-home-overview-title">${esc(overview.title)}</h1>
+          <p class="portal-home-overview-subtitle">${esc(overview.subtitle)}</p>
+        </div>
+
+        <button
+          type="button"
+          class="portal-home-overview-weather"
+          data-shared-home-action="weather"
+          aria-label="天気ウィジェットを開く"
+        >
+          <span class="portal-home-overview-weather-icon"><i class="${weatherSummary.icon}"></i></span>
+          <span class="portal-home-overview-weather-body">
+            <span class="portal-home-overview-weather-label">${esc(weatherSummary.label)}</span>
+            <strong class="portal-home-overview-weather-value">${esc(weatherSummary.value)}</strong>
+            <span class="portal-home-overview-weather-meta">${esc(weatherSummary.meta)}</span>
+          </span>
+        </button>
+      </section>
+
       <section class="portal-home-section">
         <div class="portal-home-section-head">
           <h2 class="portal-home-section-title portal-home-section-title--primary">
@@ -30,35 +56,35 @@ export function renderSharedHome() {
 
         <div class="portal-dashboard-grid">
           ${renderSharedDashboardCard({
-            action: 'links',
-            icon: 'fa-solid fa-link',
-            title: '共有リンクを開く',
-            desc: '頻繁に使用するツールへ移動',
-            tone: 'primary',
-          })}
-          ${renderSharedDashboardCard({
             action: 'notice',
             icon: 'fa-solid fa-circle-exclamation',
-            title: '重要通知を見る',
-            desc: noticeSummary.pendingAckCount > 0
-              ? `${noticeSummary.pendingAckCount}件の確認待ちがあります`
-              : (noticeSummary.unreadCount > 0
-                ? `${noticeSummary.unreadCount}件の未読があります`
-                : '未確認事項はありません'),
+            title: '社内のお知らせ',
+            desc: noticeSummary.description,
+            metric: noticeSummary.headline,
+            badge: noticeSummary.pendingAckCount > 0 ? '要確認' : '共有通知',
+            items: noticeSummary.items,
             tone: noticeSummary.pendingAckCount > 0 ? 'alert' : 'neutral',
           })}
-          <button type="button" class="portal-dashboard-card portal-dashboard-card--weather" data-shared-home-action="weather">
-            <div class="portal-dashboard-card-body">
-              <div class="portal-weather-copy">
-                <span class="portal-weather-kicker">${esc(weatherSummary.label)}</span>
-                <strong class="portal-weather-value">${esc(weatherSummary.value)}</strong>
-                <span class="portal-weather-meta">${esc(weatherSummary.meta)}</span>
-              </div>
-              <div class="portal-weather-icon">
-                <i class="${weatherSummary.icon}"></i>
-              </div>
-            </div>
-          </button>
+          ${renderSharedDashboardCard({
+            action: 'request',
+            icon: 'fa-solid fa-arrows-left-right',
+            title: '部署間依頼',
+            desc: requestSummary.description,
+            metric: requestSummary.headline,
+            badge: 'Coordination',
+            items: requestSummary.items,
+            tone: requestSummary.tone,
+          })}
+          ${renderSharedDashboardCard({
+            action: 'links',
+            icon: 'fa-solid fa-link',
+            title: '共有リンク',
+            desc: linksSummary.description,
+            metric: linksSummary.headline,
+            badge: 'Quick Access',
+            items: linksSummary.items,
+            tone: 'primary',
+          })}
         </div>
       </section>
 
@@ -97,16 +123,46 @@ export function renderSharedHome() {
   });
 }
 
-function renderSharedDashboardCard({ action, icon, title, desc, tone = 'neutral' }) {
+function renderSharedDashboardCard({
+  action,
+  icon,
+  title,
+  desc,
+  tone = 'neutral',
+  badge = '',
+  metric = '',
+  items = [],
+}) {
   return `
-    <button type="button" class="portal-dashboard-card portal-dashboard-card--${tone}" data-shared-home-action="${esc(action)}">
-      <div class="portal-dashboard-card-icon">
-        <i class="${icon}"></i>
+    <button
+      type="button"
+      class="portal-dashboard-card portal-dashboard-card--${tone} portal-dashboard-card--${esc(action)}"
+      data-shared-home-action="${esc(action)}"
+    >
+      <div class="portal-dashboard-card-head">
+        <div class="portal-dashboard-card-icon">
+          <i class="${icon}"></i>
+        </div>
+        ${badge ? `<span class="portal-dashboard-card-badge">${esc(badge)}</span>` : ''}
       </div>
       <div class="portal-dashboard-card-body">
-        <h3 class="portal-dashboard-card-title">${esc(title)}</h3>
+        <div class="portal-dashboard-card-title-row">
+          <h3 class="portal-dashboard-card-title">${esc(title)}</h3>
+          ${metric ? `<span class="portal-dashboard-card-metric">${esc(metric)}</span>` : ''}
+        </div>
         <p class="portal-dashboard-card-copy">${esc(desc)}</p>
       </div>
+      ${Array.isArray(items) && items.length > 0 ? `
+        <div class="portal-dashboard-card-list">
+          ${items.map(item => `
+            <div class="portal-dashboard-card-item">
+              <span class="portal-dashboard-card-item-title">${esc(item.title || '')}</span>
+              ${item.meta ? `<span class="portal-dashboard-card-item-meta">${esc(item.meta)}</span>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+      <span class="portal-dashboard-card-link">開く <i class="fa-solid fa-arrow-right"></i></span>
     </button>
   `;
 }
@@ -117,14 +173,38 @@ function renderSharedLinkTile(category, index) {
     <button type="button" class="portal-link-card" data-shared-home-action="links" data-shared-home-category="${esc(category.id || '')}">
       <div class="portal-link-card-head">
         <span class="portal-link-card-icon"><i class="${snapshot.icon}"></i></span>
-        <span class="portal-link-card-title">${esc(category.label || '共有カテゴリ')}</span>
+        <span class="portal-link-card-stat">${esc(snapshot.stat)}</span>
       </div>
+      <span class="portal-link-card-title">${esc(category.label || '共有カテゴリ')}</span>
       <div class="portal-link-card-progress">
         <span style="width:${snapshot.progress}%"></span>
       </div>
       <p class="portal-link-card-copy">${esc(snapshot.copy)}</p>
     </button>
   `;
+}
+
+function getHomeOverview(noticeSummary, weatherSummary) {
+  const now = new Date();
+  const username = state.currentUsername ? `${state.currentUsername}さん` : 'みなさん';
+  return {
+    eyebrow: 'Shared Home',
+    title: `${getGreetingForHour(now.getHours())}、${username}`,
+    subtitle: `${formatHomeDate(now)}。${noticeSummary.actionLabel}、${weatherSummary.meta}をすぐ確認できます。`,
+  };
+}
+
+function getGreetingForHour(hour) {
+  if (hour < 11) return 'おはようございます';
+  if (hour < 18) return 'こんにちは';
+  return 'おつかれさまです';
+}
+
+function formatHomeDate(date) {
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const dow = HOME_DOW_LABELS[date.getDay()] || '';
+  return `${date.getFullYear()}年${month}月${day}日 (${dow})`;
 }
 
 function getWeatherSummary() {
@@ -161,9 +241,57 @@ function getCategorySnapshot(category, index) {
     progress: cards.length > 0
       ? Math.min(88, 22 + cards.length * 14)
       : preset.progress,
+    stat: cards.length > 0 ? `${cards.length}件` : '開く',
     copy: previewLabels.length > 0
       ? `${previewLabels.join(', ')}${cards.length > previewLabels.length ? '...' : ''}`
       : preset.copy,
+  };
+}
+
+function getLinksSummary(categories) {
+  const items = categories.slice(0, 3).map(category => ({
+    title: category.label || '共有カテゴリ',
+    meta: state.sharedCardsLoaded ? 'カテゴリを開く' : '必要な時だけ取得',
+  }));
+  return {
+    headline: `${categories.length}カテゴリ`,
+    description: state.sharedCardsLoaded
+      ? 'よく使うカテゴリから共有リンクへすぐ移動できます。'
+      : '一覧は開いた時だけ読み込む軽量設計です。',
+    items: items.length > 0 ? items : [{
+      title: '共有カテゴリを追加',
+      meta: '共有リンクモーダルから設定できます',
+    }],
+  };
+}
+
+function getRequestSummary() {
+  const received = Array.isArray(state.receivedRequests) ? state.receivedRequests : [];
+  const sent = Array.isArray(state.sentRequests) ? state.sentRequests : [];
+  const receivedCount = received.length;
+  const sentCount = sent.length;
+  const activeCount = receivedCount + sentCount;
+  const items = [
+    ...received.slice(0, 2).map(request => ({
+      title: request.title || '受信依頼',
+      meta: request.fromDept ? `${request.fromDept}から` : '受信依頼',
+    })),
+    ...sent.slice(0, 1).map(request => ({
+      title: request.title || '送信依頼',
+      meta: request.toDept ? `${request.toDept}へ` : '送信依頼',
+    })),
+  ].slice(0, 2);
+
+  return {
+    headline: activeCount > 0 ? `${activeCount}件 進行中` : '新着なし',
+    description: activeCount > 0
+      ? `受信 ${receivedCount}件 / 送信 ${sentCount}件 の依頼を確認できます。`
+      : '相談や依頼を必要な時にすぐ起票できます。',
+    items: items.length > 0 ? items : [{
+      title: '新しい依頼を作成',
+      meta: '部署間の相談・連携をここから開始',
+    }],
+    tone: receivedCount > 0 ? 'active' : 'neutral',
   };
 }
 
@@ -390,6 +518,10 @@ async function handleSharedHomeAction(action) {
 
 function getNoticeSummary() {
   const visible = Array.isArray(state.visibleNotices) ? state.visibleNotices : [];
+  const items = visible.slice(0, 2).map(notice => ({
+    title: notice.title || 'お知らせ',
+    meta: notice.priority === 'urgent' ? '重要通知' : '共有通知',
+  }));
   const pendingAckCount = visible.filter(notice => {
     if (!notice?.requireAcknowledgement || !state.currentUsername) return false;
     const acknowledgedBy = Array.isArray(notice.acknowledgedBy) ? notice.acknowledgedBy : [];
@@ -408,6 +540,10 @@ function getNoticeSummary() {
     description: pendingAckCount > 0
       ? '重要通知の確認が必要です。'
       : (unreadCount > 0 ? 'まだ読んでいないお知らせがあります。' : '今は大きな確認待ちはありません。'),
+    items: items.length > 0 ? items : [{
+      title: '共有通知を確認',
+      meta: '未読や重要通知をまとめて確認',
+    }],
   };
 }
 
