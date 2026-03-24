@@ -3,13 +3,13 @@
 ## プロジェクト概要
 - **名前**: 生産管理課 ポータル
 - **公開先**: GitHub Pages (`https://github.com/ni1214/portal.git` / branch: `master`)
-- **バックエンド**: Firebase Firestore（プロジェクト: `kategu-sys-v15`）
+- **バックエンド**: Supabase（本番 primary） / Firebase は完全撤去の最終整理フェーズ
 - **スタック**: Vanilla JS (ES modules) + HTML + CSS — フレームワークなし
 - **主要ファイル**: `index.html` / `script.js` / `style.css`
 
 ## 開発方針（重要）
-- **基本方針**: GitHub Pages + Firebase 無料枠の範囲内で実装する
-- バックエンド処理が必要になっても、まず「Firebase/フロントで代替できないか」を先に検討する
+- **基本方針**: GitHub Pages + Supabase Free の範囲内で実装する
+- バックエンド処理が必要になっても、まず「Supabase / フロントで代替できないか」を先に検討する
 - Vercel等に切り替えればより良い方法がある場合は「Vercelに切り替えれば〇〇もできます」と**条件付きで提案するだけ**にする
 - ユーザーはVercel等への移行を現時点では望んでいない
 
@@ -43,6 +43,87 @@
 ### 運用メモ
 - Stitch の MCP 設定や API キーは **repo に書かずローカル Codex 設定で管理**する
 - デザイン規定が迷ったら、この `Stitch デザイン運用ルール` を既存の細則より優先する
+
+---
+
+## 2026-03-24 最新引き継ぎ（新規チャット開始点・最優先）
+
+> **重要**: 新規チャットでは、まずこの章から読むこと。下の古い Firebase / Firestore 中心の記述には履歴メモが多く残っている。**次の着手順は `デザインの続き → Firebase 完全撤去の続き` の順番**で進める。
+
+### 現在地
+- 最新 push 済みコミット: `eb785c6` (`feat: refresh home with stitch light layout`)
+- ホーム画面は **Stitch project `Portal - Desktop Light Mode`** をベースに、現行ポータルへ反映済み
+- 反映済み対象:
+  - 上部ヘッダー / 左サイドバー / 中央検索バー / 左メインの共有ダッシュボード / 右レールの個人スペース
+  - 共有リンク、お知らせ、カレンダー、ガイド、招待コードへのホーム導線
+- 実ブラウザ確認済み:
+  - `PC幅 1440px` ライト
+  - `スマホ幅 390px` ライト
+  - 主要導線クリック時のコンソール `error` 0 件
+
+### デザインの続き（次チャットはここから開始すること）
+
+#### 最初にやること
+- **必ずデザイン作業から始める**
+- まず Stitch の同一プロジェクトを参照して、**ホームのダークモード版 / スマホ版 / 必要なら微差分調整**を反映する
+- ホームが揃ったら、その次に **モーダル群を Stitch に順番に作らせて差し替える**
+
+#### Stitch 参照元
+- Stitch project URL: `https://stitch.withgoogle.com/projects/17284850635612432857?pli=1`
+- この環境では **Stitch MCP 利用確認済み**
+- `get_project` / `get_screen` / `generate_screen_from_text` は成功済み
+- 既に取得確認できている画面:
+  - `Portal - Desktop Light Mode`
+  - `社内ポータル - ダークモード (Desktop)`
+- 補足:
+  - Codex の専用 MCP ツールとしてではなく、**HTTP で MCP を直接叩く形で利用できる**
+  - Stitch の MCP 設定と API キーは **ローカルのみ**。repo に書かない
+
+#### デザイン実装ルール（次チャット向け）
+- **見た目の判断は Stitch を優先**し、Portal 側では機能要件と既存導線の維持を優先する
+- `id` / `data-*` / 既存イベント導線は壊さない
+- モーダルは **細かい指示を出しすぎず**、「必要機能」「必須入力」「保存導線」だけ伝えて Stitch に自由度を持たせる
+- 各画面はできるだけ `ライト / ダーク / スマホ` をまとめて設計する
+
+#### モーダルの推奨着手順
+1. 部門間依頼モーダル
+2. タスクモーダル
+3. 勤怠カレンダーモーダル
+4. メールアシスタント / プロフィール
+5. 発注モーダル
+6. 共有リンクモーダル
+7. チャット / ファイル転送
+
+#### デザイン確認の必須条件
+- `PC幅 1440px` と `スマホ幅 390px`
+- `light` と `dark`
+- `保存 → 閉じる → 再表示 → 関連画面へ反映`
+- コンソール `error` / `SEVERE` 0 件
+
+### Firebase 完全撤去の続き（デザインの後で着手）
+
+#### 現状
+- 通常起動では **Supabase primary** で動いている
+- 直近確認では **Firebase リクエスト 0 件** の状態まで来ている
+- ただし repo 内には、**古い Firebase 前提の説明・履歴メモ・フォールバック発想の名残**がまだ残っている
+
+#### 次にやること
+- デザイン作業が一段落したら、**Firebase 完全撤去の最終整理**に着手する
+- 優先順:
+  1. runtime で Firebase SDK / Firebase request が本当に不要か再監査
+  2. 旧 Firebase 前提の分岐・コメント・未使用コードを洗い出し
+  3. `AGENTS.md` などのドキュメントを **Supabase 本線** 前提へ更新
+  4. 必要なら migration 用スクリプトと runtime 用コードを明確に分離
+
+#### 完全撤去のゴール
+- 通常画面操作で Firebase を一切読まない
+- Firebase SDK が runtime 上不要なら削除する
+- 新規チャットで読んだ人が「このプロジェクトは Supabase です」と迷わず言える状態にする
+- 検証で `Network` / コンソールの両方から Firebase 依存 0 を確認する
+
+### 注意
+- 旧セクションにある Firebase / Firestore 記述は、**移行履歴やデータ対応表としては有用だが、現在の本線仕様ではない**
+- 次チャットでは、まずこの章に従って **デザインから始めること**
 
 ---
 
@@ -141,7 +222,7 @@ export function xxxFunction() { ... }
 - 新規チャットでも同様に、変更を残す場合は `master` への push まで完了させる
 
 ## アーキテクチャ
-- Firebase ESM を CDN から import（`https://www.gstatic.com/firebasejs/10.12.0/`）
+- 現在の runtime 本線は **Supabase**。以下の Firebase / Firestore 記述は、主に移行履歴・旧パス対応の参照メモとして残っている
 - `script.js` は `type="module"` — ESM import 構文必須
 - `onSnapshot` で Firestore をリアルタイム監視 → `renderAllSections()` が主な再描画関数
 - **常時編集モード**: `isEditMode = true` 固定（PIN ゲートなし）
@@ -156,6 +237,8 @@ export function xxxFunction() { ... }
 - `localStorage` はフラッシュ防止キャッシュのみ
 
 ## Firestore コレクション一覧
+> **注記**: ここは旧 Firebase / Firestore 時代のデータ対応表を兼ねる。現在の本線保存先は Supabase。
+
 | コレクション | 用途 |
 |---|---|
 | `cards/` | 公開カード |
