@@ -531,18 +531,25 @@ export function renderNotices(notices) {
     const editBtns = state.isEditMode
       ? `<button class="btn-notice-edit" data-id="${n.id}"><i class="fa-solid fa-pen"></i></button>`
       : '';
+    const iconClass = n.priority === 'urgent' ? 'fa-triangle-exclamation' : 'fa-bullhorn';
+    const iconMod = n.priority === 'urgent' ? 'urgent' : 'normal';
     item.innerHTML = `
-      <div class="notice-item-header">
-        ${newBadge}
-        <span class="notice-badge ${n.priority === 'urgent' ? 'badge-urgent' : 'badge-normal'}">${n.priority === 'urgent' ? '重要' : 'お知らせ'}</span>
-        <span class="notice-title">${esc(n.title || '')}</span>
-        <span class="notice-date">${dateStr}</span>
-        ${editBtns}
+      <div class="notice-card-icon notice-card-icon--${iconMod}">
+        <i class="fa-solid ${iconClass}"></i>
       </div>
-      ${n.body ? `<div class="notice-body">${esc(n.body)}</div>` : ''}
-      <div class="notice-targets">${buildAudienceBadgeHtml(n)}</div>
-      ${buildAcknowledgementHtml(n)}
-      ${buildReactionBar(n.id)}
+      <div class="notice-card-body">
+        <div class="notice-item-header">
+          ${newBadge}
+          <span class="notice-badge ${n.priority === 'urgent' ? 'badge-urgent' : 'badge-normal'}">${n.priority === 'urgent' ? '重要' : 'お知らせ'}</span>
+          <span class="notice-date">${dateStr}</span>
+          ${editBtns}
+        </div>
+        <div class="notice-title">${esc(n.title || '')}</div>
+        ${n.body ? `<div class="notice-body">${esc(n.body)}</div>` : ''}
+        <div class="notice-targets">${buildAudienceBadgeHtml(n)}</div>
+        ${buildAcknowledgementHtml(n)}
+        ${buildReactionBar(n.id)}
+      </div>
     `;
     if (state.isEditMode) {
       item.querySelector('.btn-notice-edit').addEventListener('click', () => openNoticeModal(n));
