@@ -106,6 +106,7 @@ export function xxxFunction() { ... }
 ## Git ワークフロー
 - 機能変更のたびに `git add` → `git commit` → `git push origin master`
 - コミット後 GitHub Pages に自動デプロイされる（数分で反映）
+- **確認不要**: コミット・`git push origin master` まで自動で進めてよい（ユーザーへの確認不要）
 
 ## アーキテクチャ
 - Firebase ESM を CDN から import（`https://www.gstatic.com/firebasejs/10.12.0/`）
