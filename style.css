@@ -16861,3 +16861,153 @@ button.portal-home-panel:hover,
     width: 100%;
   }
 }
+
+/* ===== Stitch案1 Layout ===== */
+
+/* 1. Narrow 96px sidebar with icon-above-label */
+:root {
+  --sidebar-width: 96px;
+}
+
+.sidebar {
+  padding: 8px 0;
+}
+
+.sidebar-shell {
+  padding: 12px 4px 12px;
+  gap: 2px;
+  min-height: 0;
+}
+
+.sidebar-workspace-card {
+  display: none;
+}
+
+.sidebar-invite-wrap {
+  display: none;
+}
+
+.sidebar-nav {
+  gap: 2px;
+}
+
+/* Override all sidebar items (including FABs using !important) to icon-above-label */
+.sidebar .sidebar-item {
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 10px 4px 8px !important;
+  gap: 4px !important;
+  border-radius: 10px;
+  min-height: 58px;
+  border-left: 2px solid transparent;
+  transform: none !important;
+  border-color: transparent !important;
+}
+
+.sidebar .sidebar-item:hover {
+  background: color-mix(in srgb, var(--portal-home-accent) 10%, transparent) !important;
+  border-left-color: transparent !important;
+  color: var(--portal-home-accent) !important;
+  border-color: transparent !important;
+  transform: none !important;
+}
+
+.sidebar .sidebar-item--home,
+.sidebar .sidebar-item.active {
+  background: color-mix(in srgb, var(--portal-home-accent) 10%, transparent) !important;
+  color: var(--portal-home-accent) !important;
+  box-shadow: none !important;
+  border-left-color: var(--portal-home-accent) !important;
+}
+
+.sidebar .sidebar-item-icon {
+  width: 22px;
+  height: 22px;
+  font-size: 1rem;
+}
+
+.sidebar .sidebar-item-label {
+  font-size: 9px !important;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+  white-space: normal !important;
+  text-overflow: clip !important;
+  overflow: visible !important;
+  flex: none !important;
+}
+
+.sidebar-divider {
+  margin: 6px 12px;
+}
+
+/* Utility buttons - stack vertically */
+.sidebar-utility-row {
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  padding: 0 0 4px;
+}
+
+.sidebar-utility-btn {
+  width: 44px;
+  height: 44px;
+}
+
+/* 2. Home 2-column grid (7fr left, 5fr right) */
+.home-content-grid {
+  grid-template-columns: minmax(0, 7fr) minmax(260px, 5fr) !important;
+  gap: 28px;
+}
+
+/* 3. Hide こんにちは hero panel */
+.shared-home-panel,
+.portal-home-shell {
+  display: none !important;
+}
+
+/* 4. Reduce search hero margin */
+.home-search-hero {
+  margin-bottom: 32px !important;
+}
+
+/* 5. Fix personal space top margin */
+#space-personal {
+  margin-top: 0 !important;
+}
+
+/* 6. Notice items - glass card style in home layout */
+#notice-board .notice-item {
+  background: color-mix(in srgb, var(--portal-home-card) 88%, var(--portal-home-elevated));
+  border: 1px solid color-mix(in srgb, var(--portal-home-line) 44%, transparent);
+  border-radius: 20px;
+  border-left: 3px solid var(--portal-home-accent);
+  padding: 16px 18px;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+#notice-board .notice-item:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--portal-home-accent) 28%, var(--portal-home-line));
+}
+
+#notice-board .notice-item.urgent {
+  border-left-color: var(--portal-home-danger);
+  background: color-mix(in srgb, var(--portal-home-danger) 6%, var(--portal-home-card));
+}
+
+#notice-board .notice-list {
+  gap: 14px;
+}
+
+#notice-board .notice-board {
+  margin-bottom: 0;
+}
+
+/* 7. Responsive - collapse to 1 col below 1100px */
+@media (max-width: 1100px) {
+  .home-content-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
