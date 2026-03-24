@@ -462,9 +462,25 @@ Object.assign(sharedSpaceDeps, {
   normalizeForSearch,
   focusNoticeBoard: focusNoticeBoardFromDashboard,
   focusWeatherWidget,
+  openCalendarModal: async () => {
+    await openCalendarModal();
+    if (document.getElementById('cal-modal')?.classList.contains('visible')) {
+      await onCalendarModalOpen();
+    }
+  },
+  openTaskModal: () => {
+    state.taskProjectKeyFilter = '';
+    state.activeTaskTab = 'received';
+    openTaskModal();
+  },
   openPropertySummary: () => openPropertySummaryModal(),
   openOrderModal,
-  openReqModal: () => openReqModal(),
+  openReqModal: () => {
+    state.reqProjectKeyFilter = '';
+    state.activeReqTab = 'request';
+    state.activeReqSubTab = 'received';
+    openReqModal('request');
+  },
   openEmailModal,
 });
 
