@@ -17232,19 +17232,20 @@ body {
   background: #31353c !important;
   border: 1px solid rgba(65, 71, 82, 0.20) !important;
   border-radius: 12px !important;
-  padding: 0 16px 0 48px !important;
+  padding: 0 16px !important;
   box-shadow: none !important;
   gap: 8px !important;
-  position: relative !important;
+  position: static !important;
 }
 
 .home-search-container .search-icon {
-  position: absolute !important;
-  left: 16px !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
   font-size: 1rem !important;
   color: #c0c7d4 !important;
+  flex-shrink: 0 !important;
 }
 
 .home-search-container .search-input {
@@ -17444,4 +17445,21 @@ body {
 
 [data-theme="light"] .card:hover {
   background: #eaeef2 !important;
+}
+
+/* ===== サイドバーユーティリティボタン統一: アイコンのみ 40×40px ===== */
+.sidebar .ft-fab,
+.sidebar .chat-fab,
+.sidebar .settings-fab,
+.sidebar .help-fab {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 0 !important;
+  border-radius: 10px !important;
+  font-size: 1rem !important;
 }
