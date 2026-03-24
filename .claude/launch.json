@@ -6,6 +6,18 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["C:/Users/frx/Desktop/portal/.claude/server.js"],
       "port": 8080
+    },
+    {
+      "name": "stitch-preview",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8082", "--directory", "C:/Users/frx/Desktop/portal/.claude/worktrees/festive-lederberg"],
+      "port": 8082
+    },
+    {
+      "name": "wt-portal-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:/Users/frx/Desktop/portal/.claude/worktrees/festive-lederberg/.claude/wt-server.js"],
+      "port": 8083
     }
   ]
 }

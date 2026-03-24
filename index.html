@@ -50,7 +50,7 @@
           </div>
         </div>
 
-        <nav class="header-nav" aria-label="主要メニュー">
+        <nav class="header-nav" aria-label="主要メニュー" hidden>
           <button type="button" class="header-nav-item header-nav-item--active" id="header-home-btn">ホーム</button>
           <button type="button" class="header-nav-item" id="header-shared-btn">全社共有</button>
           <button type="button" class="header-nav-item" id="header-dashboard-btn">共有ダッシュボード</button>
@@ -170,6 +170,10 @@
         <button class="sidebar-utility-btn btn-lock-header" id="btn-lock-header" title="ポータルをロック" hidden>
           <i class="fa-solid fa-lock"></i>
         </button>
+
+        <button class="sidebar-utility-btn" id="btn-read-diagnostics" title="転送診断（Supabase転送量確認）">
+          <i class="fa-solid fa-gauge-high"></i>
+        </button>
       </div>
 
       <div class="sidebar-invite-wrap">
@@ -220,7 +224,6 @@
           <i class="fa-solid fa-users"></i>
           <span>全社共有スペース</span>
         </div>
-        <p class="area-header-desc">全社員に共有されます。お知らせ・リンク集・各部門の資料などをここで確認・管理できます。天気・太陽光データはクイックリンク内の <i class="fa-solid fa-solar-panel" style="color:var(--accent-orange)"></i> アイコンから確認できます。</p>
       </div>
       <div class="space-body" id="shared-space-body">
 
@@ -279,19 +282,12 @@
           <i class="fa-solid fa-user-circle"></i>
           <span>個人スペース</span>
         </div>
-        <p class="area-header-desc">あなただけに表示されます。タスク・お気に入り・マイカテゴリはほかのユーザーには見えません。</p>
-        <p class="area-header-desc area-header-hint" id="area-personal-hint" hidden><i class="fa-solid fa-triangle-exclamation" style="color:var(--accent-orange)"></i> ユーザーネームを設定するとこのエリアのすべての機能が使えます。上の「<strong>名前を設定してください</strong>」をタップしてください。</p>
+        <p class="area-header-hint" id="area-personal-hint" hidden><i class="fa-solid fa-triangle-exclamation" style="color:var(--accent-orange)"></i> ユーザーネームを設定するとこのエリアのすべての機能が使えます。上の「<strong>名前を設定してください</strong>」をタップしてください。</p>
       </div>
       <div class="space-body" id="personal-space-body">
 
         <!-- 個人TODOパネル -->
         <section id="dash-today-section" class="dash-section" hidden></section>
-
-        <div class="rd-launch-row">
-          <button class="btn-modal-secondary rd-launch-btn" id="btn-read-diagnostics">
-            <i class="fa-solid fa-gauge-high"></i> 転送診断
-          </button>
-        </div>
 
         <section id="todo-section" class="todo-section" hidden>
           <div class="todo-header">
