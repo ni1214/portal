@@ -22,7 +22,7 @@ import {
   migrateToNewUsername,
   showUsernameModal, closeUsernameModal, showUsernameError, hideUsernameError,
   applyUsername, saveUsername,
-  ensureInviteAccess, submitInviteCode, loadInviteCodeConfig, saveInviteCode, clearInviteCode,
+  ensureInviteAccess, submitInviteCode, loadInviteCodeConfig, saveInviteCode, clearInviteCode, openInviteCodeModal,
   loginExistingUsername, restoreStoredUsernameSession,
   loadLockSettings, saveLockSettings,
   startActivityTracking, stopActivityTracking, resetActivityTimer, checkAutoLock,
@@ -435,6 +435,22 @@ initTodayDashboard({
   },
   openNoticeBoard: () => {
     focusNoticeBoardFromDashboard();
+  },
+  openFavorites: () => {
+    const section = document.getElementById('favorites-section');
+    if (section && !section.hidden) {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    document.getElementById('btn-favorites-only')?.click();
+  },
+  openInviteCode: async () => {
+    try {
+      await loadInviteCodeConfig();
+    } catch (err) {
+      console.error('招待コード設定の読込に失敗しました:', err);
+    }
+    openInviteCodeModal();
   },
 });
 initReadDiagnostics();
@@ -2581,7 +2597,7 @@ function _clearSearchResults() {
   const noResults      = document.getElementById('no-results');
   if (resultsSection) { resultsSection.hidden = true; resultsSection.innerHTML = ''; }
   if (noResults) noResults.classList.remove('visible');
-  document.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap, .area-header, .shared-home-shell')
+  document.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap, .area-header, .shared-home-shell, .portal-shared-shell, .portal-rail-shell')
     .forEach(el => el.classList.remove('search-hidden'));
 }
 
@@ -2612,7 +2628,7 @@ function initSearch() {
     }
 
     // 検索中はすべてのセクションとエリアヘッダーを隠す
-    document.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap, .area-header, .shared-home-shell')
+    document.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap, .area-header, .shared-home-shell, .portal-shared-shell, .portal-rail-shell')
       .forEach(el => el.classList.add('search-hidden'));
 
     if (!state.sharedCardsLoaded && !state.sharedCardsLoading) {
@@ -2843,6 +2859,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('header-help-btn').addEventListener('click', () => {
     document.getElementById('guide-modal').classList.add('visible');
   });
+  document.getElementById('header-notice-btn').addEventListener('click', () => {
+    focusNoticeBoardFromDashboard();
+  });
+  document.getElementById('header-home-btn').addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  document.getElementById('header-shared-btn').addEventListener('click', () => {
+    state.sharedLinksCategory = 'all';
+    void openSharedLinksModal();
+  });
+  document.getElementById('header-dashboard-btn').addEventListener('click', () => {
+    document.getElementById('shared-home-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  document.getElementById('header-manual-btn').addEventListener('click', () => {
+    document.getElementById('guide-modal').classList.add('visible');
+  });
   document.getElementById('guide-close').addEventListener('click', () => {
     document.getElementById('guide-modal').classList.remove('visible');
   });
@@ -2872,6 +2904,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('auth-invite-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('auth-invite-submit').click();
+  });
+  document.getElementById('home-invite-btn')?.addEventListener('click', async () => {
+    try {
+      await loadInviteCodeConfig();
+    } catch (err) {
+      console.error('招待コード設定の読込に失敗しました:', err);
+    }
+    openInviteCodeModal();
   });
 
   document.getElementById('auth-prelogin-submit').addEventListener('click', async () => {

@@ -5,6 +5,7 @@ let deps = {};
 
 const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 const DASH_LIST_LIMIT = 3;
+const PERSONAL_SPACE_IMAGE = 'https://lh3.googleusercontent.com/aida-public/AB6AXuB0yRE22oeu0OzCYIP9Tr6C1r_iBtg8cC5gyvleS6EfK4nHmKeH6nPLW6rnSA_eh8gOnWSCr7jx5z-90W6tGZ00giO8HjNQcn4NreAM4CdoBDonISBDsaI1k03_MY4JQaJqgKfux6peoJV-3A0NghYeE3i7O36gnUbkwfFr4cu47FNWY8vouldeH_Rw85R4399O3_YpLBownQ5IiSmgQTMhCbbrOz0Ou3jDC-9N_qbl4h-dKDyWQ8h0x2QqNPfthyTCHWI3TyclPAWE';
 const ATTENDANCE_TYPE_LABELS = {
   normal: '通常',
   有給: '有給',
@@ -20,6 +21,8 @@ const DASH_TARGETS = Object.freeze({
   REQUEST_SENT: 'request-sent',
   ATTENDANCE: 'attendance',
   NOTICE: 'notice',
+  FAVORITES: 'favorites',
+  INVITE: 'invite',
 });
 
 export function initTodayDashboard(d = {}) {
@@ -32,94 +35,137 @@ export function renderTodayDashboard() {
   if (!section) return;
   bindDashboardEvents(section);
 
-  if (!state.currentUsername) {
-    section.hidden = true;
-    section.innerHTML = '';
-    return;
-  }
-
   const today = new Date();
   const todayKey = buildDateKey(today);
-  const profileChips = buildSectionProfileChips();
-  const cards = [
-    buildFocusCard(todayKey),
-    buildTaskCard(todayKey),
-    buildRequestCard(),
-    buildAttendanceCard(todayKey),
-    buildNoticeCard(),
-  ].filter(Boolean);
-  const [focusCard, taskCard, requestCard, attendanceCard, noticeCard] = cards;
-  const quickActionCards = [focusCard, taskCard, requestCard, attendanceCard, noticeCard]
-    .filter(card => card?.target)
-    .filter((card, index, list) => list.findIndex(item => item.target === card.target) === index);
-  const summaryCards = [taskCard, requestCard, attendanceCard, noticeCard].filter(Boolean);
-  const greeting = getDashboardGreeting(today);
-  const username = state.currentUsername || 'メンバー';
+  const profile = getDashboardProfile();
+  const username = state.currentUsername || '名前を設定してください';
+  const taskCard = buildTaskCard(todayKey);
+  const attendanceCard = buildAttendanceCard(todayKey);
+  const noticeCard = buildNoticeCard();
+  const favoriteCount = Array.isArray(state.personalFavorites) ? state.personalFavorites.length : 0;
+  const visibleNotices = Array.isArray(state.visibleNotices) ? state.visibleNotices : (state.allNotices || []);
+  const unreadCount = visibleNotices.filter(notice => !state.readNoticeIds.has(notice.id)).length;
+  const pendingAckCount = getPendingAckNotices().length;
+  const isProfileReady = Boolean(state.currentUsername);
+  const attendanceTarget = isProfileReady ? DASH_TARGETS.ATTENDANCE : DASH_TARGETS.PROFILE;
+  const taskTarget = isProfileReady ? DASH_TARGETS.TASK_RECEIVED : DASH_TARGETS.PROFILE;
+  const favoritesTarget = isProfileReady ? DASH_TARGETS.FAVORITES : DASH_TARGETS.PROFILE;
+  const personalMeta = buildPersonalMeta(profile);
+  const topicTone = pendingAckCount > 0 ? 'alert' : (unreadCount > 0 ? 'active' : 'stable');
 
   section.hidden = false;
   section.innerHTML = `
-    <div class="dash-shell dash-shell--${focusCard?.tone || 'idle'}">
-      <div class="dash-section-header">
-        <div class="dash-section-heading">
-          <div class="dash-section-kicker">Today Flow</div>
-          ${profileChips}
-          <h2 class="dash-section-title">${esc(`${greeting}、${username}さん`)}</h2>
-          <p class="dash-section-copy">${esc(buildDashboardHeroDescription(focusCard))}</p>
+    <div class="portal-rail-shell">
+      <section class="portal-rail-card portal-rail-card--personal">
+        <div class="portal-rail-card-head">
+          <h2 class="portal-rail-card-title"><i class="fa-solid fa-user"></i> 個人スペース</h2>
+          <div class="portal-rail-user-block">
+            <div class="portal-rail-user-name">${esc(username)}</div>
+            <div class="portal-rail-user-meta">${esc(personalMeta)}</div>
+          </div>
         </div>
-        <div class="dash-section-date">${esc(formatDateLabel(today))}</div>
-      </div>
 
-      <div class="dash-hero-grid">
-        <section class="dash-hero-panel">
-          <div class="dash-hero-panel-head">
-            <div class="dash-hero-label">Priority</div>
-            <div class="dash-hero-value">${esc(focusCard?.value || '確認')}</div>
-          </div>
-          <div class="dash-hero-title-row">
-            <div class="dash-hero-icon"><i class="${focusCard?.icon || 'fa-solid fa-compass-drafting'}"></i></div>
-            <div>
-              <h3 class="dash-hero-title">${esc(focusCard?.title || '今日のフォーカス')}</h3>
-              ${focusCard?.subtitle ? `<p class="dash-hero-subtitle">${esc(focusCard.subtitle)}</p>` : ''}
-            </div>
-          </div>
-          ${focusCard?.meta ? `<p class="dash-hero-meta">${esc(focusCard.meta)}</p>` : ''}
-          ${renderDashboardCardChips(focusCard)}
-          ${renderDashboardCardItems(focusCard, {
-            listClassName: 'dash-hero-list',
-            emptyClassName: 'dash-hero-empty',
+        <div class="portal-rail-action-list">
+          ${renderRailAction({
+            target: attendanceTarget,
+            icon: 'fa-regular fa-clock',
+            label: '本日の勤怠',
+            value: buildAttendanceValueLabel(attendanceCard, isProfileReady),
+            tone: attendanceCard.tone || 'idle',
           })}
-          ${focusCard?.target ? `
-            <div class="dash-hero-footer">
-              <button
-                type="button"
-                class="dash-hero-cta"
-                data-dash-target="${esc(focusCard.target)}"
-                aria-label="${esc(`${focusCard.title} - ${focusCard.actionLabel || getDashboardActionLabel(focusCard.target)}`)}"
-              >
-                <span>${esc(focusCard.actionLabel || getDashboardActionLabel(focusCard.target))}</span>
-                <i class="fa-solid fa-arrow-right"></i>
-              </button>
-            </div>
-          ` : ''}
-        </section>
-
-        <div class="dash-metric-grid">
-          ${summaryCards.map(renderDashboardMetricCard).join('')}
+          ${renderRailAction({
+            target: taskTarget,
+            icon: 'fa-solid fa-circle-check',
+            label: 'マイタスク',
+            value: isProfileReady ? taskCard.value : '要設定',
+            tone: taskCard.tone || 'idle',
+          })}
+          ${renderRailAction({
+            target: favoritesTarget,
+            icon: 'fa-regular fa-bookmark',
+            label: 'お気に入り',
+            value: isProfileReady
+              ? (favoriteCount > 0 ? `${favoriteCount}件` : '開く')
+              : '要設定',
+            tone: favoriteCount > 0 ? 'active' : 'neutral',
+            arrow: true,
+          })}
         </div>
-      </div>
 
-      <div class="dash-quick-actions">
-        ${quickActionCards.map(renderDashboardQuickAction).join('')}
-      </div>
+        <div class="portal-rail-image-wrap">
+          <img
+            class="portal-rail-image"
+            src="${PERSONAL_SPACE_IMAGE}"
+            alt="明るいワークスペースのイメージ"
+            loading="lazy"
+          >
+        </div>
+      </section>
 
-      <div class="dash-story-grid">
-        ${renderDashboardFeatureCard(taskCard, { eyebrow: 'Tasks' })}
-        ${renderDashboardFeatureCard(requestCard, { eyebrow: 'Requests' })}
-        ${renderDashboardFeatureCard(attendanceCard, { eyebrow: 'Attendance' })}
-        ${renderDashboardFeatureCard(noticeCard, { eyebrow: 'Notices' })}
-      </div>
+      <section class="portal-rail-card portal-rail-card--topics portal-rail-card--${topicTone}" data-dash-target="${DASH_TARGETS.NOTICE}" tabindex="0" role="button" aria-label="共有トピックを開く">
+        <div class="portal-rail-card-head">
+          <h2 class="portal-rail-card-title"><i class="fa-solid fa-comments"></i> 共有トピック</h2>
+        </div>
+
+        <div class="portal-topic-status">
+          <span class="portal-topic-status-dot"></span>
+          <span>${esc(pendingAckCount > 0 ? '確認待ちの通知があります' : '共有トピックは安定')}</span>
+        </div>
+
+        <div class="portal-topic-grid">
+          <div class="portal-topic-metric">
+            <span class="portal-topic-label">確認待ち</span>
+            <strong class="portal-topic-value">${pendingAckCount}<span>件</span></strong>
+          </div>
+          <div class="portal-topic-metric">
+            <span class="portal-topic-label">未読</span>
+            <strong class="portal-topic-value">${unreadCount}<span>件</span></strong>
+          </div>
+        </div>
+
+        <p class="portal-topic-copy">${esc(noticeCard.meta || '最新のお知らせを確認できます。')}</p>
+      </section>
+
+      <section class="portal-invite-card">
+        <div class="portal-invite-icon">
+          <i class="fa-solid fa-qrcode"></i>
+        </div>
+        <div class="portal-invite-copy">
+          <h3 class="portal-invite-title">招待コード</h3>
+          <p class="portal-invite-text">新しいメンバーを招待</p>
+        </div>
+        <button type="button" class="portal-invite-btn" data-dash-target="${DASH_TARGETS.INVITE}">入力</button>
+      </section>
     </div>
   `;
+}
+
+function renderRailAction({ target, icon, label, value, tone = 'neutral', arrow = false }) {
+  return `
+    <button type="button" class="portal-rail-action portal-rail-action--${tone}" data-dash-target="${esc(target)}">
+      <span class="portal-rail-action-icon"><i class="${icon}"></i></span>
+      <span class="portal-rail-action-copy">${esc(label)}</span>
+      <span class="portal-rail-action-value${arrow ? ' portal-rail-action-value--arrow' : ''}">
+        ${arrow ? '<i class="fa-solid fa-chevron-right"></i>' : esc(value)}
+      </span>
+    </button>
+  `;
+}
+
+function buildPersonalMeta(profile) {
+  if (!state.currentUsername) {
+    return 'プロフィールを設定すると個人スペースが使えます';
+  }
+  const tokens = [profile.department, profile.roleLabel].filter(Boolean);
+  return tokens.length > 0 ? tokens.join(' / ') : formatDateLabel(new Date());
+}
+
+function buildAttendanceValueLabel(card, isProfileReady) {
+  if (!isProfileReady) return '要設定';
+  if (!card) return '確認';
+  if (card.value === '未入力') return '未入力';
+  if (card.value === '通常') return '入力済み';
+  return card.value;
 }
 
 function renderDashboardMetricCard(card) {
@@ -278,6 +324,12 @@ async function openDashboardTarget(target) {
       case DASH_TARGETS.NOTICE:
         await deps.openNoticeBoard?.();
         return;
+      case DASH_TARGETS.FAVORITES:
+        await deps.openFavorites?.();
+        return;
+      case DASH_TARGETS.INVITE:
+        await deps.openInviteCode?.();
+        return;
       default:
         return;
     }
@@ -302,6 +354,10 @@ function getDashboardActionLabel(target) {
       return '今日の勤怠を開く';
     case DASH_TARGETS.NOTICE:
       return 'お知らせへ移動';
+    case DASH_TARGETS.FAVORITES:
+      return 'お気に入りへ移動';
+    case DASH_TARGETS.INVITE:
+      return '招待コードを入力';
     default:
       return '画面を開く';
   }

@@ -157,6 +157,10 @@ function openInviteModal() {
   setTimeout(() => input.focus(), 80);
 }
 
+export function openInviteCodeModal() {
+  openInviteModal();
+}
+
 export function closeInviteModal() {
   document.getElementById('auth-invite-modal')?.classList.remove('visible');
 }

@@ -14,7 +14,7 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -40,34 +40,37 @@
   <!-- ==================== Header ==================== -->
   <header class="header">
     <div class="header-inner">
-      <div class="header-brand">
-        <div class="header-logo">
-          <i class="fa-solid fa-industry"></i>
+      <div class="header-left">
+        <div class="header-brand">
+          <div class="header-logo">
+            <i class="fa-solid fa-industry"></i>
+          </div>
+          <div class="header-brand-copy">
+            <div class="header-title">社内ポータル</div>
+          </div>
         </div>
-        <div>
-          <div class="header-title">日建フレメックス 社内ポータル</div>
-        </div>
-      </div>
 
-      <div class="search-container">
-        <input type="text" id="search-input" class="search-input" placeholder="メニューを検索..." autocomplete="off">
-        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <nav class="header-nav" aria-label="主要メニュー">
+          <button type="button" class="header-nav-item header-nav-item--active" id="header-home-btn">ホーム</button>
+          <button type="button" class="header-nav-item" id="header-shared-btn">全社共有</button>
+          <button type="button" class="header-nav-item" id="header-dashboard-btn">共有ダッシュボード</button>
+          <button type="button" class="header-nav-item" id="header-manual-btn">マニュアル</button>
+        </nav>
       </div>
 
       <div class="header-right">
-        <div class="header-clock">
-          <i class="fa-regular fa-clock"></i>
-          <span id="header-clock"></span>
-        </div>
         <button class="header-help-btn" id="header-help-btn" title="使い方ガイド">
           <i class="fa-solid fa-circle-question"></i>
         </button>
+        <button class="header-notice-btn" id="header-notice-btn" title="お知らせ">
+          <i class="fa-solid fa-bell"></i>
+        </button>
         <button class="btn-user" id="btn-user" title="ユーザー設定">
-          <div class="user-avatar" id="user-avatar"><i class="fa-solid fa-user"></i></div>
           <div class="user-info">
             <span class="user-label" id="user-greeting">名前を設定してください</span>
             <span class="user-name" id="username-display"></span>
           </div>
+          <div class="user-avatar" id="user-avatar"><i class="fa-solid fa-user"></i></div>
         </button>
       </div>
     </div>
@@ -78,102 +81,104 @@
 
   <!-- ==================== Sidebar (PC) ==================== -->
   <aside class="sidebar" id="app-sidebar">
+    <div class="sidebar-shell">
+      <div class="sidebar-workspace-card">
+        <div class="sidebar-workspace-icon">
+          <i class="fa-solid fa-user"></i>
+        </div>
+        <div class="sidebar-workspace-copy">
+          <div class="sidebar-workspace-title">個人スペース</div>
+          <p class="sidebar-workspace-subtitle">一般設定</p>
+        </div>
+      </div>
 
-    <!-- 個人エリア -->
-    <div class="sidebar-section">
-      <div class="sidebar-section-label">個人</div>
+      <nav class="sidebar-nav" aria-label="ホームショートカット">
+        <button class="sidebar-item sidebar-item--home" id="btn-calendar" title="カレンダー・勤怠管理">
+          <span class="sidebar-item-icon"><i class="fa-regular fa-calendar"></i></span>
+          <span class="sidebar-item-label">カレンダー・勤怠</span>
+        </button>
 
-      <button class="sidebar-item" id="btn-calendar" title="カレンダー・勤怠管理">
-        <span class="sidebar-item-icon"><i class="fa-regular fa-calendar"></i></span>
-        <span class="sidebar-item-label">カレンダー・勤怠</span>
-      </button>
+        <button class="sidebar-item" id="btn-task" title="タスク管理">
+          <span class="sidebar-item-icon">
+            <i class="fa-solid fa-list-check"></i>
+            <span class="task-badge" id="task-badge" hidden>0</span>
+          </span>
+          <span class="sidebar-item-label">タスク管理</span>
+        </button>
 
-      <button class="sidebar-item" id="btn-task" title="タスク管理">
-        <span class="sidebar-item-icon">
-          <i class="fa-solid fa-list-check"></i>
-          <span class="task-badge" id="task-badge" hidden>0</span>
-        </span>
-        <span class="sidebar-item-label">タスク管理</span>
-      </button>
+        <button class="sidebar-item" id="btn-favorites-only" title="お気に入り登録済みのカードだけを表示します">
+          <span class="sidebar-item-icon"><i class="fa-regular fa-star"></i></span>
+          <span class="sidebar-item-label">お気に入り</span>
+        </button>
 
-      <button class="sidebar-item" id="btn-favorites-only" title="お気に入り登録済みのカードだけを表示します">
-        <span class="sidebar-item-icon"><i class="fa-regular fa-star"></i></span>
-        <span class="sidebar-item-label">お気に入りのみ</span>
-      </button>
-    </div>
+        <div class="sidebar-divider" aria-hidden="true"></div>
 
-    <!-- 全社共有エリア -->
-    <div class="sidebar-section">
-      <div class="sidebar-section-label">全社共有</div>
+        <button class="sidebar-item" id="btn-notice-bell" title="お知らせ">
+          <span class="sidebar-item-icon">
+            <i class="fa-solid fa-bullhorn"></i>
+            <span class="notice-unread-badge" id="notice-unread-badge" hidden>0</span>
+          </span>
+          <span class="sidebar-item-label">お知らせ</span>
+        </button>
 
-      <button class="sidebar-item" id="btn-notice-bell" title="お知らせ">
-        <span class="sidebar-item-icon">
-          <i class="fa-solid fa-bell"></i>
-          <span class="notice-unread-badge" id="notice-unread-badge" hidden>0</span>
-        </span>
-        <span class="sidebar-item-label">お知らせ</span>
-      </button>
+        <button class="sidebar-item" id="btn-reqboard" title="他部署への依頼・目安箱">
+          <span class="sidebar-item-icon">
+            <i class="fa-solid fa-arrows-left-right"></i>
+            <span class="req-badge" id="req-badge" hidden>0</span>
+          </span>
+          <span class="sidebar-item-label">部署間依頼</span>
+        </button>
 
-      <button class="sidebar-item" id="btn-reqboard" title="他部署への依頼・目安箱">
-        <span class="sidebar-item-icon">
-          <i class="fa-solid fa-clipboard-list"></i>
-          <span class="req-badge" id="req-badge" hidden>0</span>
-        </span>
-        <span class="sidebar-item-label">部署間の依頼</span>
-      </button>
+        <button class="sidebar-item" id="btn-email-assist" title="AIがメールを生成します">
+          <span class="sidebar-item-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+          <span class="sidebar-item-label">メール生成AI</span>
+        </button>
 
-      <button class="sidebar-item" id="btn-email-assist" title="AIがメールを生成します">
-        <span class="sidebar-item-icon"><i class="fa-solid fa-envelope-open-text"></i></span>
-        <span class="sidebar-item-label">メール生成AI</span>
-      </button>
+        <button class="sidebar-item" id="btn-order-launch" title="鋼材発注">
+          <span class="sidebar-item-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+          <span class="sidebar-item-label">鋼材発注</span>
+        </button>
 
-      <button class="sidebar-item" id="btn-order-launch" title="鋼材発注">
-        <span class="sidebar-item-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
-        <span class="sidebar-item-label">鋼材発注</span>
-      </button>
+        <button class="sidebar-item" id="btn-property-summary" title="物件Noごとの依頼・タスク・発注・作業記録をまとめて確認">
+          <span class="sidebar-item-icon"><i class="fa-solid fa-box-archive"></i></span>
+          <span class="sidebar-item-label">物件Noまとめ</span>
+        </button>
 
-      <button class="sidebar-item" id="btn-property-summary" title="物件Noごとの依頼・タスク・発注・作業記録をまとめて確認">
-        <span class="sidebar-item-icon"><i class="fa-solid fa-magnifying-glass-chart"></i></span>
-        <span class="sidebar-item-label">物件Noまとめ</span>
-      </button>
+        <button class="sidebar-item chat-fab" id="chat-fab" title="チャット">
+          <span class="sidebar-item-icon">
+            <i class="fa-regular fa-comments"></i>
+            <span class="chat-unread-badge" id="chat-unread-badge" hidden>0</span>
+          </span>
+          <span class="sidebar-item-label">チャット</span>
+        </button>
+      </nav>
 
-      <button class="sidebar-item chat-fab" id="chat-fab" title="チャット">
-        <span class="sidebar-item-icon">
-          <i class="fa-solid fa-comments"></i>
-          <span class="chat-unread-badge" id="chat-unread-badge" hidden>0</span>
-        </span>
-        <span class="sidebar-item-label">チャット</span>
-      </button>
-
-      <button class="sidebar-item ft-fab" id="ft-fab" title="ファイル転送">
-        <span class="sidebar-item-icon">
+      <div class="sidebar-utility-row">
+        <button class="sidebar-utility-btn ft-fab" id="ft-fab" title="ファイル転送">
           <i class="fa-solid fa-file-arrow-up"></i>
           <span class="ft-badge" id="ft-badge" hidden>0</span>
-        </span>
-        <span class="sidebar-item-label">ファイル転送</span>
-      </button>
+        </button>
+
+        <button class="sidebar-utility-btn settings-fab" id="settings-fab" title="表示設定">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+
+        <button class="sidebar-utility-btn help-fab" id="help-fab" title="使い方ガイド">
+          <i class="fa-solid fa-question"></i>
+        </button>
+
+        <button class="sidebar-utility-btn btn-lock-header" id="btn-lock-header" title="ポータルをロック" hidden>
+          <i class="fa-solid fa-lock"></i>
+        </button>
+      </div>
+
+      <div class="sidebar-invite-wrap">
+        <button class="sidebar-invite-btn" id="home-invite-btn" type="button">
+          <i class="fa-solid fa-plus"></i>
+          <span>招待コードを入力</span>
+        </button>
+      </div>
     </div>
-
-    <!-- 設定エリア -->
-    <div class="sidebar-section sidebar-section-settings">
-      <div class="sidebar-section-label">設定</div>
-
-      <button class="sidebar-item settings-fab" id="settings-fab" title="表示設定">
-        <span class="sidebar-item-icon"><i class="fa-solid fa-gear"></i></span>
-        <span class="sidebar-item-label">表示設定</span>
-      </button>
-
-      <button class="sidebar-item help-fab" id="help-fab" title="使い方ガイド">
-        <span class="sidebar-item-icon"><i class="fa-solid fa-question"></i></span>
-        <span class="sidebar-item-label">使い方ガイド</span>
-      </button>
-
-      <button class="sidebar-item btn-lock-header" id="btn-lock-header" title="ポータルをロック" hidden>
-        <span class="sidebar-item-icon"><i class="fa-solid fa-lock"></i></span>
-        <span class="sidebar-item-label">ロック</span>
-      </button>
-    </div>
-
   </aside>
   <!-- /sidebar -->
 
@@ -195,6 +200,77 @@
         <p class="mission-banner-text" id="mission-banner-text"></p>
       </div>
     </div>
+
+    <section class="home-search-hero">
+      <div class="search-container home-search-container">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="text" id="search-input" class="search-input" placeholder="リソース、タスク、または通知を検索..." autocomplete="off">
+        <div class="home-search-tools" aria-hidden="true">
+          <span class="home-search-tool"><i class="fa-solid fa-microphone-lines"></i></span>
+          <span class="home-search-tool"><i class="fa-regular fa-image"></i></span>
+        </div>
+      </div>
+    </section>
+
+    <div class="home-content-grid">
+    <!-- ==================== 全社共有スペース wrapper ==================== -->
+    <div class="space-wrapper space-shared" id="space-shared">
+      <div class="area-header area-shared" id="area-shared-header">
+        <div class="area-header-title">
+          <i class="fa-solid fa-users"></i>
+          <span>全社共有スペース</span>
+        </div>
+        <p class="area-header-desc">全社員に共有されます。お知らせ・リンク集・各部門の資料などをここで確認・管理できます。天気・太陽光データはクイックリンク内の <i class="fa-solid fa-solar-panel" style="color:var(--accent-orange)"></i> アイコンから確認できます。</p>
+      </div>
+      <div class="space-body" id="shared-space-body">
+
+        <section id="shared-home-panel" class="shared-home-panel"></section>
+
+        <!-- ==================== お知らせボード（全社共有スペースの先頭） ==================== -->
+        <section id="notice-board" class="notice-board"></section>
+
+        <!-- 天気ウィジェット（通常は非表示、太陽光カードで展開） -->
+        <section id="weather-widget" class="weather-widget" hidden>
+      <div class="weather-section-header">
+        <div class="weather-title-area">
+          <i class="fa-solid fa-cloud-sun weather-section-icon"></i>
+          <span class="weather-section-title">高崎市の天気</span>
+        </div>
+        <span id="weather-updated" class="weather-updated"></span>
+      </div>
+      <div class="weather-body">
+        <div id="weather-current" class="weather-current">
+          <div class="weather-loading"><i class="fa-solid fa-spinner fa-spin"></i> 天気情報を取得中...</div>
+        </div>
+        <div id="weather-forecast" class="forecast-scroll"></div>
+      </div>
+
+      <!-- 展開パネル（雨雲レーダー / 太陽光発電 タブ） -->
+      <div id="weather-panel" class="weather-panel" hidden>
+        <div class="wpanel-tabs">
+          <button class="wpanel-tab" id="tab-radar" data-tab="radar">
+            <i class="fa-solid fa-map"></i> 雨雲レーダー
+          </button>
+          <button class="wpanel-tab" id="tab-solar" data-tab="solar">
+            <i class="fa-solid fa-solar-panel"></i> 太陽光発電
+          </button>
+          <a id="wpanel-external" href="#" target="_blank" rel="noopener" class="wpanel-external">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> 別タブで開く
+          </a>
+          <button id="wpanel-close" class="wpanel-close" title="閉じる">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div id="wpanel-content" class="wpanel-content">
+          <!-- iframe は JS が挿入 -->
+        </div>
+      </div>
+    </section>
+
+        <!-- 公開セクション（JS が動的挿入） -->
+
+      </div><!-- /shared-space-body -->
+    </div><!-- /space-shared -->
 
     <!-- ==================== 個人スペース wrapper ==================== -->
     <div class="space-wrapper space-personal" id="space-personal">
@@ -265,65 +341,7 @@
 
       </div><!-- /personal-space-body -->
     </div><!-- /space-personal -->
-
-    <!-- ==================== 全社共有スペース wrapper ==================== -->
-    <div class="space-wrapper space-shared" id="space-shared">
-      <div class="area-header area-shared" id="area-shared-header">
-        <div class="area-header-title">
-          <i class="fa-solid fa-users"></i>
-          <span>全社共有スペース</span>
-        </div>
-        <p class="area-header-desc">全社員に共有されます。お知らせ・リンク集・各部門の資料などをここで確認・管理できます。天気・太陽光データはクイックリンク内の <i class="fa-solid fa-solar-panel" style="color:var(--accent-orange)"></i> アイコンから確認できます。</p>
-      </div>
-      <div class="space-body" id="shared-space-body">
-
-        <section id="shared-home-panel" class="shared-home-panel"></section>
-
-        <!-- ==================== お知らせボード（全社共有スペースの先頭） ==================== -->
-        <section id="notice-board" class="notice-board"></section>
-
-        <!-- 天気ウィジェット（通常は非表示、太陽光カードで展開） -->
-        <section id="weather-widget" class="weather-widget" hidden>
-      <div class="weather-section-header">
-        <div class="weather-title-area">
-          <i class="fa-solid fa-cloud-sun weather-section-icon"></i>
-          <span class="weather-section-title">高崎市の天気</span>
-        </div>
-        <span id="weather-updated" class="weather-updated"></span>
-      </div>
-      <div class="weather-body">
-        <div id="weather-current" class="weather-current">
-          <div class="weather-loading"><i class="fa-solid fa-spinner fa-spin"></i> 天気情報を取得中...</div>
-        </div>
-        <div id="weather-forecast" class="forecast-scroll"></div>
-      </div>
-
-      <!-- 展開パネル（雨雲レーダー / 太陽光発電 タブ） -->
-      <div id="weather-panel" class="weather-panel" hidden>
-        <div class="wpanel-tabs">
-          <button class="wpanel-tab" id="tab-radar" data-tab="radar">
-            <i class="fa-solid fa-map"></i> 雨雲レーダー
-          </button>
-          <button class="wpanel-tab" id="tab-solar" data-tab="solar">
-            <i class="fa-solid fa-solar-panel"></i> 太陽光発電
-          </button>
-          <a id="wpanel-external" href="#" target="_blank" rel="noopener" class="wpanel-external">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i> 別タブで開く
-          </a>
-          <button id="wpanel-close" class="wpanel-close" title="閉じる">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-        <div id="wpanel-content" class="wpanel-content">
-          <!-- iframe は JS が挿入 -->
-        </div>
-      </div>
-    </section>
-
-        <!-- 公開セクション（JS が動的挿入） -->
-
-      </div><!-- /shared-space-body -->
-    </div><!-- /space-shared -->
+    </div>
 
     <!-- 検索結果（直接表示） -->
     <div id="search-results-section" class="search-results-section" hidden></div>
