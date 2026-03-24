@@ -155,24 +155,31 @@
 
       <div class="sidebar-utility-row">
         <button class="sidebar-utility-btn ft-fab" id="ft-fab" title="ファイル転送">
-          <i class="fa-solid fa-file-arrow-up"></i>
-          <span class="ft-badge" id="ft-badge" hidden>0</span>
+          <span class="sidebar-utility-icon">
+            <i class="fa-solid fa-file-arrow-up"></i>
+            <span class="ft-badge" id="ft-badge" hidden>0</span>
+          </span>
+          <span class="sidebar-utility-label">転送</span>
         </button>
 
         <button class="sidebar-utility-btn settings-fab" id="settings-fab" title="表示設定">
-          <i class="fa-solid fa-gear"></i>
+          <span class="sidebar-utility-icon"><i class="fa-solid fa-sliders"></i></span>
+          <span class="sidebar-utility-label">設定</span>
         </button>
 
         <button class="sidebar-utility-btn help-fab" id="help-fab" title="使い方ガイド">
-          <i class="fa-solid fa-question"></i>
+          <span class="sidebar-utility-icon"><i class="fa-regular fa-circle-question"></i></span>
+          <span class="sidebar-utility-label">ガイド</span>
         </button>
 
         <button class="sidebar-utility-btn btn-lock-header" id="btn-lock-header" title="ポータルをロック" hidden>
-          <i class="fa-solid fa-lock"></i>
+          <span class="sidebar-utility-icon"><i class="fa-solid fa-lock"></i></span>
+          <span class="sidebar-utility-label">ロック</span>
         </button>
 
-        <button class="sidebar-utility-btn" id="btn-read-diagnostics" title="転送診断（Supabase転送量確認）">
-          <i class="fa-solid fa-gauge-high"></i>
+        <button class="sidebar-utility-btn sidebar-utility-btn--wide" id="btn-read-diagnostics" title="転送診断（Supabase転送量確認）">
+          <span class="sidebar-utility-icon"><i class="fa-solid fa-gauge-high"></i></span>
+          <span class="sidebar-utility-label">転送診断</span>
         </button>
       </div>
 
