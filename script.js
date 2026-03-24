@@ -148,6 +148,8 @@ import {
 
 import { initBottomNav } from './modules/bottom-nav.js';
 
+import { initHomeDashboard, updateSummaryCards } from './modules/home-dashboard.js';
+
 import {
   initOrder,
   openOrderModal, closeOrderModal,
@@ -453,6 +455,7 @@ initTodayDashboard({
     openInviteCodeModal();
   },
 });
+initHomeDashboard();
 initReadDiagnostics();
 
 Object.assign(sharedSpaceDeps, {
@@ -1377,6 +1380,7 @@ async function saveMissionText() {
 
 function renderAllSections() {
   closeChildPopup();
+  updateSummaryCards();
   const personalBody = document.getElementById('personal-space-body');
   const sharedBody   = document.getElementById('shared-space-body');
 

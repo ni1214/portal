@@ -216,6 +216,84 @@
       </div>
     </section>
 
+    <!-- ==================== ホームダッシュボード ==================== -->
+    <div class="home-dashboard" id="home-dashboard">
+
+      <!-- サマリーカード 4枚 -->
+      <div class="hd-summary-row">
+        <button class="hd-card" id="hcard-tasks">
+          <div class="hd-card-icon hd-icon-blue"><i class="fa-solid fa-list-check"></i></div>
+          <div class="hd-card-body">
+            <div class="hd-card-label">本日のタスク</div>
+            <div class="hd-card-value" id="hcard-task-count">--</div>
+          </div>
+        </button>
+        <button class="hd-card" id="hcard-notices">
+          <div class="hd-card-icon hd-icon-red"><i class="fa-solid fa-bell"></i></div>
+          <div class="hd-card-body">
+            <div class="hd-card-label">未読お知らせ</div>
+            <div class="hd-card-value" id="hcard-notice-count">--</div>
+          </div>
+        </button>
+        <button class="hd-card" id="hcard-requests">
+          <div class="hd-card-icon hd-icon-orange"><i class="fa-solid fa-arrows-left-right"></i></div>
+          <div class="hd-card-body">
+            <div class="hd-card-label">部署間依頼</div>
+            <div class="hd-card-value" id="hcard-req-count">--</div>
+          </div>
+        </button>
+        <button class="hd-card" id="hcard-attendance">
+          <div class="hd-card-icon hd-icon-green"><i class="fa-regular fa-calendar-check"></i></div>
+          <div class="hd-card-body">
+            <div class="hd-card-label">今日の出勤</div>
+            <div class="hd-card-value" id="hcard-attendance-status">--</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- クイックアクセス -->
+      <div class="hd-panel">
+        <div class="hd-panel-header">
+          <span class="hd-panel-title">クイックアクセス</span>
+        </div>
+        <div class="hd-quick-access">
+          <button class="hqa-btn" id="hqa-calendar">
+            <div class="hqa-icon"><i class="fa-regular fa-calendar"></i></div>
+            <span>勤怠入力</span>
+          </button>
+          <button class="hqa-btn" id="hqa-task">
+            <div class="hqa-icon"><i class="fa-solid fa-list-check"></i></div>
+            <span>タスク管理</span>
+          </button>
+          <button class="hqa-btn" id="hqa-order">
+            <div class="hqa-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+            <span>鋼材発注</span>
+          </button>
+          <button class="hqa-btn" id="hqa-email">
+            <div class="hqa-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+            <span>メール生成AI</span>
+          </button>
+          <button class="hqa-btn" id="hqa-file">
+            <div class="hqa-icon"><i class="fa-solid fa-file-arrow-up"></i></div>
+            <span>ファイル転送</span>
+          </button>
+          <button class="hqa-btn" id="hqa-req">
+            <div class="hqa-icon"><i class="fa-solid fa-arrows-left-right"></i></div>
+            <span>部署間依頼</span>
+          </button>
+          <button class="hqa-btn" id="hqa-chat">
+            <div class="hqa-icon"><i class="fa-regular fa-comments"></i></div>
+            <span>チャット</span>
+          </button>
+          <button class="hqa-btn" id="hqa-property">
+            <div class="hqa-icon"><i class="fa-solid fa-box-archive"></i></div>
+            <span>物件Noまとめ</span>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /home-dashboard -->
+
     <div class="home-content-grid">
     <!-- ==================== 全社共有スペース wrapper ==================== -->
     <div class="space-wrapper space-shared" id="space-shared">
