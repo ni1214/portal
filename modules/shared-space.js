@@ -16,96 +16,118 @@ export function renderSharedHome() {
 
   const noticeSummary = getNoticeSummary();
   const publicCategories = getPublicCategories();
+  const visibleCategoryLabels = publicCategories.slice(0, 6);
+  const hiddenCategoryCount = Math.max(publicCategories.length - visibleCategoryLabels.length, 0);
   const linkStatusText = state.sharedCardsLoaded
     ? `${(state.allCards || []).length}件 読込済み`
     : '未読込';
+  const linkSummaryText = state.sharedCardsLoaded
+    ? '共有リンクは準備済みです。カテゴリからすぐ探せます。'
+    : '共有リンクは必要になった時だけ読み込む構成です。';
 
   host.innerHTML = `
     <section class="shared-home-shell">
       <div class="shared-home-hero">
-        <div class="shared-home-kicker">Shared Hub</div>
-        <h2 class="shared-home-title">共有ダッシュボード</h2>
-        <p class="shared-home-desc">
-          お知らせと共通導線だけを先に表示し、共有リンクは必要な時だけ読み込みます。
-          ホームを軽くしたまま、必要な時だけ一覧を開ける構成です。
-        </p>
-        <div class="shared-home-actions">
-          <button type="button" class="btn-modal-primary shared-home-primary-btn" data-shared-home-action="links">
-            <i class="fa-solid fa-grid-2"></i> 共有リンクを開く
-          </button>
-          <button type="button" class="btn-modal-secondary shared-home-secondary-btn" data-shared-home-action="notice">
-            <i class="fa-solid fa-bullhorn"></i> 重要通知を見る
-          </button>
-          <button type="button" class="btn-modal-secondary shared-home-secondary-btn" data-shared-home-action="weather">
-            <i class="fa-solid fa-cloud-sun"></i> 天気を見る
-          </button>
+        <div class="shared-home-hero-main">
+          <div class="shared-home-kicker">Shared Hub</div>
+          <h2 class="shared-home-title">チームが同じ画面から動ける共有ホーム</h2>
+          <p class="shared-home-desc">
+            共有リンク、お知らせ、共通導線を一枚で見渡しつつ、重い一覧は必要な時だけ開く Stitch 風のホーム構成です。
+          </p>
+          <div class="shared-home-actions">
+            <button type="button" class="btn-modal-primary shared-home-primary-btn" data-shared-home-action="links">
+              <i class="fa-solid fa-grid-2"></i> 共有リンクを開く
+            </button>
+            <button type="button" class="btn-modal-secondary shared-home-secondary-btn" data-shared-home-action="notice">
+              <i class="fa-solid fa-bullhorn"></i> 重要通知を見る
+            </button>
+            <button type="button" class="btn-modal-secondary shared-home-secondary-btn" data-shared-home-action="weather">
+              <i class="fa-solid fa-cloud-sun"></i> 天気を見る
+            </button>
+          </div>
+        </div>
+
+        <div class="shared-home-metric-grid">
+          ${renderSharedHomeMetric('共有カテゴリ', `${publicCategories.length}`, '公開ナビゲーションの入口数', 'accent')}
+          ${renderSharedHomeMetric('リンク状態', linkStatusText, state.sharedCardsLoaded ? '一覧は開いた瞬間に使えます' : '起動時は読まずに軽く保ちます', 'calm')}
+          ${renderSharedHomeMetric('お知らせ', noticeSummary.headline, `${noticeSummary.actionLabel} / 表示中 ${noticeSummary.visibleCount}件`, noticeSummary.pendingAckCount > 0 ? 'alert' : 'default')}
         </div>
       </div>
 
-      <div class="shared-home-grid">
-        <article class="shared-home-card shared-home-card--accent">
-          <div class="shared-home-card-head">
-            <span class="shared-home-card-label">共有リンク</span>
-            <span class="shared-home-card-chip">${esc(linkStatusText)}</span>
+      <div class="shared-home-layout">
+        <article class="shared-home-board shared-home-board--primary">
+          <div class="shared-home-board-head">
+            <span class="shared-home-board-label">Shared Links</span>
+            <span class="shared-home-board-chip">${esc(linkStatusText)}</span>
           </div>
-          <div class="shared-home-card-value">${publicCategories.length}カテゴリ</div>
-          <p class="shared-home-card-text">
-            一覧は起動時に出さず、このカードから必要な時だけ読み込みます。
-          </p>
-          <div class="shared-home-card-tags">
-            ${publicCategories.map(cat => `<span class="shared-home-tag">${esc(cat.label)}</span>`).join('')}
+          <div class="shared-home-board-value">${publicCategories.length}カテゴリの共有ナビ</div>
+          <p class="shared-home-board-text">${esc(linkSummaryText)}</p>
+          <div class="shared-home-tag-cloud">
+            ${visibleCategoryLabels.map(cat => `<span class="shared-home-tag">${esc(cat.label)}</span>`).join('')}
+            ${hiddenCategoryCount > 0 ? `<span class="shared-home-tag shared-home-tag--muted">+${hiddenCategoryCount}カテゴリ</span>` : ''}
+            ${visibleCategoryLabels.length === 0 ? `<span class="shared-home-tag shared-home-tag--muted">カテゴリ未登録</span>` : ''}
           </div>
+          <button type="button" class="shared-home-inline-action" data-shared-home-action="links">
+            <span>共有リンク一覧を開く</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
         </article>
 
-        <article class="shared-home-card">
-          <div class="shared-home-card-head">
-            <span class="shared-home-card-label">共有トピック</span>
-            <span class="shared-home-card-chip">${noticeSummary.actionLabel}</span>
+        <article class="shared-home-board">
+          <div class="shared-home-board-head">
+            <span class="shared-home-board-label">Topics</span>
+            <span class="shared-home-board-chip">${esc(noticeSummary.actionLabel)}</span>
           </div>
-          <div class="shared-home-card-value">${noticeSummary.headline}</div>
-          <p class="shared-home-card-text">${noticeSummary.description}</p>
+          <div class="shared-home-board-value">${esc(noticeSummary.headline)}</div>
+          <p class="shared-home-board-text">${esc(noticeSummary.description)}</p>
           <ul class="shared-home-list">
             <li>確認待ち ${noticeSummary.pendingAckCount}件</li>
             <li>未読のお知らせ ${noticeSummary.unreadCount}件</li>
             <li>表示中のお知らせ ${noticeSummary.visibleCount}件</li>
           </ul>
+          <button type="button" class="shared-home-inline-action shared-home-inline-action--subtle" data-shared-home-action="notice">
+            <span>通知ボードへ移動</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
         </article>
 
-        <article class="shared-home-card">
-          <div class="shared-home-card-head">
-            <span class="shared-home-card-label">共通アクション</span>
-            <span class="shared-home-card-chip">よく使う入口</span>
+        <article class="shared-home-board">
+          <div class="shared-home-board-head">
+            <span class="shared-home-board-label">Common Actions</span>
+            <span class="shared-home-board-chip">よく使う入口</span>
           </div>
           <div class="shared-home-shortcuts">
-            <button type="button" class="shared-home-shortcut" data-shared-home-action="property">
-              <i class="fa-solid fa-magnifying-glass-chart"></i><span>物件Noまとめ</span>
-            </button>
-            <button type="button" class="shared-home-shortcut" data-shared-home-action="order">
-              <i class="fa-solid fa-boxes-stacked"></i><span>鋼材発注</span>
-            </button>
-            <button type="button" class="shared-home-shortcut" data-shared-home-action="request">
-              <i class="fa-solid fa-clipboard-list"></i><span>部門間依頼</span>
-            </button>
-            <button type="button" class="shared-home-shortcut" data-shared-home-action="email">
-              <i class="fa-solid fa-envelope-open-text"></i><span>メール生成AI</span>
-            </button>
+            ${renderSharedShortcut('property', 'fa-solid fa-magnifying-glass-chart', '物件Noまとめ', '横断状況をまとめて確認')}
+            ${renderSharedShortcut('order', 'fa-solid fa-boxes-stacked', '鋼材発注', '発注作成と履歴確認')}
+            ${renderSharedShortcut('request', 'fa-solid fa-clipboard-list', '部門間依頼', '依頼の受付と進捗確認')}
+            ${renderSharedShortcut('email', 'fa-solid fa-envelope-open-text', 'メール生成AI', '文面作成をすぐ開始')}
           </div>
         </article>
 
-        <article class="shared-home-card">
-          <div class="shared-home-card-head">
-            <span class="shared-home-card-label">共有ホームの考え方</span>
-            <span class="shared-home-card-chip">軽量化済み</span>
+        <article class="shared-home-board">
+          <div class="shared-home-board-head">
+            <span class="shared-home-board-label">Home Rules</span>
+            <span class="shared-home-board-chip">Lightweight</span>
           </div>
-          <div class="shared-home-card-value">起動時ドン読みを抑制</div>
-          <p class="shared-home-card-text">
-            共有リンクは一覧を開いた時だけ読み込みます。ホームでは通知と共通導線に絞っています。
+          <div class="shared-home-board-value">必要な時だけ深く開くホーム</div>
+          <p class="shared-home-board-text">
+            ホームでは状況把握を優先し、一覧や集計はアクション後に開くことで、PC とスマホのどちらでも軽さを保ちます。
           </p>
           <ul class="shared-home-list">
-            <li>ホーム: 軽い共有ダッシュボード</li>
-            <li>共有リンク: 必要時だけ一覧表示</li>
-            <li>編集: 一覧モーダルからそのまま可能</li>
+            <li>ホーム: 状況把握と最短導線に集中</li>
+            <li>共有リンク: 一覧モーダルを開いた時だけ読込</li>
+            <li>編集: 一覧モーダルからそのまま継続可能</li>
           </ul>
+          <div class="shared-home-inline-actions">
+            <button type="button" class="shared-home-inline-action shared-home-inline-action--subtle" data-shared-home-action="weather">
+              <span>天気を見る</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+            <button type="button" class="shared-home-inline-action shared-home-inline-action--subtle" data-shared-home-action="email">
+              <span>メール生成AIを開く</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
         </article>
       </div>
     </section>
@@ -116,6 +138,28 @@ export function renderSharedHome() {
       void handleSharedHomeAction(button.dataset.sharedHomeAction || '');
     });
   });
+}
+
+function renderSharedHomeMetric(label, value, meta, tone = 'default') {
+  return `
+    <article class="shared-home-metric shared-home-metric--${tone}">
+      <div class="shared-home-metric-label">${esc(label)}</div>
+      <div class="shared-home-metric-value">${esc(value)}</div>
+      <div class="shared-home-metric-meta">${esc(meta)}</div>
+    </article>
+  `;
+}
+
+function renderSharedShortcut(action, icon, label, meta) {
+  return `
+    <button type="button" class="shared-home-shortcut" data-shared-home-action="${esc(action)}">
+      <span class="shared-home-shortcut-icon"><i class="${icon}"></i></span>
+      <span class="shared-home-shortcut-copy">
+        <span class="shared-home-shortcut-label">${esc(label)}</span>
+        <span class="shared-home-shortcut-meta">${esc(meta)}</span>
+      </span>
+    </button>
+  `;
 }
 
 export async function openSharedLinksModal() {

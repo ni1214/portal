@@ -48,61 +48,191 @@ export function renderTodayDashboard() {
     buildAttendanceCard(todayKey),
     buildNoticeCard(),
   ].filter(Boolean);
+  const [focusCard, taskCard, requestCard, attendanceCard, noticeCard] = cards;
+  const quickActionCards = [focusCard, taskCard, requestCard, attendanceCard, noticeCard]
+    .filter(card => card?.target)
+    .filter((card, index, list) => list.findIndex(item => item.target === card.target) === index);
+  const summaryCards = [taskCard, requestCard, attendanceCard, noticeCard].filter(Boolean);
+  const greeting = getDashboardGreeting(today);
+  const username = state.currentUsername || 'メンバー';
 
   section.hidden = false;
   section.innerHTML = `
-    <div class="dash-section-header">
-      <div>
-        <div class="dash-section-kicker">Today</div>
-        ${profileChips}
-        <h2 class="dash-section-title">今日の自分ダッシュボード</h2>
+    <div class="dash-shell dash-shell--${focusCard?.tone || 'idle'}">
+      <div class="dash-section-header">
+        <div class="dash-section-heading">
+          <div class="dash-section-kicker">Today Flow</div>
+          ${profileChips}
+          <h2 class="dash-section-title">${esc(`${greeting}、${username}さん`)}</h2>
+          <p class="dash-section-copy">${esc(buildDashboardHeroDescription(focusCard))}</p>
+        </div>
+        <div class="dash-section-date">${esc(formatDateLabel(today))}</div>
       </div>
-      <div class="dash-section-date">${esc(formatDateLabel(today))}</div>
-    </div>
-    <div class="dash-card-grid">
-      ${cards.map(renderCard).join('')}
+
+      <div class="dash-hero-grid">
+        <section class="dash-hero-panel">
+          <div class="dash-hero-panel-head">
+            <div class="dash-hero-label">Priority</div>
+            <div class="dash-hero-value">${esc(focusCard?.value || '確認')}</div>
+          </div>
+          <div class="dash-hero-title-row">
+            <div class="dash-hero-icon"><i class="${focusCard?.icon || 'fa-solid fa-compass-drafting'}"></i></div>
+            <div>
+              <h3 class="dash-hero-title">${esc(focusCard?.title || '今日のフォーカス')}</h3>
+              ${focusCard?.subtitle ? `<p class="dash-hero-subtitle">${esc(focusCard.subtitle)}</p>` : ''}
+            </div>
+          </div>
+          ${focusCard?.meta ? `<p class="dash-hero-meta">${esc(focusCard.meta)}</p>` : ''}
+          ${renderDashboardCardChips(focusCard)}
+          ${renderDashboardCardItems(focusCard, {
+            listClassName: 'dash-hero-list',
+            emptyClassName: 'dash-hero-empty',
+          })}
+          ${focusCard?.target ? `
+            <div class="dash-hero-footer">
+              <button
+                type="button"
+                class="dash-hero-cta"
+                data-dash-target="${esc(focusCard.target)}"
+                aria-label="${esc(`${focusCard.title} - ${focusCard.actionLabel || getDashboardActionLabel(focusCard.target)}`)}"
+              >
+                <span>${esc(focusCard.actionLabel || getDashboardActionLabel(focusCard.target))}</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          ` : ''}
+        </section>
+
+        <div class="dash-metric-grid">
+          ${summaryCards.map(renderDashboardMetricCard).join('')}
+        </div>
+      </div>
+
+      <div class="dash-quick-actions">
+        ${quickActionCards.map(renderDashboardQuickAction).join('')}
+      </div>
+
+      <div class="dash-story-grid">
+        ${renderDashboardFeatureCard(taskCard, { eyebrow: 'Tasks' })}
+        ${renderDashboardFeatureCard(requestCard, { eyebrow: 'Requests' })}
+        ${renderDashboardFeatureCard(attendanceCard, { eyebrow: 'Attendance' })}
+        ${renderDashboardFeatureCard(noticeCard, { eyebrow: 'Notices' })}
+      </div>
     </div>
   `;
 }
 
-function renderCard(card) {
-  const target = card.target || '';
-  const actionLabel = card.actionLabel || getDashboardActionLabel(target);
-  const isInteractive = !!target;
-  const cardAttrs = isInteractive
-    ? ` data-dash-target="${esc(target)}" tabindex="0" role="button" aria-label="${esc(`${card.title} - ${actionLabel}`)}"`
-    : '';
-  const chips = Array.isArray(card.chips) && card.chips.length > 0
-    ? `<div class="dash-card-chips">${card.chips.map(chip => `
-        <span class="dash-chip ${chip.tone ? `dash-chip--${chip.tone}` : ''}">${esc(chip.text)}</span>
-      `).join('')}</div>`
-    : '';
-
-  const items = Array.isArray(card.items) && card.items.length > 0
-    ? `<div class="dash-card-list">${card.items.map(item => `
-        <div class="dash-card-item">
-          <div class="dash-card-item-title">${esc(item.title)}</div>
-          ${item.meta ? `<div class="dash-card-item-meta">${esc(item.meta)}</div>` : ''}
-        </div>
-      `).join('')}</div>`
-    : `<div class="dash-card-empty">${esc(card.emptyText || '対象はありません')}</div>`;
-
+function renderDashboardMetricCard(card) {
+  if (!card) return '';
+  const targetAttrs = buildDashboardTargetAttrs(card, { button: true });
   return `
-    <section class="dash-card dash-card--${card.tone || 'idle'}${isInteractive ? ' dash-card--interactive' : ''}"${cardAttrs}>
-      <div class="dash-card-head">
-        <div class="dash-card-icon"><i class="${card.icon}"></i></div>
-        <div class="dash-card-heading">
-          <div class="dash-card-title">${esc(card.title)}</div>
-          ${card.subtitle ? `<div class="dash-card-subtitle">${esc(card.subtitle)}</div>` : ''}
+    <button type="button" class="dash-metric-card dash-metric-card--${card.tone || 'idle'}"${targetAttrs}>
+      <span class="dash-metric-label">${esc(card.title)}</span>
+      <span class="dash-metric-value">${esc(card.value)}</span>
+      <span class="dash-metric-meta">${esc(card.meta || card.subtitle || card.emptyText || '')}</span>
+    </button>
+  `;
+}
+
+function renderDashboardQuickAction(card) {
+  if (!card?.target) return '';
+  const actionLabel = card.actionLabel || getDashboardActionLabel(card.target);
+  return `
+    <button
+      type="button"
+      class="dash-quick-action dash-quick-action--${card.tone || 'idle'}"
+      data-dash-target="${esc(card.target)}"
+      aria-label="${esc(`${card.title} - ${actionLabel}`)}"
+    >
+      <span class="dash-quick-action-icon"><i class="${card.icon}"></i></span>
+      <span class="dash-quick-action-copy">
+        <span class="dash-quick-action-label">${esc(card.title)}</span>
+        <span class="dash-quick-action-meta">${esc(actionLabel)}</span>
+      </span>
+      <span class="dash-quick-action-value">${esc(card.value)}</span>
+    </button>
+  `;
+}
+
+function renderDashboardFeatureCard(card, options = {}) {
+  if (!card) return '';
+  const actionLabel = card.actionLabel || getDashboardActionLabel(card.target || '');
+  const targetAttrs = buildDashboardTargetAttrs(card);
+  return `
+    <section class="dash-feature-card dash-feature-card--${card.tone || 'idle'}${card.target ? ' dash-feature-card--interactive' : ''}"${targetAttrs}>
+      <div class="dash-feature-card-head">
+        <div>
+          ${options.eyebrow ? `<div class="dash-feature-eyebrow">${esc(options.eyebrow)}</div>` : ''}
+          <div class="dash-feature-title-row">
+            <div class="dash-feature-icon"><i class="${card.icon}"></i></div>
+            <div class="dash-feature-heading">
+              <div class="dash-feature-title">${esc(card.title)}</div>
+              ${card.subtitle ? `<div class="dash-feature-subtitle">${esc(card.subtitle)}</div>` : ''}
+            </div>
+          </div>
         </div>
-        <div class="dash-card-value">${esc(card.value)}</div>
+        <div class="dash-feature-value">${esc(card.value)}</div>
       </div>
-      ${card.meta ? `<div class="dash-card-meta">${esc(card.meta)}</div>` : ''}
-      ${chips}
-      ${items}
-      ${isInteractive ? `<div class="dash-card-link"><span>${esc(actionLabel)}</span><i class="fa-solid fa-arrow-right"></i></div>` : ''}
+      ${card.meta ? `<div class="dash-feature-meta">${esc(card.meta)}</div>` : ''}
+      ${renderDashboardCardChips(card)}
+      ${renderDashboardCardItems(card, {
+        listClassName: 'dash-feature-list',
+        emptyClassName: 'dash-feature-empty',
+      })}
+      ${card.target ? `<div class="dash-feature-link"><span>${esc(actionLabel)}</span><i class="fa-solid fa-arrow-right"></i></div>` : ''}
     </section>
   `;
+}
+
+function renderDashboardCardChips(card) {
+  if (!Array.isArray(card?.chips) || card.chips.length === 0) return '';
+  return `
+    <div class="dash-card-chips">
+      ${card.chips.map(chip => `
+        <span class="dash-chip ${chip.tone ? `dash-chip--${chip.tone}` : ''}">${esc(chip.text)}</span>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderDashboardCardItems(card, options = {}) {
+  const listClassName = options.listClassName || 'dash-feature-list';
+  const emptyClassName = options.emptyClassName || 'dash-feature-empty';
+  if (Array.isArray(card?.items) && card.items.length > 0) {
+    return `
+      <div class="${listClassName}">
+        ${card.items.map(item => `
+          <div class="dash-feature-item">
+            <div class="dash-feature-item-title">${esc(item.title)}</div>
+            ${item.meta ? `<div class="dash-feature-item-meta">${esc(item.meta)}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+  return `<div class="${emptyClassName}">${esc(card?.emptyText || '未対応の項目はありません')}</div>`;
+}
+
+function buildDashboardTargetAttrs(card, options = {}) {
+  const target = card?.target || '';
+  if (!target) return options.button ? ' disabled' : '';
+  const actionLabel = card.actionLabel || getDashboardActionLabel(target);
+  return options.button
+    ? ` data-dash-target="${esc(target)}" aria-label="${esc(`${card.title} - ${actionLabel}`)}"`
+    : ` data-dash-target="${esc(target)}" tabindex="0" role="button" aria-label="${esc(`${card.title} - ${actionLabel}`)}"`;
+}
+
+function getDashboardGreeting(today) {
+  const hour = today.getHours();
+  if (hour < 11) return 'おはようございます';
+  if (hour < 18) return 'お疲れさまです';
+  return 'こんばんは';
+}
+
+function buildDashboardHeroDescription(focusCard) {
+  if (focusCard?.meta) return focusCard.meta;
+  if (focusCard?.items?.[0]?.title) return `${focusCard.items[0].title} を起点に状況を確認できます。`;
+  return '今日の優先事項と進行状況をここからまとめて確認できます。';
 }
 
 function bindDashboardEvents(section) {
