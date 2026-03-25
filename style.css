@@ -17873,9 +17873,8 @@ body {
 
 .shared-home-head {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .shared-home-kicker,
@@ -17910,7 +17909,8 @@ body {
   display: grid;
   grid-template-columns: repeat(2, minmax(120px, 1fr));
   gap: 12px;
-  min-width: min(360px, 100%);
+  width: 100%;
+  min-width: 0;
 }
 
 .shared-home-metric {
@@ -18965,7 +18965,7 @@ body {
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
 [data-theme="light"] .hd-card:hover {
-  background: #f8f9fa;
+  background: #f6f8fa;
   box-shadow: 0 4px 16px rgba(0,0,0,0.10);
 }
 
@@ -19414,6 +19414,11 @@ body {
   .portal-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
+
+  /* モバイルでサマリーカードの値フォントを縮小（3文字以上の文字列が収まるよう） */
+  .portal-summary-value {
+    font-size: 1.2rem !important;
+  }
 }
 
 /* ================================================================
@@ -19469,6 +19474,9 @@ body {
   font-size: 0.73rem;
   font-weight: 600;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .portal-summary-value {
@@ -19477,11 +19485,17 @@ body {
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .portal-summary-meta {
   font-size: 0.72rem;
   color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ライトモード: サマリーカード */
@@ -19804,8 +19818,8 @@ body {
    サマリーカードグリッドの均等配置
    =================================================== */
 .portal-summary-shell {
-  margin-bottom: 20px !important;
+  margin-bottom: 20px;
 }
 .portal-summary-grid {
-  gap: 16px !important;
+  gap: 16px;
 }
