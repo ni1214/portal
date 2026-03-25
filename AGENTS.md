@@ -3,7 +3,7 @@
 ## プロジェクト概要
 - **名前**: 生産管理課 ポータル
 - **公開先**: GitHub Pages (`https://github.com/ni1214/portal.git` / branch: `master`)
-- **バックエンド**: Supabase（本番 primary） / Firebase は完全撤去の最終整理フェーズ
+- **バックエンド**: Supabase（runtime / 本番 primary） / Firebase は移行スクリプト専用
 - **スタック**: Vanilla JS (ES modules) + HTML + CSS — フレームワークなし
 - **主要ファイル**: `index.html` / `script.js` / `style.css`
 
@@ -166,9 +166,9 @@ export function xxxFunction() { ... }
 - state.js に定義せずモジュール内に `let` を書くと、後で共有が必要になったときに大改修が発生する
 - **原則**: 2つ以上のモジュールで参照する可能性がある変数はすべて `state.js` に入れる
 
-### 🗄️ ルール4: Firestore 設計を先に AGENTS.md に記録する
+### 🗄️ ルール4: Supabase 設計を先に AGENTS.md に記録する
 
-- 新機能のコレクション名・フィールド名は**実装前に AGENTS.md の「Firestore コレクション一覧」に追記**する
+- 新機能のテーブル名・フィールド名は**実装前に AGENTS.md のデータ設計メモへ追記**する
 - 後からフィールドを追加すると既存データとの整合性が崩れ、マイグレーションコストが発生する
 - フィールド追加でも事前にここに記録しておく
 
@@ -224,16 +224,16 @@ export function xxxFunction() { ... }
 ## アーキテクチャ
 - 現在の runtime 本線は **Supabase**。以下の Firebase / Firestore 記述は、主に移行履歴・旧パス対応の参照メモとして残っている
 - `script.js` は `type="module"` — ESM import 構文必須
-- `onSnapshot` で Firestore をリアルタイム監視 → `renderAllSections()` が主な再描画関数
+- runtime は `modules/supabase.js` の REST helper を本線で使う。リアルタイム相当が必要な箇所は機能ごとに polling / 再取得で補う
 - **常時編集モード**: `isEditMode = true` 固定（PIN ゲートなし）
 
 ## ユーザー識別（ニックネームログイン）
 - ニックネームを `localStorage('portal-username')` に保存（唯一 localStorage に残すもの）
 - 個人データパス: `users/{username}/data/`, `users/{username}/private_sections/`, `users/{username}/private_cards/`
-- `currentUsername` 変数で管理。`loadPersonalData(username)` で個人 Firestore データを読み込み
+- `currentUsername` 変数で管理。`loadPersonalData(username)` で個人 Supabase データを読み込む
 
 ## 個人設定の保存先
-- **Firestore が正**: `users/{username}/data/preferences`（theme / fontSize / favOnly / favorites[]）
+- **Supabase が正**: `user_preferences`（theme / fontSize / favOnly / favorites[] / lastViewedSuggestionsAt など）
 - `localStorage` はフラッシュ防止キャッシュのみ
 
 ## Firestore コレクション一覧
@@ -342,7 +342,7 @@ export function xxxFunction() { ... }
 - **保持ポリシー（2026-03 追加）**: `users/{name}/attendance/` はフロント側で週1回クリーンアップし、180日より古い日付ドキュメントを自動削除する。
 
 ## セキュリティ
-- Firestore セキュリティルールなし（ユーザー名を知らないと個人データにアクセスできない「obscurity」方式）
+- runtime は Supabase。本番で Firebase セキュリティルールは使っていない。アクセス制御は Supabase 側の設定を前提に整理する
 - 管理者PIN: `portal/config.pinHash`（SHA-256ハッシュ）
 - 招待コード: `portal/config.inviteCodeHash`（4桁コードの SHA-256 ハッシュ。URL直打ちの覗き見防止用）
 - 管理画面表示用招待コード: `portal/config.inviteCodePlain`（管理者が現在コードを見返すための表示値）

@@ -1316,7 +1316,7 @@ export function updateUsernameDisplay() {
   }
 }
 
-// Firestore の users_list にログイン記録（管理者が全員を把握できる）
+// Supabase の users_list にログイン記録（管理者が全員を把握できる）
 export async function registerUserLogin(username) {
   if (!username) return false;
   try {

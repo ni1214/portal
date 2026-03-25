@@ -42,32 +42,17 @@ const LINKED_TASK_STATUS_LABEL = {
 };
 
 export async function loadConfigDepartmentsAndViewers() {
-  if (isSupabaseSharedCoreEnabled()) {
-    try {
-      const data = await fetchPortalConfigFromSupabase();
-      if (Array.isArray(data.departments) && data.departments.length > 0) {
-        state.currentDepartments = data.departments;
-      }
-      state.suggestionBoxViewers = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
-      state.isSuggestionBoxViewer = state.currentUsername ? state.suggestionBoxViewers.includes(state.currentUsername) : false;
-      state.missionText = data.missionText || '';
-    } catch (err) {
-      console.error('Supabase config load error:', err);
-    }
-    return;
-  }
   try {
-    const snap = await getDoc(doc(db, 'portal', 'config'));
-    if (snap.exists()) {
-      const data = snap.data();
-      if (Array.isArray(data.departments) && data.departments.length > 0) {
-        state.currentDepartments = data.departments;
-      }
-      state.suggestionBoxViewers = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
-      state.isSuggestionBoxViewer = state.currentUsername ? state.suggestionBoxViewers.includes(state.currentUsername) : false;
-      state.missionText = data.missionText || '';
+    const data = await fetchPortalConfigFromSupabase();
+    if (Array.isArray(data.departments) && data.departments.length > 0) {
+      state.currentDepartments = data.departments;
     }
-  } catch (err) { console.error('config読み込みエラー:', err); }
+    state.suggestionBoxViewers = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
+    state.isSuggestionBoxViewer = state.currentUsername ? state.suggestionBoxViewers.includes(state.currentUsername) : false;
+    state.missionText = data.missionText || '';
+  } catch (err) {
+    console.error('Supabase config load error:', err);
+  }
 }
 
 function _sortRequests(list) {
@@ -180,7 +165,7 @@ async function _loadRequestHistory(side, force = false) {
     return;
   }
 
-  // Firestore の既存コード
+  // Supabase の既存コード
   try {
     const historyQuery = side === 'received'
       ? query(collection(db, 'cross_dept_requests'), where('toDept', '==', myDept))
@@ -268,7 +253,7 @@ export function startRequestListeners(username) {
     return;
   }
 
-  // Firestore の既存コード（onSnapshot 3つ）
+  // Supabase の既存コード（onSnapshot 3つ）
   if (myDept) {
     const rQ = query(
       collection(db, 'cross_dept_requests'),
@@ -621,11 +606,17 @@ function _bindRequestCommentEvents(container) {
       if (!body) return;
       input.value = '';
       try {
-        const comment = await addRequestCommentInSupabase(id, state.currentUsername, body);
-        state.requestComments = {
-          ...state.requestComments,
-          [id]: [...(state.requestComments[id] || []), comment],
-        };
+        const comment = await addRequestCommentInSupabase({
+          requestId: id,
+          username: state.currentUsername,
+          body,
+        });
+        if (comment) {
+          state.requestComments = {
+            ...state.requestComments,
+            [id]: [...(state.requestComments[id] || []), comment],
+          };
+        }
         renderReqContent();
       } catch (e) {
         showToast('コメントの送信に失敗しました', 'error');
@@ -1174,7 +1165,7 @@ export async function submitRequest() {
       void _loadRequestHistory('sent');
       return;
     }
-    // Firestore の既存コード
+    // Supabase の既存コード
     await addDoc(collection(db, 'cross_dept_requests'), {
       title,
       projectKey,
@@ -1389,15 +1380,7 @@ export async function _markSuggestionsViewed() {
   try {
     const now = new Date();
     const unixSec = Math.floor(now.getTime() / 1000);
-    if (isSupabaseSharedCoreEnabled()) {
-      await saveUserPreferencesToSupabase(state.currentUsername, { lastViewedSuggestionsAt: unixSec });
-    } else {
-      await setDoc(
-        doc(db, 'users', state.currentUsername, 'data', 'preferences'),
-        { lastViewedSuggestionsAt: now },
-        { merge: true }
-      );
-    }
+    await saveUserPreferencesToSupabase(state.currentUsername, { lastViewedSuggestionsAt: unixSec });
     state.lastViewedSuggestionsAt = unixSec;
     updateReqBadge();
   } catch (_) { /* silent */ }
@@ -1406,17 +1389,11 @@ export async function _markSuggestionsViewed() {
 // 管理者パネル：目安箱閲覧者管理
 export async function renderAdminSuggBoxSection() {
   let viewers = [];
-  if (isSupabaseSharedCoreEnabled()) {
-    try {
-      const data = await fetchPortalConfigFromSupabase();
-      viewers = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
-    } catch (_) {
-      const snap = await getDoc(doc(db, 'portal', 'config'));
-      viewers = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
-    }
-  } else {
-    const snap = await getDoc(doc(db, 'portal', 'config'));
-    viewers = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
+  try {
+    const data = await fetchPortalConfigFromSupabase();
+    viewers = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
+  } catch (err) {
+    console.error('suggestionBoxViewers load error:', err);
   }
   const container = document.getElementById('admin-suggbox-viewers');
   if (!container) return;
@@ -1433,15 +1410,7 @@ export async function renderAdminSuggBoxSection() {
       btn.addEventListener('click', async () => {
         const name = btn.dataset.name;
         const newList = viewers.filter(v => v !== name);
-        if (isSupabaseSharedCoreEnabled()) {
-          try {
-            await savePortalConfigToSupabase({ suggestionBoxViewers: newList });
-          } catch (_) {
-            await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
-          }
-        } else {
-          await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
-        }
+        await savePortalConfigToSupabase({ suggestionBoxViewers: newList });
         state.suggestionBoxViewers = newList;
         state.isSuggestionBoxViewer = state.currentUsername ? newList.includes(state.currentUsername) : false;
         renderAdminSuggBoxSection();
@@ -1455,29 +1424,15 @@ export async function addSuggBoxViewer() {
   const name = input.value.trim();
   if (!name) return;
   let current = [];
-  if (isSupabaseSharedCoreEnabled()) {
-    try {
-      const data = await fetchPortalConfigFromSupabase();
-      current = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
-    } catch (_) {
-      const snap = await getDoc(doc(db, 'portal', 'config'));
-      current = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
-    }
-  } else {
-    const snap = await getDoc(doc(db, 'portal', 'config'));
-    current = snap.exists() ? (snap.data().suggestionBoxViewers || []) : [];
+  try {
+    const data = await fetchPortalConfigFromSupabase();
+    current = Array.isArray(data.suggestionBoxViewers) ? data.suggestionBoxViewers : [];
+  } catch (err) {
+    console.error('suggestionBoxViewers load error:', err);
   }
   if (current.includes(name)) { showToast('すでに登録されています', 'warning'); return; }
   const newList = [...current, name];
-  if (isSupabaseSharedCoreEnabled()) {
-    try {
-      await savePortalConfigToSupabase({ suggestionBoxViewers: newList });
-    } catch (_) {
-      await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
-    }
-  } else {
-    await setDoc(doc(db, 'portal', 'config'), { suggestionBoxViewers: newList }, { merge: true });
-  }
+  await savePortalConfigToSupabase({ suggestionBoxViewers: newList });
   state.suggestionBoxViewers = newList;
   state.isSuggestionBoxViewer = state.currentUsername ? newList.includes(state.currentUsername) : false;
   input.value = '';

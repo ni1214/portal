@@ -1,14 +1,14 @@
 // ========== Supabase-only runtime compatibility layer ==========
-const FIREBASE_REMOVED_MESSAGE = 'Firebase runtime has been removed. Use Supabase helpers instead.';
+const LEGACY_BACKEND_REMOVED_MESSAGE = 'Legacy backend runtime has been removed. Use Supabase helpers instead.';
 
 export const db = Object.freeze({ backend: 'supabase-only' });
 
 function buildDescriptor(kind, args = []) {
-  return Object.freeze({ __disabledBackend: 'firebase', kind, args });
+  return Object.freeze({ __disabledBackend: 'legacy-backend', kind, args });
 }
 
-function throwFirebaseRemoved(methodName) {
-  throw new Error(`${methodName}: ${FIREBASE_REMOVED_MESSAGE}`);
+function throwLegacyBackendRemoved(methodName) {
+  throw new Error(`${methodName}: ${LEGACY_BACKEND_REMOVED_MESSAGE}`);
 }
 
 export function collection(...args) {
@@ -44,27 +44,27 @@ export function limit(...args) {
 }
 
 export async function getDocs() {
-  throwFirebaseRemoved('getDocs');
+  throwLegacyBackendRemoved('getDocs');
 }
 
 export async function getDoc() {
-  throwFirebaseRemoved('getDoc');
+  throwLegacyBackendRemoved('getDoc');
 }
 
 export async function setDoc() {
-  throwFirebaseRemoved('setDoc');
+  throwLegacyBackendRemoved('setDoc');
 }
 
 export async function addDoc() {
-  throwFirebaseRemoved('addDoc');
+  throwLegacyBackendRemoved('addDoc');
 }
 
 export async function deleteDoc() {
-  throwFirebaseRemoved('deleteDoc');
+  throwLegacyBackendRemoved('deleteDoc');
 }
 
 export async function updateDoc() {
-  throwFirebaseRemoved('updateDoc');
+  throwLegacyBackendRemoved('updateDoc');
 }
 
 export function writeBatch() {
@@ -73,7 +73,7 @@ export function writeBatch() {
     update() {},
     delete() {},
     async commit() {
-      throwFirebaseRemoved('writeBatch.commit');
+      throwLegacyBackendRemoved('writeBatch.commit');
     },
   };
 }
@@ -83,7 +83,7 @@ export function serverTimestamp() {
 }
 
 export function onSnapshot() {
-  throwFirebaseRemoved('onSnapshot');
+  throwLegacyBackendRemoved('onSnapshot');
 }
 
 export function arrayUnion(...values) {
@@ -289,7 +289,7 @@ export const DEFAULT_CATEGORIES = [
   { id: 'others',      label: 'その他',     icon: 'fa-solid fa-ellipsis',                   colorIndex: 5, order: 5 },
 ];
 
-// ========== 初期データ（Firestore 読み込み前の表示用） ==========
+// ========== 初期データ（初回表示用） ==========
 export const INITIAL_CARDS = [
   { label: 'Notion',          icon: 'svg:notion', url: 'https://www.notion.so/',    category: 'external',    categoryOrder: 0, order: 0, isExternalTool: true },
   { label: 'Slack',           icon: 'svg:slack',  url: 'https://slack.com/',        category: 'external',    categoryOrder: 0, order: 1, isExternalTool: true },

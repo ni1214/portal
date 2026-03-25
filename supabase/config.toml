@@ -55,7 +55,24 @@ max_client_conn = 100
 enabled = true
 # Specifies an ordered list of schema files that describe your database.
 # Supports glob patterns relative to supabase directory: "./schemas/*.sql"
-schema_paths = []
+schema_paths = [
+  "./001_core_schema.sql",
+  "./002_fix_core_ids_to_text.sql",
+  "./003_user_lock_pin_auto_lock_minutes.sql",
+  "./004_fix_private_cards_hierarchy.sql",
+  "./005_add_attendance_tables.sql",
+  "./006_add_request_task_tables.sql",
+  "./007_add_order_tables.sql",
+  "./007_user_todos_email_contacts.sql",
+  "./008_add_company_calendar_tables.sql",
+  "./010_add_suggestion_box.sql",
+  "./011_add_portal_config_fields.sql",
+  "./012_add_comment_tables.sql",
+  "./013_add_file_transfer_tables.sql",
+  "./014_add_chat_tables.sql",
+  "./015_add_drive_link_tables.sql",
+  "./016_add_suggestion_box_category.sql",
+]
 
 [db.seed]
 # If enabled, seeds the database after migrations during a db reset.
@@ -321,11 +338,6 @@ email_optional = false
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
 [auth.web3.solana]
 enabled = false
-
-# Use Firebase Auth as a third-party provider alongside Supabase Auth.
-[auth.third_party.firebase]
-enabled = false
-# project_id = "my-firebase-project"
 
 # Use Auth0 as a third-party provider alongside Supabase Auth.
 [auth.third_party.auth0]

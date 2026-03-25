@@ -367,20 +367,7 @@ function updateSiteImportFileLabel() {
   nameEl.title = file ? file.name : '';
 }
 
-async function commitSiteOpsInBatches(ops) {
-  const chunkSize = 400; // Firestore 1バッチ上限500に余裕を持たせる
-  for (let i = 0; i < ops.length; i += chunkSize) {
-    const chunk = ops.slice(i, i + chunkSize);
-    const batch = writeBatch(db);
-    chunk.forEach(op => {
-      if (op.type === 'set') batch.set(op.ref, op.data);
-      if (op.type === 'update') batch.update(op.ref, op.data);
-    });
-    await batch.commit();
-  }
-}
-
-async function importSitesToFirestore(parsed) {
+async function importSitesToSupabase(parsed) {
   const existing = [...(state.attendanceSites || [])];
   const byCode = new Map();
   let maxOrder = 0;
@@ -391,11 +378,10 @@ async function importSitesToFirestore(parsed) {
     if (so > maxOrder) maxOrder = so;
   });
 
-  const ops = [];
   let inserted = 0;
   let updated = 0;
 
-  parsed.sites.forEach(site => {
+  for (const site of parsed.sites) {
     const found = byCode.get(site.code);
     if (found) {
       const patch = {};
@@ -403,41 +389,37 @@ async function importSitesToFirestore(parsed) {
       if ((found.code || '') !== site.code) patch.code = site.code;
       if (found.active === false) patch.active = true;
       if (Object.keys(patch).length > 0) {
-        patch.updatedAt = serverTimestamp();
         patch.updatedBy = state.currentUsername || '';
-        ops.push({
-          type: 'update',
-          ref: doc(db, 'attendance_sites', found.id),
-          data: patch,
-        });
+        await updateAttendanceSiteInSupabase(found.id, patch);
+        Object.assign(found, patch);
         updated += 1;
       }
-      return;
+      continue;
     }
 
     maxOrder += 1;
-    const ref = doc(collection(db, 'attendance_sites'));
-    ops.push({
-      type: 'set',
-      ref,
-      data: {
-        code: site.code,
-        name: site.name,
-        active: true,
-        sortOrder: maxOrder,
-        updatedBy: state.currentUsername || '',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      },
+    const id = await createAttendanceSiteInSupabase({
+      code: site.code,
+      name: site.name,
+      active: true,
+      sortOrder: maxOrder,
+      updatedBy: state.currentUsername || '',
     });
+    const created = {
+      id,
+      code: site.code,
+      name: site.name,
+      active: true,
+      sortOrder: maxOrder,
+      updatedBy: state.currentUsername || '',
+    };
+    existing.push(created);
+    byCode.set(site.code, created);
     inserted += 1;
-  });
-
-  if (ops.length > 0) {
-    await commitSiteOpsInBatches(ops);
   }
+  state.attendanceSites = existing.sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0));
 
-  return { inserted, updated, touched: ops.length };
+  return { inserted, updated, touched: inserted + updated };
 }
 
 async function importSitesFromExcelFile() {
@@ -484,8 +466,8 @@ async function importSitesFromExcelFile() {
       return;
     }
 
-    setImportStatus('Firestoreへ取り込み中...');
-    const result = await importSitesToFirestore(parsed);
+    setImportStatus('Supabaseへ取り込み中...');
+    const result = await importSitesToSupabase(parsed);
     setImportStatus(`取込完了: 追加 ${result.inserted}件 / 更新 ${result.updated}件 / 解析 ${parsed.uniqueSiteCount}件`);
     showToast(`登録現場の取込が完了しました。追加: ${result.inserted}件 更新: ${result.updated}件`, 'success');
     fileInput.value = '';

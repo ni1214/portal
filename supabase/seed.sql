@@ -1,0 +1,2 @@
+-- No-op seed file for local Supabase resets.
+-- Schema is kept in the checked-in migration files.

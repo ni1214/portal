@@ -3,7 +3,7 @@
 -- Note:
 --   - Current nickname-login UX is preserved first.
 --   - RLS / auth policy design is intentionally deferred until adapter phase.
---   - Table names and keys favor smooth Firestore migration over deep normalization.
+--   - Table names and keys favor smooth Supabase migration over deep normalization.
 
 create extension if not exists pgcrypto;
 

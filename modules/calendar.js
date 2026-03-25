@@ -41,7 +41,7 @@ let recentWorkSiteCache = {
 };
 export function initCalendar(d) { deps = d; }
 
-// ===== Firestore helpers =====
+// ===== Supabase helpers =====
 function attendancePath(username, dateStr) {
   return doc(db, 'users', username, 'attendance', dateStr);
 }

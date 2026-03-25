@@ -1,10 +1,6 @@
 // ========== company-calendar.js — 会社カレンダー & 共有勤怠表示 ==========
 import { state } from './state.js';
 import {
-  db, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteField
-} from './config.js';
-import {
-  isSupabaseSharedCoreEnabled,
   fetchCompanyCalSettingsFromSupabase,
   saveCompanyCalSettingsToSupabase,
   fetchPublicAttendanceFromSupabase,
@@ -72,7 +68,7 @@ export function getJpNationalHolidays(year) {
         h[cur] = '国民の休日';
       }
     }
-  }
+  /* legacy listener removed
 
   // ── 振替休日（日曜の祝日 → 翌以降の最初の非祝日平日） ──
   const snapshot = { ...h };
@@ -87,15 +83,13 @@ export function getJpNationalHolidays(year) {
     if (sub.getFullYear() === year) {
       h[sub.toISOString().slice(0, 10)] = '振替休日';
     }
-  });
+  */
 
   _jpHolidayCache[year] = h;
   return h;
 }
 
-// ===== Firestore パス =====
-const companyCalRef = () => doc(db, 'company_calendar', 'config');
-const publicAttRef = (ym) => doc(db, 'public_attendance', ym);
+// ===== Supabase パス =====
 
 // ===== 年間カレンダーモーダル内部状態 =====
 let _ccsMode      = 'ws';       // 'ws' | 'holiday' | 'event'
@@ -116,18 +110,13 @@ function _applyCompanyCalConfig(cfg) {
 
 export function subscribeCompanyCalConfig() {
   if (state._companyCalUnsub) { state._companyCalUnsub(); state._companyCalUnsub = null; }
-  if (isSupabaseSharedCoreEnabled()) {
     fetchCompanyCalSettingsFromSupabase()
       .then(cfg => _applyCompanyCalConfig(cfg))
       .catch(err => {
         console.warn('Supabase 会社カレンダー読み込みエラー:', err);
         _applyCompanyCalConfig(null);
       });
-    return;
   }
-  state._companyCalUnsub = onSnapshot(companyCalRef(), snap => {
-    _applyCompanyCalConfig(snap.exists() ? snap.data() : null);
-  }, err => {
     console.warn('会社カレンダー読み込みエラー:', err);
     _applyCompanyCalConfig(null);
   });

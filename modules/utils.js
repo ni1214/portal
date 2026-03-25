@@ -39,7 +39,7 @@ export function normalizeProjectKeys(value) {
   return uniq;
 }
 
-// Firestore Timestamp / isoToFirestoreTs / Date / ISO文字列 をフォーマット
+// Supabase Timestamp / isoToSupabaseTs / Date / ISO文字列 をフォーマット
 export function _fmtTs(ts) {
   if (!ts) return '';
   const d = ts instanceof Date ? ts : ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000);

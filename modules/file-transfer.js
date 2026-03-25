@@ -1,6 +1,5 @@
 // ========== ファイル転送モジュール (P2P + Drive シェア) ==========
 
-import { db, doc, getDoc, setDoc, addDoc, deleteDoc, updateDoc, collection, query, where, orderBy, serverTimestamp, onSnapshot, arrayUnion } from './config.js';
 import { state, RTC_CONFIG, FILE_CHUNK_SIZE } from './state.js';
 import { esc, getUserAvatarColor } from './utils.js';
 import { showToast, showConfirm } from './notify.js';
@@ -10,7 +9,6 @@ import {
   wrapTrackedListenerUnsubscribe,
 } from './read-diagnostics.js';
 import {
-  isSupabaseSharedCoreEnabled,
   fetchMyDriveLinkFromSupabase,
   saveMyDriveLinkInSupabase,
   fetchDriveContactsFromSupabase,
@@ -85,7 +83,7 @@ export async function cleanupP2p(sessionId) {
   }
   delete state._sendProgress[sessionId];
   delete state._receiveProgress[sessionId];
-  if (isSupabaseSharedCoreEnabled()) {
+  if (true) {
     try { await deleteP2pSignalInSupabase(sessionId); } catch (_) {}
   } else {
     try { await deleteDoc(doc(db, 'p2p_signals', sessionId)); } catch (_) {}
@@ -312,7 +310,7 @@ export function renderFtPanel() {
 
 export function startFtListener() {
   if (!state.currentUsername || state._ftIncomingSub) return;
-  if (isSupabaseSharedCoreEnabled()) {
+  if (true) {
     const poll = async () => {
       try {
         state._ftIncoming = await fetchP2pSignalsFromSupabase(state.currentUsername);
@@ -336,7 +334,7 @@ export function startFtListener() {
 
 export function stopFtListener() {
   if (state._ftIncomingSub) {
-    if (isSupabaseSharedCoreEnabled()) clearInterval(state._ftIncomingSub);
+    if (true) clearInterval(state._ftIncomingSub);
     else state._ftIncomingSub();
     state._ftIncomingSub = null;
   }
@@ -350,7 +348,7 @@ export function stopFtListener() {
 export async function loadMyDriveUrl(username) {
   if (!username) return;
   try {
-    if (isSupabaseSharedCoreEnabled()) {
+    if (true) {
       state._myDriveUrl = await fetchMyDriveLinkFromSupabase(username);
     } else {
       const snap = await getDoc(doc(db, 'users', username, 'data', 'drive_link'));
@@ -362,19 +360,19 @@ export async function loadMyDriveUrl(username) {
 export async function saveMyDriveUrl(url) {
   if (!state.currentUsername) return;
   state._myDriveUrl = url;
-  if (isSupabaseSharedCoreEnabled()) {
+  if (true) {
     await saveMyDriveLinkInSupabase(state.currentUsername, url);
   } else {
     await setDoc(doc(db, 'users', state.currentUsername, 'data', 'drive_link'), { url, updatedAt: serverTimestamp() });
   }
 }
 
-// --- Firestoreリスナー / Supabaseポーリング ---
+// --- Supabaseリスナー / Supabaseポーリング ---
 let _driveKnownIncomingIds = new Set();
 
 export function startDriveListeners(username) {
   if (!username) return;
-  if (isSupabaseSharedCoreEnabled()) {
+  if (true) {
     if (state._driveIncomingSub) return;
     const poll = async () => {
       try {
@@ -428,7 +426,7 @@ export function startDriveListeners(username) {
 }
 
 export function stopDriveListeners() {
-  if (isSupabaseSharedCoreEnabled()) {
+  if (true) {
     if (state._driveIncomingSub) { clearInterval(state._driveIncomingSub); state._driveIncomingSub = null; }
     _driveKnownIncomingIds.clear();
   } else {
@@ -444,7 +442,7 @@ export function stopDriveListeners() {
 export async function loadDriveContacts(username) {
   if (!username) return;
   try {
-    if (isSupabaseSharedCoreEnabled()) {
+    if (true) {
       state._driveContacts = await fetchDriveContactsFromSupabase(username);
     } else {
       const snap = await getDoc(doc(db, 'users', username, 'data', 'drive_contacts'));
@@ -458,7 +456,7 @@ export async function saveDriveContact(contactUsername, url) {
   if (!state.currentUsername || !contactUsername || !url) return;
   state._driveContacts[contactUsername] = { url, savedAt: Date.now() };
   try {
-    if (isSupabaseSharedCoreEnabled()) {
+    if (true) {
       await saveDriveContactInSupabase(state.currentUsername, contactUsername, url);
     } else {
       await setDoc(
@@ -475,7 +473,7 @@ export async function deleteDriveContact(contactUsername) {
   if (!state.currentUsername || !contactUsername) return;
   delete state._driveContacts[contactUsername];
   try {
-    if (isSupabaseSharedCoreEnabled()) {
+    if (true) {
       await deleteDriveContactInSupabase(state.currentUsername, contactUsername);
     } else {
       await setDoc(
@@ -589,7 +587,7 @@ export function renderDrivePanel() {
 export async function openDriveShare(id, url) {
   if (!url) return;
   try {
-    if (isSupabaseSharedCoreEnabled()) {
+    if (true) {
       await updateDriveShareStatusInSupabase(id, 'viewed');
     } else {
       await updateDoc(doc(db, 'drive_shares', id), { status: 'viewed', viewedAt: serverTimestamp() });
@@ -601,7 +599,7 @@ export async function openDriveShare(id, url) {
 // --- 消去 ---
 export async function dismissDriveShare(id) {
   try {
-    if (isSupabaseSharedCoreEnabled()) {
+    if (true) {
       await deleteDriveShareInSupabase(id);
       state._driveIncoming = state._driveIncoming.filter(s => s.id !== id);
       _driveKnownIncomingIds.delete(id);
@@ -666,7 +664,7 @@ export async function confirmDriveSend() {
   btn.disabled    = true;
   btn.textContent = '送信中…';
   try {
-    if (isSupabaseSharedCoreEnabled()) {
+    if (true) {
       await addDriveShareInSupabase(state.currentUsername, state._ftDriveSelectedUser, url, msg);
     } else {
       await addDoc(collection(db, 'drive_shares'), {
@@ -824,7 +822,7 @@ export async function initiateFileTransfer(file, recipientUsername) {
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
 
-  if (isSupabaseSharedCoreEnabled()) {
+  if (true) {
     pc.onicecandidate = async e => {
       if (e.candidate) {
         try { await appendP2pCandidateInSupabase(sessionId, 'from', JSON.stringify(e.candidate.toJSON())); } catch (_) {}
@@ -915,7 +913,7 @@ export async function acceptFtTransfer(sessionId) {
   if (!state.currentUsername) return;
   let signal;
   try {
-    if (isSupabaseSharedCoreEnabled()) {
+    if (true) {
       signal = await getP2pSignalFromSupabase(sessionId);
     } else {
       const signalSnap = await getDoc(doc(db, 'p2p_signals', sessionId));
@@ -936,7 +934,7 @@ export async function acceptFtTransfer(sessionId) {
   renderFtPanel();
 
   const onDataComplete = async () => {
-    if (isSupabaseSharedCoreEnabled()) {
+    if (true) {
       try { await updateP2pSignalInSupabase(sessionId, { status: 'done' }); } catch (_) {}
       try { if (conn.unsub) conn.unsub(); } catch (_) {}
       try { dc.close(); } catch (_) {}
@@ -992,7 +990,7 @@ export async function acceptFtTransfer(sessionId) {
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
 
-  if (isSupabaseSharedCoreEnabled()) {
+  if (true) {
     pc.onicecandidate = async e => {
       if (e.candidate) {
         try { await appendP2pCandidateInSupabase(sessionId, 'to', JSON.stringify(e.candidate.toJSON())); } catch (_) {}
@@ -1044,7 +1042,7 @@ export async function acceptFtTransfer(sessionId) {
 
 export async function rejectFtTransfer(sessionId) {
   try {
-    if (isSupabaseSharedCoreEnabled()) {
+    if (true) {
       await updateP2pSignalInSupabase(sessionId, { status: 'rejected' });
     } else {
       await updateDoc(doc(db, 'p2p_signals', sessionId), { status: 'rejected' });

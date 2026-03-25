@@ -1,8 +1,4 @@
 import {
-  db, collection, getDocs, query, where,
-} from './config.js';
-import {
-  isSupabaseSharedCoreEnabled,
   fetchAttendanceSitesFromSupabase,
   fetchAttendanceByProjectKeyFromSupabase,
   fetchAttendanceEntriesFromSupabase,
@@ -103,50 +99,24 @@ async function searchPropertySummary(rawValue = null, options = {}) {
     const currentUser = state.currentUsername || '';
     const myDept = state.userEmailProfile?.department || '';
 
-    let requests, tasks, orders;
-
-    if (isSupabaseSharedCoreEnabled()) {
-      const [rawReqs, rawTasks, rawOrders] = await Promise.all([
-        fetchRequestsByProjectKeyFromSupabase(projectKey),
-        fetchTasksByProjectKeyFromSupabase(projectKey),
-        fetchOrdersByProjectKeyFromSupabase(projectKey),
-      ]);
-      requests = rawReqs
-        .filter(item => item.createdBy === currentUser || (myDept && item.toDept === myDept))
-        .sort((a, b) => getDateValue(b.updatedAt || b.createdAt) - getDateValue(a.updatedAt || a.createdAt));
-      tasks = rawTasks
-        .filter(item =>
-          item.assignedBy === currentUser ||
-          item.assignedTo === currentUser ||
-          (Array.isArray(item.sharedWith) && item.sharedWith.includes(currentUser))
-        )
-        .sort((a, b) => getDateValue(b.doneAt || b.acceptedAt || b.createdAt) - getDateValue(a.doneAt || a.acceptedAt || a.createdAt));
-      orders = rawOrders
-        .filter(item => state.isAdmin || item.orderedBy === currentUser)
-        .sort((a, b) => getDateValue(b.orderedAt) - getDateValue(a.orderedAt));
-    } else {
-      const [requestSnap, taskSnap, orderSnap] = await Promise.all([
-        getDocs(query(collection(db, 'cross_dept_requests'), where('projectKey', '==', projectKey))),
-        getDocs(query(collection(db, 'assigned_tasks'), where('projectKey', '==', projectKey))),
-        getDocs(query(collection(db, 'orders'), where('projectKey', '==', projectKey))),
-      ]);
-      requests = requestSnap.docs
-        .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
-        .filter(item => item.createdBy === currentUser || (myDept && item.toDept === myDept))
-        .sort((a, b) => getDateValue(b.updatedAt || b.createdAt) - getDateValue(a.updatedAt || a.createdAt));
-      tasks = taskSnap.docs
-        .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
-        .filter(item =>
-          item.assignedBy === currentUser ||
-          item.assignedTo === currentUser ||
-          (Array.isArray(item.sharedWith) && item.sharedWith.includes(currentUser))
-        )
-        .sort((a, b) => getDateValue(b.doneAt || b.acceptedAt || b.createdAt) - getDateValue(a.doneAt || a.acceptedAt || a.createdAt));
-      orders = orderSnap.docs
-        .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
-        .filter(item => state.isAdmin || item.orderedBy === currentUser)
-        .sort((a, b) => getDateValue(b.orderedAt) - getDateValue(a.orderedAt));
-    }
+    const [rawReqs, rawTasks, rawOrders] = await Promise.all([
+      fetchRequestsByProjectKeyFromSupabase(projectKey),
+      fetchTasksByProjectKeyFromSupabase(projectKey),
+      fetchOrdersByProjectKeyFromSupabase(projectKey),
+    ]);
+    const requests = rawReqs
+      .filter(item => item.createdBy === currentUser || (myDept && item.toDept === myDept))
+      .sort((a, b) => getDateValue(b.updatedAt || b.createdAt) - getDateValue(a.updatedAt || a.createdAt));
+    const tasks = rawTasks
+      .filter(item =>
+        item.assignedBy === currentUser ||
+        item.assignedTo === currentUser ||
+        (Array.isArray(item.sharedWith) && item.sharedWith.includes(currentUser))
+      )
+      .sort((a, b) => getDateValue(b.doneAt || b.acceptedAt || b.createdAt) - getDateValue(a.doneAt || a.acceptedAt || a.createdAt));
+    const orders = rawOrders
+      .filter(item => state.isAdmin || item.orderedBy === currentUser)
+      .sort((a, b) => getDateValue(b.orderedAt) - getDateValue(a.orderedAt));
 
     const siteMatch = resolution.siteMatch
       || [...siteMap.values()].find(site => normalizeProjectKey(site.code || '') === projectKey)
@@ -191,14 +161,7 @@ async function loadAttendanceSiteMap() {
     return _cachedSiteMap;
   }
 
-  if (isSupabaseSharedCoreEnabled()) {
-    const sites = await fetchAttendanceSitesFromSupabase();
-    _cachedSiteMap = new Map(sites.map(site => [site.id, site]));
-    return _cachedSiteMap;
-  }
-
-  const snap = await getDocs(query(collection(db, 'attendance_sites')));
-  const sites = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+  const sites = await fetchAttendanceSitesFromSupabase();
   _cachedSiteMap = new Map(sites.map(site => [site.id, site]));
   return _cachedSiteMap;
 }
@@ -373,18 +336,9 @@ async function refreshSiteCandidates(rawQuery) {
 
 async function loadAttendanceByProjectKey(username, projectKey, siteMap) {
   if (!username) return [];
-  if (isSupabaseSharedCoreEnabled()) {
-    const entries = await fetchAttendanceByProjectKeyFromSupabase(projectKey);
-    return entries
-      .map(entry => _mapSupabaseAttendanceEntry(entry, siteMap, username))
-      .filter(Boolean)
-      .sort((a, b) => b.sortKey - a.sortKey);
-  }
-  const snap = await getDocs(
-    query(collection(db, 'users', username, 'attendance'), where('projectKeys', 'array-contains', projectKey))
-  );
-  return snap.docs
-    .map(docSnap => mapAttendanceDoc(docSnap, siteMap, username))
+  const entries = await fetchAttendanceByProjectKeyFromSupabase(projectKey);
+  return entries
+    .map(entry => _mapSupabaseAttendanceEntry(entry, siteMap, username))
     .filter(Boolean)
     .sort((a, b) => b.sortKey - a.sortKey);
 }
@@ -393,18 +347,9 @@ async function loadAttendanceBySiteCode(username, projectKey, siteMap) {
   if (!username) return [];
   const months = getRecentYearMonths(ATTENDANCE_FALLBACK_MONTHS);
   if (months.length === 0) return [];
-  if (isSupabaseSharedCoreEnabled()) {
-    const entries = await fetchAttendanceEntriesFromSupabase(username, months);
-    return entries
-      .map(entry => _mapSupabaseAttendanceEntry(entry, siteMap, username))
-      .filter(record => record && record.siteEntries.some(e => normalizeProjectKey(e.code || '') === projectKey))
-      .sort((a, b) => b.sortKey - a.sortKey);
-  }
-  const snap = await getDocs(
-    query(collection(db, 'users', username, 'attendance'), where('yearMonth', 'in', months))
-  );
-  return snap.docs
-    .map(docSnap => mapAttendanceDoc(docSnap, siteMap, username))
+  const entries = await fetchAttendanceEntriesFromSupabase(username, months);
+  return entries
+    .map(entry => _mapSupabaseAttendanceEntry(entry, siteMap, username))
     .filter(record => record && record.siteEntries.some(entry => normalizeProjectKey(entry.code || '') === projectKey))
     .sort((a, b) => b.sortKey - a.sortKey);
 }

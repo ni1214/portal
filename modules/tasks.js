@@ -80,7 +80,7 @@ async function syncRequestLink(taskId, updates) {
   if (isSupabaseSharedCoreEnabled()) {
     const task = await getAssignedTaskFromSupabase(taskId);
     if (!task?.sourceRequestId) return task;
-    // Firebase serverTimestamp() sentinel をISO文字列に変換
+    // Supabase serverTimestamp() sentinel をISO文字列に変換
     const isoUpdates = Object.fromEntries(
       Object.entries(updates).map(([k, v]) =>
         [k, (v && typeof v === 'object' && '_methodName' in v) ? new Date().toISOString() : v]
@@ -202,11 +202,17 @@ function _bindTaskCommentEvents(container) {
       if (!body) return;
       input.value = '';
       try {
-        const comment = await addTaskCommentInSupabase(id, state.currentUsername, body);
-        state.taskComments = {
-          ...state.taskComments,
-          [id]: [...(state.taskComments[id] || []), comment],
-        };
+        const comment = await addTaskCommentInSupabase({
+          taskId: id,
+          username: state.currentUsername,
+          body,
+        });
+        if (comment) {
+          state.taskComments = {
+            ...state.taskComments,
+            [id]: [...(state.taskComments[id] || []), comment],
+          };
+        }
         renderTaskTabContent();
       } catch (e) {
         showToast('コメントの送信に失敗しました', 'error');
@@ -435,7 +441,7 @@ async function _loadTaskHistory(tab, force = false) {
     return;
   }
 
-  // Firestore の既存コード...
+  // Supabase の既存コード...
   try {
     let historyQuery = null;
     if (tab === 'received') {
@@ -506,7 +512,7 @@ export function startTaskListeners(username) {
     return;
   }
 
-  // Firestore の既存コード（onSnapshot 4つ）はそのまま残す
+  // Supabase の既存コード（onSnapshot 4つ）はそのまま残す
   // orderBy を外してクライアント側でソート（複合インデックス不要）
   const rQ = query(
     collection(db, 'assigned_tasks'),

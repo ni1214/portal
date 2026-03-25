@@ -1,6 +1,6 @@
--- Fix Firestore-backed IDs to remain text-based.
+-- Fix Supabase-backed IDs to remain text-based.
 -- 001 was first applied with uuid keys for some tables.
--- We keep Firestore document IDs as-is to simplify migration and parent-child relations.
+-- We keep Supabase document IDs as-is to simplify migration and parent-child relations.
 
 drop table if exists public.user_notice_reads;
 drop table if exists public.notice_reactions;

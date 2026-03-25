@@ -4,7 +4,7 @@ import { recordTransferFetch } from './read-diagnostics.js';
 const BACKEND_SUPABASE = 'supabase';
 const SUPABASE_STORAGE_KEY = 'portal-supabase-v2';
 
-// デフォルト資格情報 — 新規デバイス・新規ユーザーでも即座に Supabase を使う
+// チE��ォルト賁E��惁E��  E新規デバイス・新規ユーザーでも即座に Supabase を使ぁE
 const DEFAULT_SUPABASE_URL = 'https://ydcxgxzeavumvubrqmlq.supabase.co';
 const DEFAULT_SUPABASE_KEY = 'sb_publishable_TuZiMD49GBC9NMSf-tyWYA_NKq8430v';
 
@@ -34,18 +34,18 @@ function resolveApiKey(config = {}) {
 
 function maskApiKey(key) {
   const normalized = normalizeApiKey(key);
-  if (!normalized) return '未設定';
+  if (!normalized) return '未設宁E;
   if (normalized.length <= 16) return normalized;
   return `${normalized.slice(0, 12)}...${normalized.slice(-6)}`;
 }
 
 function validateRuntimeConfig(mode, url, apiKey) {
   if (mode !== BACKEND_SUPABASE) return;
-  if (!url) throw new Error('Supabase URL を入力してください。');
+  if (!url) throw new Error('Supabase URL を�E力してください、E);
   if (!/^https:\/\//i.test(url)) {
-    throw new Error('Supabase URL は https:// から始めてください。');
+    throw new Error('Supabase URL は https:// から始めてください、E);
   }
-  if (!apiKey) throw new Error('Supabase APIキーを入力してください。');
+  if (!apiKey) throw new Error('Supabase APIキーを�E力してください、E);
 }
 
 function getRestBaseUrl() {
@@ -85,6 +85,37 @@ function summarizeError(text = '') {
   return compact.length > 180 ? `${compact.slice(0, 177)}...` : compact;
 }
 
+function toUnixSeconds(value) {
+  if (value == null || value === '') return 0;
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value > 1e12 ? Math.floor(value / 1000) : Math.floor(value);
+  }
+  if (value instanceof Date) {
+    return Math.floor(value.getTime() / 1000);
+  }
+  if (typeof value === 'object' && value && 'seconds' in value) {
+    return Number(value.seconds) || 0;
+  }
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? Math.floor(ms / 1000) : 0;
+}
+
+function toIsoTimestamp(value) {
+  if (value == null || value === '') return null;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const ms = value > 1e12 ? value : value * 1000;
+    return new Date(ms).toISOString();
+  }
+  if (typeof value === 'object' && value && 'seconds' in value) {
+    const seconds = Number(value.seconds) || 0;
+    const nanos = Number(value.nanoseconds) || 0;
+    return new Date(seconds * 1000 + Math.floor(nanos / 1e6)).toISOString();
+  }
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+}
+
 async function requestSupabase(path, {
   method = 'GET',
   body = null,
@@ -94,7 +125,7 @@ async function requestSupabase(path, {
   diagScope = '',
 } = {}) {
   if (!state.supabaseConfigured) {
-    throw new Error('Supabase 設定がまだ完了していません。');
+    throw new Error('Supabase 設定がまだ完亁E��てぁE��せん、E);
   }
 
   const response = await fetch(`${getRestBaseUrl()}/${path}`, {
@@ -105,7 +136,7 @@ async function requestSupabase(path, {
 
   const text = await response.text();
   if (!response.ok) {
-    throw new Error(`Supabase ${method} 失敗 (${response.status}): ${summarizeError(text)}`);
+    throw new Error(`Supabase ${method} 失敁E(${response.status}): ${summarizeError(text)}`);
   }
 
   if (!text) return null;
@@ -203,7 +234,7 @@ export function saveSupabaseConfigToStorage(url, apiKey, mode) {
 }
 
 export function applySupabaseRuntimeConfig(config = {}) {
-  state.dataBackendMode = BACKEND_SUPABASE; // モード選択廃止: 常にSupabase
+  state.dataBackendMode = BACKEND_SUPABASE; // モード選択廁E��: 常にSupabase
   state.supabaseUrl = normalizeUrl(config.supabaseUrl);
   state.supabaseApiKey = resolveApiKey(config);
   state.supabaseConfigured = !!(state.supabaseUrl && state.supabaseApiKey);
@@ -217,7 +248,7 @@ export function applySupabaseRuntimeConfig(config = {}) {
 }
 
 export function isSupabaseSharedCoreEnabled() {
-  return state.supabaseConfigured; // モード選択廃止: URL+キー設定済みなら常に有効
+  return state.supabaseConfigured; // モード選択廁E��: URL+キー設定済みなら常に有効
 }
 
 export function createSupabaseClientId(prefix = 'id') {
@@ -235,14 +266,14 @@ export function renderSupabaseAdminState(message = '') {
   if (keyEl && keyEl.value !== state.supabaseApiKey) keyEl.value = state.supabaseApiKey;
 
   if (statusEl) {
-    statusEl.textContent = state.supabaseConfigured ? 'Supabase 有効' : 'Supabase 未設定';
+    statusEl.textContent = state.supabaseConfigured ? 'Supabase 有効' : 'Supabase 未設宁E;
     statusEl.classList.toggle('is-configured', state.supabaseConfigured);
   }
 
   if (hintEl) {
     hintEl.textContent = message || (state.supabaseConfigured
-      ? 'Supabase に接続済みです。全データが Supabase を使用します。'
-      : 'URL と APIキーを入力して保存してください。');
+      ? 'Supabase に接続済みです。�EチE�EタぁESupabase を使用します、E
+      : 'URL と APIキーを�E力して保存してください、E);
   }
 
   if (previewEl) {
@@ -256,7 +287,7 @@ export async function saveSupabaseRuntimeConfig({ url, apiKey }) {
 
   validateRuntimeConfig(BACKEND_SUPABASE, nextUrl, nextApiKey);
 
-  // localStorage に保存
+  // localStorage に保孁E
   saveSupabaseConfigToStorage(nextUrl, nextApiKey, BACKEND_SUPABASE);
 
   return applySupabaseRuntimeConfig({
@@ -271,7 +302,7 @@ export async function fetchSharedCategoriesFromSupabase() {
     `public_categories?select=${encodeURIComponent(CATEGORY_SELECT)}&order=order_index.asc`,
     {
       diagKey: 'supabase.public_categories',
-      diagLabel: 'Supabase 公開カテゴリ',
+      diagLabel: 'Supabase 公開カチE��リ',
       diagScope: 'public_categories',
     }
   );
@@ -298,7 +329,7 @@ export async function fetchSharedCardsByIdsFromSupabase(ids = []) {
     `public_cards?select=${encodeURIComponent(CARD_SELECT)}&id=in.${encodeURIComponent(encodeInFilter(filteredIds))}`,
     {
       diagKey: 'supabase.public_cards.favorites',
-      diagLabel: 'Supabase 公開カード(お気に入り)',
+      diagLabel: 'Supabase 公開カーチEお気に入めE',
       diagScope: 'public_cards',
     }
   );
@@ -353,7 +384,7 @@ export async function deleteSharedCardInSupabase(id) {
   });
 }
 
-// ========== 個人データ（プライベートセクション・カード・TODO・設定）==========
+// ========== 個人チE�Eタ�E��Eライベ�Eトセクション・カード�ETODO・設定！E=========
 
 export function loadSupabaseConfigFromStorage() {
   try {
@@ -367,7 +398,7 @@ export function loadSupabaseConfigFromStorage() {
       };
     }
   } catch (_) {}
-  // localStorage 未設定でもデフォルト資格情報で Supabase を使う
+  // localStorage 未設定でもデフォルト賁E��惁E��で Supabase を使ぁE
   return {
     supabaseUrl: DEFAULT_SUPABASE_URL,
     supabasePublishableKey: DEFAULT_SUPABASE_KEY,
@@ -411,7 +442,7 @@ function mapTodoRow(row = {}) {
   };
 }
 
-// --- プライベートセクション ---
+// --- プライベ�Eトセクション ---
 
 export async function fetchPrivateSectionsFromSupabase(username) {
   const encoded = encodeURIComponent(buildFilterValue(username));
@@ -461,7 +492,7 @@ export async function deletePrivateSectionInSupabase(id) {
   });
 }
 
-// --- プライベートカード ---
+// --- プライベ�EトカーチE---
 
 export async function fetchPrivateCardsFromSupabase(username) {
   const encoded = encodeURIComponent(buildFilterValue(username));
@@ -469,7 +500,7 @@ export async function fetchPrivateCardsFromSupabase(username) {
     `private_cards?username=eq.${encoded}&select=id,label,icon,url,section_id,parent_id,order_index&order=order_index.asc`,
     {
       diagKey: 'supabase.private_cards',
-      diagLabel: 'Supabase マイカード',
+      diagLabel: 'Supabase マイカーチE,
       diagScope: `private_cards/${username}`,
     }
   );
@@ -563,14 +594,14 @@ export async function deleteUserTodoInSupabase(id) {
   });
 }
 
-// ===== portal_config（管理設定） =====
+// ===== portal_config�E�管琁E��定！E=====
 
 const PORTAL_CONFIG_SELECT = 'pin_hash,invite_code_hash,invite_code_plain,invite_updated_at,gemini_api_key,departments,suggestion_box_viewers,mission_text,gas_order_url,order_seed_version';
 
 export async function fetchPortalConfigFromSupabase() {
   const rows = await requestSupabase(
     `portal_config?id=eq.1&select=${encodeURIComponent(PORTAL_CONFIG_SELECT)}`,
-    { diagKey: 'supabase.portal_config', diagLabel: 'Supabase 管理設定', diagScope: 'portal_config' }
+    { diagKey: 'supabase.portal_config', diagLabel: 'Supabase 管琁E��宁E, diagScope: 'portal_config' }
   );
   if (!Array.isArray(rows) || !rows.length) return {};
   const r = rows[0];
@@ -608,7 +639,7 @@ export async function savePortalConfigToSupabase(fields = {}) {
   });
 }
 
-// --- 個人設定 ---
+// --- 個人設宁E---
 
 function mapPreferencesRow(row = {}) {
   const prefs = {};
@@ -620,7 +651,7 @@ function mapPreferencesRow(row = {}) {
   if (row.collapse_seeded != null) prefs.collapseSeeded = !!row.collapse_seeded;
   if (Array.isArray(row.hidden_cards)) prefs.hiddenCards = row.hidden_cards;
   if (row.mission_banner_hidden != null) prefs.missionBannerHidden = !!row.mission_banner_hidden;
-  if (row.last_viewed_suggestions_at != null) prefs.lastViewedSuggestionsAt = row.last_viewed_suggestions_at;
+  if (row.last_viewed_suggestions_at != null) prefs.lastViewedSuggestionsAt = toUnixSeconds(row.last_viewed_suggestions_at);
   return prefs;
 }
 
@@ -630,7 +661,7 @@ export async function fetchUserPreferencesFromSupabase(username) {
     `user_preferences?username=eq.${encoded}&select=theme,font_size,fav_only,favorites,collapsed_sections,collapse_seeded,hidden_cards,mission_banner_hidden,last_viewed_suggestions_at&limit=1`,
     {
       diagKey: 'supabase.user_preferences',
-      diagLabel: 'Supabase 個人設定',
+      diagLabel: 'Supabase 個人設宁E,
       diagScope: `user_preferences/${username}`,
     }
   );
@@ -648,8 +679,8 @@ export async function saveUserPreferencesToSupabase(username, prefs = {}) {
   if ('collapseSeeded' in prefs) payload.collapse_seeded = !!prefs.collapseSeeded;
   if ('hiddenCards' in prefs) payload.hidden_cards = prefs.hiddenCards;
   if ('missionBannerHidden' in prefs) payload.mission_banner_hidden = !!prefs.missionBannerHidden;
-  if ('lastViewedSuggestionsAt' in prefs) payload.last_viewed_suggestions_at = prefs.lastViewedSuggestionsAt;
-  // Upsert: username が主キー（ON CONFLICT DO UPDATE）
+  if ('lastViewedSuggestionsAt' in prefs) payload.last_viewed_suggestions_at = toIsoTimestamp(prefs.lastViewedSuggestionsAt);
+  // Upsert: username が主キー�E�EN CONFLICT DO UPDATE�E�E
   await requestSupabase('user_preferences', {
     method: 'POST',
     prefer: 'resolution=merge-duplicates,return=minimal',
@@ -657,9 +688,9 @@ export async function saveUserPreferencesToSupabase(username, prefs = {}) {
   });
 }
 
-// ===== 鋼材発注（order_suppliers / order_items / orders）=====
+// ===== 鋼材発注�E�Erder_suppliers / order_items / orders�E�E====
 
-function isoToFirestoreTs(isoStr) {
+function isoToTimestampObject(isoStr) {
   if (!isoStr) return null;
   const ms = Date.parse(isoStr);
   return Number.isFinite(ms) ? { seconds: Math.floor(ms / 1000), nanoseconds: 0 } : null;
@@ -683,7 +714,7 @@ function mapSupplierRow(row = {}) {
 export async function fetchOrderSuppliersFromSupabase() {
   const rows = await requestSupabase(
     `order_suppliers?active=eq.true&select=${encodeURIComponent(SUPPLIER_SELECT)}&order=name.asc`,
-    { diagKey: 'supabase.order_suppliers', diagLabel: 'Supabase 発注先', diagScope: 'order_suppliers' }
+    { diagKey: 'supabase.order_suppliers', diagLabel: 'Supabase 発注允E, diagScope: 'order_suppliers' }
   );
   return Array.isArray(rows) ? rows.map(mapSupplierRow) : [];
 }
@@ -743,7 +774,7 @@ function mapItemRow(row = {}) {
 export async function fetchOrderItemsFromSupabase() {
   const rows = await requestSupabase(
     `order_items?select=${encodeURIComponent(ITEM_SELECT)}&order=sort_order.asc,item_category.asc,spec.asc`,
-    { diagKey: 'supabase.order_items', diagLabel: 'Supabase 鋼材マスタ', diagScope: 'order_items' }
+    { diagKey: 'supabase.order_items', diagLabel: 'Supabase 鋼材�Eスタ', diagScope: 'order_items' }
   );
   return Array.isArray(rows) ? rows.map(mapItemRow) : [];
 }
@@ -795,13 +826,13 @@ function mapOrderRow(row = {}) {
     items:         Array.isArray(row.items) ? row.items : [],
     orderedBy:     row.ordered_by     || '',
     note:          row.note           || '',
-    orderedAt:     isoToFirestoreTs(row.ordered_at),
+    orderedAt:     isoToTimestampObject(row.ordered_at),
     emailSent:     !!row.email_sent,
-    emailSentAt:   row.email_sent_at  ? isoToFirestoreTs(row.email_sent_at) : null,
-    deletedAt:     row.deleted_at     ? isoToFirestoreTs(row.deleted_at) : null,
+    emailSentAt:   row.email_sent_at  ? isoToTimestampObject(row.email_sent_at) : null,
+    deletedAt:     row.deleted_at     ? isoToTimestampObject(row.deleted_at) : null,
     deletedBy:     row.deleted_by     || null,
-    createdAt:     isoToFirestoreTs(row.created_at),
-    updatedAt:     isoToFirestoreTs(row.updated_at),
+    createdAt:     isoToTimestampObject(row.created_at),
+    updatedAt:     isoToTimestampObject(row.updated_at),
   };
 }
 
@@ -856,9 +887,16 @@ export async function updateOrderInSupabase(id, data) {
   });
 }
 
-// ==================== ヘルパー関数 ====================
+export async function deleteOrderInSupabase(id) {
+  await requestSupabase(`orders?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal',
+  });
+}
 
-/** ISO 日時文字列を Firebase Timestamp 互換オブジェクトに変換 */
+// ==================== ヘルパ�E関数 ====================
+
+/** ISO ����������� timestamp-like object �ɕϊ� */
 function toTimestamp(isoStr) {
   if (!isoStr) return null;
   const ms = new Date(isoStr).getTime();
@@ -918,17 +956,18 @@ export async function deleteUserFromSupabase(username) {
 }
 
 export async function migrateUsernameInSupabase(oldName, newName) {
-  // 1. 新しいユーザーを作成（既存なら merge）
+  // 1. 新しいユーザーを作�E�E�既存なめEmerge�E�E
   await requestSupabase('user_accounts', {
     method: 'POST',
     prefer: 'return=minimal,resolution=merge-duplicates',
     body: { username: newName, last_login_at: new Date().toISOString() },
   });
-  // 2. 旧ユーザーの各テーブルデータを新名にコピーしてから削除
+  // 2. 旧ユーザーの吁E��ーブルチE�Eタを新名にコピ�Eしてから削除
   const copyTables = [
     'user_preferences', 'user_lock_pins', 'user_profiles', 'user_section_orders',
     'private_sections', 'private_cards', 'user_todos', 'user_email_contacts',
     'user_drive_links', 'user_drive_contacts', 'user_notice_reads', 'user_chat_reads',
+    'attendance_entries',
   ];
   for (const tbl of copyTables) {
     try {
@@ -939,7 +978,7 @@ export async function migrateUsernameInSupabase(oldName, newName) {
       await requestSupabase(`${tbl}?username=eq.${encodeURIComponent(oldName)}`, { method: 'DELETE', prefer: 'return=minimal' });
     } catch (_) {}
   }
-  // 3. assigned_tasks の参照を更新（PATCH は配列フィルタがないため行単位で）
+  // 3. assigned_tasks の参�Eを更新�E�EATCH は配�EフィルタがなぁE��め行単位で�E�E
   try {
     const tasks = await requestSupabase(
       `assigned_tasks?or=(assigned_to.eq.${encodeURIComponent(oldName)},assigned_by.eq.${encodeURIComponent(oldName)})`
@@ -957,7 +996,7 @@ export async function migrateUsernameInSupabase(oldName, newName) {
       }
     }
   } catch (_) {}
-  // 4. 旧アカウント削除（cascade で関連データも削除）
+  // 4. 旧アカウント削除�E�Eascade で関連チE�Eタも削除�E�E
   await requestSupabase(`user_accounts?username=eq.${encodeURIComponent(oldName)}`, {
     method: 'DELETE', prefer: 'return=minimal',
   });
@@ -1226,10 +1265,27 @@ export async function fetchTaskCommentsFromSupabase(taskId) {
 }
 
 export async function addTaskCommentInSupabase(data) {
-  await requestSupabase('task_comments', {
-    method: 'POST', prefer: 'return=minimal',
-    body: { task_id: data.taskId, username: data.username || '', body: data.body || '' },
+  const normalized = (data && typeof data === 'object' && !Array.isArray(data))
+    ? data
+    : { taskId: arguments[0], username: arguments[1], body: arguments[2] };
+  const rows = await requestSupabase('task_comments', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: {
+      task_id: normalized.taskId,
+      username: normalized.username || '',
+      body: normalized.body || '',
+    },
   });
+  if (!Array.isArray(rows) || !rows[0]) return null;
+  const row = rows[0];
+  return {
+    id: row.id,
+    taskId: row.task_id,
+    username: row.username || '',
+    body: row.body || '',
+    createdAt: toTimestamp(row.created_at),
+  };
 }
 
 export async function deleteTaskCommentInSupabase(id) {
@@ -1245,7 +1301,7 @@ export async function fetchTasksByProjectKeyFromSupabase(projectKey) {
   return Array.isArray(rows) ? rows.map(mapTaskRow) : [];
 }
 
-// ==================== チャット ====================
+// ==================== チャチE�� ====================
 
 function mapChatRoomRow(row = {}) {
   return {
@@ -1266,7 +1322,7 @@ export async function fetchChatRoomsFromSupabase(username, type = null) {
   let path = `chat_rooms?members=cs.${encoded}&order=last_at.desc.nullslast&limit=100`;
   if (type) path += `&type=eq.${encodeURIComponent(type)}`;
   const rows = await requestSupabase(path, {
-    diagKey: `chat.rooms.${type || 'all'}`, diagLabel: 'チャットルーム', diagScope: username,
+    diagKey: `chat.rooms.${type || 'all'}`, diagLabel: 'チャチE��ルーム', diagScope: username,
   });
   return Array.isArray(rows) ? rows.map(mapChatRoomRow) : [];
 }
@@ -1278,17 +1334,20 @@ export async function getChatRoomFromSupabase(roomId) {
 }
 
 export async function upsertDmRoomInSupabase(roomId, data) {
+  const normalized = Array.isArray(data)
+    ? { members: data }
+    : (data && typeof data === 'object' ? data : {});
   await requestSupabase('chat_rooms', {
     method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
     body: {
       id: roomId,
       type: 'dm',
-      name: data.name || '',
-      members: Array.isArray(data.members) ? data.members : [],
-      created_by: data.createdBy || '',
-      last_message: data.lastMessage || '',
-      last_at: data.lastAt || null,
-      last_sender: data.lastSender || '',
+      name: normalized.name || '',
+      members: Array.isArray(normalized.members) ? normalized.members : [],
+      created_by: normalized.createdBy || '',
+      last_message: normalized.lastMessage || '',
+      last_at: normalized.lastAt || null,
+      last_sender: normalized.lastSender || '',
     },
   });
 }
@@ -1306,15 +1365,18 @@ export async function ensureDmMembersInSupabase(roomId, members) {
 }
 
 export async function createGroupRoomInSupabase(data) {
-  const id = data.id || createSupabaseClientId('room');
+  const normalized = (data && typeof data === 'object' && !Array.isArray(data))
+    ? data
+    : { name: arguments[0], members: arguments[1], createdBy: arguments[2] };
+  const id = normalized.id || createSupabaseClientId('room');
   await requestSupabase('chat_rooms', {
     method: 'POST', prefer: 'return=minimal',
     body: {
       id,
       type: 'group',
-      name: data.name || '',
-      members: Array.isArray(data.members) ? data.members : [],
-      created_by: data.createdBy || '',
+      name: normalized.name || '',
+      members: Array.isArray(normalized.members) ? normalized.members : [],
+      created_by: normalized.createdBy || '',
       last_message: '',
       last_at: null,
       last_sender: '',
@@ -1324,12 +1386,19 @@ export async function createGroupRoomInSupabase(data) {
 }
 
 export async function updateChatRoomLastInSupabase(roomId, data) {
+  const normalized = (data && typeof data === 'object' && !Array.isArray(data))
+    ? data
+    : {
+        lastMessage: data || '',
+        lastAt: new Date().toISOString(),
+        lastSender: arguments[2] || '',
+      };
   const payload = {};
-  if ('lastMessage' in data) payload.last_message = data.lastMessage || '';
-  if ('lastAt' in data)      payload.last_at      = data.lastAt || null;
-  if ('lastSender' in data)  payload.last_sender  = data.lastSender || '';
-  if ('name' in data)        payload.name         = data.name || '';
-  if ('members' in data)     payload.members      = Array.isArray(data.members) ? data.members : [];
+  if ('lastMessage' in normalized) payload.last_message = normalized.lastMessage || '';
+  if ('lastAt' in normalized)      payload.last_at      = normalized.lastAt || null;
+  if ('lastSender' in normalized)  payload.last_sender  = normalized.lastSender || '';
+  if ('name' in normalized)        payload.name         = normalized.name || '';
+  if ('members' in normalized)     payload.members      = Array.isArray(normalized.members) ? normalized.members : [];
   await requestSupabase(`chat_rooms?id=eq.${encodeURIComponent(roomId)}`, {
     method: 'PATCH', prefer: 'return=minimal', body: payload,
   });
@@ -1345,7 +1414,7 @@ export async function removeSelfFromDmRoomInSupabase(roomId, username, currentMe
 export async function fetchChatMessagesFromSupabase(roomId, msgLimit = 200) {
   const rows = await requestSupabase(
     `chat_messages?room_id=eq.${encodeURIComponent(roomId)}&select=*&order=created_at.desc&limit=${msgLimit}`,
-    { diagKey: 'chat.messages', diagLabel: 'チャットメッセージ', diagScope: roomId }
+    { diagKey: 'chat.messages', diagLabel: 'チャチE��メチE��ージ', diagScope: roomId }
   );
   if (!Array.isArray(rows)) return [];
   return rows.reverse().map(r => ({
@@ -1358,11 +1427,27 @@ export async function fetchChatMessagesFromSupabase(roomId, msgLimit = 200) {
 }
 
 export async function addChatMessageInSupabase(data) {
+  const normalized = (data && typeof data === 'object' && !Array.isArray(data))
+    ? data
+    : { roomId: arguments[0], username: arguments[1], text: arguments[2] };
   const result = await requestSupabase('chat_messages', {
-    method: 'POST', prefer: 'return=representation',
-    body: { room_id: data.roomId, username: data.username || '', text: data.text || '' },
+    method: 'POST',
+    prefer: 'return=representation',
+    body: {
+      room_id: normalized.roomId,
+      username: normalized.username || '',
+      text: normalized.text || '',
+    },
   });
-  if (Array.isArray(result) && result[0]) return result[0].id;
+  if (Array.isArray(result) && result[0]) {
+    return {
+      id: result[0].id,
+      roomId: result[0].room_id,
+      username: result[0].username || '',
+      text: result[0].text || '',
+      createdAt: toTimestamp(result[0].created_at),
+    };
+  }
   return null;
 }
 
@@ -1373,7 +1458,7 @@ export async function deleteChatMessageInSupabase(id) {
 }
 
 export async function deleteOldestChatMessageInSupabase(roomId) {
-  // 最古のメッセージを1件取得して削除
+  // 最古のメチE��ージめE件取得して削除
   const rows = await requestSupabase(
     `chat_messages?room_id=eq.${encodeURIComponent(roomId)}&select=id&order=created_at.asc&limit=1`
   );
@@ -1511,16 +1596,18 @@ export async function fetchMultipleMonthsAttendanceSummaryFromSupabase(yearMonth
   const encoded = encodeURIComponent(encodeInFilter(yms));
   const rows = await requestSupabase(
     `attendance_entries?year_month=in.${encoded}&order=entry_date.asc`,
-    { diagKey: 'attendance.summary', diagLabel: '勤怠集計', diagScope: yms.join(',') }
+    { diagKey: 'attendance.summary', diagLabel: '勤怠雁E��E, diagScope: yms.join(',') }
   );
   return Array.isArray(rows) ? rows.map(mapAttendanceRow) : [];
 }
 
 export async function cleanupOldAttendanceInSupabase(username, cutoffDate) {
-  await requestSupabase(
+  if (!username || !cutoffDate) return 0;
+  const rows = await requestSupabase(
     `attendance_entries?username=eq.${encodeURIComponent(username)}&entry_date=lt.${encodeURIComponent(cutoffDate)}`,
-    { method: 'DELETE', prefer: 'return=minimal' }
+    { method: 'DELETE', prefer: 'return=representation' }
   );
+  return Array.isArray(rows) ? rows.length : 0;
 }
 
 export async function fetchAttendanceByProjectKeyFromSupabase(projectKey) {
@@ -1536,7 +1623,7 @@ export async function fetchAttendanceByProjectKeyFromSupabase(projectKey) {
 export async function fetchCompanyCalSettingsFromSupabase() {
   const rows = await requestSupabase(
     'company_calendar_settings?order=updated_at.desc&limit=1',
-    { diagKey: 'cal.settings', diagLabel: '会社カレンダー設定', diagScope: 'company_calendar_settings' }
+    { diagKey: 'cal.settings', diagLabel: '会社カレンダー設宁E, diagScope: 'company_calendar_settings' }
   );
   if (!Array.isArray(rows) || rows.length === 0) return null;
   const r = rows[0];
@@ -1631,7 +1718,7 @@ function mapRequestRow(row = {}) {
 export async function fetchReceivedRequestsFromSupabase(myDept) {
   if (!myDept) return [];
   const rows = await requestSupabase(
-    `cross_dept_requests?to_dept=eq.${encodeURIComponent(myDept)}&archived=eq.false&order=created_at.desc&limit=200`,
+    `cross_dept_requests?to_dept=eq.${encodeURIComponent(myDept)}&status=eq.submitted&archived=eq.false&order=created_at.desc&limit=200`,
     { diagKey: 'req.received', diagLabel: '受け取った依頼', diagScope: myDept }
   );
   return Array.isArray(rows) ? rows.map(mapRequestRow) : [];
@@ -1639,7 +1726,7 @@ export async function fetchReceivedRequestsFromSupabase(myDept) {
 
 export async function fetchSentRequestsFromSupabase(username) {
   const rows = await requestSupabase(
-    `cross_dept_requests?created_by=eq.${encodeURIComponent(username)}&archived=eq.false&order=created_at.desc&limit=200`,
+    `cross_dept_requests?created_by=eq.${encodeURIComponent(username)}&notify_creator=eq.true&archived=eq.false&order=created_at.desc&limit=200`,
     { diagKey: 'req.sent', diagLabel: '送った依頼', diagScope: username }
   );
   return Array.isArray(rows) ? rows.map(mapRequestRow) : [];
@@ -1713,10 +1800,27 @@ export async function fetchRequestCommentsFromSupabase(requestId) {
 }
 
 export async function addRequestCommentInSupabase(data) {
-  await requestSupabase('request_comments', {
-    method: 'POST', prefer: 'return=minimal',
-    body: { request_id: data.requestId, username: data.username || '', body: data.body || '' },
+  const normalized = (data && typeof data === 'object' && !Array.isArray(data))
+    ? data
+    : { requestId: arguments[0], username: arguments[1], body: arguments[2] };
+  const rows = await requestSupabase('request_comments', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: {
+      request_id: normalized.requestId,
+      username: normalized.username || '',
+      body: normalized.body || '',
+    },
   });
+  if (!Array.isArray(rows) || !rows[0]) return null;
+  const row = rows[0];
+  return {
+    id: row.id,
+    requestId: row.request_id,
+    username: row.username || '',
+    body: row.body || '',
+    createdAt: toTimestamp(row.created_at),
+  };
 }
 
 export async function deleteRequestCommentInSupabase(id) {
@@ -1788,7 +1892,7 @@ export async function deleteSuggestionInSupabase(id) {
   });
 }
 
-// ==================== ファイル転送 / Drive ====================
+// ==================== ファイル転送E/ Drive ====================
 
 export async function fetchMyDriveLinkFromSupabase(username) {
   const rows = await requestSupabase(
@@ -1986,7 +2090,7 @@ export async function saveUserProfileToSupabase(username, data) {
 export async function fetchEmailContactsFromSupabase(username) {
   const rows = await requestSupabase(
     `user_email_contacts?username=eq.${encodeURIComponent(username)}&order=company_name.asc`,
-    { diagKey: 'email.contacts', diagLabel: 'メール連絡先', diagScope: username }
+    { diagKey: 'email.contacts', diagLabel: 'メール連絡允E, diagScope: username }
   );
   if (!Array.isArray(rows)) return [];
   return rows.map(r => ({
@@ -2034,7 +2138,7 @@ export async function fetchOrdersByProjectKeyFromSupabase(projectKey) {
   }));
 }
 
-// ========== セクション並び順 ==========
+// ========== セクション並び頁E==========
 
 export async function fetchSectionOrderFromSupabase(username) {
   const rows = await requestSupabase(
