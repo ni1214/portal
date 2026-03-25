@@ -19607,3 +19607,54 @@ body {
   box-shadow: 0 4px 12px rgba(9,105,218,0.10);
   background: #eaeef2;
 }
+
+/* ================================================================
+   バグ修正 v1 — 2025-03（Criticエージェント指摘分）
+   ================================================================ */
+
+/* ===== 🔴 Fix1: --border-glass-hover 循環参照修正 ===== */
+/* 元定義: --border-glass-hover: var(--border-glass-hover) → 自己参照で無効 */
+:root {
+  --border-glass-hover: rgba(255, 255, 255, 0.25);
+}
+[data-theme="light"] {
+  --border-glass-hover: rgba(31, 35, 40, 0.35);
+}
+
+/* ===== 🔴 Fix2: モバイルでhome-dashboardが非表示になるバグ修正 ===== */
+/* 元定義: @media(max-width:600px) { .home-dashboard { display: none } } を上書き */
+@media (max-width: 600px) {
+  .home-dashboard { display: block !important; }
+}
+
+/* ===== 🔴 Fix3: :focus-visible スタイル追加（WCAG 2.4.7） ===== */
+.app-header-btn:focus-visible,
+.app-menu-btn:focus-visible,
+.app-user-btn:focus-visible,
+.app-sidebar-item:focus-visible,
+.app-sidebar-util:focus-visible,
+.app-sidebar-invite:focus-visible,
+.hqa-btn:focus-visible,
+.portal-summary-card:focus-visible,
+.hd-card:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+/* ===== 🟡 Fix4: ライトモードでbody背景Orbを非表示 ===== */
+[data-theme="light"] body::before,
+[data-theme="light"] body::after {
+  opacity: 0;
+}
+
+/* ===== 🟡 Fix5: app-user-greetingの最小フォントサイズ確保 ===== */
+.app-user-greeting {
+  font-size: 0.75rem; /* 0.7rem → 0.75rem（12px、日本語最低可読域） */
+}
+
+/* ===== 🟡 Fix6: hqa-btn ラベルの折り返し対応（「物件Noまとめ」等） ===== */
+.hqa-btn span {
+  white-space: normal;
+  line-height: 1.25;
+  text-align: center;
+}
