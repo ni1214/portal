@@ -19415,3 +19415,195 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+
+/* ================================================================
+   UI刷新オーバーライド v2 — 2026-03
+   ================================================================ */
+
+/* ===== 1. ポータルサマリーカード ===== */
+.portal-summary-card {
+  padding: 16px 18px;
+  min-height: 90px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-glass);
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: none;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.portal-summary-card:hover {
+  transform: translateY(-2px);
+  background: var(--bg-card-hover);
+  border-color: var(--border-glass-hover);
+}
+
+.portal-summary-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.portal-summary-card--primary .portal-summary-icon {
+  background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
+  color: var(--accent-blue);
+}
+
+.portal-summary-card--danger .portal-summary-icon {
+  background: color-mix(in srgb, var(--accent-orange) 14%, transparent);
+  color: var(--accent-orange);
+}
+
+.portal-summary-card--tertiary .portal-summary-icon {
+  background: color-mix(in srgb, var(--accent-cyan) 14%, transparent);
+  color: var(--accent-cyan);
+}
+
+.portal-summary-card--neutral .portal-summary-icon {
+  background: color-mix(in srgb, var(--accent-purple) 14%, transparent);
+  color: var(--accent-purple);
+}
+
+.portal-summary-label {
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.portal-summary-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.portal-summary-meta {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+/* ライトモード: サマリーカード */
+[data-theme="light"] .portal-summary-card {
+  background: #ffffff;
+  border-color: rgba(31,35,40,0.14);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+[data-theme="light"] .portal-summary-card:hover {
+  background: #f6f8fa;
+  border-color: rgba(31,35,40,0.28);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+}
+
+/* ===== 2. サイドバー改善 ===== */
+
+/* 折りたたみ幅を64pxに縮小 */
+:root {
+  --app-sidebar-w-collapsed: 64px;
+}
+
+/* アクティブ状態の左インジケーター（Linearスタイル） */
+.app-sidebar-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  background: var(--accent-blue);
+  border-radius: 0 2px 2px 0;
+}
+
+[data-theme="light"] .app-sidebar-item.active::before {
+  background: var(--accent-blue);
+}
+
+/* 折りたたみ時のアクティブインジケーター位置調整 */
+.app-layout.sidebar-collapsed .app-sidebar-item.active::before {
+  left: 0;
+}
+
+/* 折りたたみ時ツールチップ */
+.app-layout.sidebar-collapsed .app-sidebar-item,
+.app-layout.sidebar-collapsed .app-sidebar-util {
+  position: relative;
+}
+
+.app-layout.sidebar-collapsed .app-sidebar-item:hover::after,
+.app-layout.sidebar-collapsed .app-sidebar-util:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-glass);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  z-index: 9999;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+
+/* ===== 3. クイックアクセスグリッド修正 ===== */
+.hd-quick-access {
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+}
+
+/* ===== 4. Stitch finale ライトモード補完 ===== */
+[data-theme="light"] body {
+  background: var(--bg-primary) !important;
+}
+
+[data-theme="light"] .header {
+  background: var(--bg-secondary) !important;
+}
+
+[data-theme="light"] .home-search-container {
+  background: #f0f2f5 !important;
+}
+
+[data-theme="light"] #notice-board .notice-item {
+  background: var(--bg-card) !important;
+}
+
+/* ===== 5. ホバーエフェクト調整（-4px→-2pxに統一） ===== */
+.link-card:hover {
+  transform: translateY(-2px);
+}
+
+/* ===== 6. タイポグラフィ微調整 ===== */
+.app-sidebar-item,
+.app-sidebar-util {
+  letter-spacing: 0.01em;
+}
+
+.portal-summary-value,
+.todo-count,
+.task-badge,
+.notice-unread-badge {
+  font-variant-numeric: tabular-nums;
+}
+
+.hqa-btn span {
+  letter-spacing: 0.01em;
+}
+
+/* ===== 7. クイックアクセスホバー改善 ===== */
+.hqa-btn:hover {
+  border-color: var(--accent-blue);
+  box-shadow: 0 4px 12px rgba(88,166,255,0.12);
+  transform: translateY(-2px);
+}
+
+[data-theme="light"] .hqa-btn:hover {
+  border-color: var(--accent-blue);
+  box-shadow: 0 4px 12px rgba(9,105,218,0.10);
+  background: #eaeef2;
+}
