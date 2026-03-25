@@ -948,16 +948,3 @@ function buildDateKey(date) {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
-
-function syncSidebarSelection() {
-  const activeButtonId = state.homeWorkspaceActiveButtonId || '';
-  document.querySelectorAll('[data-home-target]').forEach(button => {
-    const isActive = button.id === activeButtonId;
-    button.classList.toggle('home-nav-active', isActive);
-    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-  });
-}
-
-function normalizeTarget(target) {
-  return Object.prototype.hasOwnProperty.call(TARGET_LABELS, target) ? target : DEFAULT_TARGET;
-}
