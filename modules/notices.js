@@ -361,19 +361,24 @@ export async function saveNotice(data) {
     requireAcknowledgement: !!data?.requireAcknowledgement,
     acknowledgedBy: normalizeAcknowledgedUsers(existingNotice?.acknowledgedBy),
   };
+
   if (state.editingNoticeId) {
-      await updateNoticeInSupabase(state.editingNoticeId, normalizedData);
-    } else {
-      const newId = await createNoticeInSupabase(normalizedData);
-      // 楽観的更新: ローカル state にも追加（次の subscribeNotices 呼出しまでの暫定）
-      state.allNotices = [
-        { id: newId, ...normalizedData, createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 } },
-        ...(state.allNotices || []),
-      ];
-      refreshNoticeVisibility();
+    await updateNoticeInSupabase(state.editingNoticeId, normalizedData);
+    const idx = (state.allNotices || []).findIndex(notice => notice.id === state.editingNoticeId);
+    if (idx >= 0) {
+      state.allNotices[idx] = { ...state.allNotices[idx], ...normalizedData };
     }
+  } else {
+    const newId = await createNoticeInSupabase(normalizedData);
+    state.allNotices = [
+      { id: newId, ...normalizedData, createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 } },
+      ...(state.allNotices || []),
+    ];
   }
+
+  refreshNoticeVisibility();
 }
+
 
 export async function addNotice(data) {
   const normalizedData = {

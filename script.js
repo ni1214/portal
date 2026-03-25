@@ -200,7 +200,7 @@ import {
   updateSharedCardInSupabase,
   deleteSharedCardInSupabase,
   createSupabaseClientId,
-  // Step 4: 個人チE�Eタ
+  // Step 4: 個人チE�Eタ
   fetchUserPreferencesFromSupabase,
   saveUserPreferencesToSupabase,
   fetchSectionOrderFromSupabase,
@@ -218,7 +218,7 @@ import {
   createUserTodoInSupabase,
   updateUserTodoInSupabase,
   deleteUserTodoInSupabase,
-  // ユーザー一覧・ポ�Eタル設宁E
+  // ユーザー一覧・ポ�Eタル設宁E
   fetchAllUserAccountsFromSupabase,
   savePortalConfigToSupabase,
 } from './modules/supabase.js';
@@ -231,7 +231,7 @@ import { showToast, showConfirm } from './modules/notify.js';
 
 
 // ========== 依存注入 ==========
-// 吁E��ジュールが忁E��とするクロスモジュール関数を注入
+// 吁E��ジュールが忁E��とするクロスモジュール関数を注入
 
 Object.assign(authDeps, {
   loadPersonalData,
@@ -264,14 +264,14 @@ Object.assign(taskDeps, {
   renderTodayDashboard,
   loadUsersForChatPicker,
   renderTodoSection,
-  // 共有ピチE��ー用: users_list を取得して renderSharePickerUsers に渡ぁE
+  // 共有ピチE��ー用: users_list を取得して renderSharePickerUsers に渡ぁE
   loadUsersForSharePicker: async (alreadyShared, assignedTo, assignedBy) => {
     try {
       const accounts = await fetchAllUserAccountsFromSupabase();
       const allUsers = accounts.map(a => a.username);
       renderSharePickerUsers(allUsers, alreadyShared, assignedTo, assignedBy);
     } catch (err) {
-      console.error('共有ピチE��ーのユーザー取得エラー:', err);
+      console.error('共有ピチE��ーのユーザー取得エラー:', err);
       const listEl = document.getElementById('task-share-user-list');
       if (listEl) listEl.innerHTML = '<p class="task-share-empty">読み込みに失敗しました</p>';
     }
@@ -300,7 +300,7 @@ initEmail({
 // 鋼材発注モジュール初期匁E
 initOrder({});
 
-// ボトムナビ初期化（スマ�E用�E�E
+// ボトムナビ初期化（スマ�E用�E�E
 initBottomNav();
 
 // 会社カレンダーモジュール初期匁E
@@ -444,7 +444,7 @@ initTodayDashboard({
     try {
       await loadInviteCodeConfig();
     } catch (err) {
-      console.error('招征E��ード設定�E読込に失敗しました:', err);
+      console.error('招征E��ード設定�E読込に失敗しました:', err);
     }
     openInviteCodeModal();
   },
@@ -565,7 +565,7 @@ function renderTodoSection() {
     toggleBtn.title = state.todoCollapsed ? '展開する' : '折りたたむ';
   }
 
-  // ===== 割り振りタスク�E�Eending / accepted のみ�E�E====
+  // ===== 割り振りタスク�E�Eending / accepted のみ�E�E====
   const activeTasks = (state.receivedTasks || []).filter(t => t.status === 'pending' || t.status === 'accepted');
   if (assignedList) {
     assignedList.innerHTML = '';
@@ -573,7 +573,7 @@ function renderTodoSection() {
       const li = document.createElement('li');
       li.className = 'todo-item todo-item--assigned';
       const statusCls  = task.status === 'pending' ? 'task-status-pending' : 'task-status-accepted';
-      const statusText = task.status === 'pending' ? '承諾征E��' : '進行中';
+      const statusText = task.status === 'pending' ? '承諾征E��' : '進行中';
       const due = task.dueDate ? `<span class="todo-due todo-due--assigned">${esc(task.dueDate)}</span>` : '';
       li.innerHTML = `
         <span class="todo-assigned-badge ${statusCls}">${statusText}</span>
@@ -581,7 +581,7 @@ function renderTodoSection() {
         ${due}
         <span class="todo-assigned-from">依頼: ${esc(task.assignedBy)}</span>
       `;
-      li.title = 'クリチE��でタスクを開ぁE;
+      li.title = '???????????';
       li.addEventListener('click', () => {
         openTaskModal();
         setTimeout(() => switchTaskTab('received'), 50);
@@ -601,7 +601,7 @@ function renderTodoSection() {
   if (countEl) {
     const parts = [];
     if (activeTasks.length) parts.push(`依頼 ${activeTasks.length} 件`);
-    if (total) parts.push(`個人 ${doneN}/${total} 完亁E);
+    if (total) parts.push(`?? ${doneN}/${total} ??`);
     countEl.textContent = parts.join(' · ');
     countEl.className   = 'todo-count' + (doneN === total && total > 0 && activeTasks.length === 0 ? ' todo-count--all-done' : '');
   }
@@ -634,7 +634,7 @@ function renderTodoSection() {
       }
 
       li.innerHTML = `
-        <button class="todo-check" title="${todo.done ? '未完亁E��戻ぁE : '完亁E��する'}">
+        <button class="todo-check" title="${todo.done ? '??????' : '?????'}">
           <i class="fa-${todo.done ? 'solid' : 'regular'} fa-circle-check"></i>
         </button>
         <span class="todo-text">${esc(todo.text)}</span>
@@ -651,7 +651,7 @@ function renderTodoSection() {
 }
 
 
-// ========== 個人設定保存（デバウンス付き�E�E==========
+// ========== 個人設定保存（デバウンス付き�E�E==========
 let _prefSaveTimer = null;
 function savePreferencesToSupabase() {
   const targetUsername = state.currentUsername;
@@ -701,7 +701,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     }
 
     if (isSupabaseSharedCoreEnabled()) {
-      // Supabase モーチE 個人チE�Eタを並行取征E
+      // Supabase モーチE 個人チE�Eタを並行取征E
       const [sbOrder, sbPrefs, sbSections, sbCards] = await Promise.all([
         fetchSectionOrderFromSupabase(username).catch(err => { console.warn('sectionOrder fallback:', err); return null; }),
         fetchUserPreferencesFromSupabase(username).catch(err => { console.warn('prefs fallback:', err); return null; }),
@@ -743,7 +743,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     await ensureFavoritePublicCardsLoaded();
 
     renderAllSections();
-    // 初回ログイン時：�Eセクションをデフォルト折りたたみにする
+    // 初回ログイン時：�Eセクションをデフォルト折りたたみにする
     if (!state._collapseSeeded) _seedDefaultCollapse();
     renderFavorites();
     applyFavoritesOnlyMode();
@@ -756,12 +756,12 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     subscribeTodayAttendance(username);
     refreshNoticeVisibility();
     await loadConfigDepartmentsAndViewers();
-    renderMissionBanner(); // ミッションチE��ストが読み込まれた後に再描画
+    renderMissionBanner(); // ミッションチE��ストが読み込まれた後に再描画
     startRequestListeners(username);
     await loadLockSettings(username, lockOnSwitch);
     renderTodayDashboard();
   } catch (err) {
-    console.error('個人チE�Eタ読み込みエラー:', err);
+    console.error('個人チE�Eタ読み込みエラー:', err);
   }
 }
 
@@ -771,7 +771,7 @@ async function savePersonalSectionOrder(username, order) {
 }
 
 
-// ========== プライベ�Eトセクション CRUD ==========
+// ========== プライベ�Eトセクション CRUD ==========
 async function addPrivateSection(data) {
   if (!state.currentUsername) return;
   const id = await createPrivateSectionInSupabase(state.currentUsername, data);
@@ -819,7 +819,7 @@ async function deletePrivateCard(cardId) {
 }
 
 
-// ========== 個人セクション頁E��E==========
+// ========== 個人セクション頁E��E==========
 function applyPersonalOrder(cats) {
   const result = [];
   state.personalSectionOrder.forEach(sid => {
@@ -866,7 +866,7 @@ async function reorderSections(srcId, targetId) {
 }
 
 
-// ========== セクション ドラチE��&ドロチE�E ==========
+// ========== セクション ドラチE��&ドロチE�E ==========
 function setupSectionDraggable(section, sectionId) {
   const handle = section.querySelector('.section-drag-handle');
   if (!handle) return;
@@ -904,13 +904,13 @@ function setupSectionDraggable(section, sectionId) {
 }
 
 
-// ========== プライベ�Eトセクション管琁E��ーダル ==========
+// ========== プライベ�Eトセクション管琁E��ーダル ==========
 function openPrivateSectionModal(cat) {
   state.editingPrivateSectionId = cat?.docId || null;
   state.privateSectionColorIndex = cat?.colorIndex || 1;
-  document.getElementById('private-section-modal-title').innerHTML = cat
-    ? '<i class="fa-solid fa-lock"></i> マイカチE��リを編雁E
-    : '<i class="fa-solid fa-lock"></i> マイカチE��リを追加';
+  document.getElementById('private-section-modal-title').innerHTML = cat ? '<i class="fa-solid fa-lock"></i> ?????????' : '<i class="fa-solid fa-lock"></i> ?????????';
+
+
   document.getElementById('private-section-label').value = cat?.label || '';
   document.getElementById('private-section-icon').value = cat?.icon || 'fa-solid fa-star';
   document.getElementById('private-section-delete').style.display = cat ? 'inline-flex' : 'none';
@@ -941,7 +941,7 @@ function closePrivateSectionModal() {
 }
 
 
-// ========== �J�[�h CRUD ==========
+// ========== �J�[�h CRUD ==========
 async function migrateIfNeeded() {
   void INITIAL_CARDS;
 }
@@ -1088,7 +1088,7 @@ async function deleteCard(docId) {
 }
 
 
-// ========== �J�e�S�� CRUD ==========
+// ========== �J�e�S�� CRUD ==========
 async function addCategoryToSupabase(data) {
   await createSharedCategoryInSupabase(data);
   state.allCategories.push({ docId: data.id, ...data });
@@ -1153,11 +1153,11 @@ async function saveMissionText() {
     state.missionText = text;
     renderMissionBanner();
     if (btn) { btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存しました'; }
-    setTimeout(() => { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保孁E; } }, 1500);
+    setTimeout(() => { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> ??'; } }, 1500);
   } catch (err) {
-    console.error('ミッションチE��スト保存エラー:', err);
+    console.error('ミッションチE��スト保存エラー:', err);
     showToast('保存に失敗しました', 'error');
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保孁E; }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> ??'; }
   }
 }
 
@@ -1167,14 +1167,14 @@ function renderAllSections() {
   const personalBody = document.getElementById('personal-space-body');
   const sharedBody   = document.getElementById('shared-space-body');
 
-  // 既存�E動的セクション・ボタンを削除
+  // 既存�E動的セクション・ボタンを削除
   personalBody.querySelectorAll('.category-section:not(#favorites-section), .external-tools, .btn-add-category-wrap').forEach(el => el.remove());
   sharedBody.querySelectorAll('.category-section, .external-tools, .btn-add-category-wrap').forEach(el => el.remove());
 
   const publicSorted  = [...state.allCategories].sort((a, b) => a.order - b.order);
   const privateSorted = [...state.privateCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  // personalSectionOrder を適用しつつ公閁E個人で振り�EぁE
+  // personalSectionOrder を適用しつつ公閁E個人で振り�EぁE
   let orderedPublic  = publicSorted;
   let orderedPrivate = privateSorted;
   if (state.personalSectionOrder.length) {
@@ -1183,20 +1183,20 @@ function renderAllSections() {
     orderedPrivate = orderedAll.filter(c =>  c.isPrivate);
   }
 
-  // マイカチE��リ ↁE個人スペ�Eスへ
+  // マイカチE��リ ↁE個人スペ�Eスへ
   orderedPrivate.forEach(cat => {
     const catCards = state.privateCards.filter(c => c.sectionId === cat.docId).sort((a, b) => (a.order || 0) - (b.order || 0));
     personalBody.appendChild(buildSection(cat, catCards));
   });
 
-  // 「�EイカチE��リを追加」�E 個人スペ�Eス末尾
+  // 「�EイカチE��リを追加」�E 個人スペ�Eス末尾
   if (state.currentUsername) {
     const privateAddWrap = document.createElement('div');
     privateAddWrap.className = 'btn-add-category-wrap';
     privateAddWrap.innerHTML = `
       <div class="add-btn-group">
-        <button class="btn-add-private-section"><i class="fa-solid fa-lock"></i> マイカチE��リを追加</button>
-        <p class="add-btn-desc add-btn-desc--private"><i class="fa-solid fa-user-secret"></i> 自刁E��けに表示されまぁE/p>
+        <button class="btn-add-private-section"><i class="fa-solid fa-lock"></i> マイカチE��リを追加</button>
+        <p class="add-btn-desc add-btn-desc--private"><i class="fa-solid fa-user-secret"></i> 自刁E��けに表示されまぁE/p>
       </div>`;
     privateAddWrap.querySelector('.btn-add-private-section').addEventListener('click', () => openPrivateSectionModal(null));
     personalBody.appendChild(privateAddWrap);
@@ -1215,7 +1215,7 @@ function toggleSectionCollapse(sectionId) {
     state.collapsedSections.push(sectionId);
   }
   const collapsed = state.collapsedSections.includes(sectionId);
-  // DOM直接更新�E��E描画なし！E
+  // DOM直接更新�E��E描画なし！E
   const sectionEl = document.getElementById(`section-${sectionId}`)
     || document.getElementById(`section-priv-${sectionId.replace('priv:', '')}`);
   if (sectionEl) {
@@ -1281,14 +1281,14 @@ function _renderHiddenCardsList() {
   const hiddenCount = document.getElementById('hidden-cards-count');
   if (hiddenCount) hiddenCount.textContent = state.hiddenCards.length;
   if (state.hiddenCards.length === 0) {
-    container.innerHTML = '<p class="hidden-cards-empty">非表示にしたカード�Eありません</p>';
+    container.innerHTML = '<p class="hidden-cards-empty">非表示にしたカード�Eありません</p>';
     return;
   }
   // カード名を取得して表示
   const allCardPool = [...state.allCards, ...state.privateCards];
   container.innerHTML = state.hiddenCards.map(id => {
     const card = allCardPool.find(c => c.id === id);
-    const label = card ? esc(card.label) : `�E�ED: ${id}�E�`;
+    const label = card ? esc(card.label) : `�E�ED: ${id}�E�`;
     return `<div class="hidden-card-row">
       <span class="hidden-card-label">${label}</span>
       <button class="btn-unhide-card" data-id="${id}" title="再表示"><i class="fa-solid fa-eye"></i> 再表示</button>
@@ -1299,7 +1299,7 @@ function _renderHiddenCardsList() {
   });
 }
 
-// ===== チE��ォルト�E折りたたみ�E��E回ログイン時！E=====
+// ===== チE��ォルト�E折りたたみ�E��E回ログイン時！E=====
 function _seedDefaultCollapse() {
   const allIds = Array.from(
     document.querySelectorAll('.category-section[id], .external-tools[id]')
@@ -1318,7 +1318,7 @@ function buildSection(cat, cards) {
   const section = document.createElement('section');
   const gradient = getCategoryGradient(cat);
   const sectionId = cat.isPrivate ? `priv:${cat.docId}` : cat.id;
-  // 非表示カードをフィルタリング�E�個人設定！E
+  // 非表示カードをフィルタリング�E�個人設定！E
   const visibleCards = cards.filter(c => !state.hiddenCards.includes(c.id));
   cards = visibleCards;
   const isCollapsed = state.collapsedSections.includes(sectionId);
@@ -1327,7 +1327,7 @@ function buildSection(cat, cards) {
     section.className = 'external-tools' + (isCollapsed ? ' collapsed' : '');
     section.id = `section-${cat.id}`;
     const editBtns = state.isEditMode
-      ? `<button class="btn-edit-category" data-docid="${cat.docId || ''}" title="カチE��リ編雁E><i class="fa-solid fa-pen"></i></button>`
+      ? `<button class="btn-edit-category" data-docid="${cat.docId || ''}" title="カチE��リ編雁E><i class="fa-solid fa-pen"></i></button>`
       : '';
     section.innerHTML = `
       <div class="category-header">
@@ -1379,7 +1379,7 @@ function buildSection(cat, cards) {
         <div class="category-icon" style="background:${privGradient}"><i class="${cat.icon || 'fa-solid fa-star'}"></i></div>
         <h2 class="category-title">${esc(cat.label)}<span class="private-badge"><i class="fa-solid fa-lock"></i></span></h2>
         <span class="category-count">${cards.length} 件</span>
-        <button class="btn-edit-category" data-docid="${cat.docId}" title="マイカチE��リを編雁E><i class="fa-solid fa-pen"></i></button>
+        <button class="btn-edit-category" data-docid="${cat.docId}" title="マイカチE��リを編雁E><i class="fa-solid fa-pen"></i></button>
         <button class="btn-collapse-section${isCollapsed ? ' collapsed' : ''}" data-section-id="${sectionId}" title="${isCollapsed ? '展開' : '折り畳む'}">
           <i class="fa-solid fa-chevron-up"></i>
         </button>
@@ -1404,7 +1404,7 @@ function buildSection(cat, cards) {
     const allFaved = cards.length > 0 && cards.every(c => favs.includes(c.id));
     const sBtn = document.createElement('button');
     sBtn.className = 'btn-section-favorite' + (allFaved ? ' active' : '');
-    sBtn.title = allFaved ? 'まとめて解除' : 'セクションをまとめてお気に入めE;
+    sBtn.title = allFaved ? '??????' : '??????????????';
     sBtn.innerHTML = `<i class="fa-${allFaved ? 'solid' : 'regular'} fa-star"></i>`;
     sBtn.addEventListener('click', () => toggleSectionFavorite(cat.docId, true));
     section.querySelector('.category-header').appendChild(sBtn);
@@ -1413,7 +1413,7 @@ function buildSection(cat, cards) {
     section.className = 'category-section' + (isCollapsed ? ' collapsed' : '');
     section.id = `section-${cat.id}`;
     const editBtns = state.isEditMode
-      ? `<button class="btn-edit-category" data-docid="${cat.docId || ''}" title="カチE��リ編雁E><i class="fa-solid fa-pen"></i></button>`
+      ? `<button class="btn-edit-category" data-docid="${cat.docId || ''}" title="カチE��リ編雁E><i class="fa-solid fa-pen"></i></button>`
       : '';
     section.innerHTML = `
       <div class="category-header">
@@ -1454,7 +1454,7 @@ function buildSection(cat, cards) {
     const allFaved = catCardsForFav.length > 0 && catCardsForFav.every(c => favs.includes(c.id));
     const sBtn = document.createElement('button');
     sBtn.className = 'btn-section-favorite' + (allFaved ? ' active' : '');
-    sBtn.title = allFaved ? 'まとめて解除' : 'セクションをまとめてお気に入めE;
+    sBtn.title = allFaved ? '??????' : '??????????????';
     sBtn.innerHTML = `<i class="fa-${allFaved ? 'solid' : 'regular'} fa-star"></i>`;
     sBtn.addEventListener('click', () => toggleSectionFavorite(cat.id, false));
     section.querySelector('.category-header').appendChild(sBtn);
@@ -1463,7 +1463,7 @@ function buildSection(cat, cards) {
   if (state.currentUsername) {
     const handle = document.createElement('div');
     handle.className = 'section-drag-handle';
-    handle.title = 'ドラチE��してセクションを並び替ぁE;
+    handle.title = '????????????????';
     handle.setAttribute('draggable', 'true');
     handle.innerHTML = '<i class="fa-solid fa-grip-lines"></i>';
     section.querySelector('.category-header').prepend(handle);
@@ -1575,10 +1575,10 @@ function buildExternalCard(card) {
   a.innerHTML = `<div class="ext-icon-img">${iconHtml}</div><span class="ext-icon-label">${esc(card.label)}</span>`;
   wrap.appendChild(a);
 
-  // 非表示ボタン�E��Eバ�E時表示�E�E
+  // 非表示ボタン�E��Eバ�E時表示�E�E
   const hideBtn = document.createElement('button');
   hideBtn.className = 'btn-hide-ext-card';
-  hideBtn.title = 'こ�Eアイコンを非表示にする';
+  hideBtn.title = 'こ�Eアイコンを非表示にする';
   hideBtn.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
   hideBtn.addEventListener('click', e => {
     e.preventDefault();
@@ -1607,7 +1607,7 @@ function buildEditOverlay(card) {
   });
   overlay.querySelector('.btn-delete-card').addEventListener('click', async e => {
     e.preventDefault();
-    if (await confirmDelete(`、E{card.label}」を削除しますか�E�`)) {
+    if (await confirmDelete(`?${card.label}?????????`)) {
       await deleteCard(card.id);
     }
   });
@@ -1623,7 +1623,7 @@ function buildAddButton(categoryId, isPrivate = false, privateSectionDocId = nul
 }
 
 
-// ========== カード階層: ノ�Eド構篁E==========
+// ========== カード階層: ノ�Eド構篁E==========
 function buildCardNode(card, allCatCards, gradient, isPrivate) {
   const children = allCatCards.filter(c => c.parentId === card.id);
   const a = buildLinkCard(card, false, gradient);
@@ -1785,7 +1785,7 @@ function renderFavorites() {
   if (!cards.length) {
     if (state.favoritesOnlyMode) {
       section.hidden = false;
-      grid.innerHTML = '<p class="fav-empty"><i class="fa-regular fa-star"></i> お気に入りが未登録です。カードを右クリチE�� ↁE編雁Eまた�E吁E��ード�E ☁EをクリチE��して登録してください、E/p>';
+      grid.innerHTML = '<p class="fav-empty"><i class="fa-regular fa-star"></i> お気に入りが未登録です。カードを右クリチE�� ↁE編雁Eまた�E吁E��ード�E ☁EをクリチE��して登録してください、E/p>';
       if (count) count.textContent = '0 件';
     } else {
       section.hidden = true;
@@ -1800,10 +1800,10 @@ function renderFavorites() {
 }
 
 
-// ========== カチE��リ管琁E==========
+// ========== カチE��リ管琁E==========
 function openCategoryModal(cat) {
   state.editingCategoryId = cat?.docId || null;
-  document.getElementById('category-modal-title').textContent = cat ? 'カチE��リを編雁E : 'カチE��リを追加';
+  document.getElementById('category-modal-title').textContent = cat ? '???????' : '???????';
   document.getElementById('cat-label').value = cat?.label || '';
   document.getElementById('cat-icon').value = cat?.icon || 'fa-solid fa-star';
   document.getElementById('cat-delete').style.display = (cat && !cat.isExternal) ? 'inline-flex' : 'none';
@@ -1845,7 +1845,7 @@ function buildColorPicker() {
 }
 
 
-// ========== ドラチE��&ドロチE�E ==========
+// ========== ドラチE��&ドロチE�E ==========
 function setupDraggable(el, card) {
   el.setAttribute('draggable', 'true');
 
@@ -1901,7 +1901,7 @@ async function reorderCards(srcId, targetId) {
 }
 
 
-// ========== 編雁E��ーチE==========
+// ========== 編雁E��ーチE==========
 function enterEditMode() {
   state.isEditMode = true;
   document.body.classList.add('edit-mode');
@@ -1909,7 +1909,7 @@ function enterEditMode() {
   const fab = document.getElementById('admin-fab');
   fab.innerHTML = '<i class="fa-solid fa-lock-open"></i>';
   fab.classList.add('active');
-  fab.title = '編雁E��ードを終亁E;
+  fab.title = '????????';
   renderAllSections();
   refreshNoticeVisibility();
 }
@@ -1921,13 +1921,13 @@ function exitEditMode() {
   const fab = document.getElementById('admin-fab');
   fab.innerHTML = '<i class="fa-solid fa-lock"></i>';
   fab.classList.remove('active');
-  fab.title = '管琁E��E��グイン';
+  fab.title = '管琁E��E��グイン';
   renderAllSections();
   refreshNoticeVisibility();
 }
 
 
-// ========== カード編雁E��ーダル ==========
+// ========== カード編雁E��ーダル ==========
 function openCardModal(docId, categoryId = null, isPrivate = false, privateSectionDocId = null, parentId = null) {
   state.editingDocId = docId;
   state.editingCategory = categoryId;
@@ -1940,7 +1940,7 @@ function openCardModal(docId, categoryId = null, isPrivate = false, privateSecti
     : null;
   const isSVG = card?.icon?.startsWith('svg:');
 
-  document.getElementById('card-modal-title').textContent = docId ? 'カードを編雁E : 'カードを追加';
+  document.getElementById('card-modal-title').textContent = docId ? '??????' : '??????';
   document.getElementById('card-delete').style.display = docId ? 'inline-flex' : 'none';
   document.getElementById('edit-icon-group').style.display = '';
   document.getElementById('icon-picker').style.display = isSVG ? 'none' : '';
@@ -2009,8 +2009,8 @@ function buildIconPicker(selectedIcon) {
 function openPinModal(isSetup) {
   const modal = document.getElementById('pin-modal');
   modal.dataset.mode = isSetup ? 'setup' : 'login';
-  document.getElementById('pin-modal-title').textContent = isSetup ? '初回 PIN 設宁E : '管琁E��E��証';
-  document.getElementById('pin-modal-desc').textContent  = isSetup ? '使用する4桁�EPINを設定してください' : '4桁�EPINを�E力してください';
+  document.getElementById('pin-modal-title').textContent = isSetup ? '?? PIN ??' : '?????';
+  document.getElementById('pin-modal-desc').textContent  = isSetup ? '????4??PIN?????????' : '4??PIN?????????';
   document.getElementById('pin-confirm-group').style.display = isSetup ? '' : 'none';
   document.querySelectorAll('.pin-digit, .pin-digit-confirm').forEach(el => {
     el.value = '';
@@ -2060,7 +2060,7 @@ function openServicePicker() {
     });
   });
 
-  document.getElementById('svc-custom-btn').addEventListener('click', () => {
+  document.getElementById('svc-custom-btn')?.addEventListener('click', () => {
     closeServicePicker();
     openCardModal(null, 'external');
   });
@@ -2119,21 +2119,33 @@ function calcHeatIndex(tempC, humidity) {
 }
 
 function getHeatLevel(hi) {
-  if (hi >= 40) return { level: 'danger',    label: '危険',    icon: '🔴', color: '#c0392b', glow: 'rgba(255,94,160,0.55)', textColor: '#fff' };
-  if (hi >= 35) return { level: 'warning',   label: '厳重警戁E, icon: '🟠', color: '#d35400', glow: 'rgba(255,140,66,0.55)', textColor: '#fff' };
-  if (hi >= 31) return { level: 'caution',   label: '警戁E,    icon: '🟡', color: '#d4ac00', glow: 'rgba(230,200,0,0.4)',  textColor: '#1a1a00' };
-  if (hi >= 28) return { level: 'attention', label: '注愁E,    icon: '🟢', color: '#00a888', glow: 'rgba(0,212,170,0.4)',  textColor: '#fff' };
-  return { level: 'safe', label: 'ほぼ安�E', icon: '✁E, color: 'rgba(255,255,255,0.12)', glow: 'transparent', textColor: 'var(--text-secondary)' };
+  if (hi >= 40) return { level: 'danger', label: '危険', icon: '🔥', color: '#c0392b', glow: 'rgba(255,94,160,0.55)', textColor: '#fff' };
+  if (hi >= 35) return { level: 'warning', label: '厳重警戒', icon: '🥵', color: '#d35400', glow: 'rgba(255,140,66,0.55)', textColor: '#fff' };
+  if (hi >= 31) return { level: 'caution', label: '警戒', icon: '🌡️', color: '#d4ac00', glow: 'rgba(230,200,0,0.4)', textColor: '#1a1a00' };
+  if (hi >= 28) return { level: 'attention', label: '注意', icon: '🌤️', color: '#00a888', glow: 'rgba(0,212,170,0.4)', textColor: '#fff' };
+  return { level: 'safe', label: '安全', icon: '🙂', color: 'rgba(255,255,255,0.12)', glow: 'transparent', textColor: 'var(--text-secondary)' };
 }
 
 const OWM_ICON_MAP = {
-  '01d':'☀�E�E,'01n':'🌙','02d':'🌤','02n':'🌤',
-  '03d':'☁E��E,'03n':'☁E��E,'04d':'☁E��E,'04n':'☁E��E,
-  '09d':'🌧','09n':'🌧','10d':'🌦','10n':'🌦',
-  '11d':'⛁E,'11n':'⛁E,'13d':'❁E��E,'13n':'❁E��E,
-  '50d':'🌫','50n':'🌫'
+  '01d': '☀️',
+  '01n': '🌙',
+  '02d': '🌤️',
+  '02n': '🌤️',
+  '03d': '⛅',
+  '03n': '⛅',
+  '04d': '☁️',
+  '04n': '☁️',
+  '09d': '🌧️',
+  '09n': '🌧️',
+  '10d': '🌦️',
+  '10n': '🌦️',
+  '11d': '⛈️',
+  '11n': '⛈️',
+  '13d': '❄️',
+  '13n': '❄️',
+  '50d': '🌫️',
+  '50n': '🌫️'
 };
-
 async function fetchAndRenderWeather() {
   const currentEl = document.getElementById('weather-current');
   const forecastEl = document.getElementById('weather-forecast');
@@ -2176,7 +2188,7 @@ async function fetchAndRenderWeather() {
            style="background:${heat.color};color:${heat.textColor};--heat-glow:${heat.glow}">
         <span class="heat-badge-icon">${heat.icon}</span>
         <div class="heat-badge-body">
-          <span class="heat-badge-title">熱中痁E��険度</span>
+          <span class="heat-badge-title">熱中痁E��険度</span>
           <span class="heat-badge-level">${heat.label}</span>
         </div>
       </div>
@@ -2215,7 +2227,7 @@ async function fetchAndRenderWeather() {
 }
 
 
-// ========== コンチE��ストメニュー ==========
+// ========== コンチE��ストメニュー ==========
 let activeContextMenu = null;
 
 function showContextMenu(e, card) {
@@ -2264,7 +2276,7 @@ function showContextMenu(e, card) {
   menu.querySelector('.ctx-delete').addEventListener('click', async e => {
     e.stopPropagation();
     closeContextMenu();
-    if (await confirmDelete(`、E{card.label}」を削除しますか�E�`)) {
+    if (await confirmDelete(`?${card.label}?????????`)) {
       if (card.isPrivate) {
         await deletePrivateCard(card.id);
       } else {
@@ -2281,7 +2293,7 @@ function closeContextMenu() {
 }
 
 
-// ========== お気に入り�Eみ表示 ==========
+// ========== お気に入り�Eみ表示 ==========
 function applyFavoritesOnlyMode() {
   document.getElementById('app-main')?.classList.toggle('favorites-only', state.favoritesOnlyMode);
   const btn = document.getElementById('btn-favorites-only');
@@ -2289,18 +2301,18 @@ function applyFavoritesOnlyMode() {
   if (state.favoritesOnlyMode) {
     btn.classList.add('active');
     btn.title = 'すべて表示';
-    // サイドバー構造に対応！Eidebar-item-icon / sidebar-item-label�E�E
+    // サイドバー構造に対応！Eidebar-item-icon / sidebar-item-label�E�E
     const iconEl = btn.querySelector('.sidebar-item-icon i') || btn.querySelector('i');
     const labelEl = btn.querySelector('.sidebar-item-label') || btn.querySelector('.btn-fav-label');
     if (iconEl) { iconEl.className = 'fa-solid fa-star'; }
     if (labelEl) { labelEl.textContent = 'すべて表示'; }
   } else {
     btn.classList.remove('active');
-    btn.title = 'お気に入り登録済みのカードだけを表示しまぁE;
+    btn.title = '?????????????????????';
     const iconEl = btn.querySelector('.sidebar-item-icon i') || btn.querySelector('i');
     const labelEl = btn.querySelector('.sidebar-item-label') || btn.querySelector('.btn-fav-label');
     if (iconEl) { iconEl.className = 'fa-regular fa-star'; }
-    if (labelEl) { labelEl.textContent = 'お気に入り�Eみ'; }
+    if (labelEl) { labelEl.textContent = 'お気に入り�Eみ'; }
   }
   renderFavorites();
 }
@@ -2343,7 +2355,7 @@ function toggleSectionFavorite(catId, isPrivate = false) {
     if (sBtn) {
       const nowAllFaved = catCards.every(c => newFavs.includes(c.id));
       sBtn.classList.toggle('active', nowAllFaved);
-      sBtn.title = nowAllFaved ? 'まとめて解除' : 'セクションをまとめてお気に入めE;
+      sBtn.title = nowAllFaved ? '??????' : '??????????????';
       sBtn.innerHTML = `<i class="fa-${nowAllFaved ? 'solid' : 'regular'} fa-star"></i>`;
     }
   }
@@ -2371,7 +2383,7 @@ function _getCardGradient(card) {
 
 function _buildSearchBreadcrumb(card, allData) {
   const parts = [];
-  // カチE��リ吁E
+  // カチE��リ吁E
   if (card.isPrivate) {
     const sec = state.privateCategories.find(c => c.docId === card.sectionId);
     if (sec) parts.push(`<span class="srb-cat">${esc(sec.label)}</span>`);
@@ -2379,7 +2391,7 @@ function _buildSearchBreadcrumb(card, allData) {
     const cat = state.allCategories.find(c => c.id === card.category);
     if (cat) parts.push(`<span class="srb-cat">${esc(cat.label)}</span>`);
   }
-  // 親カード名�E�あれ�E�E�E
+  // 親カード名�E�あれ�E�E�E
   if (card.parentId) {
     const parent = allData.find(c => c.id === card.parentId);
     if (parent) parts.push(`<span class="srb-parent">${esc(parent.label)}</span>`);
@@ -2431,7 +2443,7 @@ function initSearch() {
       resultsSection.innerHTML = `
         <div class="search-results-header">
           <i class="fa-solid fa-spinner fa-spin"></i>
-          <span>共有リンクを検索するために一覧を読み込んでぁE��ぁE..</span>
+          <span>共有リンクを検索するために一覧を読み込んでぁE��ぁE..</span>
         </div>
       `;
       noResults.classList.remove('visible');
@@ -2442,7 +2454,7 @@ function initSearch() {
       }
     }
 
-    // 全カードから�EチE��するも�Eを直接探す（非表示カード�E除く！E
+    // 全カードから�EチE��するも�Eを直接探す（非表示カード�E除く！E
     const allData = [...(state.allCards || []), ...(state.privateCards || [])];
     const matches = allData.filter(card =>
       !state.hiddenCards.includes(card.id) &&
@@ -2506,7 +2518,7 @@ async function handlePinSubmit() {
 
   const digits = [...document.querySelectorAll('.pin-digit')].map(el => el.value).join('');
   if (digits.length !== 4) {
-    document.getElementById('pin-error').textContent = '4桁�EPINを�E力してください';
+    document.getElementById('pin-error').textContent = '4桁�EPINを�E力してください';
     return;
   }
 
@@ -2543,7 +2555,7 @@ async function handlePinSubmit() {
           state.failedAttempts = 0;
           document.getElementById('pin-error').textContent = '3回失敗、E0秒後に再試行してください';
         } else {
-          document.getElementById('pin-error').textContent = `PINが違ぁE��す（残り${3 - state.failedAttempts}回）`;
+          document.getElementById('pin-error').textContent = `PINが違ぁE��す（残り${3 - state.failedAttempts}回）`;
         }
         document.querySelectorAll('.pin-digit').forEach(el => {
           el.value = '';
@@ -2560,7 +2572,7 @@ async function handlePinSubmit() {
 }
 
 
-// ========== 表示設定（テーマ�E斁E��サイズ�E�E==========
+// ========== 表示設定（テーマ�E斁E��サイズ�E�E==========
 const THEMES     = ['dark', 'light'];
 const FONTSIZES  = ['font-sm', 'font-md', 'font-lg', 'font-xl'];
 
@@ -2607,7 +2619,7 @@ function closeSettingsPanel() {
 
 // ========== 初期匁E==========
 document.addEventListener('DOMContentLoaded', async () => {
-  // 最初に設定を適用�E�フラチE��ュ防止�E�E
+  // 最初に設定を適用�E�フラチE��ュ防止�E�E
   loadSettings();
 
   updateClock();
@@ -2617,25 +2629,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.currentUsername = null;
   }
 
-  // 常に編雁E��ーチE
+  // 常に編雁E��ーチE
   document.body.classList.add('edit-mode');
 
-  // 公開リンクは忁E��な時だけ読み込む。�E有�Eームは軽ぁE��態で先に描画する、E
+  // 公開リンクは忁E��な時だけ読み込む。�E有�Eームは軽ぁE��態で先に描画する、E
   state.allCards = [];
   renderAllSections();
   initSearch();
   renderFavorites();
 
-  // お知らせリアクションを�E行読み込み
+  // お知らせリアクションを�E行読み込み
 
-  // 天気�E即時取得！E0刁E��と更新�E�E
+  // 天気�E即時取得！E0刁E��と更新�E�E
   fetchAndRenderWeather();
   setInterval(fetchAndRenderWeather, 30 * 60 * 1000);
 
   // ===== 天気パネル =====
-  document.getElementById('wpanel-close').addEventListener('click', closeWeatherPanel);
-  document.getElementById('tab-radar').addEventListener('click', () => switchWeatherTab('radar'));
-  document.getElementById('tab-solar').addEventListener('click', () => switchWeatherTab('solar'));
+  document.getElementById('wpanel-close')?.addEventListener('click', closeWeatherPanel);
+  document.getElementById('tab-radar')?.addEventListener('click', () => switchWeatherTab('radar'));
+  document.getElementById('tab-solar')?.addEventListener('click', () => switchWeatherTab('solar'));
 
   // ===== 太陽光発電カーチE=====
   document.addEventListener('click', e => {
@@ -2682,12 +2694,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (toggle) toggle.addEventListener('click', toggleSidebar);
     if (overlay) overlay.addEventListener('click', closeSidebar);
 
-    // チE��クトップ：前回�E状態を復允E
+    // チE��クトップ：前回�E状態を復允E
     if (!isMobile() && localStorage.getItem(STORAGE_KEY) === '1') {
       layout.classList.add('sidebar-collapsed');
     }
 
-    // ホ�Eムボタン
+    // ホ�Eムボタン
     const homeBtn = document.getElementById('sidebar-home-btn');
     if (homeBtn) homeBtn.addEventListener('click', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2709,7 +2721,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
-    // モバイル�E�サイドバー冁E��イチE��をタチE�E→�E動閉ぁE
+    // モバイル�E�サイドバー冁E��イチE��をタチE�E→�E動閉ぁE
     const sidebar = document.getElementById('app-sidebar');
     if (sidebar) {
       sidebar.addEventListener('click', e => {
@@ -2719,7 +2731,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
-    // クイチE��アクセスボタン ↁE対応するサイドバーボタンに委譲
+    // クイチE��アクセスボタン ↁE対応するサイドバーボタンに委譲
     const qaMap = {
       'hqa-calendar' : 'btn-calendar',
       'hqa-task'     : 'btn-task',
@@ -2738,45 +2750,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   })();
 
-  // ===== 使ぁE��ガイチE=====
-  document.getElementById('help-fab').addEventListener('click', () => {
+  // ===== 使ぁE��ガイチE=====
+  document.getElementById('help-fab')?.addEventListener('click', () => {
     document.getElementById('guide-modal').classList.add('visible');
   });
-  // ヘッダーのヘルプ�Eタン�E�ECスマ�E共通！E
-  document.getElementById('header-help-btn').addEventListener('click', () => {
+  // ヘッダーのヘルプ�Eタン�E�ECスマ�E共通！E
+  document.getElementById('header-help-btn')?.addEventListener('click', () => {
     document.getElementById('guide-modal').classList.add('visible');
   });
-  document.getElementById('header-notice-btn').addEventListener('click', () => {
+  document.getElementById('header-notice-btn')?.addEventListener('click', () => {
     focusNoticeBoardFromDashboard();
   });
-  document.getElementById('header-home-btn').addEventListener('click', () => {
+  document.getElementById('header-home-btn')?.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
-  document.getElementById('header-shared-btn').addEventListener('click', () => {
+  document.getElementById('header-shared-btn')?.addEventListener('click', () => {
     state.sharedLinksCategory = 'all';
     void openSharedLinksModal();
   });
-  document.getElementById('header-dashboard-btn').addEventListener('click', () => {
+  document.getElementById('header-dashboard-btn')?.addEventListener('click', () => {
     document.getElementById('shared-home-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
-  document.getElementById('header-manual-btn').addEventListener('click', () => {
+  document.getElementById('header-manual-btn')?.addEventListener('click', () => {
     document.getElementById('guide-modal').classList.add('visible');
   });
-  document.getElementById('guide-close').addEventListener('click', () => {
+  document.getElementById('guide-close')?.addEventListener('click', () => {
     document.getElementById('guide-modal').classList.remove('visible');
   });
-  document.getElementById('guide-modal').addEventListener('click', e => {
+  document.getElementById('guide-modal')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) document.getElementById('guide-modal').classList.remove('visible');
   });
 
   // ===== サービスピッカー =====
-  document.getElementById('service-picker-cancel').addEventListener('click', closeServicePicker);
-  document.getElementById('service-picker-modal').addEventListener('click', e => {
+  document.getElementById('service-picker-cancel')?.addEventListener('click', closeServicePicker);
+  document.getElementById('service-picker-modal')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) closeServicePicker();
   });
 
-  // ===== ニックネ�Eム / プロフィール =====
-  document.getElementById('btn-user').addEventListener('click', () => {
+  // ===== ニックネ�Eム / プロフィール =====
+  document.getElementById('btn-user')?.addEventListener('click', () => {
     if (state.currentUsername) {
       openProfileModal();
       bindProfileQuickActions();
@@ -2786,95 +2798,94 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   updateUsernameDisplay();
 
-  document.getElementById('auth-invite-submit').addEventListener('click', async () => {
+  document.getElementById('auth-invite-submit')?.addEventListener('click', async () => {
     await submitInviteCode(document.getElementById('auth-invite-input').value);
   });
-  document.getElementById('auth-invite-input').addEventListener('keydown', e => {
+  document.getElementById('auth-invite-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('auth-invite-submit').click();
   });
   document.getElementById('home-invite-btn')?.addEventListener('click', async () => {
     try {
       await loadInviteCodeConfig();
     } catch (err) {
-      console.error('招征E��ード設定�E読込に失敗しました:', err);
+      console.error('招征E��ード設定�E読込に失敗しました:', err);
     }
     openInviteCodeModal();
   });
 
-  document.getElementById('auth-prelogin-submit').addEventListener('click', async () => {
+  document.getElementById('auth-prelogin-submit')?.addEventListener('click', async () => {
     await submitPreloginPin(document.getElementById('auth-prelogin-input').value);
   });
-  document.getElementById('auth-prelogin-input').addEventListener('keydown', e => {
+  document.getElementById('auth-prelogin-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('auth-prelogin-submit').click();
   });
-  document.getElementById('auth-prelogin-cancel').addEventListener('click', async () => {
+  document.getElementById('auth-prelogin-cancel')?.addEventListener('click', async () => {
     await cancelPreloginPin();
   });
 
-  document.getElementById('username-submit').addEventListener('click', () => {
+  document.getElementById('username-submit')?.addEventListener('click', () => {
     const name = document.getElementById('username-input').value.trim();
     if (!name) { document.getElementById('username-input').focus(); return; }
     saveUsername(name);
   });
-  document.getElementById('username-input').addEventListener('keydown', e => {
+  document.getElementById('username-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('username-submit').click();
   });
-  document.getElementById('username-input').addEventListener('input', hideUsernameError);
-  document.getElementById('username-reclaim').addEventListener('click', async () => {
+  document.getElementById('username-input')?.addEventListener('input', hideUsernameError);
+  document.getElementById('username-reclaim')?.addEventListener('click', async () => {
     const name = document.getElementById('username-input').value.trim();
     if (name) await loginExistingUsername(name);
   });
-  document.getElementById('username-skip').addEventListener('click', () => {
+  document.getElementById('username-skip')?.addEventListener('click', () => {
     closeUsernameModal();
-    // スキチE�E後：ユーザーネ�Eム未設定バナ�Eを表示
+    // スキチE�E後：ユーザーネ�Eム未設定バナ�Eを表示
     if (!state.currentUsername) {
       const hint = document.getElementById('area-personal-hint');
       if (hint) hint.hidden = false;
     }
   });
 
-  const inviteOk = await ensureInviteAccess();
-  if (!inviteOk) return;
+  void ensureInviteAccess();
 
-  try {
-    await loadCategories();
-    await subscribeNotices();
-    renderAllSections();
-    renderFavorites();
-  } catch (err) {
-    console.error('Supabase 初期読み込みエラー:', err);
-  }
+  void Promise.all([loadCategories(), subscribeNotices()])
+    .then(() => {
+      renderAllSections();
+      renderFavorites();
+    })
+    .catch(err => {
+      console.error('Supabase ?????????????????:', err);
+    });
 
-  // お気に入り�Eみ表示ボタン
-  document.getElementById('btn-favorites-only').addEventListener('click', toggleFavoritesOnly);
+  // お気に入り�Eみ表示ボタン
+  document.getElementById('btn-favorites-only')?.addEventListener('click', toggleFavoritesOnly);
   applyFavoritesOnlyMode();
 
-  // ===== ロチE��ボタン =====
-  document.getElementById('btn-lock-header').addEventListener('click', lockPortal);
+  // ===== ロチE��ボタン =====
+  document.getElementById('btn-lock-header')?.addEventListener('click', lockPortal);
 
-  // ロチE��画面チE��キー
+  // ロチE��画面チE��キー
   document.querySelectorAll('.lock-key[data-digit]').forEach(btn => {
     btn.addEventListener('click', () => handleLockKeyPress(btn.dataset.digit));
   });
-  document.getElementById('lock-key-del').addEventListener('click', handleLockDelete);
-  document.getElementById('btn-lock-switch-user').addEventListener('click', lockSwitchUser);
+  document.getElementById('lock-key-del')?.addEventListener('click', handleLockDelete);
+  document.getElementById('btn-lock-switch-user')?.addEventListener('click', lockSwitchUser);
 
-  // キーボ�EドでもPIN入劁E
+  // キーボ�EドでもPIN入劁E
   document.addEventListener('keydown', e => {
     if (document.getElementById('lock-screen').hidden) return;
     if (/^[0-9]$/.test(e.key)) handleLockKeyPress(e.key);
     if (e.key === 'Backspace') handleLockDelete();
   });
 
-  // セキュリチE��設宁E
-  document.getElementById('btn-open-security').addEventListener('click', () => {
+  // セキュリチE��設宁E
+  document.getElementById('btn-open-security')?.addEventListener('click', () => {
     closeUsernameModal();
     openSecurityModal();
   });
-  document.getElementById('security-cancel').addEventListener('click', closeSecurityModal);
+  document.getElementById('security-cancel')?.addEventListener('click', closeSecurityModal);
 
-  // ロチE��機�E ON/OFF トグル
-  document.getElementById('lock-enabled-toggle').addEventListener('change', async e => {
+  // ロチE��機�E ON/OFF トグル
+  document.getElementById('lock-enabled-toggle')?.addEventListener('change', async e => {
     state.lockEnabled = e.target.checked;
     document.getElementById('security-autolock-section').hidden = !state.lockEnabled;
     document.getElementById('btn-lock-header').hidden = !(state.lockEnabled && state.lockPinEnabled && state.currentUsername);
@@ -2886,8 +2897,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await saveLockSettings();
   });
 
-  // 自動ロチE��時間
-  document.getElementById('autolock-time-grid').addEventListener('click', async e => {
+  // 自動ロチE��時間
+  document.getElementById('autolock-time-grid')?.addEventListener('click', async e => {
     const btn = e.target.closest('.autolock-time-btn');
     if (!btn) return;
     state.autoLockMinutes = parseInt(btn.dataset.minutes);
@@ -2897,14 +2908,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     await saveLockSettings();
   });
 
-  // 管琁E��E��ネル
-  document.getElementById('btn-open-admin').addEventListener('click', () => {
+  // 管琁E��E��ネル
+  document.getElementById('btn-open-admin')?.addEventListener('click', () => {
     closeSettingsPanel();
     openAdminModal();
   });
-  document.getElementById('admin-cancel').addEventListener('click', closeAdminModal);
-  document.getElementById('admin-close').addEventListener('click', closeAdminModal);
-  document.getElementById('admin-auth-btn').addEventListener('click', async () => {
+  document.getElementById('admin-cancel')?.addEventListener('click', closeAdminModal);
+  document.getElementById('admin-close')?.addEventListener('click', closeAdminModal);
+  document.getElementById('admin-auth-btn')?.addEventListener('click', async () => {
     const pin   = document.getElementById('admin-pin-input').value;
     const errEl = document.getElementById('admin-auth-error');
     errEl.hidden = true;
@@ -2916,7 +2927,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await loadInviteCodeConfig();
       loadUsersForAdmin();
       renderAdminSuggBoxSection();
-      // ミッションチE��ストを入力欁E��反映
+      // ミッションチE��ストを入力欁E��反映
       const mInput = document.getElementById('admin-mission-input');
       if (mInput) mInput.value = state.missionText || '';
       renderSupabaseAdminState();
@@ -2924,17 +2935,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       errEl.hidden = false;
     }
   });
-  document.getElementById('admin-pin-input').addEventListener('keydown', e => {
+  document.getElementById('admin-pin-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('admin-auth-btn').click();
   });
 
-  // 管琁E��EIN初回設宁E
-  document.getElementById('admin-setup-btn').addEventListener('click', async () => {
+  // 管琁E��EIN初回設宁E
+  document.getElementById('admin-setup-btn')?.addEventListener('click', async () => {
     const pin     = document.getElementById('admin-new-pin').value;
     const confirm = document.getElementById('admin-new-pin-confirm').value;
     const errEl   = document.getElementById('admin-setup-error');
     errEl.hidden  = true;
-    if (!/^\d{4,6}$/.test(pin))  { errEl.textContent = '4、E桁�E数字を入力してください'; errEl.hidden = false; return; }
+    if (!/^\d{4,6}$/.test(pin))  { errEl.textContent = '4、E桁�E数字を入力してください'; errEl.hidden = false; return; }
     if (pin !== confirm)          { errEl.textContent = 'PINが一致しません';               errEl.hidden = false; return; }
     await setPIN(pin);
     document.getElementById('admin-setup-area').hidden = true;
@@ -2946,35 +2957,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (mInput) mInput.value = state.missionText || '';
     renderSupabaseAdminState();
   });
-  document.getElementById('admin-setup-cancel').addEventListener('click', closeAdminModal);
-  document.getElementById('admin-invite-save-btn').addEventListener('click', async () => {
+  document.getElementById('admin-setup-cancel')?.addEventListener('click', closeAdminModal);
+  document.getElementById('admin-invite-save-btn')?.addEventListener('click', async () => {
     const input = document.getElementById('admin-invite-input');
     const msgEl = document.getElementById('admin-invite-error');
     msgEl.hidden = true;
     try {
       await saveInviteCode(input.value);
     } catch (err) {
-      msgEl.textContent = err?.message || '招征E��ード�E保存に失敗しました、E;
+      msgEl.textContent = err?.message || '????????????????';
       msgEl.hidden = false;
     }
   });
-  document.getElementById('admin-invite-input').addEventListener('keydown', e => {
+  document.getElementById('admin-invite-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('admin-invite-save-btn').click();
   });
-  document.getElementById('admin-invite-clear-btn').addEventListener('click', async () => {
+  document.getElementById('admin-invite-clear-btn')?.addEventListener('click', async () => {
     const msgEl = document.getElementById('admin-invite-error');
     msgEl.hidden = true;
-    if (!await showConfirm('招征E��ードを解除しますか�E�E, { danger: true })) return;
+    if (!await showConfirm('????????????????????', { danger: true })) return;
     try {
       await clearInviteCode();
     } catch (err) {
-      msgEl.textContent = err?.message || '招征E��ード�E解除に失敗しました、E;
+      msgEl.textContent = err?.message || '????????????????';
       msgEl.hidden = false;
     }
   });
 
   // PIN設宁E
-  document.getElementById('admin-supabase-save-btn').addEventListener('click', async () => {
+  document.getElementById('admin-supabase-save-btn')?.addEventListener('click', async () => {
     const btn = document.getElementById('admin-supabase-save-btn');
     const errEl = document.getElementById('admin-supabase-error');
     const urlEl = document.getElementById('admin-supabase-url');
@@ -2989,31 +3000,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         apiKey: keyEl?.value || '',
       });
       await reloadSharedCoreData();
-      renderSupabaseAdminState('保存しました。Supabase 接続を更新しました、E);
-      btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存済み';
+      renderSupabaseAdminState('???????Supabase ??????????');
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> ????';
     } catch (err) {
-      errEl.textContent = err?.message || 'Supabase 設定�E保存に失敗しました、E;
+      errEl.textContent = err?.message || 'Supabase ?????????????';
       errEl.hidden = false;
-      btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保孁E;
+      btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> ??';
     } finally {
       setTimeout(() => {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 保孁E;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> ??';
       }, errEl.hidden ? 1200 : 0);
     }
   });
 
-  // カチE��リ修復ボタン�E�Eupabase 上�EカチE��リラベルが文字化けしてぁE��場合に修復�E�E
+  // カチE��リ修復ボタン�E�Eupabase 上�EカチE��リラベルが文字化けしてぁE��場合に修復�E�E
   const repairCategoriesBtn = document.getElementById('admin-repair-categories-btn');
   repairCategoriesBtn?.addEventListener('click', async () => {
     const btn = repairCategoriesBtn;
     const errEl = document.getElementById('admin-supabase-error');
     errEl.hidden = true;
     if (!isSupabaseSharedCoreEnabled()) {
-      showToast('Supabase が有効のとき�Eみ使えまぁE, 'warning');
+      showToast('Supabase ??????????', 'warning');
       return;
     }
-    if (!await showConfirm('Supabase のカチE��リラベルをデフォルト値で上書きします。よろしぁE��すか�E�E)) return;
+    if (!await showConfirm('Supabase ??????????????????????????', { danger: true })) return;
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>';
     try {
@@ -3027,28 +3038,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
       }
       await reloadSharedCoreData();
-      showToast('カチE��リラベルを修復しました', 'success');
-      btn.innerHTML = '<i class="fa-solid fa-check"></i> 修復済み';
+      showToast('????????????', 'success');
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> ????';
     } catch (err) {
-      errEl.textContent = err?.message || 'カチE��リ修復に失敗しました、E;
+      errEl.textContent = err?.message || '???????????????';
       errEl.hidden = false;
-      btn.innerHTML = '<i class="fa-solid fa-wrench"></i> カチE��リ修復';
+      btn.innerHTML = '<i class="fa-solid fa-wrench"></i> ??????';
     } finally {
       setTimeout(() => {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-wrench"></i> カチE��リ修復';
+        btn.innerHTML = '<i class="fa-solid fa-wrench"></i> ??????';
       }, errEl.hidden ? 1500 : 0);
     }
   });
 
-  document.getElementById('btn-set-pin').addEventListener('click', async () => {
+  document.getElementById('btn-set-pin')?.addEventListener('click', async () => {
     const newPin  = document.getElementById('new-pin-input').value;
     const confirm = document.getElementById('confirm-pin-input').value;
     const errEl   = document.getElementById('security-pin-error');
     errEl.hidden  = true;
-    if (!/^\d{4}$/.test(newPin))   { errEl.textContent = '4桁�E数字を入力してください'; errEl.hidden = false; return; }
+    if (!/^\d{4}$/.test(newPin))   { errEl.textContent = '4桁�E数字を入力してください'; errEl.hidden = false; return; }
     if (newPin !== confirm)         { errEl.textContent = 'PINが一致しません';           errEl.hidden = false; return; }
-    if (!state.currentUsername)     { errEl.textContent = 'ユーザーネ�Eムを設定してください'; errEl.hidden = false; return; }
+    if (!state.currentUsername)     { errEl.textContent = 'ユーザーネ�Eムを設定してください'; errEl.hidden = false; return; }
     try {
       await setLockPin(newPin);
       closeSecurityModal();
@@ -3059,7 +3070,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // PIN変更
-  document.getElementById('btn-change-pin').addEventListener('click', async () => {
+  document.getElementById('btn-change-pin')?.addEventListener('click', async () => {
     const cur    = document.getElementById('current-pin-input').value;
     const errEl  = document.getElementById('security-current-error');
     errEl.hidden = true;
@@ -3074,7 +3085,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // PIN解除
-  document.getElementById('btn-remove-pin').addEventListener('click', async () => {
+  document.getElementById('btn-remove-pin')?.addEventListener('click', async () => {
     const cur    = document.getElementById('current-pin-input').value;
     const errEl  = document.getElementById('security-current-error');
     errEl.hidden = true;
@@ -3084,7 +3095,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeSecurityModal();
   });
 
-  // 初回訪問時にニックネ�Eムモーダル
+  // 初回訪問時にニックネ�Eムモーダル
   if (!storedUsername) {
     setTimeout(() => showUsernameModal(false), 600);
     renderTodoSection();
@@ -3096,13 +3107,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ===== TODO パネル =====
-  document.getElementById('todo-toggle-btn').addEventListener('click', () => {
+  document.getElementById('todo-toggle-btn')?.addEventListener('click', () => {
     state.todoCollapsed = !state.todoCollapsed;
     renderTodoSection();
   });
 
-  // �E�追加ボタン ↁE入力行を展開
-  document.getElementById('todo-open-btn').addEventListener('click', () => {
+  // �E�追加ボタン ↁE入力行を展開
+  document.getElementById('todo-open-btn')?.addEventListener('click', () => {
     const row = document.getElementById('todo-add-row');
     const openBtn = document.getElementById('todo-open-btn');
     row.hidden = false;
@@ -3119,9 +3130,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('todo-input').value = '';
     document.getElementById('todo-due-select').value = '';
   }
-  document.getElementById('todo-cancel-btn').addEventListener('click', closeTodoRow);
+  document.getElementById('todo-cancel-btn')?.addEventListener('click', closeTodoRow);
 
-  document.getElementById('todo-add-btn').addEventListener('click', async () => {
+  document.getElementById('todo-add-btn')?.addEventListener('click', async () => {
     const input  = document.getElementById('todo-input');
     const due    = document.getElementById('todo-due-select');
     const text   = input.value.trim();
@@ -3130,82 +3141,82 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeTodoRow();
   });
 
-  document.getElementById('todo-input').addEventListener('keydown', e => {
+  document.getElementById('todo-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('todo-add-btn').click();
     if (e.key === 'Escape') closeTodoRow();
   });
 
   // ===== 鋼材発注 =====
-  document.getElementById('btn-order-launch').addEventListener('click', openOrderModal);
-  document.getElementById('btn-property-summary').addEventListener('click', () => openPropertySummaryModal());
-  document.getElementById('ord-open-admin-btn').addEventListener('click', () => {
+  document.getElementById('btn-order-launch')?.addEventListener('click', openOrderModal);
+  document.getElementById('btn-property-summary')?.addEventListener('click', () => openPropertySummaryModal());
+  document.getElementById('ord-open-admin-btn')?.addEventListener('click', () => {
     document.getElementById('ord-modal').classList.remove('visible');
     openOrderAdminModal();
   });
 
   // ===== メールアシスタンチE=====
-  document.getElementById('btn-email-assist').addEventListener('click', () => {
+  document.getElementById('btn-email-assist')?.addEventListener('click', () => {
     openEmailModal();
   });
-  document.getElementById('email-modal-close').addEventListener('click', closeEmailModal);
-  document.getElementById('email-modal').addEventListener('click', e => {
+  document.getElementById('email-modal-close')?.addEventListener('click', closeEmailModal);
+  document.getElementById('email-modal')?.addEventListener('click', e => {
     if (e.target.id === 'email-modal') closeEmailModal();
   });
-  document.getElementById('profile-modal-close').addEventListener('click', closeProfileModal);
-  document.getElementById('profile-modal').addEventListener('click', e => {
+  document.getElementById('profile-modal-close')?.addEventListener('click', closeProfileModal);
+  document.getElementById('profile-modal')?.addEventListener('click', e => {
     if (e.target.id === 'profile-modal') closeProfileModal();
   });
-  document.getElementById('email-open-profile-btn').addEventListener('click', () => {
+  document.getElementById('email-open-profile-btn')?.addEventListener('click', () => {
     closeEmailModal();
     openProfileModal();
   });
   // 新要E返信選抁E
-  document.getElementById('email-type-new').addEventListener('click', () => setEmailMode('new'));
-  document.getElementById('email-type-reply').addEventListener('click', () => setEmailMode('reply'));
-  document.getElementById('email-back-btn').addEventListener('click', resetEmailMode);
+  document.getElementById('email-type-new')?.addEventListener('click', () => setEmailMode('new'));
+  document.getElementById('email-type-reply')?.addEventListener('click', () => setEmailMode('reply'));
+  document.getElementById('email-back-btn')?.addEventListener('click', resetEmailMode);
   // 連絡允E
-  document.getElementById('email-contact-add-btn').addEventListener('click', () => {
+  document.getElementById('email-contact-add-btn')?.addEventListener('click', () => {
     const newContact = document.getElementById('email-new-contact');
     newContact.hidden = !newContact.hidden;
   });
-  document.getElementById('email-contact-save-btn').addEventListener('click', saveNewContact);
-  document.getElementById('email-contact-cancel-btn').addEventListener('click', () => {
+  document.getElementById('email-contact-save-btn')?.addEventListener('click', saveNewContact);
+  document.getElementById('email-contact-cancel-btn')?.addEventListener('click', () => {
     document.getElementById('email-new-contact').hidden = true;
   });
-  // 斁E��選抁E
-  document.getElementById('email-tone-btns').addEventListener('click', e => {
+  // 斁E��選抁E
+  document.getElementById('email-tone-btns')?.addEventListener('click', e => {
     const btn = e.target.closest('.email-tone-btn');
     if (btn) selectTone(btn.dataset.tone);
   });
-  // 生�E・コピ�E・リセチE��
-  document.getElementById('email-generate').addEventListener('click', generateEmail);
-  document.getElementById('btn-copy-output').addEventListener('click', copyEmailOutput);
-  document.getElementById('btn-reset-output').addEventListener('click', resetEmailOutput);
-  document.getElementById('email-api-key-save').addEventListener('click', saveGeminiApiKey);
+  // 生�E・コピ�E・リセチE��
+  document.getElementById('email-generate')?.addEventListener('click', generateEmail);
+  document.getElementById('btn-copy-output')?.addEventListener('click', copyEmailOutput);
+  document.getElementById('btn-reset-output')?.addEventListener('click', resetEmailOutput);
+  document.getElementById('email-api-key-save')?.addEventListener('click', saveGeminiApiKey);
   // タチE
   // プロフィール
-  document.getElementById('ep-save').addEventListener('click', saveUserEmailProfile);
-  document.getElementById('ep-reset-sig').addEventListener('click', resetSignatureTemplate);
-  document.getElementById('ep-signature').addEventListener('input', e => updateSignaturePreview(e.target.value));
+  document.getElementById('ep-save')?.addEventListener('click', saveUserEmailProfile);
+  document.getElementById('ep-reset-sig')?.addEventListener('click', resetSignatureTemplate);
+  document.getElementById('ep-signature')?.addEventListener('input', e => updateSignaturePreview(e.target.value));
   bindProfileQuickActions();
 
-  // ===== チャチE��FAB =====
-  document.getElementById('chat-fab').addEventListener('click', () => {
+  // ===== チャチE��FAB =====
+  document.getElementById('chat-fab')?.addEventListener('click', () => {
     state.chatPanelOpen ? closeChatPanel() : openChatPanel();
   });
-  document.getElementById('chat-panel-close').addEventListener('click', closeChatPanel);
+  document.getElementById('chat-panel-close')?.addEventListener('click', closeChatPanel);
   initChatResize();
-  document.getElementById('chat-tab-dm').addEventListener('click', () => switchChatSidebarTab('dm'));
-  document.getElementById('chat-tab-group').addEventListener('click', () => switchChatSidebarTab('group'));
-  document.getElementById('chat-send-btn').addEventListener('click', sendChatMessage);
-  document.getElementById('chat-input').addEventListener('keydown', e => {
+  document.getElementById('chat-tab-dm')?.addEventListener('click', () => switchChatSidebarTab('dm'));
+  document.getElementById('chat-tab-group')?.addEventListener('click', () => switchChatSidebarTab('group'));
+  document.getElementById('chat-send-btn')?.addEventListener('click', sendChatMessage);
+  document.getElementById('chat-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
   });
 
-  // ===== チャチE��冁E��ョートカチE�� =====
-  document.getElementById('chat-launch-task').addEventListener('click', openTaskModal);
-  document.getElementById('chat-launch-ft').addEventListener('click', () => {
-    // DMの場合�E相手を自動選択してFT送信モーダルを開ぁE
+  // ===== チャチE��冁E��ョートカチE�� =====
+  document.getElementById('chat-launch-task')?.addEventListener('click', openTaskModal);
+  document.getElementById('chat-launch-ft')?.addEventListener('click', () => {
+    // DMの場合�E相手を自動選択してFT送信モーダルを開ぁE
     if (state.currentRoomType === 'dm' && state.currentRoomId) {
       const partner = state.currentRoomId.split('_').find(u => u !== state.currentUsername);
       if (partner) {
@@ -3217,7 +3228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     openFileTransferPanel();
   });
 
-  // ===== 説明文折りたたみ�E�E2P / Drive�E�E=====
+  // ===== 説明文折りたたみ�E�E2P / Drive�E�E=====
   ['p2p', 'drive'].forEach(type => {
     const btn  = document.getElementById(`ft-${type}-desc-toggle`);
     const desc = document.getElementById(`ft-${type}-desc`);
@@ -3231,25 +3242,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ===== ファイル転送E=====
-  document.getElementById('ft-fab').addEventListener('click', () => {
+  document.getElementById('ft-fab')?.addEventListener('click', () => {
     state._ftPanelOpen ? closeFileTransferPanel() : openFileTransferPanel();
   });
-  document.getElementById('ft-panel-close').addEventListener('click', closeFileTransferPanel);
-  document.getElementById('ft-new-btn').addEventListener('click', openFtSendModal);
-  document.getElementById('ft-cancel-btn').addEventListener('click', closeFtSendModal);
-  document.getElementById('ft-confirm-btn').addEventListener('click', confirmFtSend);
+  document.getElementById('ft-panel-close')?.addEventListener('click', closeFileTransferPanel);
+  document.getElementById('ft-new-btn')?.addEventListener('click', openFtSendModal);
+  document.getElementById('ft-cancel-btn')?.addEventListener('click', closeFtSendModal);
+  document.getElementById('ft-confirm-btn')?.addEventListener('click', confirmFtSend);
 
   // ===== Drive シェア =====
   document.querySelectorAll('.ft-tab').forEach(btn =>
     btn.addEventListener('click', () => switchFtTab(btn.dataset.tab)));
-  document.getElementById('ft-drive-send-btn').addEventListener('click', openDriveSendModal);
-  document.getElementById('ft-drive-cancel-btn').addEventListener('click', closeDriveSendModal);
-  document.getElementById('ft-drive-confirm-btn').addEventListener('click', confirmDriveSend);
-  // インラインDriveリンクウィジェチE��初期化！EoadPersonalData完亁E��に呼ばれる�E�E
+  document.getElementById('ft-drive-send-btn')?.addEventListener('click', openDriveSendModal);
+  document.getElementById('ft-drive-cancel-btn')?.addEventListener('click', closeDriveSendModal);
+  document.getElementById('ft-drive-confirm-btn')?.addEventListener('click', confirmDriveSend);
+  // インラインDriveリンクウィジェチE��初期化！EoadPersonalData完亁E��に呼ばれる�E�E
   initDriveLinkWidget();
 
   // ファイル送信モーダル: ファイル選抁E
-  document.getElementById('ft-file-input').addEventListener('change', e => {
+  document.getElementById('ft-file-input')?.addEventListener('change', e => {
     const file = e.target.files[0];
     if (!file) return;
     state._ftSelectedFile = file;
@@ -3259,7 +3270,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('ft-confirm-btn').hidden = false;
   });
 
-  // ドラチE��&ドロチE�E
+  // ドラチE��&ドロチE�E
   const dropZone = document.getElementById('ft-file-drop');
   if (dropZone) {
     dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -3278,63 +3289,63 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ===== 新規DM/グルーチE=====
-  document.getElementById('btn-new-dm').addEventListener('click', openNewDmModal);
-  document.getElementById('new-dm-cancel').addEventListener('click', () => {
+  document.getElementById('btn-new-dm')?.addEventListener('click', openNewDmModal);
+  document.getElementById('new-dm-cancel')?.addEventListener('click', () => {
     document.getElementById('new-dm-modal').classList.remove('visible');
   });
-  document.getElementById('btn-new-group').addEventListener('click', openNewGroupModal);
-  document.getElementById('new-group-cancel').addEventListener('click', () => {
+  document.getElementById('btn-new-group')?.addEventListener('click', openNewGroupModal);
+  document.getElementById('new-group-cancel')?.addEventListener('click', () => {
     document.getElementById('new-group-modal').classList.remove('visible');
   });
-  document.getElementById('new-group-create').addEventListener('click', createGroupRoom);
+  document.getElementById('new-group-create')?.addEventListener('click', createGroupRoom);
 
   // ===== 部門間依頼・目安箱 =====
-  document.getElementById('btn-reqboard').addEventListener('click', () => openReqModal());
-  document.getElementById('reqboard-modal-close').addEventListener('click', closeReqModal);
+  document.getElementById('btn-reqboard')?.addEventListener('click', () => openReqModal());
+  document.getElementById('reqboard-modal-close')?.addEventListener('click', closeReqModal);
   document.querySelectorAll('.reqboard-tab').forEach(btn => {
     btn.addEventListener('click', () => switchReqTab(btn.dataset.tab));
   });
   document.querySelectorAll('.reqboard-subtab').forEach(btn => {
     btn.addEventListener('click', () => switchReqSubTab(btn.dataset.subtab));
   });
-  document.getElementById('req-status-cancel').addEventListener('click', () => {
+  document.getElementById('req-status-cancel')?.addEventListener('click', () => {
     document.getElementById('req-status-modal').classList.remove('visible');
     state._pendingStatusChange = null;
   });
-  document.getElementById('req-status-ok').addEventListener('click', updateRequestStatus);
-  document.getElementById('req-taskify-cancel').addEventListener('click', closeReqTaskifyModal);
-  document.getElementById('req-taskify-pick-user').addEventListener('click', openReqTaskifyUserPicker);
-  document.getElementById('req-taskify-confirm').addEventListener('click', submitRequestTaskify);
-  document.getElementById('req-taskify-modal').addEventListener('click', e => {
+  document.getElementById('req-status-ok')?.addEventListener('click', updateRequestStatus);
+  document.getElementById('req-taskify-cancel')?.addEventListener('click', closeReqTaskifyModal);
+  document.getElementById('req-taskify-pick-user')?.addEventListener('click', openReqTaskifyUserPicker);
+  document.getElementById('req-taskify-confirm')?.addEventListener('click', submitRequestTaskify);
+  document.getElementById('req-taskify-modal')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) closeReqTaskifyModal();
   });
-  document.getElementById('sugg-reply-cancel').addEventListener('click', () => {
+  document.getElementById('sugg-reply-cancel')?.addEventListener('click', () => {
     document.getElementById('sugg-reply-modal').classList.remove('visible');
     state._pendingSuggReply = null;
   });
-  document.getElementById('sugg-reply-ok').addEventListener('click', sendSuggReply);
-  document.getElementById('admin-suggbox-add-btn').addEventListener('click', addSuggBoxViewer);
-  document.getElementById('admin-suggbox-add-input').addEventListener('keydown', e => {
+  document.getElementById('sugg-reply-ok')?.addEventListener('click', sendSuggReply);
+  document.getElementById('admin-suggbox-add-btn')?.addEventListener('click', addSuggBoxViewer);
+  document.getElementById('admin-suggbox-add-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') addSuggBoxViewer();
   });
 
   // ミッションバナー
-  document.getElementById('mission-banner-toggle').addEventListener('click', toggleMissionBanner);
-  document.getElementById('admin-mission-save-btn').addEventListener('click', saveMissionText);
+  document.getElementById('mission-banner-toggle')?.addEventListener('click', toggleMissionBanner);
+  document.getElementById('admin-mission-save-btn')?.addEventListener('click', saveMissionText);
 
   // ===== カード非表示確認モーダル =====
-  document.getElementById('hide-card-confirm-cancel').addEventListener('click', () => {
+  document.getElementById('hide-card-confirm-cancel')?.addEventListener('click', () => {
     document.getElementById('hide-card-confirm-modal').classList.remove('visible');
     _pendingHideCardId = null;
   });
-  document.getElementById('hide-card-confirm-ok').addEventListener('click', () => {
+  document.getElementById('hide-card-confirm-ok')?.addEventListener('click', () => {
     document.getElementById('hide-card-confirm-modal').classList.remove('visible');
     if (_pendingHideCardId) {
       _doHideCard(_pendingHideCardId);
       _pendingHideCardId = null;
     }
   });
-  document.getElementById('hide-card-confirm-modal').addEventListener('click', e => {
+  document.getElementById('hide-card-confirm-modal')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) {
       e.currentTarget.classList.remove('visible');
       _pendingHideCardId = null;
@@ -3342,46 +3353,46 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ===== カレンダー =====
-  document.getElementById('btn-calendar').addEventListener('click', async () => {
+  document.getElementById('btn-calendar')?.addEventListener('click', async () => {
     await openCalendarModal();
     if (document.getElementById('cal-modal')?.classList.contains('visible')) {
       await onCalendarModalOpen();
     }
   });
-  document.getElementById('cal-close-btn').addEventListener('click', () => {
+  document.getElementById('cal-close-btn')?.addEventListener('click', () => {
     closeCalendarModal();
     onCalendarModalClose();
   });
-  document.getElementById('cal-prev-btn').addEventListener('click', async () => {
+  document.getElementById('cal-prev-btn')?.addEventListener('click', async () => {
     calPrevMonth();
     await onCalendarMonthChanged();
   });
-  document.getElementById('cal-next-btn').addEventListener('click', async () => {
+  document.getElementById('cal-next-btn')?.addEventListener('click', async () => {
     calNextMonth();
     await onCalendarMonthChanged();
   });
-  document.getElementById('cal-today-btn').addEventListener('click', async () => {
+  document.getElementById('cal-today-btn')?.addEventListener('click', async () => {
     calGoToday();
     await onCalendarMonthChanged();
   });
-  document.getElementById('cal-day-cancel-btn').addEventListener('click', closeDayPanel);
-  document.getElementById('cal-day-save-btn').addEventListener('click', saveDayAttendance);
-  document.getElementById('cal-day-delete-btn').addEventListener('click', () => {
+  document.getElementById('cal-day-cancel-btn')?.addEventListener('click', closeDayPanel);
+  document.getElementById('cal-day-save-btn')?.addEventListener('click', saveDayAttendance);
+  document.getElementById('cal-day-delete-btn')?.addEventListener('click', () => {
     const { calendarSelectedDate } = state;
     if (calendarSelectedDate) deleteAttendance(calendarSelectedDate);
   });
-  // タブ�E替
-  document.getElementById('cal-tab-personal').addEventListener('click', async () => {
+  // タブ�E替
+  document.getElementById('cal-tab-personal')?.addEventListener('click', async () => {
     switchCalTab('personal');
     await switchCalPersonalTab(state.calPersonalTab || 'calendar');
   });
-  document.getElementById('cal-tab-shared').addEventListener('click',   () => switchCalTab('shared'));
-  // 管琁E��E��定�Eタン�E��E有カレンダータブ�E  Eイベントデリゲーション�E�E
-  document.getElementById('cal-modal').addEventListener('click', e => {
+  document.getElementById('cal-tab-shared')?.addEventListener('click',   () => switchCalTab('shared'));
+  // 管琁E��E��定�Eタン�E��E有カレンダータブ�E  Eイベントデリゲーション�E�E
+  document.getElementById('cal-modal')?.addEventListener('click', e => {
     if (e.target.closest('#btn-company-cal-settings')) openCompanyCalSettings();
   });
-  // モーダル外クリチE��で閉じめE
-  document.getElementById('cal-modal').addEventListener('click', e => {
+  // モーダル外クリチE��で閉じめE
+  document.getElementById('cal-modal')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) {
       closeCalendarModal();
       onCalendarModalClose();
@@ -3391,49 +3402,49 @@ document.addEventListener('DOMContentLoaded', async () => {
   initCompanyCalSettingsForms();
 
   // ===== タスク =====
-  document.getElementById('btn-task').addEventListener('click', openTaskModal);
-  document.getElementById('task-modal-close').addEventListener('click', closeTaskModal);
+  document.getElementById('btn-task')?.addEventListener('click', openTaskModal);
+  document.getElementById('task-modal-close')?.addEventListener('click', closeTaskModal);
   document.querySelectorAll('.task-tab').forEach(btn => {
     btn.addEventListener('click', () => switchTaskTab(btn.dataset.tab));
   });
-  document.getElementById('task-user-picker-cancel').addEventListener('click', () => {
+  document.getElementById('task-user-picker-cancel')?.addEventListener('click', () => {
     document.getElementById('task-user-picker-modal').classList.remove('visible');
   });
-  document.getElementById('task-user-picker-modal').addEventListener('click', e => {
+  document.getElementById('task-user-picker-modal')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) document.getElementById('task-user-picker-modal').classList.remove('visible');
   });
 
-  // タスク編雁E��ーダル
-  document.getElementById('task-edit-cancel-btn').addEventListener('click', closeTaskEditModal);
-  document.getElementById('task-edit-save-btn').addEventListener('click', submitTaskEdit);
-  document.getElementById('task-edit-modal').addEventListener('click', e => {
+  // タスク編雁E��ーダル
+  document.getElementById('task-edit-cancel-btn')?.addEventListener('click', closeTaskEditModal);
+  document.getElementById('task-edit-save-btn')?.addEventListener('click', submitTaskEdit);
+  document.getElementById('task-edit-modal')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) closeTaskEditModal();
   });
 
-  // タスク共有ピチE��ー
-  document.getElementById('task-share-cancel-btn').addEventListener('click', closeTaskSharePicker);
-  document.getElementById('task-share-confirm-btn').addEventListener('click', submitTaskShare);
-  document.getElementById('task-share-picker-modal').addEventListener('click', e => {
+  // タスク共有ピチE��ー
+  document.getElementById('task-share-cancel-btn')?.addEventListener('click', closeTaskSharePicker);
+  document.getElementById('task-share-confirm-btn')?.addEventListener('click', submitTaskShare);
+  document.getElementById('task-share-picker-modal')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) closeTaskSharePicker();
   });
-  document.getElementById('task-share-search').addEventListener('input', e => {
+  document.getElementById('task-share-search')?.addEventListener('input', e => {
     filterShareUserList(e.target.value);
   });
 
-  // ===== ベル通知ボタン�E�お知らせ追加モーダルを開く！E=====
-  document.getElementById('btn-notice-bell').addEventListener('click', () => {
+  // ===== ベル通知ボタン�E�お知らせ追加モーダルを開く！E=====
+  document.getElementById('btn-notice-bell')?.addEventListener('click', () => {
     openNoticeModal(null);
   });
 
-  // ===== プライベ�Eトセクションモーダル =====
-  document.getElementById('private-section-cancel').addEventListener('click', closePrivateSectionModal);
+  // ===== プライベ�Eトセクションモーダル =====
+  document.getElementById('private-section-cancel')?.addEventListener('click', closePrivateSectionModal);
 
-  document.getElementById('private-section-icon').addEventListener('input', e => {
+  document.getElementById('private-section-icon')?.addEventListener('input', e => {
     const prev = document.getElementById('private-section-icon-preview');
     if (prev) prev.innerHTML = `<i class="${e.target.value.trim()}"></i>`;
   });
 
-  document.getElementById('private-section-save').addEventListener('click', async () => {
+  document.getElementById('private-section-save')?.addEventListener('click', async () => {
     const label = document.getElementById('private-section-label').value.trim();
     const icon = document.getElementById('private-section-icon').value.trim() || 'fa-solid fa-star';
     if (!label) { document.getElementById('private-section-label').focus(); return; }
@@ -3450,18 +3461,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       closePrivateSectionModal();
       renderAllSections();
     } catch (err) {
-      console.error('マイカチE��リ保存エラー:', err);
-      showToast('保存に失敗しました、E, 'error');
+      console.error('マイカチE��リ保存エラー:', err);
+      showToast('?????????', 'error');
     } finally {
       btn.disabled = false;
-      btn.textContent = '保孁E;
+      btn.textContent = '??';
     }
   });
 
-  document.getElementById('private-section-delete').addEventListener('click', async () => {
+  document.getElementById('private-section-delete')?.addEventListener('click', async () => {
     if (!state.editingPrivateSectionId) return;
     const cat = state.privateCategories.find(c => c.docId === state.editingPrivateSectionId);
-    if (await confirmDelete(`、E{cat?.label}」を削除しますか�E�（中のカードも全て削除されます）`)) {
+    if (await confirmDelete(`?${cat?.label}?????????????????????????`)) {
       const sectionCards = state.privateCards.filter(c => c.sectionId === state.editingPrivateSectionId);
       await Promise.all(sectionCards.map(c => deletePrivateCard(c.id)));
       await deletePrivateSection(state.editingPrivateSectionId);
@@ -3470,7 +3481,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // コンチE��ストメニュー
+  // コンチE��ストメニュー
   document.addEventListener('click', closeContextMenu);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContextMenu(); });
 
@@ -3496,12 +3507,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  document.getElementById('pin-cancel').addEventListener('click', closePinModal);
-  document.getElementById('pin-submit').addEventListener('click', handlePinSubmit);
+  document.getElementById('pin-cancel')?.addEventListener('click', closePinModal);
+  document.getElementById('pin-submit')?.addEventListener('click', handlePinSubmit);
 
-  // ===== カード編雁E��ーダル =====
-  document.getElementById('card-cancel').addEventListener('click', closeCardModal);
-  document.getElementById('edit-icon').addEventListener('input', e => {
+  // ===== カード編雁E��ーダル =====
+  document.getElementById('card-cancel')?.addEventListener('click', closeCardModal);
+  document.getElementById('edit-icon')?.addEventListener('input', e => {
     const val = e.target.value.trim();
     updateIconPreview(val);
     document.querySelectorAll('#icon-picker .icon-picker-btn').forEach(btn => {
@@ -3509,7 +3520,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  document.getElementById('card-save').addEventListener('click', async () => {
+  document.getElementById('card-save')?.addEventListener('click', async () => {
     const label = document.getElementById('edit-label').value.trim();
     const icon  = document.getElementById('edit-icon').value.trim();
     const url   = document.getElementById('edit-url').value.trim();
@@ -3552,25 +3563,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeCardModal();
     } catch (err) {
       console.error('保存エラー:', err);
-      showToast('保存に失敗しました。もぁE��度お試しください、E, 'error');
+      showToast('?????????', 'error');
     } finally {
       btn.disabled = false;
-      btn.textContent = '保孁E;
+      btn.textContent = '??';
     }
   });
 
-  document.getElementById('card-delete').addEventListener('click', async () => {
+  document.getElementById('card-delete')?.addEventListener('click', async () => {
     if (state.editingIsPrivate) {
       const card = state.privateCards.find(c => c.id === state.editingDocId);
       if (!card) return;
-      if (await confirmDelete(`、E{card.label}」を削除しますか�E�`)) {
+      if (await confirmDelete(`?${card.label}?????????`)) {
         await deletePrivateCard(state.editingDocId);
         closeCardModal();
       }
     } else {
       const card = state.allCards.find(c => c.id === state.editingDocId);
       if (!card) return;
-      if (await confirmDelete(`、E{card.label}」を削除しますか�E�`)) {
+      if (await confirmDelete(`?${card.label}?????????`)) {
         await deleteCard(state.editingDocId);
         closeCardModal();
       }
@@ -3578,10 +3589,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ===== お知らせモーダル =====
-  document.getElementById('notice-cancel').addEventListener('click', closeNoticeModal);
-  document.getElementById('notice-target-scope').addEventListener('change', handleNoticeTargetScopeChange);
+  document.getElementById('notice-cancel')?.addEventListener('click', closeNoticeModal);
+  document.getElementById('notice-target-scope')?.addEventListener('change', handleNoticeTargetScopeChange);
 
-  document.getElementById('notice-save').addEventListener('click', async () => {
+  document.getElementById('notice-save')?.addEventListener('click', async () => {
     const title = document.getElementById('notice-title').value.trim();
     const body  = document.getElementById('notice-body').value.trim();
     const priority = document.getElementById('notice-priority').value;
@@ -3592,7 +3603,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       .filter(Boolean);
     if (!title) { document.getElementById('notice-title').focus(); return; }
     if (targetScope === 'departments' && targetDepartments.length === 0) {
-      showToast('配信先部署めEつ以上選んでください、E, 'warning');
+      showToast('??????1??????????', 'warning');
       document.querySelector('.notice-target-checkbox')?.focus();
       return;
     }
@@ -3615,31 +3626,31 @@ document.addEventListener('DOMContentLoaded', async () => {
       refreshNoticeVisibility();
     } catch (err) {
       console.error('お知らせ保存エラー:', err);
-      showToast('保存に失敗しました、E, 'error');
+      showToast('?????????', 'error');
     } finally {
       btn.disabled = false;
-      btn.textContent = '保孁E;
+      btn.textContent = '??';
     }
   });
 
-  document.getElementById('notice-delete').addEventListener('click', async () => {
+  document.getElementById('notice-delete')?.addEventListener('click', async () => {
     if (!state.editingNoticeId) return;
     const n = state.allNotices.find(x => x.id === state.editingNoticeId);
-    if (await confirmDelete(`、E{n?.title}」を削除しますか�E�`)) {
+    if (await confirmDelete(`?${n?.title}?????????`)) {
       await moduleDeleteNotice(state.editingNoticeId);
       closeNoticeModal();
       refreshNoticeVisibility();
     }
   });
 
-  // ===== カチE��リモーダル =====
-  document.getElementById('cat-cancel').addEventListener('click', closeCategoryModal);
+  // ===== カチE��リモーダル =====
+  document.getElementById('cat-cancel')?.addEventListener('click', closeCategoryModal);
 
-  document.getElementById('cat-icon').addEventListener('input', e => {
+  document.getElementById('cat-icon')?.addEventListener('input', e => {
     updateCatIconPreview(e.target.value.trim());
   });
 
-  document.getElementById('cat-save').addEventListener('click', async () => {
+  document.getElementById('cat-save')?.addEventListener('click', async () => {
     const label = document.getElementById('cat-label').value.trim();
     const icon  = document.getElementById('cat-icon').value.trim() || 'fa-solid fa-star';
     if (!label) { document.getElementById('cat-label').focus(); return; }
@@ -3659,23 +3670,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeCategoryModal();
       renderAllSections();
     } catch (err) {
-      console.error('カチE��リ保存エラー:', err);
-      showToast('保存に失敗しました、E, 'error');
+      console.error('カチE��リ保存エラー:', err);
+      showToast('?????????', 'error');
     } finally {
       btn.disabled = false;
-      btn.textContent = '保孁E;
+      btn.textContent = '??';
     }
   });
 
-  document.getElementById('cat-delete').addEventListener('click', async () => {
+  document.getElementById('cat-delete')?.addEventListener('click', async () => {
     if (!state.editingCategoryId) return;
     const cat = state.allCategories.find(c => c.docId === state.editingCategoryId);
     const hasCards = state.allCards.some(c => c.category === cat?.id);
     if (hasCards) {
-      showToast('こ�EカチE��リにはカードがあります。�Eにカードを削除また�E移動してください、E, 'warning');
+      showToast('????????????????????????????????????', 'warning');
       return;
     }
-    if (await confirmDelete(`、E{cat?.label}」を削除しますか�E�`)) {
+    if (await confirmDelete(`?${cat?.label}?????????????????????????`)) {
       await deleteCategoryFromSupabase(state.editingCategoryId);
       closeCategoryModal();
       renderAllSections();
@@ -3683,7 +3694,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ===== 設定パネル =====
-  document.getElementById('settings-fab').addEventListener('click', () => {
+  document.getElementById('settings-fab')?.addEventListener('click', () => {
     const panel = document.getElementById('settings-panel');
     if (panel.hasAttribute('hidden')) {
       openSettingsPanel();
@@ -3692,23 +3703,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  document.getElementById('settings-panel-close').addEventListener('click', closeSettingsPanel);
+  document.getElementById('settings-panel-close')?.addEventListener('click', closeSettingsPanel);
 
-  // チE�Eマ選抁E
+  // チE�Eマ選抁E
   document.querySelectorAll('#theme-grid .theme-card').forEach(btn => {
     btn.addEventListener('click', () => {
       applyTheme(btn.dataset.theme);
     });
   });
 
-  // 斁E��サイズ選抁E
+  // 斁E��サイズ選抁E
   document.querySelectorAll('#fontsize-grid .fontsize-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       applyFontSize(btn.dataset.size);
     });
   });
 
-  // パネル外クリチE��で閉じめE
+  // パネル外クリチE��で閉じめE
   document.addEventListener('click', e => {
     const panel = document.getElementById('settings-panel');
     const fab   = document.getElementById('settings-fab');
@@ -3717,7 +3728,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // ===== モーダル開閉時に body スクロールをロチE�� =====
+  // ===== モーダル開閉時に body スクロールをロチE�� =====
   const _modalScrollObserver = new MutationObserver(() => {
     const anyVisible = document.querySelector('.modal-overlay.visible') !== null;
     document.body.style.overflow = anyVisible ? 'hidden' : '';
@@ -3726,7 +3737,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     _modalScrollObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
   });
 
-  // ===== ファイル転送中のペ�Eジ離脱警呁E=====
+  // ===== ファイル転送中のペ�Eジ離脱警呁E=====
   window.addEventListener('beforeunload', e => {
     const pendingOut = state._ftOutgoing.filter(s => s.status === 'pending' || s.status === 'accepted');
     const pendingIn  = state._ftIncoming.filter(s => s.status === 'pending');

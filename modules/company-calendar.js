@@ -68,22 +68,7 @@ export function getJpNationalHolidays(year) {
         h[cur] = '国民の休日';
       }
     }
-  /* legacy listener removed
-
-  // ── 振替休日（日曜の祝日 → 翌以降の最初の非祝日平日） ──
-  const snapshot = { ...h };
-  Object.keys(snapshot).forEach(dateStr => {
-    const d = new Date(dateStr);
-    if (d.getDay() !== 0) return; // 日曜日の祝日のみ
-    let sub = new Date(d);
-    sub.setDate(sub.getDate() + 1);
-    while (sub.getDay() === 0 || h[sub.toISOString().slice(0, 10)]) {
-      sub.setDate(sub.getDate() + 1);
-    }
-    if (sub.getFullYear() === year) {
-      h[sub.toISOString().slice(0, 10)] = '振替休日';
-    }
-  */
+  }
 
   _jpHolidayCache[year] = h;
   return h;
@@ -109,22 +94,18 @@ function _applyCompanyCalConfig(cfg) {
 }
 
 export function subscribeCompanyCalConfig() {
-  if (state._companyCalUnsub) { state._companyCalUnsub(); state._companyCalUnsub = null; }
-    fetchCompanyCalSettingsFromSupabase()
-      .then(cfg => _applyCompanyCalConfig(cfg))
-      .catch(err => {
-        console.warn('Supabase 会社カレンダー読み込みエラー:', err);
-        _applyCompanyCalConfig(null);
-      });
-  }
-    console.warn('会社カレンダー読み込みエラー:', err);
-    _applyCompanyCalConfig(null);
-  });
+  fetchCompanyCalSettingsFromSupabase()
+    .then(cfg => _applyCompanyCalConfig(cfg))
+    .catch(err => {
+      console.warn('Supabase company calendar load error:', err);
+      _applyCompanyCalConfig(null);
+    });
 }
 
 export function unsubscribeCompanyCalConfig() {
   if (state._companyCalUnsub) { state._companyCalUnsub(); state._companyCalUnsub = null; }
 }
+
 
 async function _refreshCompanyCalIfSupabase() {
   if (!isSupabaseSharedCoreEnabled()) return;

@@ -34,18 +34,18 @@ function resolveApiKey(config = {}) {
 
 function maskApiKey(key) {
   const normalized = normalizeApiKey(key);
-  if (!normalized) return '未設宁E;
+  if (!normalized) return '???';
   if (normalized.length <= 16) return normalized;
   return `${normalized.slice(0, 12)}...${normalized.slice(-6)}`;
 }
 
 function validateRuntimeConfig(mode, url, apiKey) {
   if (mode !== BACKEND_SUPABASE) return;
-  if (!url) throw new Error('Supabase URL を�E力してください、E);
+  if (!url) throw new Error('Supabase URL ??????????');
   if (!/^https:\/\//i.test(url)) {
-    throw new Error('Supabase URL は https:// から始めてください、E);
+    throw new Error('Supabase URL ? https:// ??????????');
   }
-  if (!apiKey) throw new Error('Supabase APIキーを�E力してください、E);
+  if (!apiKey) throw new Error('Supabase API????????????');
 }
 
 function getRestBaseUrl() {
@@ -125,7 +125,7 @@ async function requestSupabase(path, {
   diagScope = '',
 } = {}) {
   if (!state.supabaseConfigured) {
-    throw new Error('Supabase 設定がまだ完亁E��てぁE��せん、E);
+    throw new Error('Supabase ???????');
   }
 
   const response = await fetch(`${getRestBaseUrl()}/${path}`, {
@@ -266,14 +266,14 @@ export function renderSupabaseAdminState(message = '') {
   if (keyEl && keyEl.value !== state.supabaseApiKey) keyEl.value = state.supabaseApiKey;
 
   if (statusEl) {
-    statusEl.textContent = state.supabaseConfigured ? 'Supabase 有効' : 'Supabase 未設宁E;
+    statusEl.textContent = state.supabaseConfigured ? 'Supabase ????' : 'Supabase ???';
     statusEl.classList.toggle('is-configured', state.supabaseConfigured);
   }
 
   if (hintEl) {
     hintEl.textContent = message || (state.supabaseConfigured
-      ? 'Supabase に接続済みです。�EチE�EタぁESupabase を使用します、E
-      : 'URL と APIキーを�E力して保存してください、E);
+      ? 'Supabase ???????????????? Supabase ??????'
+      : 'URL ? API????????????');
   }
 
   if (previewEl) {
@@ -500,7 +500,7 @@ export async function fetchPrivateCardsFromSupabase(username) {
     `private_cards?username=eq.${encoded}&select=id,label,icon,url,section_id,parent_id,order_index&order=order_index.asc`,
     {
       diagKey: 'supabase.private_cards',
-      diagLabel: 'Supabase マイカーチE,
+      diagLabel: 'Supabase ?????',
       diagScope: `private_cards/${username}`,
     }
   );
@@ -601,7 +601,7 @@ const PORTAL_CONFIG_SELECT = 'pin_hash,invite_code_hash,invite_code_plain,invite
 export async function fetchPortalConfigFromSupabase() {
   const rows = await requestSupabase(
     `portal_config?id=eq.1&select=${encodeURIComponent(PORTAL_CONFIG_SELECT)}`,
-    { diagKey: 'supabase.portal_config', diagLabel: 'Supabase 管琁E��宁E, diagScope: 'portal_config' }
+    { diagKey: 'supabase.portal_config', diagLabel: 'Supabase ??', diagScope: 'portal_config' }
   );
   if (!Array.isArray(rows) || !rows.length) return {};
   const r = rows[0];
@@ -661,7 +661,7 @@ export async function fetchUserPreferencesFromSupabase(username) {
     `user_preferences?username=eq.${encoded}&select=theme,font_size,fav_only,favorites,collapsed_sections,collapse_seeded,hidden_cards,mission_banner_hidden,last_viewed_suggestions_at&limit=1`,
     {
       diagKey: 'supabase.user_preferences',
-      diagLabel: 'Supabase 個人設宁E,
+      diagLabel: 'Supabase ????',
       diagScope: `user_preferences/${username}`,
     }
   );
@@ -714,7 +714,7 @@ function mapSupplierRow(row = {}) {
 export async function fetchOrderSuppliersFromSupabase() {
   const rows = await requestSupabase(
     `order_suppliers?active=eq.true&select=${encodeURIComponent(SUPPLIER_SELECT)}&order=name.asc`,
-    { diagKey: 'supabase.order_suppliers', diagLabel: 'Supabase 発注允E, diagScope: 'order_suppliers' }
+    { diagKey: 'supabase.order_suppliers', diagLabel: 'Supabase ???', diagScope: 'order_suppliers' }
   );
   return Array.isArray(rows) ? rows.map(mapSupplierRow) : [];
 }
@@ -1596,7 +1596,7 @@ export async function fetchMultipleMonthsAttendanceSummaryFromSupabase(yearMonth
   const encoded = encodeURIComponent(encodeInFilter(yms));
   const rows = await requestSupabase(
     `attendance_entries?year_month=in.${encoded}&order=entry_date.asc`,
-    { diagKey: 'attendance.summary', diagLabel: '勤怠雁E��E, diagScope: yms.join(',') }
+    { diagKey: 'attendance.summary', diagLabel: 'Supabase ????', diagScope: yms.join(',') }
   );
   return Array.isArray(rows) ? rows.map(mapAttendanceRow) : [];
 }
@@ -1623,7 +1623,7 @@ export async function fetchAttendanceByProjectKeyFromSupabase(projectKey) {
 export async function fetchCompanyCalSettingsFromSupabase() {
   const rows = await requestSupabase(
     'company_calendar_settings?order=updated_at.desc&limit=1',
-    { diagKey: 'cal.settings', diagLabel: '会社カレンダー設宁E, diagScope: 'company_calendar_settings' }
+    { diagKey: 'cal.settings', diagLabel: '?????????', diagScope: 'company_calendar_settings' }
   );
   if (!Array.isArray(rows) || rows.length === 0) return null;
   const r = rows[0];
@@ -2090,7 +2090,7 @@ export async function saveUserProfileToSupabase(username, data) {
 export async function fetchEmailContactsFromSupabase(username) {
   const rows = await requestSupabase(
     `user_email_contacts?username=eq.${encodeURIComponent(username)}&order=company_name.asc`,
-    { diagKey: 'email.contacts', diagLabel: 'メール連絡允E, diagScope: username }
+    { diagKey: 'email.contacts', diagLabel: '??????', diagScope: username }
   );
   if (!Array.isArray(rows)) return [];
   return rows.map(r => ({
