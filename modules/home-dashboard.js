@@ -31,6 +31,7 @@ const CARD_CONFIG = Object.freeze({
 
 export function initHomeDashboard(d = {}) {
   deps = d;
+  document.getElementById('app-main')?.classList.add('home-compact');
   renderHomeDashboard();
   bindSummaryCards();
   updateSummaryCards();

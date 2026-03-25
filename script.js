@@ -2773,7 +2773,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     void openSharedLinksModal();
   });
   document.getElementById('header-dashboard-btn')?.addEventListener('click', () => {
-    document.getElementById('shared-home-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
   document.getElementById('header-manual-btn')?.addEventListener('click', () => {
     document.getElementById('guide-modal').classList.add('visible');

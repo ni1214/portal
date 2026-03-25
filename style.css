@@ -18939,6 +18939,37 @@ body {
   margin-right: auto;
 }
 
+.app-main.home-compact .home-dashboard {
+  margin-bottom: 14px;
+}
+
+.app-main.home-compact .home-content-grid {
+  display: none !important;
+}
+
+.app-main.home-compact .hd-panel {
+  display: block !important;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+}
+
+.app-main.home-compact .hd-quick-access {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.app-main.home-compact .hqa-btn {
+  padding: 8px 6px;
+  gap: 5px;
+}
+
+.app-main.home-compact .hqa-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 1rem;
+}
+
 /* --------------------------------------------------
    ミッションバナー（新スタイル）
    -------------------------------------------------- */
