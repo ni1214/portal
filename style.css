@@ -17991,6 +17991,12 @@ body {
   gap: 16px;
 }
 
+.shared-home-card-head > div:first-child,
+.portal-personal-card-head > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+
 .shared-home-card-title,
 .portal-personal-section-title {
   margin: 0;
@@ -18132,6 +18138,8 @@ body {
   color: var(--portal-home-accent);
   font-size: 0.82rem;
   font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .portal-personal-focus {
