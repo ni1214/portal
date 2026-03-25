@@ -73,6 +73,11 @@ function syncTodayAttendanceState(dateStr, data) {
   state.todayAttendance = data ? { ...data } : null;
 }
 
+function refreshTodayDashboard() {
+  deps.renderTodayDashboard?.();
+  deps.updateSummaryCards?.();
+}
+
 export function subscribeTodayAttendance(username) {
   if (state._todayAttendanceSub) {
     state._todayAttendanceSub();
@@ -80,7 +85,7 @@ export function subscribeTodayAttendance(username) {
   }
   if (!username) {
     syncTodayAttendanceState('', null);
-    deps.renderTodayDashboard?.();
+    refreshTodayDashboard();
     return;
   }
 
@@ -90,11 +95,11 @@ export function subscribeTodayAttendance(username) {
     fetchAttendanceEntriesFromSupabase(username, [todayStr.slice(0, 7)]).then(entries => {
       const todayEntry = (entries || []).find(entry => (entry?.date || entry?.dateStr) === todayStr) || null;
       syncTodayAttendanceState(todayStr, todayEntry ? buildAttendanceStateForStore(todayStr, todayEntry) : null);
-      deps.renderTodayDashboard?.();
+      refreshTodayDashboard();
     }).catch(err => {
       console.warn('Today attendance load failed (Supabase):', err);
       syncTodayAttendanceState(todayStr, null);
-      deps.renderTodayDashboard?.();
+      refreshTodayDashboard();
     });
     return;
   }
@@ -102,7 +107,7 @@ export function subscribeTodayAttendance(username) {
   state._todayAttendanceSub = wrapTrackedListenerUnsubscribe('cal.today', onSnapshot(attendancePath(username, todayStr), snap => {
     recordListenerSnapshot('cal.today', snap.exists() ? 1 : 0, todayStr, snap.exists() ? [{ id: snap.id, ...snap.data() }] : []);
     syncTodayAttendanceState(todayStr, snap.exists() ? snap.data() : null);
-    deps.renderTodayDashboard?.();
+    refreshTodayDashboard();
   }));
 }
 
@@ -112,6 +117,7 @@ export function unsubscribeTodayAttendance() {
     state._todayAttendanceSub = null;
   }
   syncTodayAttendanceState('', null);
+  refreshTodayDashboard();
 }
 
 export async function saveAttendance(dateStr, data) {
@@ -142,7 +148,7 @@ export async function saveAttendance(dateStr, data) {
       syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
       renderCalendar();
       updateCalendarSummary();
-      deps.renderTodayDashboard?.();
+      refreshTodayDashboard();
       return true;
     } catch (err) {
       console.error('勤怠保存エラー:', err);
@@ -178,7 +184,7 @@ export async function saveAttendance(dateStr, data) {
     syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
     renderCalendar();
     updateCalendarSummary();
-    deps.renderTodayDashboard?.();
+    refreshTodayDashboard();
     return true;
   } catch (err) {
     console.error('勤怠保存エラー:', err);
@@ -199,7 +205,7 @@ export async function deleteAttendance(dateStr) {
       await deps.removePublicAttendance?.(dateStr, state.currentUsername);
       deps.markWorkSummaryStale?.();
       renderCalendar();
-      deps.renderTodayDashboard?.();
+      refreshTodayDashboard();
     } catch (err) { console.error('勤怠削除エラー:', err); }
     return;
   }
@@ -213,7 +219,7 @@ export async function deleteAttendance(dateStr) {
     await deps.removePublicAttendance?.(dateStr, state.currentUsername);
     deps.markWorkSummaryStale?.();
     renderCalendar();
-    deps.renderTodayDashboard?.();
+    refreshTodayDashboard();
   } catch (err) { console.error('勤怠削除エラー:', err); }
 }
 
@@ -265,7 +271,7 @@ export function subscribeAttendance(username) {
       state.attendanceData = indexAttendanceEntriesByDate(entries);
       renderCalendar();
       updateCalendarSummary();
-      deps.renderTodayDashboard?.();
+      refreshTodayDashboard();
     }).catch(err => {
       console.error('勤怠取得エラー(Supabase):', err);
     });
@@ -282,14 +288,14 @@ export function subscribeAttendance(username) {
     snap.docs.forEach(d => { state.attendanceData[d.id] = d.data(); });
     renderCalendar();
     updateCalendarSummary();
-    deps.renderTodayDashboard?.();
+    refreshTodayDashboard();
   }));
 }
 
 export function unsubscribeAttendance() {
   if (state._attendanceSub) { state._attendanceSub(); state._attendanceSub = null; }
   state.attendanceData = {};
-  deps.renderTodayDashboard?.();
+  refreshTodayDashboard();
 }
 
 // ===== 前月データを一回だけ取得（締め計算用） =====

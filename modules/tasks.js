@@ -603,6 +603,7 @@ export function updateTaskBadge() {
     btn.classList.remove('has-badge');
   }
   deps.updateLockNotifications?.();
+  deps.updateSummaryCards?.();
   deps.renderTodayDashboard?.();
 }
 

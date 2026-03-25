@@ -18424,6 +18424,19 @@ body {
   }
 
   .shared-home-notice-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 14px;
+  }
+
+  .shared-home-notice-date {
+    width: auto;
+    min-width: 0;
+    font-size: 0.74rem;
+  }
+
+  .shared-home-notice-item {
     align-items: flex-start;
   }
 
@@ -19019,6 +19032,7 @@ body {
   border-radius: var(--app-radius);
   padding: 18px 20px;
   margin-bottom: 24px;
+  display: none !important;
   box-shadow: var(--app-shadow-card);
 }
 [data-theme="light"] .hd-panel {
@@ -19397,6 +19411,9 @@ body {
   /* ボトムナビ表示 */
   .bottom-nav { display: flex; }
 
+  /* 画面上部の quick access は summary cards と役割が重なるためモバイルでは隠す */
+  .hd-panel { display: none !important; }
+
   .hd-summary-row {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
@@ -19750,7 +19767,7 @@ body {
 }
 
 /* ===== デスクトップ2カラムレイアウト（1024px以上で常時2列） ===== */
-@media (min-width: 1024px) {
+@media (min-width: 1121px) {
   .home-content-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 340px !important;
@@ -19763,10 +19780,21 @@ body {
     top: calc(var(--app-header-h, 60px) + 12px);
     max-height: calc(100vh - var(--app-header-h, 60px) - 24px);
     overflow-y: auto;
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-glass-hover) transparent;
+    scrollbar-gutter: stable;
   }
   #space-personal::-webkit-scrollbar {
-    display: none;
+    width: 8px;
+  }
+  #space-personal::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  #space-personal::-webkit-scrollbar-thumb {
+    background: var(--border-glass-hover);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
   }
 }
 
@@ -19809,7 +19837,7 @@ body {
    2カラムレイアウト列の天揃い修正
    問題: align-items: start で個人スペースが左列に揃わない
    =================================================== */
-@media (min-width: 1024px) {
+@media (min-width: 1121px) {
   .home-content-grid {
     align-items: start !important;
     /* 全社スペースと個人スペースが同じ上端から始まるよう揃える */

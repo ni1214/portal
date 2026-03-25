@@ -242,6 +242,7 @@ export function updateNoticeBadge() {
     bell.classList.remove('has-unread');
   }
   deps.updateLockNotifications?.();
+  deps.updateSummaryCards?.();
 }
 
 export function setupNoticeObserver() {

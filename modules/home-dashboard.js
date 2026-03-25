@@ -1,25 +1,24 @@
 import { state } from './state.js';
 
 let deps = {};
-let badgeObserver = null;
 
 const CARD_CONFIG = Object.freeze({
   tasks: {
     triggerId: 'btn-task',
     icon: 'fa-solid fa-list-check',
-    label: '今日のタスク',
+    label: '受信タスク',
     tone: 'primary',
   },
   notices: {
     triggerId: 'btn-notice-bell',
     icon: 'fa-solid fa-bell',
-    label: '未読のお知らせ',
+    label: '要確認のお知らせ',
     tone: 'danger',
   },
   requests: {
     triggerId: 'btn-reqboard',
     icon: 'fa-solid fa-arrows-left-right',
-    label: '進行中の依頼',
+    label: '受信依頼',
     tone: 'tertiary',
   },
   attendance: {
@@ -34,16 +33,11 @@ export function initHomeDashboard(d = {}) {
   deps = d;
   renderHomeDashboard();
   bindSummaryCards();
-  updateTaskCard();
-  updateNoticeCard();
-  updateReqCard();
-  updateAttendanceCard();
-  observeBadges();
+  updateSummaryCards();
 }
 
 export function updateSummaryCards() {
-  renderHomeDashboard();
-  bindSummaryCards(); // DOM再生成後にリスナーを再バインド
+  ensureHomeDashboardShell();
   updateTaskCard();
   updateNoticeCard();
   updateReqCard();
@@ -64,6 +58,16 @@ function renderHomeDashboard() {
       </div>
     </section>
   `;
+}
+
+function ensureHomeDashboardShell() {
+  const host = document.getElementById('home-dashboard');
+  if (!host) return null;
+  if (!host.querySelector('.portal-summary-shell')) {
+    renderHomeDashboard();
+    bindSummaryCards();
+  }
+  return host;
 }
 
 function renderSummaryCard(key) {
@@ -97,39 +101,39 @@ function bindSummaryCards() {
 }
 
 function updateTaskCard() {
-  const count = getBadgeCount(document.getElementById('task-badge'));
+  const snapshot = getTaskSummarySnapshot();
   const value = document.getElementById('hcard-task-count');
   const meta = document.getElementById('hcard-tasks-meta');
   const card = document.getElementById('hcard-tasks');
   if (!value || !meta || !card) return;
 
-  value.textContent = `${count}件`;
-  meta.textContent = count > 0 ? '承諾待ちや進行中を確認' : '新しいタスクはありません';
-  card.dataset.state = count > 0 ? 'active' : 'idle';
+  value.textContent = snapshot.value;
+  meta.textContent = snapshot.meta;
+  card.dataset.state = snapshot.state;
 }
 
 function updateNoticeCard() {
-  const count = getBadgeCount(document.getElementById('notice-unread-badge'));
+  const snapshot = getNoticeSummarySnapshot();
   const value = document.getElementById('hcard-notice-count');
   const meta = document.getElementById('hcard-notices-meta');
   const card = document.getElementById('hcard-notices');
   if (!value || !meta || !card) return;
 
-  value.textContent = `${count}件`;
-  meta.textContent = count > 0 ? '重要なお知らせを確認' : '共有トピックは落ち着いています';
-  card.dataset.state = count > 0 ? 'alert' : 'idle';
+  value.textContent = snapshot.value;
+  meta.textContent = snapshot.meta;
+  card.dataset.state = snapshot.state;
 }
 
 function updateReqCard() {
-  const count = getBadgeCount(document.getElementById('req-badge'));
+  const snapshot = getRequestSummarySnapshot();
   const value = document.getElementById('hcard-req-count');
   const meta = document.getElementById('hcard-requests-meta');
   const card = document.getElementById('hcard-requests');
   if (!value || !meta || !card) return;
 
-  value.textContent = `${count}件`;
-  meta.textContent = count > 0 ? '部門間依頼を開く' : '新しい依頼はありません';
-  card.dataset.state = count > 0 ? 'active' : 'idle';
+  value.textContent = snapshot.value;
+  meta.textContent = snapshot.meta;
+  card.dataset.state = snapshot.state;
 }
 
 function updateAttendanceCard() {
@@ -138,23 +142,84 @@ function updateAttendanceCard() {
   const card = document.getElementById('hcard-attendance');
   if (!value || !meta || !card) return;
 
+  const snapshot = getAttendanceSummarySnapshot();
+  value.textContent = snapshot.value;
+  meta.textContent = snapshot.meta;
+  card.dataset.state = snapshot.state;
+}
+
+function getTaskSummarySnapshot() {
+  const receivedTasks = Array.isArray(state.receivedTasks) ? state.receivedTasks : [];
+  const activeTasks = receivedTasks.filter(task => task.status === 'pending' || task.status === 'accepted');
+  const pendingCount = activeTasks.filter(task => task.status === 'pending').length;
+  const acceptedCount = activeTasks.length - pendingCount;
+  const overdueCount = activeTasks.filter(task => task.dueDate && task.dueDate < buildDateKey(new Date())).length;
+
+  return {
+    value: activeTasks.length > 0 ? `${activeTasks.length}件` : '0件',
+    meta: activeTasks.length > 0
+      ? (overdueCount > 0
+        ? `期限超過 ${overdueCount}件 / 承諾待ち ${pendingCount}件`
+        : `承諾待ち ${pendingCount}件 / 進行中 ${acceptedCount}件`)
+      : '受信タスクはありません',
+    state: activeTasks.length === 0 ? 'idle' : (pendingCount > 0 || overdueCount > 0 ? 'alert' : 'active'),
+  };
+}
+
+function getRequestSummarySnapshot() {
+  const receivedRequests = Array.isArray(state.receivedRequests) ? state.receivedRequests : [];
+  const openRequests = receivedRequests.filter(req => !req.archived && (req.status === 'submitted' || req.status === 'reviewing'));
+  const submittedCount = openRequests.filter(req => req.status === 'submitted').length;
+  const reviewingCount = openRequests.length - submittedCount;
+
+  return {
+    value: openRequests.length > 0 ? `${openRequests.length}件` : '0件',
+    meta: openRequests.length > 0
+      ? `提出 ${submittedCount}件 / 確認中 ${reviewingCount}件`
+      : '受信依頼はありません',
+    state: openRequests.length > 0 ? 'active' : 'idle',
+  };
+}
+
+function getNoticeSummarySnapshot() {
+  const notices = Array.isArray(state.visibleNotices)
+    ? state.visibleNotices
+    : (Array.isArray(state.allNotices) ? state.allNotices : []);
+  const readNoticeIds = state.readNoticeIds instanceof Set ? state.readNoticeIds : new Set();
+  const currentUsername = state.currentUsername || '';
+  const pendingAck = notices.filter(notice => {
+    if (!notice?.requireAcknowledgement || !currentUsername) return false;
+    const acknowledgedBy = Array.isArray(notice.acknowledgedBy) ? notice.acknowledgedBy : [];
+    return !acknowledgedBy.includes(currentUsername);
+  });
+  const unread = notices.filter(notice => !readNoticeIds.has(notice.id) && !notice?.requireAcknowledgement);
+  const count = pendingAck.length + unread.length;
+
+  return {
+    value: `${count}件`,
+    meta: pendingAck.length > 0
+      ? `確認待ち ${pendingAck.length}件 / 未読 ${unread.length}件`
+      : (unread.length > 0 ? `未読 ${unread.length}件` : '未読はありません'),
+    state: count > 0 ? (pendingAck.length > 0 ? 'alert' : 'active') : 'clear',
+  };
+}
+
+function getAttendanceSummarySnapshot() {
   const today = getTodayAttendance();
   if (!today) {
-    value.textContent = '未入力';
-    meta.textContent = '今日の勤怠を登録';
-    card.dataset.state = 'alert';
-    return;
+    return {
+      value: '未入力',
+      meta: '今日の勤怠を登録',
+      state: 'alert',
+    };
   }
 
   const label = getAttendanceLabel(today);
-  value.textContent = label;
-  meta.textContent = getAttendanceMeta(today);
-  card.dataset.state = today.type === '欠勤' ? 'alert' : 'clear';
-}
-
-function getBadgeCount(badge) {
-  if (!badge || badge.hidden) return 0;
-  return Number.parseInt(badge.textContent || '0', 10) || 0;
+  return {
+    value: label,
+    meta: getAttendanceMeta(today),
+    state: today.type === '欠勤' ? 'alert' : 'clear',
+  };
 }
 
 function getTodayAttendance() {
@@ -201,24 +266,4 @@ function buildDateKey(date) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-}
-
-function observeBadges() {
-  if (badgeObserver) return;
-
-  badgeObserver = new MutationObserver(() => {
-    updateSummaryCards();
-  });
-
-  ['task-badge', 'notice-unread-badge', 'req-badge'].forEach(id => {
-    const target = document.getElementById(id);
-    if (!target) return;
-    badgeObserver.observe(target, {
-      childList: true,
-      characterData: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['hidden'],
-    });
-  });
 }

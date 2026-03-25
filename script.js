@@ -257,11 +257,13 @@ Object.assign(noticeDeps, {
   updateLockNotifications,
   renderTodayDashboard,
   renderSharedHome,
+  updateSummaryCards,
 });
 
 Object.assign(taskDeps, {
   updateLockNotifications,
   renderTodayDashboard,
+  updateSummaryCards,
   loadUsersForChatPicker,
   renderTodoSection,
   // 共有ピチE��ー用: users_list を取得して renderSharePickerUsers に渡ぁE
@@ -282,6 +284,7 @@ Object.assign(reqDeps, {
   loadUsersForChatPicker,
   createTaskRecord,
   renderTodayDashboard,
+  updateSummaryCards,
 });
 
 initEmail({
@@ -317,6 +320,7 @@ initCalendar({
   removePublicAttendance,
   renderSharedCalendar,
   renderTodayDashboard,
+  updateSummaryCards,
   markWorkSummaryStale,
   subscribeCompanyCalConfig,
   unsubscribeCompanyCalConfig,
