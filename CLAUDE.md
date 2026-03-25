@@ -3,13 +3,13 @@
 ## プロジェクト概要
 - **名前**: 生産管理課 ポータル
 - **公開先**: GitHub Pages (`https://github.com/ni1214/portal.git` / branch: `master`)
-- **バックエンド**: Firebase Firestore（プロジェクト: `kategu-sys-v15`）
+- **バックエンド**: Supabase（プロジェクト: `ydcxgxzeavumvubrqmlq.supabase.co`）
 - **スタック**: Vanilla JS (ES modules) + HTML + CSS — フレームワークなし
 - **主要ファイル**: `index.html` / `script.js` / `style.css`
 
 ## 開発方針（重要）
-- **基本方針**: GitHub Pages + Firebase 無料枠の範囲内で実装する
-- バックエンド処理が必要になっても、まず「Firebase/フロントで代替できないか」を先に検討する
+- **基本方針**: GitHub Pages + Supabase 無料枠の範囲内で実装する
+- バックエンド処理が必要になっても、まず「Supabase/フロントで代替できないか」を先に検討する
 - Vercel等に切り替えればより良い方法がある場合は「Vercelに切り替えれば〇〇もできます」と**条件付きで提案するだけ**にする
 - ユーザーはVercel等への移行を現時点では望んでいない
 
@@ -156,9 +156,10 @@ export function xxxFunction() { ... }
 | `updatedAt` | timestamp | `serverTimestamp()` |
 
 ## セキュリティ
-- Firestore セキュリティルールなし（ユーザー名を知らないと個人データにアクセスできない「obscurity」方式）
-- 管理者PIN: `portal/config.pinHash`（SHA-256ハッシュ）
-- 個人PINロック: `users/{name}/data/lock_pin.hash`
+- バックエンド: Supabase（Row Level Security + publishable key で公開安全）
+- Firebase は完全廃止。`modules/config.js` は全 Firebase API をスタブ化しエラーを投げる
+- 管理者PIN: `portal/config.pinHash`（SHA-256ハッシュ） → Supabase の `portal_config` テーブルに移行済み
+- 個人PINロック: `users/{name}/data/lock_pin.hash` → Supabase の `user_private_data` テーブル
 
 ---
 
@@ -368,6 +369,65 @@ assigned_tasks/{taskId}
   3. 情報なら → ホームのサマリーカードやワークスペースに表示する。
   4. 「念のため」「あると便利そう」でUIを追加しない。必要性を説明できること。
 ```
+
+---
+
+## 🤖 エージェントチーム構成（Claude Code マルチエージェント）
+
+> **新規チャットでも同じチーム構成を再現するには**:「マルチエージェントで作業してください。以下のエージェント役割で進めてください」と伝えること。
+
+### 常設エージェント一覧
+
+| エージェント | 役割 | 主な作業内容 |
+|---|---|---|
+| **🎯 指揮官 (Commander)** | 全体統括 | タスク分割・エージェント割り当て・進行管理 |
+| **🔍 監査エージェント (Auditor)** | 旧UI・不要コード発見 | 古いCSSクラス・重複要素・デッドコードの特定 |
+| **📐 リサーチエージェント (Researcher)** | 最新UIトレンド調査 | WebSearchでGoogle/Material Design等を調査し提案 |
+| **⚒️ 実装エージェント (Implementer)** | コード実装 | HTML/CSS/JS の新機能・UI修正を実装 |
+| **🧐 批評エージェント (Critic)** | 実装レビュー | 実装後の問題点・改善案を指摘 |
+| **🐛 バグファインダー (Bug Finder)** | バグ発見 | Chrome MCP で実機クリックテスト・コンソールエラー確認 |
+| **🔧 バグフィクサー (Bug Fixer)** | バグ修正 | バグファインダーの報告を受けてコードを修正 |
+| **👀 UXレビュアー (UX Reviewer)** | 初見ユーザー視点 | 「初めて見る人が10秒で理解できるか」を判定 |
+| **🎨 UIビューティエージェント (Beauty Inspector)** | 見た目の美しさ監視 | 余白・整列・間隔・色・タイポグラフィの粗を見つける |
+| **✨ UIビューティフィクサー (Beauty Fixer)** | 見た目修正 | Beauty Inspector の指摘を受けてCSSを修正 |
+| **🔄 再発防止エージェント (Prevention Agent)** | ルール策定 | 同じミスが再発しないようCLAUDE.mdにルールを追記 |
+
+### 🎨 UIビューティエージェント チェックリスト（毎回確認）
+
+UIビューティエージェントは新しいUIが追加・変更されるたびに以下を確認する：
+
+| チェック項目 | 確認方法 |
+|---|---|
+| セクション間の余白が均等か | 上下マージンが統一されているか目視確認 |
+| 要素が他の要素にくっついていないか | margin-bottom が `!important` で上書きされていないか |
+| サイドバーが全高を埋めているか | スクロール後も背景色が途切れないか Chrome で確認 |
+| グリッド列の天揃いが正しいか | `align-items` の値と実際の表示を照合 |
+| テキストサイズの階層が明確か | h1 > h2 > h3 > body の大きさ比率を確認 |
+| カードの角丸・影が統一されているか | `border-radius` と `box-shadow` が CSS変数経由か |
+| ホバー効果が全インタラクティブ要素にあるか | `:hover` 定義の漏れチェック |
+| ダークモード・ライトモード両方で崩れていないか | テーマ切替後にスクリーンショット比較 |
+
+---
+
+## 🗃️ 完了済み作業ログ（2026-03）
+
+### UI刷新作業（2026-03-25 完了）
+- ✅ 旧 `.header` / `.sidebar` / `.main` → `.app-header` / `.app-sidebar` / `.app-main` に完全移行
+- ✅ 2カラムレイアウト（全社スペース + 個人スペース sticky）
+- ✅ クイックアクセスパネル：デスクトップでは非表示（`@media min-width:1024px`）
+- ✅ サイドバー内FABボタン（position:fixed → static）修正
+- ✅ `.main.favorites-only` → `.app-main.favorites-only` 修正
+- ✅ `updateSummaryCards()` で `bindSummaryCards()` を再コールするよう修正
+- ✅ `--border-glass-hover` 循環参照バグ修正
+
+### 操作性テスト結果（2026-03-25 全機能確認済み）
+全サイドバーボタン・フッターボタン・ESCキーのモーダル開閉を Chrome 実機でテスト：
+すべて ✅ 正常動作 確認済み（鋼材発注はSupabase読込2秒後に表示）
+
+### バックエンド移行確認（2026-03-25）
+- Firebase → Supabase 移行完全完了
+- `config.js` は Firebase スタブ（全関数がエラーを投げる）
+- `supabase.js` にデフォルトURL/KEY内蔵、localStorage未設定でも動作
 
 ---
 
