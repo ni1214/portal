@@ -34,12 +34,16 @@ export function initHomeDashboard(d = {}) {
   deps = d;
   renderHomeDashboard();
   bindSummaryCards();
-  updateSummaryCards();
+  updateTaskCard();
+  updateNoticeCard();
+  updateReqCard();
+  updateAttendanceCard();
   observeBadges();
 }
 
 export function updateSummaryCards() {
   renderHomeDashboard();
+  bindSummaryCards(); // DOM再生成後にリスナーを再バインド
   updateTaskCard();
   updateNoticeCard();
   updateReqCard();

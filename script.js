@@ -2508,7 +2508,7 @@ function closeContextMenu() {
 
 // ========== お気に入りのみ表示 ==========
 function applyFavoritesOnlyMode() {
-  document.querySelector('.main').classList.toggle('favorites-only', state.favoritesOnlyMode);
+  document.getElementById('app-main')?.classList.toggle('favorites-only', state.favoritesOnlyMode);
   const btn = document.getElementById('btn-favorites-only');
   if (!btn) return;
   if (state.favoritesOnlyMode) {

@@ -2715,15 +2715,15 @@ select.todo-due-select {
 /* ===========================
    邵ｺ鬆托ｽｰ蜉ｱ竊楢怦・･郢ｧ鄙ｫ繝ｻ邵ｺ・ｿ髯ｦ・ｨ驕会ｽｺ郢晢ｽ｢郢晢ｽｼ郢昴・
    =========================== */
-.main.favorites-only .category-section:not(#favorites-section),
-.main.favorites-only .external-tools,
-.main.favorites-only .btn-add-category-wrap,
-.main.favorites-only #notice-board,
-.main.favorites-only #weather-widget {
+.app-main.favorites-only .category-section:not(#favorites-section),
+.app-main.favorites-only .external-tools,
+.app-main.favorites-only .btn-add-category-wrap,
+.app-main.favorites-only #notice-board,
+.app-main.favorites-only #weather-widget {
   display: none !important;
 }
 
-.main.favorites-only #favorites-section {
+.app-main.favorites-only #favorites-section {
   display: block !important;
 }
 
@@ -10078,7 +10078,7 @@ html.font-xl { font-size: 21px; }
 }
 
 /* 邵ｺ鬆托ｽｰ蜉ｱ竊楢怦・･郢ｧ鄙ｫ繝ｻ邵ｺ・ｿ髯ｦ・ｨ驕会ｽｺ郢晢ｽ｢郢晢ｽｼ郢晉判蜃ｾ邵ｺ・ｯ陷茨ｽｱ隴帛ｳｨ縺帷ｹ晏｣ｹ繝ｻ郢ｧ・ｹ陷茨ｽｨ闖ｴ阮呻ｽ帝ｫｱ讚・ｽ｡・ｨ驕会ｽｺ */
-.main.favorites-only #space-shared { display: none; }
+.app-main.favorites-only #space-shared { display: none; }
 
 /* ===========================
    App Layout Wrapper
@@ -19657,4 +19657,12 @@ body {
   white-space: normal;
   line-height: 1.25;
   text-align: center;
+}
+
+/* ===== Bug#6修正: 481px〜760pxでサマリーカードが1列になるバグ ===== */
+/* L.18409の@media(max-width:760px)が portal-summary-grid を1列にしているのを上書き */
+@media (max-width: 760px) {
+  .portal-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
 }
