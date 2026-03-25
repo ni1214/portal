@@ -19712,7 +19712,11 @@ body {
   justify-content: center;
 }
 
-/* ===== クイックアクセス: 4列固定（デスクトップで1行になるのを防止） ===== */
+/* ===== クイックアクセス: デスクトップ非表示（サイドバーと100%重複 → 認知コスト除去） ===== */
+/* モバイル(<768px)はサイドバーが隠れるため引き続き表示。4列固定で2行に収める */
+@media (min-width: 769px) {
+  .hd-panel { display: none !important; }
+}
 .hd-quick-access {
   grid-template-columns: repeat(4, minmax(80px, 1fr)) !important;
 }
