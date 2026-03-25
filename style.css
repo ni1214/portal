@@ -20298,3 +20298,235 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===================================================
+   Home Prototype: fixed desktop layout + simplified overview
+   =================================================== */
+:root {
+  --portal-desktop-shell-width: 1440px;
+  --portal-home-content-width: 1184px;
+  --portal-home-card-radius: 26px;
+}
+
+.home-content-grid,
+#space-shared,
+#space-personal,
+#shared-home-panel,
+#shared-space-body,
+#personal-space-body,
+#dash-today-section,
+.portal-summary-shell,
+.portal-rail-shell,
+.portal-personal-card,
+.portal-personal-mini-grid,
+.shared-home-shell {
+  display: none !important;
+}
+
+@media (min-width: 768px) {
+  html,
+  body {
+    overflow-x: auto !important;
+  }
+
+  body {
+    min-width: var(--portal-desktop-shell-width);
+  }
+
+  .app-layout {
+    width: var(--portal-desktop-shell-width) !important;
+    min-width: var(--portal-desktop-shell-width) !important;
+    margin: 0 auto !important;
+  }
+
+  .app-main {
+    min-width: 0;
+  }
+
+  #home-dashboard {
+    display: block !important;
+    width: min(100%, var(--portal-home-content-width));
+    margin: 0 auto 28px;
+  }
+
+  .home-workspace-shell {
+    padding: 28px;
+    border-radius: 30px;
+    border: 1px solid var(--border-glass);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 94%, transparent), color-mix(in srgb, var(--bg-glass) 82%, transparent)),
+      var(--bg-card);
+    box-shadow: var(--app-shadow-card);
+  }
+
+  .home-workspace-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    align-items: start;
+  }
+
+  .home-workspace-badge {
+    align-self: start;
+    min-width: 220px;
+  }
+
+  .home-workspace-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+
+  .home-workspace-card {
+    min-width: 0;
+    padding: 18px;
+    border-radius: var(--portal-home-card-radius);
+  }
+
+  .home-workspace-card--main,
+  .home-workspace-card--aside {
+    display: block;
+  }
+
+  .home-workspace-card--main {
+    grid-column: span 2;
+  }
+
+  .home-workspace-card--aside {
+    grid-column: span 1;
+  }
+
+  .home-workspace-metric-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .home-workspace-actions {
+    flex-wrap: wrap;
+  }
+
+  .home-workspace-action {
+    min-height: 48px;
+  }
+
+  .home-workspace-notice-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-workspace-stage,
+  .home-workspace-panel,
+  .home-overview-shell {
+    display: block;
+  }
+
+  .home-overview-grid,
+  .home-workspace-top-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 0;
+  }
+
+  .home-overview-card,
+  .home-workspace-overview-card,
+  .home-workspace-stage-card {
+    min-width: 0;
+    border-radius: var(--portal-home-card-radius);
+    border: 1px solid var(--border-glass);
+    background: color-mix(in srgb, var(--bg-card) 88%, var(--bg-glass));
+    box-shadow: var(--app-shadow-card);
+    overflow: hidden;
+  }
+
+  .home-overview-card,
+  .home-workspace-overview-card {
+    padding: 18px;
+  }
+
+  .home-workspace-stage,
+  .home-workspace-panel {
+    margin-top: 20px;
+    padding: 22px;
+    border-radius: 30px;
+    border: 1px solid var(--border-glass);
+    background: color-mix(in srgb, var(--bg-card) 90%, var(--bg-glass));
+    box-shadow: var(--app-shadow-card);
+  }
+
+  .home-workspace-stage-head,
+  .home-workspace-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .home-workspace-stage-body,
+  .home-workspace-panel-body {
+    margin-top: 16px;
+  }
+}
+
+@media (max-width: 767px) {
+  html,
+  body {
+    overflow-x: hidden !important;
+  }
+
+  body {
+    min-width: 0;
+  }
+
+  .app-layout {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+
+  #home-dashboard {
+    width: 100%;
+    margin: 0 0 20px;
+  }
+
+  .home-workspace-shell {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .home-workspace-header {
+    grid-template-columns: 1fr;
+  }
+
+  .home-workspace-badge {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .home-workspace-grid,
+  .home-overview-grid,
+  .home-workspace-top-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-workspace-card,
+  .home-overview-card,
+  .home-workspace-overview-card,
+  .home-workspace-stage,
+  .home-workspace-panel {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .home-workspace-metric-grid,
+  .home-workspace-notice-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .home-workspace-actions {
+    flex-direction: column;
+  }
+
+  .home-workspace-action {
+    width: 100%;
+  }
+}
