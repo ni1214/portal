@@ -19726,3 +19726,25 @@ body {
     gap: 6px;
   }
 }
+
+/* ===== デスクトップ2カラムレイアウト（1024px以上で常時2列） ===== */
+@media (min-width: 1024px) {
+  .home-content-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px !important;
+    gap: 20px;
+    align-items: start;
+  }
+  /* 個人スペースをstickyにして、全社スペースをスクロールしても追従 */
+  #space-personal {
+    position: sticky;
+    top: calc(var(--app-header-h, 60px) + 12px);
+    max-height: calc(100vh - var(--app-header-h, 60px) - 24px);
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  #space-personal::-webkit-scrollbar {
+    display: none;
+  }
+}
+/* モバイル・タブレットは1列のまま（変更しない） */
