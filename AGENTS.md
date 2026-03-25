@@ -44,6 +44,28 @@
 - Stitch の MCP 設定や API キーは **repo に書かずローカル Codex 設定で管理**する
 - デザイン規定が迷ったら、この `Stitch デザイン運用ルール` を既存の細則より優先する
 
+## Claude Code 役割の Codex 対応表
+> **目的**: Claude Code 側で使っている常設エージェント名を、Codex では `spawn_agent` / `explorer` / `worker` / `web` に読み替えて運用する。
+
+| Claude Code の役割 | Codex での対応 | 使い分けの目安 |
+|---|---|---|
+| 🎯 **指揮官 (Commander)** | メインの Codex が進行管理 | ユーザー要件の解釈、タスク分割、割り当て、進行管理を担当する |
+| 🔍 **監査エージェント (Auditor)** | `explorer` かレビュー用の sub-agent | 古い CSS クラス、重複要素、デッドコードの洗い出しに使う |
+| 📐 **リサーチエージェント (Researcher)** | `web` を使う調査担当の sub-agent | 最新 UI トレンド、Google / Material Design などの調査に使う |
+| ⚒️ **実装エージェント (Implementer)** | `worker` | HTML / CSS / JS の新機能追加や UI 修正を担当する |
+| 🧐 **批評エージェント (Critic)** | レビュー用 sub-agent かメインのセルフレビュー | 実装後の問題点、抜け、改善案を指摘する |
+| 🐛 **バグファインダー (Bug Finder)** | 実機確認担当の sub-agent | ブラウザ操作、クリック確認、コンソールエラー確認を担当する |
+| 🔧 **バグフィクサー (Bug Fixer)** | `worker` | バグファインダーの報告を受けてコードを修正する |
+| 👀 **UXレビュアー (UX Reviewer)** | レビュー用 sub-agent | 初見ユーザー視点で 10 秒以内に理解できるかを見る |
+| 🎨 **UIビューティエージェント (Beauty Inspector)** | レビュー用 sub-agent | 余白、整列、間隔、色、タイポグラフィの粗を見つける |
+| ✨ **UIビューティフィクサー (Beauty Fixer)** | `worker` | Beauty Inspector の指摘を受けて CSS を修正する |
+| 🔄 **再発防止エージェント (Prevention Agent)** | メインの文書更新作業 | 同じミスが再発しないよう `AGENTS.md` や関連メモへルールを追記する |
+| 📱 **レスポンシブチェッカー (Responsive Checker)** | 実機確認担当の sub-agent | mobile / tablet / desktop の 3 サイズで崩れを確認する |
+
+- Codex では Claude Code のような「常設の個別エージェント名」は持たず、必要な時に役割単位で `spawn_agent` する
+- レビュー系は `explorer` を優先し、実装系は `worker`、調査系は `web` を優先する
+- 役割を複数同時に使う場合は、作業範囲が重ならないように分担する
+
 ---
 
 ## 2026-03-24 最新引き継ぎ（新規チャット開始点・最優先）
