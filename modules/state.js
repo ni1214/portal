@@ -84,6 +84,8 @@ export const state = {
   missionBannerHidden: true,  // ユーザー個人の折り畳み状態（デフォルト：折りたたみ）
 
   // ニックネーム・個人データ
+  homeWorkspaceTarget: 'notice',
+  homeWorkspaceActiveButtonId: 'sidebar-home-btn',
   currentUsername: localStorage.getItem('portal-username') || null,
   dataBackendMode: 'supabase',
   supabaseUrl: '',

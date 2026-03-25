@@ -148,7 +148,7 @@ import {
 
 import { initBottomNav } from './modules/bottom-nav.js';
 
-import { initHomeDashboard, updateSummaryCards } from './modules/home-dashboard.js';
+import { initHomeDashboard, setHomeWorkspaceTarget, updateSummaryCards } from './modules/home-workspace.js';
 
 import {
   initOrder,
@@ -169,6 +169,7 @@ import {
 
 import {
   initReadDiagnostics,
+  openReadDiagnosticsModal,
   recordGetDocsRead,
   recordListenerStart,
   recordListenerSnapshot,
@@ -343,6 +344,67 @@ function buildTodayDateKey() {
   return `${year}-${month}-${day}`;
 }
 
+async function openTodayAttendanceFromHome() {
+  await openCalendarModal();
+  if (!document.getElementById('cal-modal')?.classList.contains('visible')) return;
+  await onCalendarModalOpen();
+  openDayPanel(buildTodayDateKey());
+}
+
+function openTaskModalFromHome() {
+  state.taskProjectKeyFilter = '';
+  state.activeTaskTab = 'received';
+  openTaskModal();
+}
+
+function openTaskNewFromHome() {
+  state.taskProjectKeyFilter = '';
+  state.activeTaskTab = 'new';
+  openTaskModal();
+}
+
+function openRequestModalFromHome() {
+  state.reqProjectKeyFilter = '';
+  state.activeReqTab = 'request';
+  state.activeReqSubTab = 'received';
+  openReqModal('request');
+}
+
+function openRequestNewFromHome() {
+  state.reqProjectKeyFilter = '';
+  state.activeReqTab = 'request';
+  state.activeReqSubTab = 'new';
+  openReqModal('request');
+}
+
+function openNoticeCreateFromHome() {
+  openNoticeModal(null);
+}
+
+function openGuideModalFromHome() {
+  document.getElementById('guide-modal')?.classList.add('visible');
+}
+
+function openSettingsPanelFromHome() {
+  openSettingsPanel();
+}
+
+function openReadDiagnosticsFromHome() {
+  openReadDiagnosticsModal();
+}
+
+function openPropertySummaryFromHome() {
+  openPropertySummaryModal();
+}
+
+function openInviteCodeModalFromHome() {
+  void loadInviteCodeConfig()
+    .catch(err => {
+      console.error('招待コード設定の読込に失敗しました:', err);
+    })
+    .finally(() => openInviteCodeModal());
+}
+
 let dashboardNoticeFocusTimer = null;
 
 function focusNoticeBoardFromDashboard() {
@@ -427,24 +489,25 @@ initTodayDashboard({
     state.activeReqSubTab = 'sent';
     openReqModal('request');
   },
-  openTodayAttendance: async () => {
-    await openCalendarModal();
-    if (!document.getElementById('cal-modal')?.classList.contains('visible')) return;
-    await onCalendarModalOpen();
-    openDayPanel(buildTodayDateKey());
-  },
+  openTodayAttendance: openTodayAttendanceFromHome,
   openNoticeBoard: () => {
+    if (state.favoritesOnlyMode) {
+      toggleFavoritesOnly();
+    }
+    setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
     focusNoticeBoardFromDashboard();
   },
   openFavorites: () => {
     const section = document.getElementById('favorites-section');
     if (section && !section.hidden) {
+      setHomeWorkspaceTarget('favorites', 'btn-favorites-only');
       section.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
     document.getElementById('btn-favorites-only')?.click();
   },
-  openInviteCode: async () => {
+  openInviteCode: openInviteCodeModalFromHome,
+  /* openInviteCode: async () => {
     try {
       await loadInviteCodeConfig();
     } catch (err) {
@@ -452,8 +515,43 @@ initTodayDashboard({
     }
     openInviteCodeModal();
   },
+  */
 });
-initHomeDashboard();
+initHomeDashboard({
+  focusNoticeBoard: () => {
+    if (state.favoritesOnlyMode) {
+      toggleFavoritesOnly();
+    }
+    setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
+    focusNoticeBoardFromDashboard();
+  },
+  openNoticeModal: openNoticeCreateFromHome,
+  openTodayAttendance: openTodayAttendanceFromHome,
+  openCalendarModal: async () => {
+    await openCalendarModal();
+    if (document.getElementById('cal-modal')?.classList.contains('visible')) {
+      await onCalendarModalOpen();
+    }
+  },
+  openTaskModal: openTaskModalFromHome,
+  openTaskNew: openTaskNewFromHome,
+  openRequestModal: openRequestModalFromHome,
+  openRequestNew: openRequestNewFromHome,
+  openOrderModal,
+  openOrderHistoryModal,
+  openEmailModal,
+  openProfileModal,
+  openChatPanel,
+  openNewDmModal,
+  openFileTransferPanel,
+  openFtSendModal,
+  openPropertySummaryModal: openPropertySummaryFromHome,
+  openSettingsPanel: openSettingsPanelFromHome,
+  openGuideModal: openGuideModalFromHome,
+  openReadDiagnosticsModal: openReadDiagnosticsFromHome,
+  openInviteCodeModal: openInviteCodeModalFromHome,
+  toggleFavoritesOnly,
+});
 initReadDiagnostics();
 
 Object.assign(sharedSpaceDeps, {
@@ -461,7 +559,13 @@ Object.assign(sharedSpaceDeps, {
   buildSection,
   openCategoryModal,
   normalizeForSearch,
-  focusNoticeBoard: focusNoticeBoardFromDashboard,
+  focusNoticeBoard: () => {
+    if (state.favoritesOnlyMode) {
+      toggleFavoritesOnly();
+    }
+    setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
+    focusNoticeBoardFromDashboard();
+  },
   focusWeatherWidget,
   openCalendarModal: async () => {
     await openCalendarModal();
@@ -2728,6 +2832,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     // モバイル�E�サイドバー冁E��イチE��をタチE�E→�E動閉ぁE
     const sidebar = document.getElementById('app-sidebar');
     if (sidebar) {
+      const selectHomeWorkspace = (target, buttonId = '') => {
+        const normalizedTarget = target || 'notice';
+        if (normalizedTarget === 'favorites') {
+          toggleFavoritesOnly();
+          setHomeWorkspaceTarget(
+            state.favoritesOnlyMode ? 'favorites' : 'notice',
+            state.favoritesOnlyMode ? (buttonId || 'btn-favorites-only') : 'sidebar-home-btn',
+          );
+        } else {
+          if (state.favoritesOnlyMode) {
+            toggleFavoritesOnly();
+          }
+          setHomeWorkspaceTarget(normalizedTarget, buttonId || 'sidebar-home-btn');
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (isMobile()) closeSidebar();
+      };
+      sidebar.addEventListener('click', e => {
+        const button = e.target.closest('[data-home-target]');
+        if (!button || !sidebar.contains(button)) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        selectHomeWorkspace(button.dataset.homeTarget, button.id);
+      }, true);
       sidebar.addEventListener('click', e => {
         if (isMobile() && e.target.closest('.app-sidebar-item, .app-sidebar-util, .app-sidebar-invite')) {
           setTimeout(closeSidebar, 80);
