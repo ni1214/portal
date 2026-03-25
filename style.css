@@ -19666,3 +19666,59 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+
+/* ===== サイドバー内FABボタン: position:fixedをリセット ===== */
+/* 旧CSSの .chat-fab/.ft-fab/.settings-fab に position:fixed があるため上書き */
+.app-sidebar .chat-fab,
+.app-sidebar .ft-fab,
+.app-sidebar .settings-fab,
+.app-sidebar .help-fab,
+.app-sidebar-footer .chat-fab,
+.app-sidebar-footer .ft-fab,
+.app-sidebar-footer .settings-fab,
+.app-sidebar-footer .help-fab {
+  position: static !important;
+  bottom: auto !important;
+  right: auto !important;
+  left: auto !important;
+  top: auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  border-radius: 8px !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+/* ホバー時もtransformを上書き（scale(1.1)などをリセット） */
+.app-sidebar .chat-fab:hover,
+.app-sidebar .ft-fab:hover,
+.app-sidebar .settings-fab:hover,
+.app-sidebar .help-fab:hover,
+.app-sidebar-footer .chat-fab:hover,
+.app-sidebar-footer .ft-fab:hover,
+.app-sidebar-footer .settings-fab:hover,
+.app-sidebar-footer .help-fab:hover {
+  transform: none !important;
+}
+
+/* ===== no-results: 検索中のみ表示（デフォルト非表示） ===== */
+.no-results {
+  display: none !important;
+}
+.no-results.visible {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== クイックアクセス: 4列固定（デスクトップで1行になるのを防止） ===== */
+.hd-quick-access {
+  grid-template-columns: repeat(4, minmax(80px, 1fr)) !important;
+}
+@media (max-width: 480px) {
+  .hd-quick-access {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6px;
+  }
+}
