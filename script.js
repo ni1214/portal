@@ -148,7 +148,7 @@ import {
 
 import { initBottomNav } from './modules/bottom-nav.js';
 
-import { initHomeDashboard, setHomeWorkspaceTarget, updateSummaryCards } from './modules/home-workspace.js';
+import { initHomeDashboard, setHomeWorkspaceTarget, updateSummaryCards } from './modules/home-workspace.js?v=131708b';
 
 import {
   initOrder,
