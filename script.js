@@ -148,7 +148,7 @@ import {
 
 import { initBottomNav } from './modules/bottom-nav.js';
 
-import { initHomeDashboard, setHomeWorkspaceTarget, updateSummaryCards } from './modules/home-workspace.js?v=131708b';
+import { initHomeDashboard, setHomeWorkspaceTarget, updateSummaryCards } from './modules/home-workspace.js?v=20260325a';
 
 import {
   initOrder,
@@ -405,40 +405,8 @@ function openInviteCodeModalFromHome() {
     .finally(() => openInviteCodeModal());
 }
 
-let dashboardNoticeFocusTimer = null;
-
 function focusNoticeBoardFromDashboard() {
-  const board = document.getElementById('notice-board');
-  if (!board) return;
-
-  const headerOffset = window.innerWidth <= 768 ? 76 : 92;
-  const targetTop = Math.max(0, window.scrollY + board.getBoundingClientRect().top - headerOffset);
-  window.scrollTo({ top: targetTop, behavior: 'smooth' });
-
-  if (!board.hasAttribute('tabindex')) {
-    board.setAttribute('tabindex', '-1');
-  }
-
-  const prevOutline = board.style.outline;
-  const prevOutlineOffset = board.style.outlineOffset;
-  const prevBoxShadow = board.style.boxShadow;
-  const prevTransition = board.style.transition;
-
-  board.focus({ preventScroll: true });
-  board.style.transition = [prevTransition, 'outline-color 180ms ease', 'box-shadow 180ms ease']
-    .filter(Boolean)
-    .join(', ');
-  board.style.outline = '2px solid var(--accent-blue)';
-  board.style.outlineOffset = '6px';
-  board.style.boxShadow = '0 0 0 8px rgba(var(--state-primary-rgb), 0.14)';
-
-  clearTimeout(dashboardNoticeFocusTimer);
-  dashboardNoticeFocusTimer = window.setTimeout(() => {
-    board.style.outline = prevOutline;
-    board.style.outlineOffset = prevOutlineOffset;
-    board.style.boxShadow = prevBoxShadow;
-    board.style.transition = prevTransition;
-  }, 1800);
+  setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
 }
 
 function focusWeatherWidget() {
@@ -491,20 +459,11 @@ initTodayDashboard({
   },
   openTodayAttendance: openTodayAttendanceFromHome,
   openNoticeBoard: () => {
-    if (state.favoritesOnlyMode) {
-      toggleFavoritesOnly();
-    }
     setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
-    focusNoticeBoardFromDashboard();
   },
   openFavorites: () => {
-    const section = document.getElementById('favorites-section');
-    if (section && !section.hidden) {
-      setHomeWorkspaceTarget('favorites', 'btn-favorites-only');
-      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
-    document.getElementById('btn-favorites-only')?.click();
+    toggleFavoritesOnly();
+    setHomeWorkspaceTarget('favorites', 'btn-favorites-only');
   },
   openInviteCode: openInviteCodeModalFromHome,
   /* openInviteCode: async () => {
@@ -519,11 +478,7 @@ initTodayDashboard({
 });
 initHomeDashboard({
   focusNoticeBoard: () => {
-    if (state.favoritesOnlyMode) {
-      toggleFavoritesOnly();
-    }
     setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
-    focusNoticeBoardFromDashboard();
   },
   openNoticeModal: openNoticeCreateFromHome,
   openTodayAttendance: openTodayAttendanceFromHome,
@@ -560,11 +515,7 @@ Object.assign(sharedSpaceDeps, {
   openCategoryModal,
   normalizeForSearch,
   focusNoticeBoard: () => {
-    if (state.favoritesOnlyMode) {
-      toggleFavoritesOnly();
-    }
     setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
-    focusNoticeBoardFromDashboard();
   },
   focusWeatherWidget,
   openCalendarModal: async () => {
@@ -2810,6 +2761,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ホ�Eムボタン
     const homeBtn = document.getElementById('sidebar-home-btn');
     if (homeBtn) homeBtn.addEventListener('click', () => {
+      setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       if (isMobile()) closeSidebar();
     });
@@ -2834,19 +2786,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (sidebar) {
       const selectHomeWorkspace = (target, buttonId = '') => {
         const normalizedTarget = target || 'notice';
-        if (normalizedTarget === 'favorites') {
-          toggleFavoritesOnly();
-          setHomeWorkspaceTarget(
-            state.favoritesOnlyMode ? 'favorites' : 'notice',
-            state.favoritesOnlyMode ? (buttonId || 'btn-favorites-only') : 'sidebar-home-btn',
-          );
-        } else {
-          if (state.favoritesOnlyMode) {
-            toggleFavoritesOnly();
-          }
-          setHomeWorkspaceTarget(normalizedTarget, buttonId || 'sidebar-home-btn');
-        }
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setHomeWorkspaceTarget(normalizedTarget, buttonId || 'sidebar-home-btn');
         if (isMobile()) closeSidebar();
       };
       sidebar.addEventListener('click', e => {
@@ -2894,7 +2834,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     focusNoticeBoardFromDashboard();
   });
   document.getElementById('header-home-btn')?.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
   });
   document.getElementById('header-shared-btn')?.addEventListener('click', () => {
     state.sharedLinksCategory = 'all';
@@ -2989,7 +2929,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
   // お気に入り�Eみ表示ボタン
-  document.getElementById('btn-favorites-only')?.addEventListener('click', toggleFavoritesOnly);
+  document.getElementById('btn-favorites-only')?.addEventListener('click', () => {
+    toggleFavoritesOnly();
+    setHomeWorkspaceTarget('favorites', 'btn-favorites-only');
+  });
   applyFavoritesOnlyMode();
 
   // ===== ロチE��ボタン =====

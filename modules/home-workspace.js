@@ -5,38 +5,105 @@ export let deps = {};
 
 const DEFAULT_TARGET = 'notice';
 
-const TARGET_LABELS = {
-  notice: '通知',
-  calendar: '勤怠・カレンダー',
-  task: 'タスク管理',
-  request: '部門間依頼',
-  order: '鋼材発注',
-  email: 'メールアシスタント',
-  chat: 'チャット',
-  file: 'ファイル転送',
-  property: '物件Noまとめ',
-  favorites: 'お気に入り',
-  settings: '表示設定',
-  help: '使い方ガイド',
-  diagnostics: '転送診断',
-  invite: '招待コード',
-};
-
-const TARGET_TONES = {
-  notice: 'danger',
-  calendar: 'info',
-  task: 'violet',
-  request: 'cyan',
-  order: 'orange',
-  email: 'success',
-  chat: 'sky',
-  file: 'green',
-  property: 'neutral',
-  favorites: 'warning',
-  settings: 'neutral',
-  help: 'info',
-  diagnostics: 'purple',
-  invite: 'success',
+const TARGET_META = {
+  notice: {
+    title: '通知',
+    detailTitle: '通知を確認する',
+    copy: '未読と確認待ちをまとめて確認できます。ホームの中心になる場所です。',
+    kicker: 'ホームの中心',
+    tone: 'notice',
+  },
+  calendar: {
+    title: '勤怠・カレンダー',
+    detailTitle: '今日の勤怠を開く',
+    copy: '今日の勤怠入力とカレンダーを素早く開けます。',
+    kicker: '今日の入口',
+    tone: 'calendar',
+  },
+  task: {
+    title: 'タスク管理',
+    detailTitle: '受信・依頼・共有タスク',
+    copy: '自分に関するタスクをまとめて確認して、必要なら新規依頼も起票できます。',
+    kicker: '作業の起点',
+    tone: 'task',
+  },
+  request: {
+    title: '部門間依頼',
+    detailTitle: '依頼と目安箱',
+    copy: '依頼の受信と送信、新規投稿までをここからまとめて進めます。',
+    kicker: '部門連携',
+    tone: 'request',
+  },
+  order: {
+    title: '鋼材発注',
+    detailTitle: '発注フォームと履歴',
+    copy: '発注フォーム、履歴、管理設定をひとまとめに開けます。',
+    kicker: '発注の入口',
+    tone: 'order',
+  },
+  email: {
+    title: 'メールアシスタント',
+    detailTitle: 'メール作成とプロフィール',
+    copy: 'メール作成と署名設定をまとめて開けます。',
+    kicker: 'メール導線',
+    tone: 'email',
+  },
+  chat: {
+    title: 'チャット',
+    detailTitle: 'DM とグループ',
+    copy: 'DM とグループを開き、必要なら新規ルームも作成できます。',
+    kicker: '会話の入口',
+    tone: 'chat',
+  },
+  file: {
+    title: 'ファイル転送',
+    detailTitle: 'ファイル送信と Drive 共有',
+    copy: 'ファイル転送パネルと送信画面を素早く開けます。',
+    kicker: '転送の入口',
+    tone: 'file',
+  },
+  property: {
+    title: '物件Noまとめ',
+    detailTitle: '物件No の横断検索',
+    copy: '依頼・タスク・発注を物件Noでまとめて確認します。',
+    kicker: '横串の入口',
+    tone: 'property',
+  },
+  favorites: {
+    title: 'お気に入り',
+    detailTitle: 'お気に入りの表示',
+    copy: 'お気に入り表示を切り替えて、よく使うカードへ戻れます。',
+    kicker: 'よく使う導線',
+    tone: 'favorites',
+  },
+  settings: {
+    title: '表示設定',
+    detailTitle: 'テーマとフォント',
+    copy: 'テーマ、フォントサイズ、編集モードを確認できます。',
+    kicker: '見た目の設定',
+    tone: 'settings',
+  },
+  help: {
+    title: '使い方ガイド',
+    detailTitle: 'ホームの使い方',
+    copy: 'このホームは、上が固定の要約、下がサイドバー連動のワークスペースです。',
+    kicker: '初見向け',
+    tone: 'help',
+  },
+  diagnostics: {
+    title: '転送診断',
+    detailTitle: '読み込み量の確認',
+    copy: 'どの画面がどれだけ読んだかを確認して、転送量の増えすぎを防ぎます。',
+    kicker: '軽量化の確認',
+    tone: 'diagnostics',
+  },
+  invite: {
+    title: '招待コード',
+    detailTitle: '招待コードの確認',
+    copy: '招待コードの入力と再表示をまとめて扱えます。',
+    kicker: 'アクセス管理',
+    tone: 'invite',
+  },
 };
 
 export function initHomeDashboard(d = {}) {
@@ -65,76 +132,190 @@ export function renderHomeWorkspace() {
 
   const targetKey = normalizeTarget(state.homeWorkspaceTarget);
   const target = buildTargetConfig(targetKey);
-  const notice = buildNoticeSnapshot();
+  const overviewTitle = buildOverviewTitle();
+  const overviewSubtitle = buildOverviewSubtitle();
+  const taskOverview = buildTaskOverview();
+  const noticeOverview = buildNoticeOverview();
+  const companyOverview = buildCompanyNoticeOverview();
 
   host.innerHTML = `
-    <section class="home-workspace-shell" data-tone="${esc(target.tone)}" aria-live="polite" role="region" aria-labelledby="home-workspace-title">
+    <section class="home-workspace-shell" data-tone="${esc(target.tone)}" aria-live="polite" role="region" aria-labelledby="home-overview-title">
       <header class="home-workspace-header">
         <div class="home-workspace-header-copy">
-          <p class="home-workspace-kicker">サイドバー連動</p>
-          <h2 class="home-workspace-title" id="home-workspace-title">${esc(target.title)}</h2>
-          <p class="home-workspace-copy">${esc(target.copy)}</p>
+          <p class="home-workspace-kicker">ホーム</p>
+          <h2 class="home-workspace-title" id="home-overview-title">${esc(overviewTitle)}</h2>
+          <p class="home-workspace-copy">${esc(overviewSubtitle)}</p>
         </div>
         <div class="home-workspace-badge">
-          <span class="home-workspace-badge-label">現在の項目</span>
-          <strong class="home-workspace-badge-value">${esc(target.badge || target.title)}</strong>
+          <span class="home-workspace-badge-label">現在の表示</span>
+          <strong class="home-workspace-badge-value">${esc(target.title)}</strong>
         </div>
       </header>
 
-      <div class="home-workspace-grid">
-        <article class="home-workspace-card home-workspace-card--main">
-          <div class="home-workspace-card-head">
-            <div>
-              <p class="home-workspace-card-kicker">${esc(target.kicker || '入力エリア')}</p>
-              <h3 class="home-workspace-card-title">${esc(target.detailTitle || target.title)}</h3>
-            </div>
-            <span class="home-workspace-card-pill">${esc(target.value || '開く')}</span>
-          </div>
+      <div class="home-overview-grid">
+        ${renderOverviewCard(taskOverview)}
+        ${renderOverviewCard(noticeOverview)}
+        ${renderOverviewCard(companyOverview)}
+      </div>
 
+      <section class="home-workspace-stage home-workspace-panel" data-tone="${esc(target.tone)}" aria-labelledby="home-workspace-stage-title">
+        <div class="home-workspace-stage-head">
+          <div>
+            <p class="home-workspace-card-kicker">${esc(target.kicker)}</p>
+            <h3 class="home-workspace-stage-title" id="home-workspace-stage-title">${esc(target.detailTitle)}</h3>
+            <p class="home-workspace-stage-copy">${esc(target.copy)}</p>
+          </div>
+          <span class="home-workspace-card-pill">${esc(target.badge || target.title)}</span>
+        </div>
+
+        <div class="home-workspace-stage-body">
           ${renderMetricGrid(target.metrics)}
           ${renderBulletList(target.bullets)}
           ${renderActionRow(target.actions)}
-        </article>
-
-        <aside class="home-workspace-card home-workspace-card--aside">
-          <div class="home-workspace-card-head">
-            <div>
-              <p class="home-workspace-card-kicker">通知</p>
-              <h3 class="home-workspace-card-title">確認待ちと未読</h3>
-            </div>
-            <span class="home-workspace-card-pill">${esc(notice.totalLabel)}</span>
-          </div>
-
-          <div class="home-workspace-notice-summary">
-            <div class="home-workspace-notice-stat">
-              <span>未読</span>
-              <strong>${esc(notice.unreadLabel)}</strong>
-            </div>
-            <div class="home-workspace-notice-stat">
-              <span>確認待ち</span>
-              <strong>${esc(notice.pendingLabel)}</strong>
-            </div>
-          </div>
-
-          <div class="home-workspace-notice-preview">
-            ${renderNoticePreview(notice.items)}
-          </div>
-
-          <div class="home-workspace-side-actions">
-            ${renderActionButton({
-              label: '通知ボードへ',
-              action: 'focus-notice',
-              variant: 'secondary',
-            })}
-          </div>
-
-          <p class="home-workspace-side-note">左のサイドバーを押すと、この上段が切り替わります。</p>
-        </aside>
-      </div>
+        </div>
+      </section>
     </section>
   `;
 
   syncSidebarSelection();
+}
+
+function buildOverviewTitle() {
+  const username = state.currentUsername || 'ユーザー名未設定';
+  return `おかえり、${username}`;
+}
+
+function buildOverviewSubtitle() {
+  if (!state.currentUsername) {
+    return 'ユーザー名を設定すると、自分のタスクや通知が表示されます。';
+  }
+  return '上部はタスク・通知・社内のお知らせだけ。下のエリアはサイドバーで切り替える試作です。';
+}
+
+function renderOverviewCard(snapshot) {
+  return `
+    <article class="home-workspace-card home-overview-card" data-tone="${esc(snapshot.tone)}">
+      <div class="home-workspace-card-head">
+        <div>
+          <p class="home-workspace-card-kicker">${esc(snapshot.kicker)}</p>
+          <h3 class="home-workspace-card-title">${esc(snapshot.title)}</h3>
+        </div>
+        <span class="home-workspace-card-pill">${esc(snapshot.value)}</span>
+      </div>
+
+      <p class="home-workspace-copy">${esc(snapshot.meta)}</p>
+      ${renderOverviewList(snapshot.items, snapshot.emptyText)}
+    </article>
+  `;
+}
+
+function renderOverviewList(items = [], emptyText = '') {
+  if (!Array.isArray(items) || items.length === 0) {
+    return `<div class="home-workspace-empty">${esc(emptyText || '表示できる項目はありません')}</div>`;
+  }
+
+  return `
+    <ul class="home-workspace-note-list">
+      ${items.map(item => `
+        <li class="home-workspace-note-item">
+          <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+          <span>
+            <strong>${esc(item.title || '')}</strong>
+            ${item.meta ? `<span class="home-workspace-note-meta">${esc(item.meta)}</span>` : ''}
+          </span>
+        </li>
+      `).join('')}
+    </ul>
+  `;
+}
+
+function buildTaskOverview() {
+  const tasks = collectActiveTasks();
+  const pending = tasks.filter(task => task.status === 'pending').length;
+  const accepted = tasks.filter(task => task.status === 'accepted').length;
+  const overdue = tasks.filter(task => task.dueDate && task.dueDate < buildDateKey(new Date())).length;
+
+  return {
+    kicker: '自分の仕事',
+    title: '自分のタスク',
+    value: `${tasks.length}件`,
+    meta: tasks.length > 0
+      ? `承諾待ち ${pending}件 / 進行中 ${accepted}件`
+      : '受信タスクはありません',
+    tone: overdue > 0 ? 'notice' : (pending > 0 ? 'task' : 'settings'),
+    items: tasks.slice(0, 2).map(task => ({
+      title: task.title || '名称未設定',
+      meta: [
+        TASK_STATUS_LABEL[task.status]?.text || task.status || '',
+        task.assignedBy ? `依頼 ${task.assignedBy}` : '',
+        formatDueLabel(task.dueDate),
+      ].filter(Boolean).join(' / '),
+    })),
+    emptyText: '受信タスクはまだありません',
+  };
+}
+
+function buildNoticeOverview() {
+  const stats = buildNoticeStats();
+  return {
+    kicker: '自分向け',
+    title: '通知',
+    value: `${stats.totalCount}件`,
+    meta: stats.pendingAckCount > 0
+      ? `確認待ち ${stats.pendingAckCount}件 / 未読 ${stats.unreadCount}件`
+      : (stats.unreadCount > 0 ? `未読 ${stats.unreadCount}件` : '通知はありません'),
+    tone: stats.pendingAckCount > 0 ? 'notice' : (stats.unreadCount > 0 ? 'task' : 'settings'),
+    items: stats.items,
+    emptyText: '通知はまだありません',
+  };
+}
+
+function buildCompanyNoticeOverview() {
+  const stats = buildNoticeStats();
+  return {
+    kicker: '社内',
+    title: '社内のお知らせ',
+    value: `${stats.totalNoticeCount}件`,
+    meta: stats.latestNotice
+      ? `最新: ${stats.latestNotice.title || '名称未設定'}`
+      : '社内のお知らせはありません',
+    tone: stats.latestNotice?.priority === 'urgent' ? 'notice' : 'help',
+    items: stats.items,
+    emptyText: '社内のお知らせはまだありません',
+  };
+}
+
+function buildNoticeStats() {
+  const notices = collectNoticeSource();
+  const currentUsername = state.currentUsername || '';
+  const readIds = state.readNoticeIds instanceof Set ? state.readNoticeIds : new Set();
+
+  const pendingAck = notices.filter(notice => {
+    if (!notice?.requireAcknowledgement || !currentUsername) return false;
+    const acknowledgedBy = Array.isArray(notice.acknowledgedBy) ? notice.acknowledgedBy : [];
+    return !acknowledgedBy.includes(currentUsername);
+  });
+
+  const unread = notices.filter(notice => !readIds.has(notice.id) && !notice?.requireAcknowledgement);
+  const latestNotice = notices[0] || null;
+
+  return {
+    notices,
+    pendingAck,
+    unread,
+    latestNotice,
+    totalNoticeCount: notices.length,
+    totalCount: pendingAck.length + unread.length,
+    pendingAckCount: pendingAck.length,
+    unreadCount: unread.length,
+    items: notices.slice(0, 2).map(notice => ({
+      title: notice.title || '名称未設定',
+      meta: [
+        notice.requireAcknowledgement ? '確認必須' : (notice.priority === 'urgent' ? '重要' : '通常'),
+        formatNoticeDate(notice.createdAt),
+      ].filter(Boolean).join(' / '),
+    })),
+  };
 }
 
 function buildTargetConfig(targetKey) {
@@ -172,51 +353,51 @@ function buildTargetConfig(targetKey) {
 }
 
 function buildNoticeConfig() {
-  const notice = buildNoticeSnapshot();
+  const stats = buildNoticeStats();
   return {
     title: '通知',
     detailTitle: '通知を確認する',
-    copy: '通知だけを残したホームです。未読と確認待ちをここで素早く確認できます。',
+    copy: '未読と確認待ちをまとめて確認できます。ここがホームの中心です。',
     kicker: 'ホームの中心',
-    tone: TARGET_TONES.notice,
-    value: notice.totalLabel,
-    badge: notice.totalLabel,
+    tone: 'notice',
+    value: `${stats.totalCount}件`,
+    badge: `${stats.totalCount}件`,
     metrics: [
-      { label: '未読', value: notice.unreadLabel },
-      { label: '確認待ち', value: notice.pendingLabel },
-      { label: '最新', value: notice.latestLabel },
+      { label: '未読', value: `${stats.unreadCount}件` },
+      { label: '確認待ち', value: `${stats.pendingAckCount}件` },
+      { label: '最新', value: stats.latestNotice ? (stats.latestNotice.title || '名称未設定') : 'なし' },
     ],
     bullets: [
-      '重要なお知らせを優先表示',
-      '確認ボードへすぐ移動',
-      '必要なら新規通知の作成にも進める',
+      '重要なお知らせを優先して確認',
+      '確認必須の通知を見落とさない',
+      '必要なら新規通知の投稿へ進む',
     ],
     actions: [
-      { label: '通知ボードへ移動', action: 'focus-notice', variant: 'primary' },
-      { label: 'お知らせを投稿', action: 'open-notice-modal', variant: 'secondary', show: () => state.isEditMode === true },
+      { label: 'お知らせを投稿', action: 'open-notice-modal', variant: 'primary', show: () => state.isEditMode === true },
+      { label: '使い方ガイド', action: 'open-help', variant: 'secondary' },
     ],
   };
 }
 
 function buildCalendarConfig() {
-  const snapshot = buildAttendanceSnapshot();
+  const attendance = buildAttendanceSnapshot();
   return {
     title: '勤怠・カレンダー',
     detailTitle: '今日の勤怠を開く',
-    copy: '今日の勤怠入力へ進みます。カレンダーを見ながら、そのまま保存できます。',
-    kicker: '日々の入力',
-    tone: TARGET_TONES.calendar,
-    value: snapshot.value,
-    badge: snapshot.badge,
+    copy: '今日の勤怠入力とカレンダーを開きます。必要なら日付をまたいで確認できます。',
+    kicker: '今日の入口',
+    tone: 'calendar',
+    value: attendance.value,
+    badge: attendance.value,
     metrics: [
-      { label: '今日の状態', value: snapshot.value },
-      { label: 'メモ', value: snapshot.noteLabel },
-      { label: '年度有給', value: snapshot.fiscalLabel },
+      { label: '今日', value: attendance.value },
+      { label: 'メモ', value: attendance.noteLabel },
+      { label: '今月', value: attendance.monthLabel },
     ],
     bullets: [
-      '個人勤怠',
-      '勤務内容表',
-      '共有カレンダー',
+      '今日の勤怠をすぐ入力',
+      'カレンダーから過去日を確認',
+      '共有カレンダーも同じ導線で開ける',
     ],
     actions: [
       { label: '今日の勤怠を開く', action: 'open-today-attendance', variant: 'primary' },
@@ -226,24 +407,24 @@ function buildCalendarConfig() {
 }
 
 function buildTaskConfig() {
-  const snapshot = buildTaskSnapshot();
+  const stats = buildTaskSnapshot();
   return {
     title: 'タスク管理',
     detailTitle: '受信・依頼・共有タスク',
-    copy: '受け取ったタスクや依頼中のタスクをここから開きます。新規依頼もすぐ起票できます。',
+    copy: '自分に関するタスクをここから確認して、新規依頼もすぐ起票できます。',
     kicker: '作業の起点',
-    tone: TARGET_TONES.task,
-    value: snapshot.countLabel,
-    badge: snapshot.countLabel,
+    tone: 'task',
+    value: stats.countLabel,
+    badge: stats.countLabel,
     metrics: [
-      { label: '受信', value: snapshot.receivedLabel },
-      { label: '依頼', value: snapshot.sentLabel },
-      { label: '共有', value: snapshot.sharedLabel },
+      { label: '受信', value: stats.receivedLabel },
+      { label: '共有', value: stats.sharedLabel },
+      { label: '期限超過', value: stats.overdueLabel },
     ],
     bullets: [
-      '新規依頼',
-      '受け取ったタスク',
-      '共有されたタスク',
+      '受信タスクをひと目で確認',
+      '共有タスクも合わせて追跡',
+      '新規依頼の起票へそのまま進む',
     ],
     actions: [
       { label: 'タスク管理を開く', action: 'open-task-modal', variant: 'primary' },
@@ -253,24 +434,24 @@ function buildTaskConfig() {
 }
 
 function buildRequestConfig() {
-  const snapshot = buildRequestSnapshot();
+  const stats = buildRequestSnapshot();
   return {
     title: '部門間依頼',
     detailTitle: '依頼と目安箱',
-    copy: '部門間依頼と目安箱をまとめて開きます。新規投稿もここから始められます。',
+    copy: '受信した依頼、送信した依頼、新規投稿までをまとめて扱います。',
     kicker: '部門連携',
-    tone: TARGET_TONES.request,
-    value: snapshot.countLabel,
-    badge: snapshot.countLabel,
+    tone: 'request',
+    value: stats.countLabel,
+    badge: stats.countLabel,
     metrics: [
-      { label: '受信', value: snapshot.receivedLabel },
-      { label: '送信', value: snapshot.sentLabel },
-      { label: '下書き', value: snapshot.draftLabel },
+      { label: '受信', value: stats.receivedLabel },
+      { label: '送信', value: stats.sentLabel },
+      { label: '進行中', value: stats.openLabel },
     ],
     bullets: [
-      '受け取った依頼',
-      '自分の依頼',
-      '新規投稿',
+      '部門間の依頼をまとめて確認',
+      '新規投稿から依頼を起票',
+      '状況の更新を追える',
     ],
     actions: [
       { label: '依頼を開く', action: 'open-request-modal', variant: 'primary' },
@@ -283,20 +464,20 @@ function buildOrderConfig() {
   return {
     title: '鋼材発注',
     detailTitle: '発注フォームと履歴',
-    copy: '鋼材発注の入力画面と履歴を切り替えます。設定画面にもすぐ進めます。',
+    copy: '発注フォーム、履歴、管理設定をひとまとめに開けます。',
     kicker: '発注の入口',
-    tone: TARGET_TONES.order,
-    value: '入力',
+    tone: 'order',
+    value: '発注',
     badge: '発注',
     metrics: [
-      { label: '新規', value: '作成' },
+      { label: 'フォーム', value: '開く' },
       { label: '履歴', value: '確認' },
       { label: '管理', value: '設定' },
     ],
     bullets: [
-      '発注フォーム',
-      '発注履歴',
-      '管理設定',
+      '鋼材発注フォームへ移動',
+      '過去の発注履歴を確認',
+      '必要なら管理設定へ進む',
     ],
     actions: [
       { label: '発注を開く', action: 'open-order-modal', variant: 'primary' },
@@ -306,24 +487,24 @@ function buildOrderConfig() {
 }
 
 function buildEmailConfig() {
-  const snapshot = buildEmailSnapshot();
+  const profile = state.userEmailProfile || {};
   return {
     title: 'メールアシスタント',
     detailTitle: 'メール作成とプロフィール',
-    copy: 'メール作成専用です。所属部署や署名はプロフィール設定から編集できます。',
+    copy: 'メール作成と署名設定をまとめて開けます。',
     kicker: 'メール導線',
-    tone: TARGET_TONES.email,
-    value: snapshot.departmentLabel,
-    badge: snapshot.roleLabel,
+    tone: 'email',
+    value: profile.department || '未設定',
+    badge: profile.department || '未設定',
     metrics: [
-      { label: '所属', value: snapshot.departmentLabel },
-      { label: '役割', value: snapshot.roleLabel },
-      { label: '署名', value: snapshot.signatureLabel },
+      { label: '部署', value: profile.department || '未設定' },
+      { label: '役割', value: USER_ROLE_LABELS[profile.roleType] || '未設定' },
+      { label: '署名', value: profile.signatureTemplate ? '設定済み' : '未設定' },
     ],
     bullets: [
-      '新規メール',
-      '返信メール',
-      'プロフィール設定',
+      'メールアシスタントを開く',
+      'プロフィール設定で署名を整える',
+      '必要な連絡先を確認',
     ],
     actions: [
       { label: 'メールアシスタントを開く', action: 'open-email-modal', variant: 'primary' },
@@ -333,24 +514,26 @@ function buildEmailConfig() {
 }
 
 function buildChatConfig() {
-  const snapshot = buildChatSnapshot();
+  const dmCount = Array.isArray(state.dmRooms) ? state.dmRooms.length : 0;
+  const groupCount = Array.isArray(state.groupRooms) ? state.groupRooms.length : 0;
+  const messageCount = Array.isArray(state.currentRoomMessages) ? state.currentRoomMessages.length : 0;
   return {
     title: 'チャット',
     detailTitle: 'DM とグループ',
-    copy: 'チャットパネルを開いて、DM とグループを切り替えます。新規 DM の作成もここから進めます。',
+    copy: 'チャットパネルを開いて、DM とグループを切り替えます。',
     kicker: '会話の入口',
-    tone: TARGET_TONES.chat,
-    value: snapshot.countLabel,
-    badge: snapshot.countLabel,
+    tone: 'chat',
+    value: `${dmCount + groupCount}室`,
+    badge: `${dmCount + groupCount}室`,
     metrics: [
-      { label: 'DM', value: snapshot.dmLabel },
-      { label: 'グループ', value: snapshot.groupLabel },
-      { label: '状態', value: snapshot.statusLabel },
+      { label: 'DM', value: `${dmCount}室` },
+      { label: 'グループ', value: `${groupCount}室` },
+      { label: '表示中', value: `${messageCount}件` },
     ],
     bullets: [
-      'DM ルーム',
-      'グループルーム',
-      '新規ルーム作成',
+      'DM とグループを切り替え',
+      '新規 DM を作成',
+      '必要な会話へすぐ戻る',
     ],
     actions: [
       { label: 'チャットを開く', action: 'open-chat-panel', variant: 'primary' },
@@ -360,24 +543,27 @@ function buildChatConfig() {
 }
 
 function buildFileConfig() {
-  const snapshot = buildFileSnapshot();
+  const incoming = Array.isArray(state._ftIncoming) ? state._ftIncoming.length : 0;
+  const outgoing = Array.isArray(state._ftOutgoing) ? state._ftOutgoing.length : 0;
+  const driveIncoming = Array.isArray(state._driveIncoming) ? state._driveIncoming.length : 0;
+  const driveOutgoing = Array.isArray(state._driveOutgoing) ? state._driveOutgoing.length : 0;
   return {
     title: 'ファイル転送',
     detailTitle: 'ファイル送信と Drive 共有',
-    copy: 'ファイル転送パネルを開いて、送信中・受信中の流れをひと目で追えます。',
+    copy: 'ファイル転送パネルを開いて、送受信と Drive 共有を扱います。',
     kicker: '転送の入口',
-    tone: TARGET_TONES.file,
-    value: snapshot.countLabel,
-    badge: snapshot.countLabel,
+    tone: 'file',
+    value: `${incoming + outgoing + driveIncoming + driveOutgoing}件`,
+    badge: `${incoming + outgoing + driveIncoming + driveOutgoing}件`,
     metrics: [
-      { label: 'P2P 受信', value: snapshot.p2pIncomingLabel },
-      { label: 'Drive 受信', value: snapshot.driveIncomingLabel },
-      { label: '送信', value: snapshot.outgoingLabel },
+      { label: '送信中', value: `${outgoing}件` },
+      { label: '受信中', value: `${incoming}件` },
+      { label: 'Drive', value: `${driveIncoming + driveOutgoing}件` },
     ],
     bullets: [
-      'P2P 送受信',
-      'Drive 共有',
-      'ファイル送信',
+      'ファイル転送パネルを開く',
+      'P2P の送受信を管理',
+      'Drive 共有の流れも確認',
     ],
     actions: [
       { label: 'ファイル転送を開く', action: 'open-file-panel', variant: 'primary' },
@@ -387,24 +573,26 @@ function buildFileConfig() {
 }
 
 function buildPropertyConfig() {
-  const snapshot = buildPropertySnapshot();
+  const requests = Array.isArray(state.receivedRequests) ? state.receivedRequests.length : 0;
+  const tasks = Array.isArray(state.receivedTasks) ? state.receivedTasks.length : 0;
+  const sharedTasks = Array.isArray(state.sharedTasks) ? state.sharedTasks.length : 0;
   return {
     title: '物件Noまとめ',
     detailTitle: '物件No の横断検索',
-    copy: '物件Noを軸に、依頼・タスク・発注・勤怠を横断検索します。',
+    copy: '依頼・タスク・発注を物件Noでまとめて確認します。',
     kicker: '横串の入口',
-    tone: TARGET_TONES.property,
-    value: snapshot.valueLabel,
-    badge: snapshot.valueLabel,
+    tone: 'property',
+    value: '検索',
+    badge: '検索',
     metrics: [
-      { label: '依頼', value: snapshot.requestLabel },
-      { label: 'タスク', value: snapshot.taskLabel },
-      { label: '発注', value: snapshot.orderLabel },
+      { label: '依頼', value: `${requests}件` },
+      { label: 'タスク', value: `${tasks + sharedTasks}件` },
+      { label: '発注', value: '横断' },
     ],
     bullets: [
-      '依頼の関連付け',
-      'タスクの横断確認',
-      '発注・勤怠の検索',
+      '物件Noで依頼・タスク・発注を横断検索',
+      '入力後に結果をまとめて確認',
+      '必要な連携画面へそのまま進める',
     ],
     actions: [
       { label: '物件Noまとめを開く', action: 'open-property-summary', variant: 'primary' },
@@ -413,24 +601,25 @@ function buildPropertyConfig() {
 }
 
 function buildFavoritesConfig() {
-  const snapshot = buildFavoritesSnapshot();
+  const count = Array.isArray(state.personalFavorites) ? state.personalFavorites.length : 0;
+  const hiddenCount = Array.isArray(state.hiddenCards) ? state.hiddenCards.length : 0;
   return {
     title: 'お気に入り',
-    detailTitle: 'お気に入りを切り替える',
-    copy: 'お気に入りだけを表示して、よく使うカードへすぐ戻れます。',
+    detailTitle: 'お気に入りの表示',
+    copy: 'お気に入りのカードをまとめて確認して、表示モードを切り替えられます。',
     kicker: 'よく使う導線',
-    tone: TARGET_TONES.favorites,
-    value: snapshot.countLabel,
-    badge: snapshot.modeLabel,
+    tone: 'favorites',
+    value: `${count}件`,
+    badge: state.favoritesOnlyMode ? '表示中' : '通常',
     metrics: [
-      { label: '登録数', value: snapshot.countLabel },
-      { label: '表示', value: snapshot.modeLabel },
-      { label: '状態', value: snapshot.stateLabel },
+      { label: '登録数', value: `${count}件` },
+      { label: '表示', value: state.favoritesOnlyMode ? '表示中' : '通常' },
+      { label: '非表示', value: `${hiddenCount}件` },
     ],
     bullets: [
-      'お気に入りのみ表示',
-      '通常表示へ戻す切替',
-      'よく使うカードの整理',
+      'お気に入りカードをまとめて確認',
+      'よく使う導線へすぐ戻る',
+      '表示モードもそのまま切り替え',
     ],
     actions: [
       { label: 'お気に入り表示を切り替える', action: 'toggle-favorites', variant: 'primary' },
@@ -439,24 +628,25 @@ function buildFavoritesConfig() {
 }
 
 function buildSettingsConfig() {
-  const snapshot = buildSettingsSnapshot();
+  const theme = localStorage.getItem('portal-theme') || 'dark';
+  const fontSize = localStorage.getItem('portal-font-size') || 'font-md';
   return {
     title: '表示設定',
     detailTitle: 'テーマとフォント',
-    copy: 'テーマ、フォントサイズ、表示の好みをまとめて確認できます。',
+    copy: 'テーマ、フォントサイズ、編集モードを確認できます。',
     kicker: '見た目の設定',
-    tone: TARGET_TONES.settings,
-    value: snapshot.themeLabel,
-    badge: snapshot.fontLabel,
+    tone: 'settings',
+    value: theme === 'light' ? 'ライト' : 'ダーク',
+    badge: theme === 'light' ? 'ライト' : 'ダーク',
     metrics: [
-      { label: 'テーマ', value: snapshot.themeLabel },
-      { label: 'フォント', value: snapshot.fontLabel },
-      { label: '編集モード', value: snapshot.editModeLabel },
+      { label: 'テーマ', value: theme === 'light' ? 'ライト' : 'ダーク' },
+      { label: '文字サイズ', value: fontSize.replace('font-', '') || 'md' },
+      { label: '編集', value: state.isEditMode ? '常時ON' : 'OFF' },
     ],
     bullets: [
-      'テーマ切替',
-      'フォントサイズ',
-      '表示設定',
+      'テーマを切り替える',
+      'フォントサイズを調整',
+      '編集モードの状態を確認',
     ],
     actions: [
       { label: '設定を開く', action: 'open-settings', variant: 'primary' },
@@ -466,78 +656,76 @@ function buildSettingsConfig() {
 }
 
 function buildHelpConfig() {
-  const snapshot = buildHelpSnapshot();
   return {
     title: '使い方ガイド',
     detailTitle: 'ホームの使い方',
-    copy: 'このホームでは、左のサイドバーで機能を選び、上段のワークスペースから各入力画面へ進みます。',
+    copy: '上部は固定の要約、下部はサイドバーで切り替える試作です。',
     kicker: '初見向け',
-    tone: TARGET_TONES.help,
-    value: snapshot.valueLabel,
-    badge: snapshot.valueLabel,
+    tone: 'help',
+    value: '案内',
+    badge: '案内',
     metrics: [
-      { label: 'ホーム', value: snapshot.homeLabel },
-      { label: '通知', value: snapshot.noticeLabel },
-      { label: '導線', value: snapshot.routeLabel },
+      { label: 'ホーム', value: '固定' },
+      { label: 'サイドバー', value: '切替' },
+      { label: 'モーダル', value: '流用' },
     ],
     bullets: [
-      'サイドバーで切り替え',
-      'ワークスペースから入力画面へ',
-      '通知は常時確認',
+      '上部はタスク・通知・社内のお知らせだけ',
+      '左のサイドバーで下の領域を切り替える',
+      '必要な入力は既存モーダルをそのまま開く',
     ],
     actions: [
-      { label: 'ガイドを開く', action: 'open-guide', variant: 'primary' },
+      { label: 'ガイドを開く', action: 'open-help', variant: 'primary' },
       { label: '通知へ移動', action: 'focus-notice', variant: 'secondary' },
     ],
   };
 }
 
 function buildDiagnosticsConfig() {
-  const snapshot = buildDiagnosticsSnapshot();
+  const diag = state.readDiagnostics || {};
   return {
     title: '転送診断',
     detailTitle: '読み込み量の確認',
-    copy: 'どの画面がどれだけ読んだかを確認して、Supabase Free の転送量を守ります。',
+    copy: 'どの画面がどれだけ読んだかを確認して、無駄な読み込みを追いやすくします。',
     kicker: '軽量化の確認',
-    tone: TARGET_TONES.diagnostics,
-    value: snapshot.transferLabel,
-    badge: snapshot.transferLabel,
+    tone: 'diagnostics',
+    value: formatFileSize(diag.estimatedTransferBytes || 0),
+    badge: formatFileSize(diag.estimatedTransferBytes || 0),
     metrics: [
-      { label: '推定転送', value: snapshot.transferLabel },
-      { label: 'API', value: snapshot.apiLabel },
-      { label: 'Listener', value: snapshot.listenerLabel },
+      { label: '推定転送', value: formatFileSize(diag.estimatedTransferBytes || 0) },
+      { label: 'API', value: `${Number(diag.apiCalls || 0)}回` },
+      { label: 'リスナー', value: `${Number(diag.listenerStarts || 0)}回` },
     ],
     bullets: [
-      '重い取得の確認',
-      '月 5GB 対策',
-      'どの画面が重いかの把握',
+      'どの画面が重いかを把握',
+      '起動時の読み込み量を確認',
+      '必要なら後で絞り込みを見直す',
     ],
     actions: [
       { label: '診断を開く', action: 'open-diagnostics', variant: 'primary' },
-      { label: 'ガイドを見る', action: 'open-guide', variant: 'secondary' },
+      { label: 'ガイドを見る', action: 'open-help', variant: 'secondary' },
     ],
   };
 }
 
 function buildInviteConfig() {
-  const snapshot = buildInviteSnapshot();
   return {
     title: '招待コード',
     detailTitle: '招待コードの確認',
-    copy: '招待コードの入力と確認をまとめて開けます。必要に応じて再表示にも進めます。',
+    copy: '招待コードの入力と再表示をまとめて扱えます。',
     kicker: 'アクセス管理',
-    tone: TARGET_TONES.invite,
-    value: snapshot.statusLabel,
-    badge: snapshot.requiredLabel,
+    tone: 'invite',
+    value: state.inviteCodeVerified ? '確認済み' : '未確認',
+    badge: state.inviteCodeRequired ? '必要' : '不要',
     metrics: [
-      { label: '必要', value: snapshot.requiredLabel },
-      { label: '確認', value: snapshot.verifiedLabel },
-      { label: '管理', value: snapshot.adminLabel },
+      { label: '必要', value: state.inviteCodeRequired ? '必要' : '不要' },
+      { label: '確認', value: state.inviteCodeVerified ? '確認済み' : '未確認' },
+      { label: '管理', value: state.adminInviteConfigured ? 'あり' : '未設定' },
     ],
     bullets: [
-      '招待コードの入力',
-      '現在の設定確認',
-      '管理画面からの再表示',
+      '招待コードが必要か確認',
+      '管理画面から再表示',
+      '入力前に状態を見られる',
     ],
     actions: [
       { label: '招待コードを開く', action: 'open-invite', variant: 'primary' },
@@ -552,7 +740,7 @@ function renderMetricGrid(metrics = []) {
       ${metrics.map(metric => `
         <div class="home-workspace-metric">
           <span class="home-workspace-metric-label">${esc(metric.label || '')}</span>
-          <strong class="home-workspace-metric-value">${esc(metric.value || '-')}</strong>
+          <strong class="home-workspace-metric-value">${esc(metric.value || '')}</strong>
         </div>
       `).join('')}
     </div>
@@ -605,23 +793,6 @@ function renderActionButton(action, primary = false) {
   `;
 }
 
-function renderNoticePreview(items = []) {
-  if (!Array.isArray(items) || items.length === 0) {
-    return `<div class="home-workspace-empty">表示中のお知らせはありません。</div>`;
-  }
-
-  return `
-    <div class="home-workspace-notice-list">
-      ${items.map(item => `
-        <div class="home-workspace-notice-item">
-          <strong class="home-workspace-notice-title">${esc(item.title)}</strong>
-          <span class="home-workspace-notice-meta">${esc(item.meta || '')}</span>
-        </div>
-      `).join('')}
-    </div>
-  `;
-}
-
 function bindWorkspaceHost() {
   const host = document.getElementById('home-dashboard');
   if (!host || host.dataset.workspaceBound === '1') return;
@@ -667,7 +838,7 @@ function handleWorkspaceAction(action) {
       deps.openOrderModal?.();
       return;
     case 'open-order-history':
-      void deps.openOrderHistoryModal?.();
+      deps.openOrderHistoryModal?.();
       return;
     case 'open-email-modal':
       deps.openEmailModal?.();
@@ -676,35 +847,37 @@ function handleWorkspaceAction(action) {
       deps.openProfileModal?.();
       return;
     case 'open-chat-panel':
-      void deps.openChatPanel?.();
+      deps.openChatPanel?.();
       return;
     case 'open-new-dm':
-      void deps.openNewDmModal?.();
+      deps.openNewDmModal?.();
       return;
     case 'open-file-panel':
       deps.openFileTransferPanel?.();
       return;
     case 'open-file-send':
-      void deps.openFtSendModal?.();
+      deps.openFtSendModal?.();
       return;
     case 'open-property-summary':
-      void deps.openPropertySummaryModal?.();
+      deps.openPropertySummaryModal?.();
       return;
     case 'toggle-favorites':
+    case 'focus-favorites':
       deps.toggleFavoritesOnly?.();
-      setHomeWorkspaceTarget(state.favoritesOnlyMode ? 'favorites' : 'notice', state.favoritesOnlyMode ? 'btn-favorites-only' : 'sidebar-home-btn');
+      setHomeWorkspaceTarget('favorites', 'btn-favorites-only');
       return;
     case 'open-settings':
       deps.openSettingsPanel?.();
       return;
     case 'open-guide':
+    case 'open-help':
       deps.openGuideModal?.();
       return;
     case 'open-diagnostics':
       deps.openReadDiagnosticsModal?.();
       return;
     case 'open-invite':
-      void deps.openInviteCodeModal?.();
+      deps.openInviteCodeModal?.();
       return;
     default:
       return;
@@ -721,68 +894,31 @@ function syncSidebarSelection() {
 }
 
 function normalizeTarget(target) {
-  return Object.prototype.hasOwnProperty.call(TARGET_LABELS, target) ? target : DEFAULT_TARGET;
+  return Object.prototype.hasOwnProperty.call(TARGET_META, target) ? target : DEFAULT_TARGET;
 }
 
-function buildNoticeSnapshot() {
-  const notices = Array.isArray(state.visibleNotices) ? state.visibleNotices : [];
-  const currentUsername = state.currentUsername || '';
-  const readIds = state.readNoticeIds instanceof Set ? state.readNoticeIds : new Set();
-
-  const pendingAck = notices.filter(notice => {
-    if (!notice?.requireAcknowledgement || !currentUsername) return false;
-    const acknowledgedBy = Array.isArray(notice.acknowledgedBy) ? notice.acknowledgedBy : [];
-    return !acknowledgedBy.includes(currentUsername);
-  });
-
-  const unread = notices.filter(notice => !notice?.requireAcknowledgement && !readIds.has(notice.id));
-  const latest = notices[0] || null;
-
-  return {
-    total: pendingAck.length + unread.length,
-    totalLabel: `${pendingAck.length + unread.length}件`,
-    unreadLabel: `${unread.length}件`,
-    pendingLabel: `${pendingAck.length}件`,
-    latestLabel: latest ? (latest.title || '最新') : 'なし',
-    items: notices.slice(0, 3).map(notice => ({
-      title: notice.title || 'お知らせ',
-      meta: [
-        notice.requireAcknowledgement ? '確認待ち' : (notice.priority === 'urgent' ? '緊急' : '通常'),
-        formatNoticeDate(notice.createdAt),
-      ].filter(Boolean).join(' / '),
-    })),
-  };
+function collectNoticeSource() {
+  const visible = Array.isArray(state.visibleNotices) && state.visibleNotices.length > 0
+    ? state.visibleNotices
+    : (Array.isArray(state.allNotices) ? state.allNotices : []);
+  return visible.slice().sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
 }
 
-function buildAttendanceSnapshot() {
-  const todayKey = buildDateKey(new Date());
-  const attendance = state.todayAttendanceDate === todayKey
-    ? (state.todayAttendance || null)
-    : (state.attendanceData?.[todayKey] || null);
-
-  if (!attendance) {
-    return {
-      value: '未入力',
-      badge: state.currentUsername ? '今日' : '未設定',
-      noteLabel: '今日の勤怠を入力',
-      fiscalLabel: `${Number(state.fiscalYearPaidLeave || 0)}日`,
-    };
-  }
-
-  const workSiteHours = Object.values(attendance.workSiteHours || {})
-    .map(hours => Number(hours))
-    .filter(hours => Number.isFinite(hours) && hours > 0);
-  const totalHours = workSiteHours.reduce((sum, hours) => sum + hours, 0);
-  const typeLabel = attendance.type && attendance.type !== 'normal'
-    ? attendance.type
-    : (attendance.hayade ? `早出 ${attendance.hayade}` : (attendance.zangyo ? `残業 ${attendance.zangyo}` : (workSiteHours.length > 0 ? `${workSiteHours.length}現場` : '通常')));
-
-  return {
-    value: typeLabel,
-    badge: state.currentUsername ? '今日' : '未設定',
-    noteLabel: attendance.note || (workSiteHours.length > 0 ? `${formatHours(totalHours)}h` : '入力済み'),
-    fiscalLabel: `${Number(state.fiscalYearPaidLeave || 0)}日`,
-  };
+function collectActiveTasks() {
+  const buckets = [
+    ...(Array.isArray(state.receivedTasks) ? state.receivedTasks : []),
+    ...(Array.isArray(state.sharedTasks) ? state.sharedTasks : []),
+  ];
+  const seen = new Set();
+  return buckets
+    .filter(task => task && ['pending', 'accepted'].includes(task.status))
+    .filter(task => {
+      const key = task.id || `${task.title || ''}-${task.assignedBy || ''}-${task.assignedTo || ''}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => compareTaskPriority(a, b));
 }
 
 function buildTaskSnapshot() {
@@ -794,7 +930,7 @@ function buildTaskSnapshot() {
   return {
     countLabel: `${activeTasks.length}件`,
     receivedLabel: `${pendingCount}件`,
-    sentLabel: `${Math.max(0, acceptedCount)}件`,
+    sentLabel: `${acceptedCount}件`,
     sharedLabel: `${Array.isArray(state.sharedTasks) ? state.sharedTasks.length : 0}件`,
     overdueLabel: `${overdueCount}件`,
   };
@@ -809,137 +945,43 @@ function buildRequestSnapshot() {
     countLabel: `${openReceived.length + sentRequests.length}件`,
     receivedLabel: `${openReceived.length}件`,
     sentLabel: `${sentRequests.length}件`,
-    draftLabel: `${Math.max(0, sentRequests.length - openReceived.length)}件`,
+    openLabel: `${openReceived.length}件`,
   };
 }
 
-function buildEmailSnapshot() {
-  const profile = state.userEmailProfile || {};
+function buildAttendanceSnapshot() {
+  const todayKey = buildDateKey(new Date());
+  const attendance = state.todayAttendanceDate === todayKey
+    ? (state.todayAttendance || null)
+    : (state.attendanceData?.[todayKey] || null);
+  const monthLabel = todayKey.slice(0, 7);
+
+  if (!attendance) {
+    return {
+      value: '未入力',
+      noteLabel: '今日の勤怠は未入力',
+      monthLabel,
+    };
+  }
+
+  const label = getAttendanceLabel(attendance);
   return {
-    departmentLabel: profile.department || '未設定',
-    roleLabel: USER_ROLE_LABELS[profile.roleType] || '未設定',
-    signatureLabel: profile.signatureTemplate ? '設定済み' : '未設定',
+    value: label,
+    noteLabel: attendance.note || 'メモなし',
+    monthLabel,
   };
 }
 
-function buildChatSnapshot() {
-  const dmCount = Array.isArray(state.dmRooms) ? state.dmRooms.length : 0;
-  const groupCount = Array.isArray(state.groupRooms) ? state.groupRooms.length : 0;
-  return {
-    countLabel: `${dmCount + groupCount}件`,
-    dmLabel: `${dmCount}件`,
-    groupLabel: `${groupCount}件`,
-    statusLabel: state.chatPanelOpen ? '開いています' : '未表示',
-  };
-}
+function compareTaskPriority(a, b) {
+  const aDue = toMillis(a.dueDate) || Number.POSITIVE_INFINITY;
+  const bDue = toMillis(b.dueDate) || Number.POSITIVE_INFINITY;
+  if (aDue !== bDue) return aDue - bDue;
 
-function buildFileSnapshot() {
-  const p2pIncoming = Array.isArray(state._ftIncoming) ? state._ftIncoming.length : 0;
-  const p2pOutgoing = Array.isArray(state._ftOutgoing) ? state._ftOutgoing.length : 0;
-  const driveIncoming = Array.isArray(state._driveIncoming) ? state._driveIncoming.length : 0;
-  const driveOutgoing = Array.isArray(state._driveOutgoing) ? state._driveOutgoing.length : 0;
-  return {
-    countLabel: `${p2pIncoming + p2pOutgoing + driveIncoming + driveOutgoing}件`,
-    p2pIncomingLabel: `${p2pIncoming}件`,
-    driveIncomingLabel: `${driveIncoming}件`,
-    outgoingLabel: `${p2pOutgoing + driveOutgoing}件`,
-  };
-}
+  const aStatus = a.status === 'pending' ? 0 : 1;
+  const bStatus = b.status === 'pending' ? 0 : 1;
+  if (aStatus !== bStatus) return aStatus - bStatus;
 
-function buildPropertySnapshot() {
-  const query = (state.propertySummaryQuery || '').trim();
-  const resultCount = state.propertySummaryResults
-    ? Object.keys(state.propertySummaryResults).length
-    : 0;
-  return {
-    valueLabel: query ? `検索中: ${query}` : '横断検索',
-    requestLabel: `${Array.isArray(state.receivedRequests) ? state.receivedRequests.length : 0}件`,
-    taskLabel: `${Array.isArray(state.receivedTasks) ? state.receivedTasks.length : 0}件`,
-    orderLabel: `${resultCount}件`,
-  };
-}
-
-function buildFavoritesSnapshot() {
-  const count = Array.isArray(state.personalFavorites) ? state.personalFavorites.length : 0;
-  return {
-    countLabel: `${count}件`,
-    modeLabel: state.favoritesOnlyMode ? '表示中' : '通常',
-    stateLabel: count > 0 ? '登録済み' : '空',
-  };
-}
-
-function buildSettingsSnapshot() {
-  const theme = localStorage.getItem('portal-theme') || 'dark';
-  const fontSize = localStorage.getItem('portal-font-size') || 'font-md';
-  return {
-    themeLabel: theme === 'light' ? 'ライト' : 'ダーク',
-    fontLabel: fontSize.replace('font-', ''),
-    editModeLabel: state.isEditMode ? '常時ON' : 'OFF',
-  };
-}
-
-function buildHelpSnapshot() {
-  return {
-    valueLabel: '案内',
-    homeLabel: 'ワークスペース',
-    noticeLabel: '通知',
-    routeLabel: '入力画面',
-  };
-}
-
-function buildDiagnosticsSnapshot() {
-  const diag = state.readDiagnostics || {};
-  return {
-    transferLabel: formatFileSize(diag.estimatedTransferBytes || 0),
-    apiLabel: `${Number(diag.apiCalls || 0)}回`,
-    listenerLabel: `${Number(diag.listenerStarts || 0)}回`,
-  };
-}
-
-function buildInviteSnapshot() {
-  return {
-    requiredLabel: state.inviteCodeRequired ? '必要' : '不要',
-    verifiedLabel: state.inviteCodeVerified ? '確認済み' : '未確認',
-    adminLabel: state.adminInviteConfigured ? '管理あり' : '未設定',
-    statusLabel: state.inviteCodeVerified ? '認証済み' : '未確認',
-  };
-}
-
-function collectActiveTasks() {
-  const buckets = [
-    ...(Array.isArray(state.receivedTasks) ? state.receivedTasks : []),
-    ...(Array.isArray(state.sentTasks) ? state.sentTasks : []),
-    ...(Array.isArray(state.sharedTasks) ? state.sharedTasks : []),
-  ];
-  const seen = new Set();
-  return buckets.filter(task => {
-    if (!task || !['pending', 'accepted'].includes(task.status)) return false;
-    const key = task.id || `${task.title || ''}-${task.assignedBy || ''}-${task.assignedTo || ''}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function renderNoticeItem(item) {
-  return `
-    <div class="home-workspace-notice-item">
-      <strong class="home-workspace-notice-title">${esc(item.title || 'お知らせ')}</strong>
-      <span class="home-workspace-notice-meta">${esc(item.meta || '')}</span>
-    </div>
-  `;
-}
-
-function formatNoticeDate(createdAt) {
-  if (!createdAt) return '';
-  const date = createdAt?.seconds ? new Date(createdAt.seconds * 1000) : new Date(createdAt);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
-}
-
-function formatHours(hours) {
-  const rounded = Math.round(Number(hours || 0) * 10) / 10;
-  return Number.isInteger(rounded) ? `${rounded}` : `${rounded}`.replace(/\.0$/, '');
+  return String(a.title || '').localeCompare(String(b.title || ''), 'ja');
 }
 
 function buildDateKey(date) {
@@ -947,4 +989,43 @@ function buildDateKey(date) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function getAttendanceLabel(attendance) {
+  if (!attendance) return '未入力';
+  if (attendance.type === '有給') return '有給';
+  if (attendance.type === '半休午前') return '半休 午前';
+  if (attendance.type === '半休午後') return '半休 午後';
+  if (attendance.type === '欠勤') return '欠勤';
+  if (attendance.type === 'normal' || !attendance.type) return '通常';
+  if (attendance.hayade) return `早出 ${attendance.hayade}`;
+  if (attendance.zangyo) return `残業 ${attendance.zangyo}`;
+  return attendance.type;
+}
+
+function formatDueLabel(dueDate) {
+  if (!dueDate) return '';
+  const todayKey = buildDateKey(new Date());
+  if (dueDate < todayKey) return `期限超過 ${dueDate.slice(5).replace('-', '/')}`;
+  if (dueDate === todayKey) return '期限 今日';
+  return `期限 ${dueDate.slice(5).replace('-', '/')}`;
+}
+
+function formatNoticeDate(value) {
+  const ms = toMillis(value);
+  if (!ms) return '';
+  const d = new Date(ms);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+function toMillis(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  if (typeof value?.toMillis === 'function') return value.toMillis();
+  if (typeof value?.seconds === 'number') return value.seconds * 1000;
+  return 0;
 }
