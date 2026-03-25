@@ -1195,8 +1195,8 @@ function renderAllSections() {
     privateAddWrap.className = 'btn-add-category-wrap';
     privateAddWrap.innerHTML = `
       <div class="add-btn-group">
-        <button class="btn-add-private-section"><i class="fa-solid fa-lock"></i> マイカチE��リを追加</button>
-        <p class="add-btn-desc add-btn-desc--private"><i class="fa-solid fa-user-secret"></i> 自刁E��けに表示されまぁE/p>
+        <button class="btn-add-private-section"><i class="fa-solid fa-lock"></i> マイカテゴリを追加</button>
+        <p class="add-btn-desc add-btn-desc--private"><i class="fa-solid fa-user-secret"></i> 自分だけに表示されます</p>
       </div>`;
     privateAddWrap.querySelector('.btn-add-private-section').addEventListener('click', () => openPrivateSectionModal(null));
     personalBody.appendChild(privateAddWrap);
@@ -1327,7 +1327,7 @@ function buildSection(cat, cards) {
     section.className = 'external-tools' + (isCollapsed ? ' collapsed' : '');
     section.id = `section-${cat.id}`;
     const editBtns = state.isEditMode
-      ? `<button class="btn-edit-category" data-docid="${cat.docId || ''}" title="カチE��リ編雁E><i class="fa-solid fa-pen"></i></button>`
+      ? `<button class="btn-edit-category" data-docid="${cat.docId || ''}" title="カテゴリ編集"><i class="fa-solid fa-pen"></i></button>`
       : '';
     section.innerHTML = `
       <div class="category-header">
@@ -1379,7 +1379,7 @@ function buildSection(cat, cards) {
         <div class="category-icon" style="background:${privGradient}"><i class="${cat.icon || 'fa-solid fa-star'}"></i></div>
         <h2 class="category-title">${esc(cat.label)}<span class="private-badge"><i class="fa-solid fa-lock"></i></span></h2>
         <span class="category-count">${cards.length} 件</span>
-        <button class="btn-edit-category" data-docid="${cat.docId}" title="マイカチE��リを編雁E><i class="fa-solid fa-pen"></i></button>
+        <button class="btn-edit-category" data-docid="${cat.docId}" title="マイカテゴリを編集"><i class="fa-solid fa-pen"></i></button>
         <button class="btn-collapse-section${isCollapsed ? ' collapsed' : ''}" data-section-id="${sectionId}" title="${isCollapsed ? '展開' : '折り畳む'}">
           <i class="fa-solid fa-chevron-up"></i>
         </button>
@@ -1413,7 +1413,7 @@ function buildSection(cat, cards) {
     section.className = 'category-section' + (isCollapsed ? ' collapsed' : '');
     section.id = `section-${cat.id}`;
     const editBtns = state.isEditMode
-      ? `<button class="btn-edit-category" data-docid="${cat.docId || ''}" title="カチE��リ編雁E><i class="fa-solid fa-pen"></i></button>`
+      ? `<button class="btn-edit-category" data-docid="${cat.docId || ''}" title="カテゴリ編集"><i class="fa-solid fa-pen"></i></button>`
       : '';
     section.innerHTML = `
       <div class="category-header">
@@ -1495,9 +1495,9 @@ function buildLinkCard(card, isFav = false, gradient = '') {
 
   const favs = getFavorites();
   const isFavorited = favs.includes(card.id);
-  const starBtn = `<button class="btn-favorite${isFavorited ? ' active' : ''}" data-id="${card.id}" title="お気に入めE><i class="fa-${isFavorited ? 'solid' : 'regular'} fa-star"></i></button>`;
+  const starBtn = `<button class="btn-favorite${isFavorited ? ' active' : ''}" data-id="${card.id}" title="お気に入り"><i class="fa-${isFavorited ? 'solid' : 'regular'} fa-star"></i></button>`;
   const noUrlBadge = hasNoUrl
-    ? `<span class="no-url-badge"><i class="fa-solid fa-triangle-exclamation"></i> URL未設宁E/span>`
+    ? `<span class="no-url-badge"><i class="fa-solid fa-triangle-exclamation"></i> URL未設定</span>`
     : '';
 
   a.innerHTML = `
@@ -1598,7 +1598,7 @@ function buildEditOverlay(card) {
   const overlay = document.createElement('div');
   overlay.className = 'card-edit-overlay';
   overlay.innerHTML = `
-    <button class="btn-edit-card" title="編雁E><i class="fa-solid fa-pen"></i></button>
+    <button class="btn-edit-card" title="編集"><i class="fa-solid fa-pen"></i></button>
     <button class="btn-delete-card" title="削除"><i class="fa-solid fa-trash"></i></button>
   `;
   overlay.querySelector('.btn-edit-card').addEventListener('click', e => {
@@ -1668,7 +1668,7 @@ function openChildPopup(parentCard, children, allCatCards, gradient, isPrivate, 
       <span class="card-child-popup__icon">${iconHtml}</span>
       <span>${esc(parentCard.label)}</span>
     </div>
-    <button class="card-child-popup__close" title="閉じめE><i class="fa-solid fa-xmark"></i></button>
+    <button class="card-child-popup__close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
   `;
   popup.appendChild(header);
 
@@ -1785,7 +1785,7 @@ function renderFavorites() {
   if (!cards.length) {
     if (state.favoritesOnlyMode) {
       section.hidden = false;
-      grid.innerHTML = '<p class="fav-empty"><i class="fa-regular fa-star"></i> お気に入りが未登録です。カードを右クリチE�� ↁE編雁Eまた�E吁E��ード�E ☁EをクリチE��して登録してください、E/p>';
+      grid.innerHTML = '<p class="fav-empty"><i class="fa-regular fa-star"></i> お気に入りが未登録です。カードを右クリック → 編集、またはカードの ☆ をクリックして登録してください。</p>';
       if (count) count.textContent = '0 件';
     } else {
       section.hidden = true;
