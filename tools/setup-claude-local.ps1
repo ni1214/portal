@@ -56,7 +56,7 @@ $launch = [ordered]@{
     [ordered]@{
       name = 'portal-dev'
       runtimeExecutable = 'node'
-      runtimeArgs = @($serverPath)
+      runtimeArgs = @('./.claude/server.js')
       port = 8080
     }
   )
@@ -79,10 +79,6 @@ $settings = [ordered]@{
       'mcp__Claude_Preview__preview_logs',
       'mcp__Claude_Preview__preview_network',
       'mcp__Claude_Preview__preview_list'
-    )
-    additionalDirectories = @(
-      $root,
-      $claudeDir
     )
   }
 }
