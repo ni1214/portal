@@ -9,3 +9,7 @@ supabase/.temp/
 
 # Generated migration payloads may contain real user data
 supabase/generated-*.sql
+
+# Local build/test artifacts
+node_modules/
+test-results/
