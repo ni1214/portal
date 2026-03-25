@@ -2623,11 +2623,11 @@ function _clearSearchResults() {
 
 function initSearch() {
   const searchInput    = document.getElementById('search-input');
-  const container      = searchInput.closest('.search-container');
+  const container      = searchInput.closest('.search-container, .app-search-wrap');
   const noResults      = document.getElementById('no-results');
   const resultsSection = document.getElementById('search-results-section');
 
-  container.addEventListener('click', () => searchInput.focus());
+  if (container) container.addEventListener('click', () => searchInput.focus());
 
   searchInput.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
@@ -2640,7 +2640,7 @@ function initSearch() {
   searchInput.addEventListener('input', async () => {
     const raw = searchInput.value.trim();
     const q   = normalizeForSearch(raw);
-    container.classList.toggle('has-value', raw.length > 0);
+    if (container) container.classList.toggle('has-value', raw.length > 0);
 
     if (!q) {
       _clearSearchResults();
@@ -2870,6 +2870,80 @@ document.addEventListener('DOMContentLoaded', async () => {
       openWeatherPanel('solar');
     }
   });
+
+  // ===== サイドバートグル =====
+  (function() {
+    const layout   = document.getElementById('app-layout');
+    const toggle   = document.getElementById('sidebar-toggle');
+    const overlay  = document.getElementById('sidebar-overlay');
+    const isMobile = () => window.innerWidth <= 768;
+    const STORAGE_KEY = 'portal-sidebar-collapsed';
+
+    function openSidebar() {
+      if (isMobile()) {
+        layout.classList.add('sidebar-open');
+        layout.classList.remove('sidebar-collapsed');
+      } else {
+        layout.classList.remove('sidebar-collapsed');
+        localStorage.setItem(STORAGE_KEY, '0');
+      }
+    }
+    function closeSidebar() {
+      if (isMobile()) {
+        layout.classList.remove('sidebar-open');
+      } else {
+        layout.classList.add('sidebar-collapsed');
+        localStorage.setItem(STORAGE_KEY, '1');
+      }
+    }
+    function toggleSidebar() {
+      if (isMobile()) {
+        layout.classList.contains('sidebar-open') ? closeSidebar() : openSidebar();
+      } else {
+        layout.classList.contains('sidebar-collapsed') ? openSidebar() : closeSidebar();
+      }
+    }
+
+    if (toggle) toggle.addEventListener('click', toggleSidebar);
+    if (overlay) overlay.addEventListener('click', closeSidebar);
+
+    // デスクトップ：前回の状態を復元
+    if (!isMobile() && localStorage.getItem(STORAGE_KEY) === '1') {
+      layout.classList.add('sidebar-collapsed');
+    }
+
+    // ホームボタン
+    const homeBtn = document.getElementById('sidebar-home-btn');
+    if (homeBtn) homeBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (isMobile()) closeSidebar();
+    });
+
+    // 検索クリアボタン
+    const searchInput = document.getElementById('search-input');
+    const searchClear = document.getElementById('app-search-clear');
+    if (searchInput && searchClear) {
+      searchInput.addEventListener('input', () => {
+        searchClear.hidden = !searchInput.value;
+      });
+      searchClear.addEventListener('click', () => {
+        searchInput.value = '';
+        searchClear.hidden = true;
+        searchInput.dispatchEvent(new Event('input'));
+        searchInput.focus();
+      });
+    }
+
+    // モバイル：サイドバー内アイテムをタップ→自動閉じ
+    const sidebar = document.getElementById('app-sidebar');
+    if (sidebar) {
+      sidebar.addEventListener('click', e => {
+        if (isMobile() && e.target.closest('.app-sidebar-item, .app-sidebar-util, .app-sidebar-invite')) {
+          setTimeout(closeSidebar, 80);
+        }
+      });
+    }
+  })();
 
   // ===== 使い方ガイド =====
   document.getElementById('help-fab').addEventListener('click', () => {

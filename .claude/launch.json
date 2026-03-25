@@ -24,6 +24,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["C:/Users/frx/Desktop/portal/.claude/worktrees/wizardly-feynman/.claude/wt-server.js"],
       "port": 8084
+    },
+    {
+      "name": "wt-compassionate-franklin",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:/Users/frx/Desktop/portal/.claude/worktrees/compassionate-franklin/.claude/wt-server.js"],
+      "port": 8085
     }
   ]
 }
