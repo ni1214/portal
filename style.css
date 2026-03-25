@@ -19754,3 +19754,58 @@ body {
   .hd-panel { display: none !important; }
 }
 /* モバイル・タブレットは1列のまま（変更しない） */
+
+/* ===================================================
+   UIビューティエージェント 修正 #1
+   ポータルの目的バナーとサマリーカードの間隔修正
+   問題: margin: 0 0 0 !important で下余白がゼロになっていた
+   =================================================== */
+.mission-banner {
+  margin-bottom: 20px !important;
+}
+.app-main {
+  padding: 20px 24px 40px !important;
+}
+
+/* ===================================================
+   UIビューティエージェント 修正 #2
+   サイドバーが全高を埋めない問題
+   問題: app-layout の overflow:hidden でサイドバー背景が途切れる
+   =================================================== */
+.app-layout {
+  /* 高さを確実に viewport いっぱいに */
+  min-height: calc(100vh - var(--app-header-h)) !important;
+}
+.app-sidebar {
+  /* flex コンテナ内でサイドバーが自身の高さに縮まないよう強制 */
+  align-self: stretch !important;
+  min-height: 100% !important;
+}
+
+/* ===================================================
+   UIビューティエージェント 修正 #3
+   2カラムレイアウト列の天揃い修正
+   問題: align-items: start で個人スペースが左列に揃わない
+   =================================================== */
+@media (min-width: 1024px) {
+  .home-content-grid {
+    align-items: start !important;
+    /* 全社スペースと個人スペースが同じ上端から始まるよう揃える */
+    grid-template-rows: auto;
+  }
+  /* ホームダッシュボード全体のpaddingも統一 */
+  #home-dashboard {
+    padding-top: 0 !important;
+  }
+}
+
+/* ===================================================
+   UIビューティエージェント 修正 #4
+   サマリーカードグリッドの均等配置
+   =================================================== */
+.portal-summary-shell {
+  margin-bottom: 20px !important;
+}
+.portal-summary-grid {
+  gap: 16px !important;
+}
