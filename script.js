@@ -406,7 +406,18 @@ function openInviteCodeModalFromHome() {
 }
 
 function focusNoticeBoardFromDashboard() {
-  setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
+  focusHomeWorkspace('notice', 'sidebar-home-btn');
+}
+
+function focusHomeWorkspace(target = 'notice', activeButtonId = 'sidebar-home-btn', options = {}) {
+  const { scrollToTop = false, closeOnMobile = false } = options;
+  setHomeWorkspaceTarget(target, activeButtonId);
+  if (scrollToTop) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  if (closeOnMobile && isMobile()) {
+    closeSidebar();
+  }
 }
 
 function focusWeatherWidget() {
@@ -462,7 +473,6 @@ initTodayDashboard({
     setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
   },
   openFavorites: () => {
-    toggleFavoritesOnly();
     setHomeWorkspaceTarget('favorites', 'btn-favorites-only');
   },
   openInviteCode: openInviteCodeModalFromHome,
@@ -505,7 +515,6 @@ initHomeDashboard({
   openGuideModal: openGuideModalFromHome,
   openReadDiagnosticsModal: openReadDiagnosticsFromHome,
   openInviteCodeModal: openInviteCodeModalFromHome,
-  toggleFavoritesOnly,
 });
 initReadDiagnostics();
 
@@ -2355,6 +2364,7 @@ function closeContextMenu() {
 // ========== お気に入り�Eみ表示 ==========
 function applyFavoritesOnlyMode() {
   document.getElementById('app-main')?.classList.toggle('favorites-only', state.favoritesOnlyMode);
+  renderFavorites();
   const btn = document.getElementById('btn-favorites-only');
   if (!btn) return;
   if (state.favoritesOnlyMode) {
@@ -2759,13 +2769,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ホ�Eムボタン
-    const homeBtn = document.getElementById('sidebar-home-btn');
-    if (homeBtn) homeBtn.addEventListener('click', () => {
-      setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      if (isMobile()) closeSidebar();
-    });
-
     // 検索クリアボタン
     const searchInput = document.getElementById('search-input');
     const searchClear = document.getElementById('app-search-clear');
@@ -2786,8 +2789,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (sidebar) {
       const selectHomeWorkspace = (target, buttonId = '') => {
         const normalizedTarget = target || 'notice';
-        setHomeWorkspaceTarget(normalizedTarget, buttonId || 'sidebar-home-btn');
-        if (isMobile()) closeSidebar();
+        focusHomeWorkspace(normalizedTarget, buttonId || 'sidebar-home-btn', {
+          scrollToTop: normalizedTarget === 'notice',
+          closeOnMobile: isMobile(),
+        });
       };
       sidebar.addEventListener('click', e => {
         const button = e.target.closest('[data-home-target]');
@@ -2834,7 +2839,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     focusNoticeBoardFromDashboard();
   });
   document.getElementById('header-home-btn')?.addEventListener('click', () => {
-    setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
+    focusHomeWorkspace('notice', 'sidebar-home-btn', { scrollToTop: true });
   });
   document.getElementById('header-shared-btn')?.addEventListener('click', () => {
     state.sharedLinksCategory = 'all';
@@ -2928,11 +2933,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Supabase ?????????????????:', err);
     });
 
-  // お気に入り�Eみ表示ボタン
-  document.getElementById('btn-favorites-only')?.addEventListener('click', () => {
-    toggleFavoritesOnly();
-    setHomeWorkspaceTarget('favorites', 'btn-favorites-only');
-  });
   applyFavoritesOnlyMode();
 
   // ===== ロチE��ボタン =====

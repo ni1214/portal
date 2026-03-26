@@ -20353,12 +20353,10 @@ body {
 
   .home-workspace-shell {
     padding: 28px;
-    border-radius: 30px;
-    border: 1px solid var(--border-glass);
-    background:
-      linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 94%, transparent), color-mix(in srgb, var(--bg-glass) 82%, transparent)),
-      var(--bg-card);
-    box-shadow: var(--app-shadow-card);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   .home-workspace-header {
@@ -20384,6 +20382,22 @@ body {
     min-width: 0;
     padding: 18px;
     border-radius: var(--portal-home-card-radius);
+  }
+
+  .home-workspace-card,
+  .home-workspace-badge,
+  .home-workspace-metric,
+  .home-workspace-notice-stat,
+  .home-workspace-notice-item {
+    border-radius: 20px;
+    border-color: color-mix(in srgb, var(--border-glass) 55%, transparent);
+    background: color-mix(in srgb, var(--bg-card) 94%, transparent);
+    box-shadow: none;
+  }
+
+  .home-workspace-shell::before {
+    width: 3px;
+    opacity: 0.55;
   }
 
   .home-workspace-card--main,
@@ -20433,10 +20447,10 @@ body {
   .home-workspace-overview-card,
   .home-workspace-stage-card {
     min-width: 0;
-    border-radius: var(--portal-home-card-radius);
-    border: 1px solid var(--border-glass);
-    background: color-mix(in srgb, var(--bg-card) 88%, var(--bg-glass));
-    box-shadow: var(--app-shadow-card);
+    border-radius: 20px;
+    border: 1px solid color-mix(in srgb, var(--border-glass) 55%, transparent);
+    background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+    box-shadow: none;
     overflow: hidden;
   }
 
@@ -20448,11 +20462,11 @@ body {
   .home-workspace-stage,
   .home-workspace-panel {
     margin-top: 20px;
-    padding: 22px;
-    border-radius: 30px;
-    border: 1px solid var(--border-glass);
-    background: color-mix(in srgb, var(--bg-card) 90%, var(--bg-glass));
-    box-shadow: var(--app-shadow-card);
+    padding: 18px 0 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   .home-workspace-stage-head,

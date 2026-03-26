@@ -211,7 +211,7 @@ function renderOverviewCard(snapshot) {
 
 function renderOverviewList(items = [], emptyText = '') {
   if (!Array.isArray(items) || items.length === 0) {
-    return `<div class="home-workspace-empty">${esc(emptyText || '表示できる項目はありません')}</div>`;
+    return '';
   }
 
   return `
@@ -606,7 +606,7 @@ function buildFavoritesConfig() {
   return {
     title: 'お気に入り',
     detailTitle: 'お気に入りの表示',
-    copy: 'お気に入りのカードをまとめて確認して、表示モードを切り替えられます。',
+    copy: 'お気に入りのカードをまとめて確認して、よく使う導線を開けます。',
     kicker: 'よく使う導線',
     tone: 'favorites',
     value: `${count}件`,
@@ -618,11 +618,11 @@ function buildFavoritesConfig() {
     ],
     bullets: [
       'お気に入りカードをまとめて確認',
-      'よく使う導線へすぐ戻る',
-      '表示モードもそのまま切り替え',
+      'よく使う導線へすぐ開く',
+      '下のワークスペースで詳細を開く',
     ],
     actions: [
-      { label: 'お気に入り表示を切り替える', action: 'toggle-favorites', variant: 'primary' },
+      { label: 'お気に入りを開く', action: 'focus-favorites', variant: 'primary' },
     ],
   };
 }
@@ -861,9 +861,8 @@ function handleWorkspaceAction(action) {
     case 'open-property-summary':
       deps.openPropertySummaryModal?.();
       return;
-    case 'toggle-favorites':
     case 'focus-favorites':
-      deps.toggleFavoritesOnly?.();
+    case 'toggle-favorites':
       setHomeWorkspaceTarget('favorites', 'btn-favorites-only');
       return;
     case 'open-settings':
