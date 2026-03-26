@@ -119,30 +119,15 @@ export function initHomeDashboard(d = {}) {
   renderHomeWorkspace();
 }
 
-export function setHomeWorkspaceTarget(target = DEFAULT_TARGET, activeButtonId = '') {
-  ensureHomeCompactMode();
-  state.homeWorkspaceTarget = normalizeTarget(target);
-  if (activeButtonId) {
-    state.homeWorkspaceActiveButtonId = activeButtonId;
-  }
-  const host = document.getElementById('home-dashboard');
-  if (!host) return;
-  if (!host.querySelector('.home-workspace-shell')) {
-    renderHomeWorkspace();
-    return;
-  }
-  const targetKey = normalizeTarget(state.homeWorkspaceTarget);
-  const targetConfig = buildTargetConfig(targetKey);
-  // 上部固定ゾーンは変えない — ステージのみ更新
-  renderHomeWorkspaceStage(targetKey, targetConfig);
+// サイドバーはステージを切り替えなくなったためこの関数は後方互換用のみ
+export function setHomeWorkspaceTarget(_target = DEFAULT_TARGET, _activeButtonId = '') {
+  // no-op: ステージは常に Today's Focus 固定
 }
 
 export function updateSummaryCards() {
   ensureHomeCompactMode();
-  const targetKey = normalizeTarget(state.homeWorkspaceTarget);
-  const target = buildTargetConfig(targetKey);
   renderHomeWorkspaceTop();
-  renderHomeWorkspaceStage(targetKey, target);
+  renderHomeWorkspaceStage();
 }
 
 export function renderHomeWorkspace() {
@@ -150,18 +135,16 @@ export function renderHomeWorkspace() {
   const host = document.getElementById('home-dashboard');
   if (!host) return;
 
-  const targetKey = normalizeTarget(state.homeWorkspaceTarget);
-  const target = buildTargetConfig(targetKey);
-  const stageBodyId = `home-workspace-stage-body-${targetKey}`;
   const overviewTitle = buildOverviewTitle();
   const overviewSubtitle = buildOverviewSubtitle();
   const taskOverview = buildTaskOverview();
   const noticeOverview = buildNoticeOverview();
   const companyOverview = buildCompanyNoticeOverview();
+  const focus = buildTodaysFocus();
 
   host.innerHTML = `
     <section class="home-workspace-shell" aria-live="polite" role="region" aria-labelledby="home-overview-title">
-      <!-- 上部固定ゾーン: サイドバー切り替えで変わらない -->
+      <!-- 上部固定ゾーン -->
       <div class="home-workspace-top" data-home-workspace-top>
         <header class="home-workspace-header">
           <div class="home-workspace-header-copy">
@@ -177,26 +160,22 @@ export function renderHomeWorkspace() {
         </div>
       </div>
 
-      <!-- ステージゾーン: サイドバーで切り替わる -->
-      <section class="home-workspace-stage home-workspace-panel" data-home-workspace-stage data-tone="${esc(target.tone)}" aria-labelledby="home-workspace-stage-title">
+      <!-- Today's Focus: 常に固定 -->
+      <section class="home-workspace-stage home-workspace-panel" data-home-workspace-stage aria-labelledby="home-workspace-stage-title">
         <div class="home-workspace-stage-head">
           <div>
-            <p class="home-workspace-card-kicker">${esc(target.kicker)}</p>
-            <h3 class="home-workspace-stage-title" id="home-workspace-stage-title">${esc(target.detailTitle)}</h3>
-            <p class="home-workspace-stage-copy">${esc(target.copy)}</p>
+            <p class="home-workspace-card-kicker">今日の状況</p>
+            <h3 class="home-workspace-stage-title" id="home-workspace-stage-title">Today's Focus</h3>
+            <p class="home-workspace-stage-copy">承諾待ちのタスクと未読のお知らせをまとめて確認できます。</p>
           </div>
-          <span class="home-workspace-card-pill">${esc(target.badge || target.title)}</span>
+          <span class="home-workspace-card-pill">${esc(focus.totalPill)}</span>
         </div>
-
-        <div class="home-workspace-stage-body" id="${stageBodyId}">
-          ${renderStageContent(targetKey, target)}
+        <div class="home-workspace-stage-body" id="home-workspace-stage-body-focus">
+          ${renderTodaysFocusBody(focus)}
         </div>
       </section>
     </section>
   `;
-
-  syncSidebarSelection();
-  hydrateStageContent(targetKey, stageBodyId, target);
 }
 
 function renderHomeWorkspaceTop() {
@@ -245,7 +224,7 @@ function renderHomeWorkspaceTop() {
   }
 }
 
-function renderHomeWorkspaceStage(targetKey, target) {
+function renderHomeWorkspaceStage() {
   const host = document.getElementById('home-dashboard');
   if (!host) return;
 
@@ -258,25 +237,21 @@ function renderHomeWorkspaceStage(targetKey, target) {
   const stage = shell.querySelector('[data-home-workspace-stage]');
   if (!stage) return;
 
-  const stageBodyId = `home-workspace-stage-body-${targetKey}`;
-  stage.dataset.tone = target.tone;
+  const focus = buildTodaysFocus();
+  stage.removeAttribute('data-tone');
   stage.innerHTML = `
     <div class="home-workspace-stage-head">
       <div>
-        <p class="home-workspace-card-kicker">${esc(target.kicker)}</p>
-        <h3 class="home-workspace-stage-title" id="home-workspace-stage-title">${esc(target.detailTitle)}</h3>
-        <p class="home-workspace-stage-copy">${esc(target.copy)}</p>
+        <p class="home-workspace-card-kicker">今日の状況</p>
+        <h3 class="home-workspace-stage-title" id="home-workspace-stage-title">Today's Focus</h3>
+        <p class="home-workspace-stage-copy">承諾待ちのタスクと未読のお知らせをまとめて確認できます。</p>
       </div>
-      <span class="home-workspace-card-pill">${esc(target.badge || target.title)}</span>
+      <span class="home-workspace-card-pill">${esc(focus.totalPill)}</span>
     </div>
-
-    <div class="home-workspace-stage-body" id="${stageBodyId}">
-      ${renderStageContent(targetKey, target)}
+    <div class="home-workspace-stage-body" id="home-workspace-stage-body-focus">
+      ${renderTodaysFocusBody(focus)}
     </div>
   `;
-
-  syncSidebarSelection();
-  hydrateStageContent(targetKey, stageBodyId, target);
 }
 
 function buildOverviewTitle() {
@@ -288,7 +263,95 @@ function buildOverviewSubtitle() {
   if (!state.currentUsername) {
     return 'ユーザー名を設定すると、自分のタスクや通知が表示されます。';
   }
-  return 'このゾーンは常に固定。サイドバーで下のエリアを切り替えてください。';
+  return 'サイドバーのボタンは直接モーダルを開きます。下は今日の要確認事項です。';
+}
+
+function buildTodaysFocus() {
+  const activeTasks = collectActiveTasks();
+  const stats = buildNoticeStats();
+  const totalCount = activeTasks.length + stats.totalCount;
+  return {
+    totalPill: `${totalCount}件`,
+    tasks: activeTasks.slice(0, 5),
+    taskCount: activeTasks.length,
+    notices: stats.notices.filter(n => {
+      const readIds = state.readNoticeIds instanceof Set ? state.readNoticeIds : new Set();
+      const acked = Array.isArray(n.acknowledgedBy) ? n.acknowledgedBy : [];
+      const needsAck = n.requireAcknowledgement && !acked.includes(state.currentUsername || '');
+      const unread = !readIds.has(n.id) && !n.requireAcknowledgement;
+      return needsAck || unread;
+    }).slice(0, 4),
+    noticeCount: stats.totalCount,
+    pendingAckCount: stats.pendingAckCount,
+    unreadCount: stats.unreadCount,
+  };
+}
+
+function renderTodaysFocusBody(focus) {
+  const taskCard = `
+    <article class="home-workspace-card home-workspace-card--main" style="--workspace-accent:#8b5cf6">
+      <div class="home-workspace-card-head">
+        <div>
+          <p class="home-workspace-card-kicker">タスク</p>
+          <h4 class="home-workspace-card-title">承諾待ち・進行中</h4>
+        </div>
+        <span class="home-workspace-card-pill">${esc(`${focus.taskCount}件`)}</span>
+      </div>
+      ${focus.tasks.length ? `
+        <div class="home-workspace-notice-preview">
+          <div class="home-workspace-notice-list">
+            ${focus.tasks.map(task => `
+              <div class="home-workspace-notice-item">
+                <strong class="home-workspace-notice-title">${esc(task.title || 'タスク')}</strong>
+                <span class="home-workspace-notice-meta">${esc(buildTaskMetaLine(task))}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : `<p class="home-workspace-empty">承諾待ち・進行中のタスクはありません。</p>`}
+      <div class="home-workspace-side-actions" style="margin-top:14px">
+        <button type="button" class="home-workspace-action home-workspace-action--primary" data-home-action="open-task-modal">
+          タスク管理を開く
+        </button>
+      </div>
+    </article>
+  `;
+
+  const noticeCard = `
+    <article class="home-workspace-card home-workspace-card--aside" style="--workspace-accent:var(--accent-orange)">
+      <div class="home-workspace-card-head">
+        <div>
+          <p class="home-workspace-card-kicker">お知らせ・通知</p>
+          <h4 class="home-workspace-card-title">未読・確認待ち</h4>
+        </div>
+        <span class="home-workspace-card-pill">${esc(`${focus.noticeCount}件`)}</span>
+      </div>
+      ${focus.notices.length ? `
+        <div class="home-workspace-notice-preview">
+          <div class="home-workspace-notice-list">
+            ${focus.notices.map(n => `
+              <div class="home-workspace-notice-item">
+                <strong class="home-workspace-notice-title">${esc(n.title || 'お知らせ')}</strong>
+                <span class="home-workspace-notice-meta">${esc(buildNoticeMetaLine(n))}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : `<p class="home-workspace-empty">未読・確認待ちのお知らせはありません。</p>`}
+      <div class="home-workspace-side-actions" style="margin-top:14px">
+        <button type="button" class="home-workspace-action home-workspace-action--secondary" data-home-action="open-notice-modal">
+          お知らせを確認する
+        </button>
+      </div>
+    </article>
+  `;
+
+  return `
+    <div class="home-workspace-grid home-workspace-top-grid">
+      ${taskCard}
+      ${noticeCard}
+    </div>
+  `;
 }
 
 function renderOverviewCard(snapshot) {

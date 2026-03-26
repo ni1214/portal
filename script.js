@@ -2790,25 +2790,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     // モバイル�E�サイドバー冁E��イチE��をタチE�E→�E動閉ぁE
     const sidebar = document.getElementById('app-sidebar');
     if (sidebar) {
-      const selectHomeWorkspace = (target, buttonId = '') => {
-        const normalizedTarget = target || 'notice';
-        focusHomeWorkspace(normalizedTarget, buttonId || 'sidebar-home-btn', {
-          scrollToTop: normalizedTarget === 'notice',
-          closeOnMobile: isMobile(),
-        });
+      // サイドバーボタン → 直接モーダル/パネルを開く（ステージ切り替えなし）
+      const sidebarDirectActions = {
+        'sidebar-home-btn':     () => window.scrollTo({ top: 0, behavior: 'smooth' }),
+        'btn-calendar':         async () => {
+          await openCalendarModal();
+          if (document.getElementById('cal-modal')?.classList.contains('visible')) {
+            await onCalendarModalOpen();
+          }
+        },
+        'btn-task':             () => openTaskModalFromHome(),
+        'btn-notice-bell':      () => openNoticeModal(null),
+        'btn-reqboard':         () => openRequestModalFromHome(),
+        'chat-fab':             () => state.chatPanelOpen ? closeChatPanel() : openChatPanel(),
+        'ft-fab':               () => state._ftPanelOpen ? closeFileTransferPanel() : openFileTransferPanel(),
+        'btn-order-launch':     () => openOrderModal(),
+        'btn-property-summary': () => openPropertySummaryFromHome(),
+        'btn-email-assist':     () => openEmailModal(),
+        'btn-favorites-only':   () => toggleFavoritesOnly(),
+        'settings-fab':         () => openSettingsPanelFromHome(),
+        'help-fab':             () => openGuideModalFromHome(),
+        'btn-read-diagnostics': () => openReadDiagnosticsFromHome(),
+        'home-invite-btn':      () => openInviteCodeModalFromHome(),
       };
       sidebar.addEventListener('click', e => {
         const button = e.target.closest('[data-home-target]');
         if (!button || !sidebar.contains(button)) return;
         e.preventDefault();
         e.stopImmediatePropagation();
-        selectHomeWorkspace(button.dataset.homeTarget, button.id);
+        const action = sidebarDirectActions[button.id];
+        if (action) void action();
+        if (isMobile()) setTimeout(closeSidebar, 80);
       }, true);
-      sidebar.addEventListener('click', e => {
-        if (isMobile() && e.target.closest('.app-sidebar-item, .app-sidebar-util, .app-sidebar-invite')) {
-          setTimeout(closeSidebar, 80);
-        }
-      });
     }
 
     // クイチE��アクセスボタン ↁE対応するサイドバーボタンに委譲
