@@ -20235,6 +20235,63 @@ body {
   line-height: 1.6;
 }
 
+.home-workspace-stage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.home-workspace-stage-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  min-height: clamp(420px, 56vh, 760px);
+}
+
+.home-workspace-embed {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.home-workspace-embed > .task-embedded-shell {
+  flex: 1;
+  min-height: 100%;
+}
+
+.task-embedded-shell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100%;
+  border: 1px solid var(--border-glass);
+  border-radius: 22px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--bg-card) 94%, transparent);
+  box-shadow: var(--app-shadow-card);
+}
+
+.task-modal-header--embedded {
+  background: color-mix(in srgb, var(--bg-glass) 80%, transparent);
+}
+
+.task-tabs--embedded {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+}
+
+.task-tab-content--embedded {
+  padding: 14px 16px 18px;
+}
+
+.task-new-form--embedded {
+  padding-top: 8px;
+}
+
 .app-sidebar-item.home-nav-active,
 .app-sidebar-util.home-nav-active,
 .app-sidebar-invite.home-nav-active {
@@ -20302,61 +20359,72 @@ body {
 }
 
 /* ===================================================
-   Home Prototype: fixed desktop layout + simplified overview
+   Home Layout Stabilizer
+   Replaces the old fixed-width prototype that was clipping
+   the top area and offsetting the sidebar from the left edge.
    =================================================== */
 :root {
-  --portal-desktop-shell-width: 1440px;
-  --portal-home-content-width: 1184px;
-  --portal-home-card-radius: 26px;
-}
-
-.home-content-grid,
-#space-shared,
-#space-personal,
-#shared-home-panel,
-#shared-space-body,
-#personal-space-body,
-#dash-today-section,
-.portal-summary-shell,
-.portal-rail-shell,
-.portal-personal-card,
-.portal-personal-mini-grid,
-.shared-home-shell {
-  display: none !important;
+  --portal-home-shell-max: 1380px;
+  --portal-home-main-max: 1240px;
+  --portal-home-card-radius: 24px;
 }
 
 @media (min-width: 768px) {
   html,
   body {
-    overflow-x: auto !important;
+    overflow-x: hidden !important;
   }
 
   body {
-    min-width: var(--portal-desktop-shell-width);
+    min-width: 0 !important;
   }
 
   .app-layout {
-    width: var(--portal-desktop-shell-width) !important;
-    min-width: var(--portal-desktop-shell-width) !important;
-    margin: 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    align-items: stretch;
+  }
+
+  .app-sidebar {
+    align-self: stretch !important;
+    min-height: calc(100vh - var(--app-header-h)) !important;
+    height: auto !important;
+  }
+
+  .app-sidebar-inner {
+    min-height: 100%;
   }
 
   .app-main {
     min-width: 0;
+    padding-top: 32px !important;
+  }
+
+  #home-dashboard,
+  .home-content-grid {
+    width: min(100%, var(--portal-home-shell-max));
+    max-width: var(--portal-home-shell-max);
+    margin-left: auto;
+    margin-right: auto;
   }
 
   #home-dashboard {
     display: block !important;
-    width: min(100%, var(--portal-home-content-width));
-    margin: 0 auto 28px;
+    margin-bottom: 28px;
+  }
+
+  .home-content-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr) !important;
+    gap: 24px !important;
+    align-items: start !important;
   }
 
   .home-workspace-shell {
-    padding: 28px;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
+    padding: 26px;
+    border-radius: 28px;
   }
 
   .home-workspace-header {
@@ -20371,102 +20439,27 @@ body {
     min-width: 220px;
   }
 
-  .home-workspace-grid {
+  .home-overview-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
-    margin-top: 20px;
+    margin-top: 24px;
   }
 
-  .home-workspace-card {
-    min-width: 0;
-    padding: 18px;
-    border-radius: var(--portal-home-card-radius);
-  }
-
-  .home-workspace-card,
-  .home-workspace-badge,
-  .home-workspace-metric,
-  .home-workspace-notice-stat,
-  .home-workspace-notice-item {
-    border-radius: 20px;
-    border-color: color-mix(in srgb, var(--border-glass) 55%, transparent);
-    background: color-mix(in srgb, var(--bg-card) 94%, transparent);
-    box-shadow: none;
-  }
-
-  .home-workspace-shell::before {
-    width: 3px;
-    opacity: 0.55;
-  }
-
-  .home-workspace-card--main,
-  .home-workspace-card--aside {
-    display: block;
-  }
-
-  .home-workspace-card--main {
-    grid-column: span 2;
-  }
-
-  .home-workspace-card--aside {
-    grid-column: span 1;
-  }
-
-  .home-workspace-metric-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .home-workspace-actions {
-    flex-wrap: wrap;
-  }
-
-  .home-workspace-action {
-    min-height: 48px;
-  }
-
-  .home-workspace-notice-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
+  .home-overview-card,
   .home-workspace-stage,
   .home-workspace-panel,
-  .home-overview-shell {
-    display: block;
-  }
-
-  .home-overview-grid,
-  .home-workspace-top-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
-    margin-top: 0;
-  }
-
-  .home-overview-card,
-  .home-workspace-overview-card,
-  .home-workspace-stage-card {
-    min-width: 0;
-    border-radius: 20px;
-    border: 1px solid color-mix(in srgb, var(--border-glass) 55%, transparent);
-    background: color-mix(in srgb, var(--bg-card) 96%, transparent);
-    box-shadow: none;
-    overflow: hidden;
-  }
-
-  .home-overview-card,
-  .home-workspace-overview-card {
-    padding: 18px;
+  .home-workspace-badge {
+    border-radius: var(--portal-home-card-radius);
   }
 
   .home-workspace-stage,
   .home-workspace-panel {
-    margin-top: 20px;
-    padding: 18px 0 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
+    margin-top: 22px;
+  }
+
+  .home-workspace-stage-body {
+    flex: 1;
   }
 
   .home-workspace-stage-head,
@@ -20483,6 +20476,12 @@ body {
   }
 }
 
+@media (max-width: 1120px) {
+  .home-content-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
 @media (max-width: 767px) {
   html,
   body {
@@ -20490,13 +20489,14 @@ body {
   }
 
   body {
-    min-width: 0;
+    min-width: 0 !important;
   }
 
   .app-layout {
     width: 100% !important;
     min-width: 0 !important;
-    margin: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
   }
 
   #home-dashboard {
@@ -20518,21 +20518,7 @@ body {
     width: 100%;
   }
 
-  .home-workspace-grid,
   .home-overview-grid,
-  .home-workspace-top-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .home-workspace-card,
-  .home-overview-card,
-  .home-workspace-overview-card,
-  .home-workspace-stage,
-  .home-workspace-panel {
-    padding: 16px;
-    border-radius: 20px;
-  }
-
   .home-workspace-metric-grid,
   .home-workspace-notice-summary {
     grid-template-columns: 1fr;
@@ -20544,5 +20530,17 @@ body {
 
   .home-workspace-action {
     width: 100%;
+  }
+
+  .home-workspace-stage-body {
+    min-height: 0;
+  }
+
+  .home-workspace-embed {
+    min-height: 0;
+  }
+
+  .task-embedded-shell {
+    border-radius: 18px;
   }
 }

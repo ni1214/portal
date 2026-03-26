@@ -132,6 +132,7 @@ export function renderHomeWorkspace() {
 
   const targetKey = normalizeTarget(state.homeWorkspaceTarget);
   const target = buildTargetConfig(targetKey);
+  const stageBodyId = `home-workspace-stage-body-${targetKey}`;
   const overviewTitle = buildOverviewTitle();
   const overviewSubtitle = buildOverviewSubtitle();
   const taskOverview = buildTaskOverview();
@@ -168,16 +169,15 @@ export function renderHomeWorkspace() {
           <span class="home-workspace-card-pill">${esc(target.badge || target.title)}</span>
         </div>
 
-        <div class="home-workspace-stage-body">
-          ${renderMetricGrid(target.metrics)}
-          ${renderBulletList(target.bullets)}
-          ${renderActionRow(target.actions)}
+        <div class="home-workspace-stage-body" id="${stageBodyId}">
+          ${renderStageContent(targetKey, target)}
         </div>
       </section>
     </section>
   `;
 
   syncSidebarSelection();
+  hydrateStageContent(targetKey, stageBodyId, target);
 }
 
 function buildOverviewTitle() {
@@ -776,6 +776,324 @@ function renderActionRow(actions = []) {
       ${visibleActions.map((action, index) => renderActionButton(action, index === 0)).join('')}
     </div>
   `;
+}
+
+function renderStageContent(targetKey, target) {
+  const fallback = renderDefaultStageContent(target);
+
+  switch (targetKey) {
+    case 'task':
+      return renderTaskStageContent(target, fallback);
+    case 'notice':
+      return renderNoticeStageContent(target);
+    case 'request':
+      return renderRequestStageContent(target);
+    case 'calendar':
+      return renderCalendarStageContent(target);
+    case 'favorites':
+      return renderFavoritesStageContent(target);
+    default:
+      return fallback;
+  }
+}
+
+function renderDefaultStageContent(target) {
+  return `
+    ${renderMetricGrid(target.metrics)}
+    ${renderBulletList(target.bullets)}
+    ${renderActionRow(target.actions)}
+  `;
+}
+
+function renderTaskStageContent(target, fallbackContent) {
+  const stats = buildTaskSnapshot();
+  const activeTasks = collectActiveTasks();
+  const focusTasks = activeTasks.slice(0, 4);
+  const embedAvailable = typeof deps.renderEmbeddedTaskWorkspace === 'function';
+
+  return `
+    <div class="home-workspace-grid home-workspace-top-grid">
+      <article class="home-workspace-card home-workspace-card--main">
+        <div class="home-workspace-card-head">
+          <div>
+            <p class="home-workspace-card-kicker">フォーカス</p>
+            <h4 class="home-workspace-card-title">自分のタスクを常設表示</h4>
+          </div>
+          <span class="home-workspace-card-pill">${esc(stats.countLabel)}</span>
+        </div>
+        <div class="home-workspace-notice-summary">
+          <div class="home-workspace-notice-stat">
+            <span>受信</span>
+            <strong>${esc(stats.receivedLabel)}</strong>
+          </div>
+          <div class="home-workspace-notice-stat">
+            <span>共有</span>
+            <strong>${esc(stats.sharedLabel)}</strong>
+          </div>
+          <div class="home-workspace-notice-stat">
+            <span>進行中</span>
+            <strong>${esc(stats.sentLabel)}</strong>
+          </div>
+          <div class="home-workspace-notice-stat">
+            <span>期限超過</span>
+            <strong>${esc(stats.overdueLabel)}</strong>
+          </div>
+        </div>
+        ${focusTasks.length ? `
+          <div class="home-workspace-notice-preview">
+            <div class="home-workspace-notice-list">
+              ${focusTasks.map(task => `
+                <div class="home-workspace-notice-item">
+                  <strong class="home-workspace-notice-title">${esc(task.title || 'タスク')}</strong>
+                  <span class="home-workspace-notice-meta">${esc(buildTaskMetaLine(task))}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : '<p class="home-workspace-empty">進行中のタスクはありません。</p>'}
+      </article>
+      <aside class="home-workspace-card home-workspace-card--aside">
+        <div class="home-workspace-card-head">
+          <div>
+            <p class="home-workspace-card-kicker">操作</p>
+            <h4 class="home-workspace-card-title">すぐ始める</h4>
+          </div>
+        </div>
+        ${renderBulletList(target.bullets)}
+        <div class="home-workspace-side-actions">
+          ${renderActionButton(target.actions[0], true)}
+        </div>
+        ${target.actions[1] ? `
+          <div class="home-workspace-side-actions">
+            ${renderActionButton(target.actions[1], false)}
+          </div>
+        ` : ''}
+        <p class="home-workspace-side-note">
+          ${embedAvailable ? '下のエリアにタスク管理の実ビューを展開しています。' : '埋め込み API が未接続のため、この画面では要約表示を出しています。'}
+        </p>
+      </aside>
+    </div>
+    <div class="home-workspace-embed" id="home-task-embed" data-home-embed="task">
+      ${embedAvailable ? '' : fallbackContent}
+    </div>
+  `;
+}
+
+function renderNoticeStageContent(target) {
+  const stats = buildNoticeStats();
+
+  return `
+    <div class="home-workspace-grid home-workspace-top-grid">
+      <article class="home-workspace-card home-workspace-card--main">
+        <div class="home-workspace-card-head">
+          <div>
+            <p class="home-workspace-card-kicker">通知トレイ</p>
+            <h4 class="home-workspace-card-title">未読と確認待ちをここで把握</h4>
+          </div>
+          <span class="home-workspace-card-pill">${esc(target.badge || target.title)}</span>
+        </div>
+        <div class="home-workspace-notice-summary">
+          <div class="home-workspace-notice-stat">
+            <span>未読</span>
+            <strong>${esc(`${stats.unreadCount}件`)}</strong>
+          </div>
+          <div class="home-workspace-notice-stat">
+            <span>確認待ち</span>
+            <strong>${esc(`${stats.pendingAckCount}件`)}</strong>
+          </div>
+        </div>
+        ${stats.notices.length ? `
+          <div class="home-workspace-notice-preview">
+            <div class="home-workspace-notice-list">
+              ${stats.notices.slice(0, 4).map(notice => `
+                <div class="home-workspace-notice-item">
+                  <strong class="home-workspace-notice-title">${esc(notice.title || 'お知らせ')}</strong>
+                  <span class="home-workspace-notice-meta">${esc(buildNoticeMetaLine(notice))}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : '<p class="home-workspace-empty">表示できるお知らせはありません。</p>'}
+      </article>
+      <aside class="home-workspace-card home-workspace-card--aside">
+        <div class="home-workspace-card-head">
+          <div>
+            <p class="home-workspace-card-kicker">次の操作</p>
+            <h4 class="home-workspace-card-title">通知の流れ</h4>
+          </div>
+        </div>
+        ${renderBulletList(target.bullets)}
+        ${renderActionRow(target.actions)}
+      </aside>
+    </div>
+  `;
+}
+
+function renderRequestStageContent(target) {
+  const receivedRequests = Array.isArray(state.receivedRequests) ? state.receivedRequests : [];
+  const sentRequests = Array.isArray(state.sentRequests) ? state.sentRequests : [];
+  const recentRequests = [...receivedRequests, ...sentRequests]
+    .sort((a, b) => toMillis(b.updatedAt || b.createdAt) - toMillis(a.updatedAt || a.createdAt))
+    .slice(0, 4);
+
+  return `
+    <div class="home-workspace-grid home-workspace-top-grid">
+      <article class="home-workspace-card home-workspace-card--main">
+        <div class="home-workspace-card-head">
+          <div>
+            <p class="home-workspace-card-kicker">依頼ボード</p>
+            <h4 class="home-workspace-card-title">受信と送信の流れを一画面で確認</h4>
+          </div>
+          <span class="home-workspace-card-pill">${esc(target.badge || target.title)}</span>
+        </div>
+        ${renderMetricGrid(target.metrics)}
+        ${recentRequests.length ? `
+          <div class="home-workspace-notice-preview">
+            <div class="home-workspace-notice-list">
+              ${recentRequests.map(request => `
+                <div class="home-workspace-notice-item">
+                  <strong class="home-workspace-notice-title">${esc(request.title || '依頼')}</strong>
+                  <span class="home-workspace-notice-meta">${esc(buildRequestMetaLine(request))}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : '<p class="home-workspace-empty">進行中の依頼はありません。</p>'}
+      </article>
+      <aside class="home-workspace-card home-workspace-card--aside">
+        <div class="home-workspace-card-head">
+          <div>
+            <p class="home-workspace-card-kicker">進め方</p>
+            <h4 class="home-workspace-card-title">依頼からタスク化へ</h4>
+          </div>
+        </div>
+        ${renderBulletList(target.bullets)}
+        ${renderActionRow(target.actions)}
+      </aside>
+    </div>
+  `;
+}
+
+function renderCalendarStageContent(target) {
+  const attendance = buildAttendanceSnapshot();
+
+  return `
+    <div class="home-workspace-grid home-workspace-top-grid">
+      <article class="home-workspace-card home-workspace-card--main">
+        <div class="home-workspace-card-head">
+          <div>
+            <p class="home-workspace-card-kicker">今日の勤怠</p>
+            <h4 class="home-workspace-card-title">当日の入力状況を確認</h4>
+          </div>
+          <span class="home-workspace-card-pill">${esc(attendance.value)}</span>
+        </div>
+        ${renderMetricGrid(target.metrics)}
+        <div class="home-workspace-notice-preview">
+          <div class="home-workspace-notice-list">
+            <div class="home-workspace-notice-item">
+              <strong class="home-workspace-notice-title">入力メモ</strong>
+              <span class="home-workspace-notice-meta">${esc(attendance.noteLabel || '未入力')}</span>
+            </div>
+            <div class="home-workspace-notice-item">
+              <strong class="home-workspace-notice-title">対象月</strong>
+              <span class="home-workspace-notice-meta">${esc(attendance.monthLabel)}</span>
+            </div>
+          </div>
+        </div>
+      </article>
+      <aside class="home-workspace-card home-workspace-card--aside">
+        <div class="home-workspace-card-head">
+          <div>
+            <p class="home-workspace-card-kicker">操作</p>
+            <h4 class="home-workspace-card-title">今日の記録を開く</h4>
+          </div>
+        </div>
+        ${renderBulletList(target.bullets)}
+        ${renderActionRow(target.actions)}
+      </aside>
+    </div>
+  `;
+}
+
+function renderFavoritesStageContent(target) {
+  const count = Array.isArray(state.personalFavorites) ? state.personalFavorites.length : 0;
+  const favoritesLabel = state.favoritesOnlyMode ? 'お気に入り表示に固定中です。' : '必要なカードだけに絞り込めます。';
+
+  return `
+    <div class="home-workspace-grid home-workspace-top-grid">
+      <article class="home-workspace-card home-workspace-card--main">
+        <div class="home-workspace-card-head">
+          <div>
+            <p class="home-workspace-card-kicker">ショートカット</p>
+            <h4 class="home-workspace-card-title">よく使うカードをすぐ開く</h4>
+          </div>
+          <span class="home-workspace-card-pill">${esc(`${count}件`)}</span>
+        </div>
+        ${renderMetricGrid(target.metrics)}
+        <p class="home-workspace-copy">${esc(favoritesLabel)}</p>
+      </article>
+      <aside class="home-workspace-card home-workspace-card--aside">
+        <div class="home-workspace-card-head">
+          <div>
+            <p class="home-workspace-card-kicker">表示</p>
+            <h4 class="home-workspace-card-title">お気に入りビュー</h4>
+          </div>
+        </div>
+        ${renderBulletList(target.bullets)}
+        ${renderActionRow(target.actions)}
+      </aside>
+    </div>
+  `;
+}
+
+function hydrateStageContent(targetKey, stageBodyId, target) {
+  if (targetKey !== 'task' || typeof deps.renderEmbeddedTaskWorkspace !== 'function') {
+    return;
+  }
+
+  const mountPoint = document.getElementById('home-task-embed');
+  if (!mountPoint) return;
+
+  try {
+    deps.renderEmbeddedTaskWorkspace(mountPoint, {
+      targetKey,
+      stageBodyId,
+      title: target.detailTitle,
+      badge: target.badge || target.title,
+    });
+  } catch (error) {
+    console.error('task workspace embed failed:', error);
+    mountPoint.innerHTML = renderDefaultStageContent(target);
+  }
+}
+
+function buildTaskMetaLine(task) {
+  return [
+    TASK_STATUS_LABEL[task.status]?.text || task.status || '',
+    task.assignedBy ? `依頼: ${task.assignedBy}` : '',
+    task.assignedTo ? `担当: ${task.assignedTo}` : '',
+    formatDueLabel(task.dueDate),
+    task.projectKey ? `物件No ${task.projectKey}` : '',
+  ].filter(Boolean).join(' / ');
+}
+
+function buildNoticeMetaLine(notice) {
+  const acknowledgedBy = Array.isArray(notice.acknowledgedBy) ? notice.acknowledgedBy : [];
+  return [
+    notice.requireAcknowledgement ? '確認必須' : '通常',
+    notice.priority === 'urgent' ? '重要' : '通常優先度',
+    acknowledgedBy.length > 0 ? `${acknowledgedBy.length}人確認` : '',
+    formatNoticeDate(notice.createdAt),
+  ].filter(Boolean).join(' / ');
+}
+
+function buildRequestMetaLine(request) {
+  return [
+    request.status || '',
+    request.fromDept ? `元: ${request.fromDept}` : '',
+    request.toDept ? `先: ${request.toDept}` : '',
+    request.projectKey ? `物件No ${request.projectKey}` : '',
+  ].filter(Boolean).join(' / ');
 }
 
 function renderActionButton(action, primary = false) {

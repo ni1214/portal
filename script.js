@@ -81,6 +81,7 @@ import {
   deps as taskDeps,
   startTaskListeners, updateTaskBadge,
   openTaskModal, closeTaskModal, switchTaskTab, renderTaskTabContent,
+  renderEmbeddedTaskWorkspace, refreshEmbeddedTaskWorkspaces,
   openTaskUserPicker, submitNewTask, createTaskRecord,
   acceptTask, completeTask, acknowledgeTask, deleteTask,
   openTaskEditModal, closeTaskEditModal, submitTaskEdit,
@@ -265,6 +266,7 @@ Object.assign(taskDeps, {
   updateLockNotifications,
   renderTodayDashboard,
   updateSummaryCards,
+  refreshEmbeddedTaskWorkspaces,
   loadUsersForChatPicker,
   renderTodoSection,
   // 共有ピチE��ー用: users_list を取得して renderSharePickerUsers に渡ぁE
@@ -490,6 +492,7 @@ initHomeDashboard({
   focusNoticeBoard: () => {
     setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
   },
+  renderEmbeddedTaskWorkspace,
   openNoticeModal: openNoticeCreateFromHome,
   openTodayAttendance: openTodayAttendanceFromHome,
   openCalendarModal: async () => {

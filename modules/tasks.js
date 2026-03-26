@@ -33,6 +33,8 @@ let liveReceivedTasks = [];
 let liveSentTasks = [];
 let liveSentDoneNotifyTasks = [];
 let liveSharedTasks = [];
+const embeddedTaskWorkspaces = new Map();
+let embeddedTaskWorkspaceSeq = 0;
 
 function buildTaskPayload({
   title,
@@ -105,12 +107,12 @@ async function syncRequestLink(taskId, updates) {
   return task;
 }
 
-function _taskProjectKeyFilterValue() {
-  return normalizeProjectKey(state.taskProjectKeyFilter || '').toLowerCase();
+function _normalizeTaskFilterValue(value) {
+  return normalizeProjectKey(value || '').toLowerCase();
 }
 
-function _filterTasksByProjectKey(list) {
-  const filter = _taskProjectKeyFilterValue();
+function _filterTasksByProjectKey(list, filterValue = state.taskProjectKeyFilter) {
+  const filter = _normalizeTaskFilterValue(filterValue);
   if (!filter) return list;
   return list.filter(task =>
     normalizeProjectKey(task.projectKey || '').toLowerCase().includes(filter)
@@ -160,9 +162,9 @@ function _taskCommentSectionHtml(taskId) {
   `;
 }
 
-async function _loadTaskComments(taskId) {
+async function _loadTaskComments(taskId, rerender = renderTaskTabContent) {
   state.taskCommentsLoading = { ...state.taskCommentsLoading, [taskId]: true };
-  renderTaskTabContent();
+  rerender();
   try {
     const comments = await fetchTaskCommentsFromSupabase(taskId);
     state.taskComments = { ...state.taskComments, [taskId]: comments };
@@ -170,25 +172,25 @@ async function _loadTaskComments(taskId) {
     showToast('コメントの読み込みに失敗しました', 'error');
   } finally {
     state.taskCommentsLoading = { ...state.taskCommentsLoading, [taskId]: false };
-    renderTaskTabContent();
+    rerender();
   }
 }
 
-function _bindTaskCommentEvents(container) {
+function _bindTaskCommentEvents(container, rerender = renderTaskTabContent) {
   // トグル
   container.querySelectorAll('.tc-toggle[data-task-id]').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.taskId;
       if (state.expandedTaskCommentId === id) {
         state.expandedTaskCommentId = null;
-        renderTaskTabContent();
+        rerender();
         return;
       }
       state.expandedTaskCommentId = id;
       if (!state.taskComments[id]) {
-        void _loadTaskComments(id);
+        void _loadTaskComments(id, rerender);
       } else {
-        renderTaskTabContent();
+        rerender();
       }
     });
   });
@@ -213,7 +215,7 @@ function _bindTaskCommentEvents(container) {
             [id]: [...(state.taskComments[id] || []), comment],
           };
         }
-        renderTaskTabContent();
+        rerender();
       } catch (e) {
         showToast('コメントの送信に失敗しました', 'error');
       }
@@ -241,7 +243,7 @@ function _bindTaskCommentEvents(container) {
           ...state.taskComments,
           [taskId]: (state.taskComments[taskId] || []).filter(c => c.id !== cid),
         };
-        renderTaskTabContent();
+        rerender();
       } catch (e) {
         showToast('削除に失敗しました', 'error');
       }
@@ -249,9 +251,12 @@ function _bindTaskCommentEvents(container) {
   });
 }
 
-function _taskFilterBarHtml(totalCount, filteredCount) {
-  const currentValue = esc(state.taskProjectKeyFilter || '');
-  const countLabel = state.taskProjectKeyFilter
+function _taskFilterBarHtml(totalCount, filteredCount, options = {}) {
+  const currentFilterValue = options.filterValue ?? state.taskProjectKeyFilter ?? '';
+  const currentValue = esc(currentFilterValue);
+  const inputId = options.inputId || 'task-project-filter-input';
+  const clearId = options.clearId || 'task-project-filter-clear';
+  const countLabel = currentFilterValue
     ? `${filteredCount} / ${totalCount}件`
     : `${totalCount}件`;
   return `
@@ -260,7 +265,7 @@ function _taskFilterBarHtml(totalCount, filteredCount) {
         <i class="fa-solid fa-magnifying-glass task-project-filter-icon"></i>
         <input
           type="text"
-          id="task-project-filter-input"
+          id="${inputId}"
           class="form-input task-project-filter-input"
           placeholder="物件Noで絞り込み"
           value="${currentValue}"
@@ -269,8 +274,8 @@ function _taskFilterBarHtml(totalCount, filteredCount) {
         <button
           type="button"
           class="task-project-filter-clear"
-          id="task-project-filter-clear"
-          ${state.taskProjectKeyFilter ? '' : 'hidden'}
+          id="${clearId}"
+          ${currentFilterValue ? '' : 'hidden'}
           title="検索をクリア"
         ><i class="fa-solid fa-xmark"></i></button>
       </div>
@@ -279,25 +284,397 @@ function _taskFilterBarHtml(totalCount, filteredCount) {
   `;
 }
 
-function _bindTaskProjectFilterEvents() {
-  const input = document.getElementById('task-project-filter-input');
-  const clearBtn = document.getElementById('task-project-filter-clear');
+function _bindTaskProjectFilterEvents(options = {}) {
+  const input = document.getElementById(options.inputId || 'task-project-filter-input');
+  const clearBtn = document.getElementById(options.clearId || 'task-project-filter-clear');
+  const rerender = options.rerender || renderTaskTabContent;
+  const setFilterValue = typeof options.setFilterValue === 'function'
+    ? options.setFilterValue
+    : (value => {
+        state.taskProjectKeyFilter = value;
+      });
   if (input) {
     if (input._taskFilterHandler) input.removeEventListener('input', input._taskFilterHandler);
     input._taskFilterHandler = e => {
-      state.taskProjectKeyFilter = normalizeProjectKey(e.target.value || '');
-      renderTaskTabContent();
+      setFilterValue(normalizeProjectKey(e.target.value || ''));
+      rerender();
     };
     input.addEventListener('input', input._taskFilterHandler);
   }
   if (clearBtn) {
     if (clearBtn._taskFilterClearHandler) clearBtn.removeEventListener('click', clearBtn._taskFilterClearHandler);
     clearBtn._taskFilterClearHandler = () => {
-      state.taskProjectKeyFilter = '';
-      renderTaskTabContent();
+      setFilterValue('');
+      rerender();
     };
     clearBtn.addEventListener('click', clearBtn._taskFilterClearHandler);
   }
+}
+
+function _resolveTaskWorkspaceHost(containerOrSelector) {
+  if (!containerOrSelector) return null;
+  if (typeof containerOrSelector === 'string') {
+    return document.querySelector(containerOrSelector);
+  }
+  return containerOrSelector instanceof HTMLElement ? containerOrSelector : null;
+}
+
+function _getEmbeddedWorkspace(workspaceId) {
+  return embeddedTaskWorkspaces.get(workspaceId) || null;
+}
+
+function _getEmbeddedWorkspaceShell(workspaceId) {
+  const workspace = _getEmbeddedWorkspace(workspaceId);
+  if (!workspace?.host?.isConnected) return null;
+  return workspace.host.querySelector('[data-embedded-task-shell]');
+}
+
+function _getEmbeddedWorkspaceContent(workspaceId) {
+  const shell = _getEmbeddedWorkspaceShell(workspaceId);
+  return shell?.querySelector('[data-embedded-task-content]') || null;
+}
+
+function _syncEmbeddedTaskTabs(workspaceId) {
+  const shell = _getEmbeddedWorkspaceShell(workspaceId);
+  const workspace = _getEmbeddedWorkspace(workspaceId);
+  if (!shell || !workspace) return;
+
+  shell.querySelectorAll('[data-embedded-task-tab]').forEach(button => {
+    const isActive = button.dataset.embeddedTaskTab === workspace.activeTab;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+}
+
+/*
+function _renderEmbeddedTaskComposer(container, workspace, rerender) {
+  const assigneeLabel = workspace.newTaskAssignee || '譛ｪ驕ｸ謚・;
+  container.innerHTML = `
+    <div class="task-new-form task-new-form--embedded">
+      <div class="form-group">
+        <label class="form-label">諡・ｽ楢・<span class="required-mark">*</span></label>
+        <div class="task-assignee-row">
+          <span class="task-assignee-display${workspace.newTaskAssignee ? ' selected' : ''}" data-embedded-task-assignee>${esc(assigneeLabel)}</span>
+          <button class="task-pick-btn" type="button" data-embedded-task-pick-user><i class="fa-solid fa-user-plus"></i> 驕ｸ謚・/button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">繧ｿ繧ｹ繧ｯ蜷・<span class="required-mark">*</span></label>
+        <input type="text" class="form-input" data-embedded-task-title placeholder="萓具ｼ壹・・・雉・侭菴懈・" maxlength="60" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">迚ｩ莉ｶNo・井ｻｻ諢擾ｼ・/label>
+        <input type="text" class="form-input" data-embedded-task-project-key placeholder="迚ｩ莉ｶNo・育樟蝣ｴ繧ｳ繝ｼ繝会ｼ・萓具ｼ・1065" maxlength="80" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">隧ｳ邏ｰ・育怐逡･蜿ｯ・・/label>
+        <textarea class="form-input" data-embedded-task-desc rows="3" placeholder="隧ｳ縺励＞隱ｬ譏弱ｄ豕ｨ諢冗せ..."></textarea>
+      </div>
+      <div class="form-group form-group-inline">
+        <input type="date" class="date-icon-only" data-embedded-task-due>
+        <label class="form-label">譛滄剞蜈･蜉幢ｼ育怐逡･蜿ｯ・・/label>
+      </div>
+      <button class="btn-modal-primary" type="button" data-embedded-task-submit style="width:100%;margin-top:4px">
+        <i class="fa-solid fa-paper-plane"></i> 繧ｿ繧ｹ繧ｯ繧剃ｾ晞ｼ縺吶ｋ
+      </button>
+    </div>
+  `;
+
+  container.querySelector('[data-embedded-task-pick-user]')?.addEventListener('click', async () => {
+    const pickerModal = document.getElementById('task-user-picker-modal');
+    const searchInput = document.getElementById('task-user-search');
+    if (!pickerModal || !searchInput || !deps.loadUsersForChatPicker) {
+      showToast('諡・ｽ楢・ｮ｢謚槭ｒ髢九￠縺ｾ縺帙ｓ', 'error');
+      return;
+    }
+
+    pickerModal.classList.add('visible');
+    searchInput.value = '';
+    await deps.loadUsersForChatPicker('task-user-list', 'task-user-search', name => {
+      workspace.newTaskAssignee = name;
+      pickerModal.classList.remove('visible');
+      rerender();
+    }, true);
+  });
+
+  container.querySelector('[data-embedded-task-submit]')?.addEventListener('click', async event => {
+    if (!workspace.newTaskAssignee) {
+      showToast('諡・ｽ楢・ｒ驕ｸ謚槭＠縺ｦ縺上□縺輔＞縲・, 'warning');
+      return;
+    }
+
+    const title = container.querySelector('[data-embedded-task-title]')?.value.trim();
+    if (!title) {
+      container.querySelector('[data-embedded-task-title]')?.focus();
+      return;
+    }
+
+    const submitButton = event.currentTarget;
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner"></span> 騾∽ｿ｡荳ｭ...';
+    try {
+      await createTaskRecord({
+        title,
+        description: container.querySelector('[data-embedded-task-desc]')?.value.trim() || '',
+        assignedBy: state.currentUsername,
+        assignedTo: workspace.newTaskAssignee,
+        dueDate: container.querySelector('[data-embedded-task-due]')?.value || '',
+        projectKey: normalizeProjectKey(container.querySelector('[data-embedded-task-project-key]')?.value || ''),
+        sourceType: 'manual',
+      });
+      workspace.newTaskAssignee = '';
+      workspace.activeTab = 'sent';
+      showToast('繧ｿ繧ｹ繧ｯ繧剃ｾ晞ｼ縺励∪縺励◆', 'success');
+      rerender();
+    } catch (err) {
+      console.error('embedded task create error:', err);
+      showToast('騾∽ｿ｡縺ｫ螟ｱ謨励＠縺ｾ縺励◆: ' + err.message, 'error');
+    } finally {
+      submitButton.disabled = false;
+      submitButton.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 繧ｿ繧ｹ繧ｯ繧剃ｾ晞ｼ縺吶ｋ';
+    }
+  });
+}
+
+*/
+function _renderEmbeddedTaskComposer(container, workspace, rerender) {
+  const assigneeLabel = workspace.newTaskAssignee || 'No assignee selected';
+  container.innerHTML = `
+    <div class="task-new-form task-new-form--embedded">
+      <div class="form-group">
+        <label class="form-label">Assignee<span class="required-mark">*</span></label>
+        <div class="task-assignee-row">
+          <span class="task-assignee-display${workspace.newTaskAssignee ? ' selected' : ''}" data-embedded-task-assignee>${esc(assigneeLabel)}</span>
+          <button class="task-pick-btn" type="button" data-embedded-task-pick-user><i class="fa-solid fa-user-plus"></i> Pick user</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Task title<span class="required-mark">*</span></label>
+        <input type="text" class="form-input" data-embedded-task-title placeholder="Enter a short task title" maxlength="60" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Project key</label>
+        <input type="text" class="form-input" data-embedded-task-project-key placeholder="Optional project key, for example 1065" maxlength="80" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input" data-embedded-task-desc rows="3" placeholder="Add context, notes, or handoff details"></textarea>
+      </div>
+      <div class="form-group form-group-inline">
+        <input type="date" class="date-icon-only" data-embedded-task-due>
+        <label class="form-label">Due date</label>
+      </div>
+      <button class="btn-modal-primary" type="button" data-embedded-task-submit style="width:100%;margin-top:4px">
+        <i class="fa-solid fa-paper-plane"></i> Create task
+      </button>
+    </div>
+  `;
+
+  container.querySelector('[data-embedded-task-pick-user]')?.addEventListener('click', async () => {
+    const pickerModal = document.getElementById('task-user-picker-modal');
+    const searchInput = document.getElementById('task-user-search');
+    if (!pickerModal || !searchInput || !deps.loadUsersForChatPicker) {
+      showToast('User picker is not available', 'error');
+      return;
+    }
+
+    pickerModal.classList.add('visible');
+    searchInput.value = '';
+    await deps.loadUsersForChatPicker('task-user-list', 'task-user-search', name => {
+      workspace.newTaskAssignee = name;
+      pickerModal.classList.remove('visible');
+      rerender();
+    }, true);
+  });
+
+  container.querySelector('[data-embedded-task-submit]')?.addEventListener('click', async event => {
+    if (!workspace.newTaskAssignee) {
+      showToast('Please choose an assignee', 'warning');
+      return;
+    }
+
+    const title = container.querySelector('[data-embedded-task-title]')?.value.trim();
+    if (!title) {
+      container.querySelector('[data-embedded-task-title]')?.focus();
+      return;
+    }
+
+    const submitButton = event.currentTarget;
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner"></span> Creating...';
+    try {
+      await createTaskRecord({
+        title,
+        description: container.querySelector('[data-embedded-task-desc]')?.value.trim() || '',
+        assignedBy: state.currentUsername,
+        assignedTo: workspace.newTaskAssignee,
+        dueDate: container.querySelector('[data-embedded-task-due]')?.value || '',
+        projectKey: normalizeProjectKey(container.querySelector('[data-embedded-task-project-key]')?.value || ''),
+        sourceType: 'manual',
+      });
+      workspace.newTaskAssignee = '';
+      workspace.activeTab = 'sent';
+      showToast('Task created', 'success');
+      rerender();
+    } catch (err) {
+      console.error('embedded task create error:', err);
+      showToast('Failed to create task: ' + err.message, 'error');
+    } finally {
+      submitButton.disabled = false;
+      submitButton.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Create task';
+    }
+  });
+}
+
+function _renderTaskTabContentInto(container, options = {}) {
+  if (!container) return;
+
+  if (!state.currentUsername) {
+    container.innerHTML = '<div class="task-empty"><i class="fa-solid fa-user-slash"></i><p>繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝繧定ｨｭ螳壹＠縺ｦ縺上□縺輔＞</p></div>';
+    return;
+  }
+
+  const activeTab = options.activeTab || state.activeTaskTab;
+  if (options.mode === 'embedded' && activeTab === 'new') {
+    _renderEmbeddedTaskComposer(container, options.workspace, options.rerender);
+    return;
+  }
+
+  if (activeTab === 'received') {
+    _renderReceivedTasks(container, options);
+  } else if (activeTab === 'sent') {
+    _renderSentTasks(container, options);
+  } else if (activeTab === 'shared') {
+    _renderSharedTasks(container, options);
+  } else {
+    _renderNewTaskForm(container);
+  }
+}
+
+function _renderEmbeddedTaskWorkspaceContent(workspaceId) {
+  const workspace = _getEmbeddedWorkspace(workspaceId);
+  const container = _getEmbeddedWorkspaceContent(workspaceId);
+  if (!workspace || !container) return;
+
+  _syncEmbeddedTaskTabs(workspaceId);
+  _renderTaskTabContentInto(container, {
+    mode: 'embedded',
+    workspace,
+    activeTab: workspace.activeTab,
+    filterValue: workspace.filterValue,
+    filterInputId: `${workspaceId}-filter-input`,
+    filterClearId: `${workspaceId}-filter-clear`,
+    setFilterValue: value => {
+      workspace.filterValue = value;
+    },
+    rerender: () => _renderEmbeddedTaskWorkspaceContent(workspaceId),
+  });
+}
+
+/*
+export function renderEmbeddedTaskWorkspace(containerOrSelector, options = {}) {
+  const host = _resolveTaskWorkspaceHost(containerOrSelector);
+  if (!host) return null;
+
+  const workspaceId = host.dataset.taskEmbeddedWorkspaceId || `task-embedded-${++embeddedTaskWorkspaceSeq}`;
+  host.dataset.taskEmbeddedWorkspaceId = workspaceId;
+
+  const previous = embeddedTaskWorkspaces.get(workspaceId);
+  const workspace = {
+    id: workspaceId,
+    host,
+    title: options.title || previous?.title || '繧ｿ繧ｹ繧ｯ邂｡逅・,
+    activeTab: options.activeTab || previous?.activeTab || 'received',
+    filterValue: options.filterValue ?? previous?.filterValue ?? '',
+    newTaskAssignee: previous?.newTaskAssignee || '',
+  };
+  embeddedTaskWorkspaces.set(workspaceId, workspace);
+
+  host.innerHTML = `
+    <section class="task-embedded-shell" data-embedded-task-shell data-embedded-task-id="${workspaceId}">
+      <div class="task-modal-header task-modal-header--embedded">
+        <span><i class="fa-solid fa-list-check"></i> ${esc(workspace.title)}</span>
+      </div>
+      <div class="task-tabs task-tabs--embedded">
+        <button class="task-tab" type="button" data-embedded-task-tab="received">蜿励￠蜿悶▲縺溘ち繧ｹ繧ｯ</button>
+        <button class="task-tab" type="button" data-embedded-task-tab="sent">萓晞ｼ縺励◆繧ｿ繧ｹ繧ｯ</button>
+        <button class="task-tab" type="button" data-embedded-task-tab="shared">蜈ｱ譛峨＆繧後◆繧ｿ繧ｹ繧ｯ</button>
+        <button class="task-tab" type="button" data-embedded-task-tab="new"><i class="fa-solid fa-plus"></i> 譁ｰ隕丈ｾ晞ｼ</button>
+      </div>
+      <div class="task-tab-content task-tab-content--embedded" data-embedded-task-content></div>
+    </section>
+  `;
+
+  host.querySelectorAll('[data-embedded-task-tab]').forEach(button => {
+    button.addEventListener('click', () => {
+      workspace.activeTab = button.dataset.embeddedTaskTab || 'received';
+      if (workspace.activeTab !== 'new') {
+        workspace.newTaskAssignee = '';
+      }
+      _renderEmbeddedTaskWorkspaceContent(workspaceId);
+    });
+  });
+
+  _renderEmbeddedTaskWorkspaceContent(workspaceId);
+  return workspace;
+}
+*/
+
+export function renderEmbeddedTaskWorkspace(containerOrSelector, options = {}) {
+  const host = _resolveTaskWorkspaceHost(containerOrSelector);
+  if (!host) return null;
+
+  const workspaceId = host.dataset.taskEmbeddedWorkspaceId || `task-embedded-${++embeddedTaskWorkspaceSeq}`;
+  host.dataset.taskEmbeddedWorkspaceId = workspaceId;
+
+  const previous = embeddedTaskWorkspaces.get(workspaceId);
+  const workspace = {
+    id: workspaceId,
+    host,
+    title: options.title || previous?.title || 'タスク管理',
+    activeTab: options.activeTab || previous?.activeTab || 'received',
+    filterValue: options.filterValue ?? previous?.filterValue ?? '',
+    newTaskAssignee: previous?.newTaskAssignee || '',
+  };
+  embeddedTaskWorkspaces.set(workspaceId, workspace);
+
+  host.innerHTML = `
+    <section class="task-embedded-shell" data-embedded-task-shell data-embedded-task-id="${workspaceId}">
+      <div class="task-modal-header task-modal-header--embedded">
+        <span><i class="fa-solid fa-list-check"></i> ${esc(workspace.title)}</span>
+      </div>
+      <div class="task-tabs task-tabs--embedded">
+        <button class="task-tab" type="button" data-embedded-task-tab="received">受信</button>
+        <button class="task-tab" type="button" data-embedded-task-tab="sent">送信</button>
+        <button class="task-tab" type="button" data-embedded-task-tab="shared">共有</button>
+        <button class="task-tab" type="button" data-embedded-task-tab="new"><i class="fa-solid fa-plus"></i> 新規依頼</button>
+      </div>
+      <div class="task-tab-content task-tab-content--embedded" data-embedded-task-content></div>
+    </section>
+  `;
+
+  host.querySelectorAll('[data-embedded-task-tab]').forEach(button => {
+    button.addEventListener('click', () => {
+      workspace.activeTab = button.dataset.embeddedTaskTab || 'received';
+      if (workspace.activeTab !== 'new') {
+        workspace.newTaskAssignee = '';
+      }
+      _renderEmbeddedTaskWorkspaceContent(workspaceId);
+    });
+  });
+
+  _renderEmbeddedTaskWorkspaceContent(workspaceId);
+  return workspace;
+}
+
+export function refreshEmbeddedTaskWorkspaces() {
+  embeddedTaskWorkspaces.forEach((workspace, workspaceId) => {
+    if (!workspace.host?.isConnected) {
+      embeddedTaskWorkspaces.delete(workspaceId);
+      return;
+    }
+    _renderEmbeddedTaskWorkspaceContent(workspaceId);
+  });
 }
 
 function _taskProjectKeyHtml(task) {
@@ -605,6 +982,7 @@ export function updateTaskBadge() {
   deps.updateLockNotifications?.();
   deps.updateSummaryCards?.();
   deps.renderTodayDashboard?.();
+  refreshEmbeddedTaskWorkspaces();
 }
 
 export function openTaskModal() {
@@ -619,6 +997,7 @@ export function closeTaskModal() {
   document.getElementById('task-modal').classList.remove('visible');
 }
 
+/*
 export function switchTaskTab(tab) {
   state.activeTaskTab = tab;
   document.querySelectorAll('.task-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -639,7 +1018,25 @@ export function renderTaskTabContent() {
   else                                          _renderNewTaskForm(content);
 }
 
-export function _renderReceivedTasks(container) {
+*/
+export function switchTaskTab(tab) {
+  state.activeTaskTab = tab;
+  document.querySelectorAll('#task-modal .task-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  renderTaskTabContent();
+  _ensureTaskHistoryForActiveTab();
+}
+
+export function renderTaskTabContent() {
+  const content = document.getElementById('task-tab-content');
+  if (!content) return;
+  _renderTaskTabContentInto(content, {
+    activeTab: state.activeTaskTab,
+    filterValue: state.taskProjectKeyFilter,
+    rerender: renderTaskTabContent,
+  });
+}
+
+export function _renderReceivedTasks(container, options = {}) {
   if (state.taskHistoryLoading.received && !state.receivedTasks.length) {
     container.innerHTML = '<div class="task-empty"><span class="spinner"></span><p>履歴を読み込み中です...</p></div>';
     return;
@@ -648,16 +1045,31 @@ export function _renderReceivedTasks(container) {
     container.innerHTML = '<div class="task-empty"><i class="fa-solid fa-inbox"></i><p>受け取ったタスクはありません</p></div>';
     return;
   }
-  const filtered = _filterTasksByProjectKey(state.receivedTasks);
+  const filterValue = options.filterValue ?? state.taskProjectKeyFilter;
+  const rerender = options.rerender || renderTaskTabContent;
+  const filtered = _filterTasksByProjectKey(state.receivedTasks, filterValue);
   if (!filtered.length) {
     container.innerHTML = `
-      ${_taskFilterBarHtml(state.receivedTasks.length, filtered.length)}
+      ${_taskFilterBarHtml(state.receivedTasks.length, filtered.length, {
+        filterValue,
+        inputId: options.filterInputId,
+        clearId: options.filterClearId,
+      })}
       <div class="task-empty"><i class="fa-solid fa-magnifying-glass"></i><p>物件Noに一致するタスクはありません</p></div>
     `;
-    _bindTaskProjectFilterEvents();
+    _bindTaskProjectFilterEvents({
+      inputId: options.filterInputId,
+      clearId: options.filterClearId,
+      setFilterValue: options.setFilterValue,
+      rerender,
+    });
     return;
   }
-  container.innerHTML = _taskFilterBarHtml(state.receivedTasks.length, filtered.length) + filtered.map(t => {
+  container.innerHTML = _taskFilterBarHtml(state.receivedTasks.length, filtered.length, {
+    filterValue,
+    inputId: options.filterInputId,
+    clearId: options.filterClearId,
+  }) + filtered.map(t => {
     const s = TASK_STATUS_LABEL[t.status] || TASK_STATUS_LABEL.pending;
     const due = t.dueDate ? `<span class="task-due"><i class="fa-regular fa-calendar"></i> ${esc(t.dueDate)}</span>` : '';
     let actions = '';
@@ -684,8 +1096,13 @@ export function _renderReceivedTasks(container) {
       </div>`;
   }).join('');
 
-  _bindTaskProjectFilterEvents();
-  _bindTaskCommentEvents(container);
+  _bindTaskProjectFilterEvents({
+    inputId: options.filterInputId,
+    clearId: options.filterClearId,
+    setFilterValue: options.setFilterValue,
+    rerender,
+  });
+  _bindTaskCommentEvents(container, rerender);
   container.querySelectorAll('.task-action-accept').forEach(btn =>
     btn.addEventListener('click', () => acceptTask(btn.dataset.id)));
   container.querySelectorAll('.task-action-done').forEach(btn =>
@@ -694,7 +1111,7 @@ export function _renderReceivedTasks(container) {
     btn.addEventListener('click', () => deleteTask(btn.dataset.id, 'この完了タスクを削除しますか？')));
 }
 
-export function _renderSentTasks(container) {
+export function _renderSentTasks(container, options = {}) {
   if (state.taskHistoryLoading.sent && !state.sentTasks.length) {
     container.innerHTML = '<div class="task-empty"><span class="spinner"></span><p>履歴を読み込み中です...</p></div>';
     return;
@@ -703,16 +1120,31 @@ export function _renderSentTasks(container) {
     container.innerHTML = '<div class="task-empty"><i class="fa-solid fa-paper-plane"></i><p>依頼したタスクはありません</p></div>';
     return;
   }
-  const filtered = _filterTasksByProjectKey(state.sentTasks);
+  const filterValue = options.filterValue ?? state.taskProjectKeyFilter;
+  const rerender = options.rerender || renderTaskTabContent;
+  const filtered = _filterTasksByProjectKey(state.sentTasks, filterValue);
   if (!filtered.length) {
     container.innerHTML = `
-      ${_taskFilterBarHtml(state.sentTasks.length, filtered.length)}
+      ${_taskFilterBarHtml(state.sentTasks.length, filtered.length, {
+        filterValue,
+        inputId: options.filterInputId,
+        clearId: options.filterClearId,
+      })}
       <div class="task-empty"><i class="fa-solid fa-magnifying-glass"></i><p>物件Noに一致するタスクはありません</p></div>
     `;
-    _bindTaskProjectFilterEvents();
+    _bindTaskProjectFilterEvents({
+      inputId: options.filterInputId,
+      clearId: options.filterClearId,
+      setFilterValue: options.setFilterValue,
+      rerender,
+    });
     return;
   }
-  container.innerHTML = _taskFilterBarHtml(state.sentTasks.length, filtered.length) + filtered.map(t => {
+  container.innerHTML = _taskFilterBarHtml(state.sentTasks.length, filtered.length, {
+    filterValue,
+    inputId: options.filterInputId,
+    clearId: options.filterClearId,
+  }) + filtered.map(t => {
     const s = TASK_STATUS_LABEL[t.status] || TASK_STATUS_LABEL.pending;
     const due = t.dueDate ? `<span class="task-due"><i class="fa-regular fa-calendar"></i> ${esc(t.dueDate)}</span>` : '';
     const isNewDone = t.status === 'done' && !t.notifiedDone;
@@ -763,8 +1195,13 @@ export function _renderSentTasks(container) {
       </div>`;
   }).join('');
 
-  _bindTaskProjectFilterEvents();
-  _bindTaskCommentEvents(container);
+  _bindTaskProjectFilterEvents({
+    inputId: options.filterInputId,
+    clearId: options.filterClearId,
+    setFilterValue: options.setFilterValue,
+    rerender,
+  });
+  _bindTaskCommentEvents(container, rerender);
   container.querySelectorAll('.task-action-edit').forEach(btn =>
     btn.addEventListener('click', () => openTaskEditModal(btn.dataset.id)));
   container.querySelectorAll('.task-action-share').forEach(btn =>
@@ -777,7 +1214,7 @@ export function _renderSentTasks(container) {
     btn.addEventListener('click', () => deleteTask(btn.dataset.id, 'この依頼を取り消しますか？相手側からも消えます。')));
 }
 
-export function _renderSharedTasks(container) {
+export function _renderSharedTasks(container, options = {}) {
   if (state.taskHistoryLoading.shared && !state.sharedTasks.length) {
     container.innerHTML = '<div class="task-empty"><span class="spinner"></span><p>履歴を読み込み中です...</p></div>';
     return;
@@ -786,16 +1223,31 @@ export function _renderSharedTasks(container) {
     container.innerHTML = '<div class="task-empty"><i class="fa-solid fa-share-nodes"></i><p>共有されたタスクはありません</p></div>';
     return;
   }
-  const filtered = _filterTasksByProjectKey(state.sharedTasks);
+  const filterValue = options.filterValue ?? state.taskProjectKeyFilter;
+  const rerender = options.rerender || renderTaskTabContent;
+  const filtered = _filterTasksByProjectKey(state.sharedTasks, filterValue);
   if (!filtered.length) {
     container.innerHTML = `
-      ${_taskFilterBarHtml(state.sharedTasks.length, filtered.length)}
+      ${_taskFilterBarHtml(state.sharedTasks.length, filtered.length, {
+        filterValue,
+        inputId: options.filterInputId,
+        clearId: options.filterClearId,
+      })}
       <div class="task-empty"><i class="fa-solid fa-magnifying-glass"></i><p>物件Noに一致するタスクはありません</p></div>
     `;
-    _bindTaskProjectFilterEvents();
+    _bindTaskProjectFilterEvents({
+      inputId: options.filterInputId,
+      clearId: options.filterClearId,
+      setFilterValue: options.setFilterValue,
+      rerender,
+    });
     return;
   }
-  container.innerHTML = _taskFilterBarHtml(state.sharedTasks.length, filtered.length) + filtered.map(t => {
+  container.innerHTML = _taskFilterBarHtml(state.sharedTasks.length, filtered.length, {
+    filterValue,
+    inputId: options.filterInputId,
+    clearId: options.filterClearId,
+  }) + filtered.map(t => {
     const s   = TASK_STATUS_LABEL[t.status] || TASK_STATUS_LABEL.pending;
     const due = t.dueDate ? `<span class="task-due"><i class="fa-regular fa-calendar"></i> ${esc(t.dueDate)}</span>` : '';
     const resp = t.sharedResponses?.[state.currentUsername] || 'pending';
@@ -825,8 +1277,13 @@ export function _renderSharedTasks(container) {
       </div>`;
   }).join('');
 
-  _bindTaskProjectFilterEvents();
-  _bindTaskCommentEvents(container);
+  _bindTaskProjectFilterEvents({
+    inputId: options.filterInputId,
+    clearId: options.filterClearId,
+    setFilterValue: options.setFilterValue,
+    rerender,
+  });
+  _bindTaskCommentEvents(container, rerender);
   container.querySelectorAll('.task-action-share-accept').forEach(btn =>
     btn.addEventListener('click', () => acceptSharedTask(btn.dataset.id)));
   container.querySelectorAll('.task-action-share-decline').forEach(btn =>
