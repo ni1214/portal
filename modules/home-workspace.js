@@ -119,11 +119,23 @@ export function setHomeWorkspaceTarget(target = DEFAULT_TARGET, activeButtonId =
   if (activeButtonId) {
     state.homeWorkspaceActiveButtonId = activeButtonId;
   }
-  renderHomeWorkspace();
+  const host = document.getElementById('home-dashboard');
+  if (!host) return;
+  if (!host.querySelector('.home-workspace-shell')) {
+    renderHomeWorkspace();
+    return;
+  }
+  const targetKey = normalizeTarget(state.homeWorkspaceTarget);
+  const targetConfig = buildTargetConfig(targetKey);
+  updateHomeWorkspaceTopBadge(targetConfig);
+  renderHomeWorkspaceStage(targetKey, targetConfig);
 }
 
 export function updateSummaryCards() {
-  renderHomeWorkspace();
+  const targetKey = normalizeTarget(state.homeWorkspaceTarget);
+  const target = buildTargetConfig(targetKey);
+  renderHomeWorkspaceTop(target);
+  renderHomeWorkspaceStage(targetKey, target);
 }
 
 export function renderHomeWorkspace() {
@@ -159,7 +171,7 @@ export function renderHomeWorkspace() {
         ${renderOverviewCard(companyOverview)}
       </div>
 
-      <section class="home-workspace-stage home-workspace-panel" data-tone="${esc(target.tone)}" aria-labelledby="home-workspace-stage-title">
+      <section class="home-workspace-stage home-workspace-panel" data-home-workspace-stage data-tone="${esc(target.tone)}" aria-labelledby="home-workspace-stage-title">
         <div class="home-workspace-stage-head">
           <div>
             <p class="home-workspace-card-kicker">${esc(target.kicker)}</p>
@@ -174,6 +186,132 @@ export function renderHomeWorkspace() {
         </div>
       </section>
     </section>
+  `;  
+
+  syncSidebarSelection();
+  renderHomeWorkspaceTop(target);
+  hydrateStageContent(targetKey, stageBodyId, target);
+}
+
+function renderHomeWorkspaceTop(targetOverride = null) {
+  const host = document.getElementById('home-dashboard');
+  if (!host) return;
+
+  const targetKey = normalizeTarget(state.homeWorkspaceTarget);
+  const target = targetOverride || buildTargetConfig(targetKey);
+  const overviewTitle = buildOverviewTitle();
+  const overviewSubtitle = buildOverviewSubtitle();
+  const taskOverview = buildTaskOverview();
+  const noticeOverview = buildNoticeOverview();
+  const companyOverview = buildCompanyNoticeOverview();
+
+  const headerMarkup = `
+    <header class="home-workspace-header">
+      <div class="home-workspace-header-copy">
+        <p class="home-workspace-kicker">繝帙・繝</p>
+        <h2 class="home-workspace-title" id="home-overview-title">${esc(overviewTitle)}</h2>
+        <p class="home-workspace-copy">${esc(overviewSubtitle)}</p>
+      </div>
+      <div class="home-workspace-badge">
+        <span class="home-workspace-badge-label">迴ｾ蝨ｨ縺ｮ陦ｨ遉ｺ</span>
+        <strong class="home-workspace-badge-value" data-home-workspace-current-target>${esc(target.title)}</strong>
+      </div>
+    </header>
+  `;
+
+  const gridMarkup = `
+    <div class="home-overview-grid">
+      ${renderOverviewCard(taskOverview)}
+      ${renderOverviewCard(noticeOverview)}
+      ${renderOverviewCard(companyOverview)}
+    </div>
+  `;
+  const topMarkup = `
+    <div class="home-workspace-top" data-home-workspace-top>
+      ${headerMarkup}
+      ${gridMarkup}
+    </div>
+  `;
+
+  const shell = host.querySelector('.home-workspace-shell');
+  if (!shell) {
+    renderHomeWorkspace();
+    return;
+  }
+
+  const top = shell.querySelector('[data-home-workspace-top]');
+  if (top) {
+    top.outerHTML = topMarkup;
+    return;
+  }
+
+  const header = shell.querySelector('.home-workspace-header');
+  if (!header) {
+    const stage = shell.querySelector('[data-home-workspace-stage]');
+    if (stage) {
+      stage.insertAdjacentHTML('beforebegin', topMarkup);
+    } else {
+      shell.insertAdjacentHTML('afterbegin', topMarkup);
+    }
+    return;
+  }
+
+  const grid = shell.querySelector('.home-overview-grid');
+  if (grid) {
+    header.outerHTML = topMarkup;
+    grid.remove();
+  } else {
+    header.outerHTML = topMarkup;
+  }
+}
+
+function updateHomeWorkspaceTopBadge(target) {
+  const host = document.getElementById('home-dashboard');
+  if (!host) return;
+
+  const shell = host.querySelector('.home-workspace-shell');
+  if (!shell) {
+    renderHomeWorkspace();
+    return;
+  }
+
+  shell.dataset.tone = target.tone;
+  const badge = shell.querySelector('.home-workspace-badge-value');
+  if (badge) {
+    badge.textContent = target.title || '';
+    return;
+  }
+  renderHomeWorkspaceTop(target);
+}
+
+function renderHomeWorkspaceStage(targetKey, target) {
+  const host = document.getElementById('home-dashboard');
+  if (!host) return;
+
+  const shell = host.querySelector('.home-workspace-shell');
+  if (!shell) {
+    renderHomeWorkspace();
+    return;
+  }
+
+  const stage = shell.querySelector('[data-home-workspace-stage]');
+  if (!stage) return;
+
+  const stageBodyId = `home-workspace-stage-body-${targetKey}`;
+  stage.dataset.tone = target.tone;
+  stage.innerHTML = `
+    <div class="home-workspace-stage-head">
+      <div>
+        <p class="home-workspace-card-kicker">${esc(target.kicker)}</p>
+        <h3 class="home-workspace-stage-title" id="home-workspace-stage-title">${esc(target.detailTitle)}</h3>
+        <p class="home-workspace-stage-copy">${esc(target.copy)}</p>
+      </div>
+      <span class="home-workspace-card-pill">${esc(target.badge || target.title)}</span>
+    </div>
+
+    <div class="home-workspace-stage-body" id="${stageBodyId}">
+      ${renderStageContent(targetKey, target)}
+    </div>
   `;
 
   syncSidebarSelection();
