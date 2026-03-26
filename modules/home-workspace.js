@@ -106,15 +106,21 @@ const TARGET_META = {
   },
 };
 
+function ensureHomeCompactMode() {
+  document.getElementById('app-main')?.classList.add('home-compact');
+}
+
 export function initHomeDashboard(d = {}) {
   deps = { ...deps, ...d };
   if (!state.homeWorkspaceTarget) state.homeWorkspaceTarget = DEFAULT_TARGET;
   if (!state.homeWorkspaceActiveButtonId) state.homeWorkspaceActiveButtonId = 'sidebar-home-btn';
   bindWorkspaceHost();
+  ensureHomeCompactMode();
   renderHomeWorkspace();
 }
 
 export function setHomeWorkspaceTarget(target = DEFAULT_TARGET, activeButtonId = '') {
+  ensureHomeCompactMode();
   state.homeWorkspaceTarget = normalizeTarget(target);
   if (activeButtonId) {
     state.homeWorkspaceActiveButtonId = activeButtonId;
@@ -132,6 +138,7 @@ export function setHomeWorkspaceTarget(target = DEFAULT_TARGET, activeButtonId =
 }
 
 export function updateSummaryCards() {
+  ensureHomeCompactMode();
   const targetKey = normalizeTarget(state.homeWorkspaceTarget);
   const target = buildTargetConfig(targetKey);
   renderHomeWorkspaceTop(target);
@@ -139,6 +146,7 @@ export function updateSummaryCards() {
 }
 
 export function renderHomeWorkspace() {
+  ensureHomeCompactMode();
   const host = document.getElementById('home-dashboard');
   if (!host) return;
 

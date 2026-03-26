@@ -19437,6 +19437,10 @@ body {
     padding: 16px 14px 80px;
     width: 100%;
   }
+  .app-main.home-compact {
+    height: calc(100dvh - var(--app-header-h));
+    max-height: calc(100dvh - var(--app-header-h));
+  }
   .app-layout { overflow: visible; height: auto; }
 
   /* ボトムナビ表示 */
@@ -19947,6 +19951,43 @@ body {
 
 .home-workspace-stage-body {
   margin-top: 16px;
+}
+
+.app-main.home-compact {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 24px;
+}
+
+.app-main.home-compact #home-dashboard {
+  display: flex !important;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: 0 !important;
+}
+
+.app-main.home-compact #home-dashboard > .home-workspace-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.app-main.home-compact .home-workspace-shell {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main.home-compact .home-workspace-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.app-main.home-compact .home-workspace-stage-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .home-workspace-shell::before {
@@ -20554,23 +20595,89 @@ body {
   }
 
   .home-workspace-shell {
-    padding: 18px;
-    border-radius: 22px;
+    padding: 14px;
+    border-radius: 20px;
   }
 
   .home-workspace-header {
     grid-template-columns: 1fr;
   }
 
+  .home-workspace-top {
+    gap: 10px;
+    padding-bottom: 12px;
+  }
+
+  .home-workspace-header-copy .home-workspace-copy,
+  .home-overview-card .home-workspace-copy,
+  .home-workspace-stage-copy {
+    display: none;
+  }
+
+  .home-workspace-title {
+    font-size: 1.2rem;
+  }
+
   .home-workspace-badge {
     min-width: 0;
     width: 100%;
+    padding: 10px 12px;
   }
 
-  .home-overview-grid,
+  .home-workspace-badge-value {
+    font-size: 0.98rem;
+  }
+
   .home-workspace-metric-grid,
   .home-workspace-notice-summary {
     grid-template-columns: 1fr;
+  }
+
+  .home-overview-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .home-overview-card {
+    padding: 10px;
+  }
+
+  .home-overview-card .home-workspace-card-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 0;
+  }
+
+  .home-overview-card .home-workspace-card-kicker {
+    font-size: 0.6rem;
+    margin-bottom: 2px;
+  }
+
+  .home-overview-card .home-workspace-card-title {
+    font-size: 0.76rem;
+    line-height: 1.25;
+  }
+
+  .home-overview-card .home-workspace-card-pill {
+    padding: 4px 6px;
+    font-size: 0.6rem;
+  }
+
+  .home-workspace-stage {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .home-workspace-stage-head {
+    gap: 8px;
+    padding-bottom: 8px;
+  }
+
+  .home-workspace-stage-title {
+    font-size: 1rem;
   }
 
   .home-workspace-actions {
@@ -20583,6 +20690,7 @@ body {
 
   .home-workspace-stage-body {
     min-height: 0;
+    margin-top: 12px;
   }
 
   .home-workspace-embed {
