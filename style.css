@@ -20458,6 +20458,10 @@ body {
     margin-top: 22px;
   }
 
+  .home-content-grid[hidden] {
+    display: none !important;
+  }
+
   .home-workspace-stage-body {
     flex: 1;
   }
@@ -20543,4 +20547,10 @@ body {
   .task-embedded-shell {
     border-radius: 18px;
   }
+}
+
+.home-content-grid[hidden],
+#space-shared[hidden],
+#space-personal[hidden] {
+  display: none !important;
 }
