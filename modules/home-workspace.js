@@ -133,7 +133,7 @@ export function setHomeWorkspaceTarget(target = DEFAULT_TARGET, activeButtonId =
   }
   const targetKey = normalizeTarget(state.homeWorkspaceTarget);
   const targetConfig = buildTargetConfig(targetKey);
-  updateHomeWorkspaceTopBadge(targetConfig);
+  // 上部固定ゾーンは変えない — ステージのみ更新
   renderHomeWorkspaceStage(targetKey, targetConfig);
 }
 
@@ -141,7 +141,7 @@ export function updateSummaryCards() {
   ensureHomeCompactMode();
   const targetKey = normalizeTarget(state.homeWorkspaceTarget);
   const target = buildTargetConfig(targetKey);
-  renderHomeWorkspaceTop(target);
+  renderHomeWorkspaceTop();
   renderHomeWorkspaceStage(targetKey, target);
 }
 
@@ -160,25 +160,24 @@ export function renderHomeWorkspace() {
   const companyOverview = buildCompanyNoticeOverview();
 
   host.innerHTML = `
-    <section class="home-workspace-shell" data-tone="${esc(target.tone)}" aria-live="polite" role="region" aria-labelledby="home-overview-title">
-      <header class="home-workspace-header">
-        <div class="home-workspace-header-copy">
-          <p class="home-workspace-kicker">ホーム</p>
-          <h2 class="home-workspace-title" id="home-overview-title">${esc(overviewTitle)}</h2>
-          <p class="home-workspace-copy">${esc(overviewSubtitle)}</p>
+    <section class="home-workspace-shell" aria-live="polite" role="region" aria-labelledby="home-overview-title">
+      <!-- 上部固定ゾーン: サイドバー切り替えで変わらない -->
+      <div class="home-workspace-top" data-home-workspace-top>
+        <header class="home-workspace-header">
+          <div class="home-workspace-header-copy">
+            <p class="home-workspace-kicker">ホーム</p>
+            <h2 class="home-workspace-title" id="home-overview-title">${esc(overviewTitle)}</h2>
+            <p class="home-workspace-copy">${esc(overviewSubtitle)}</p>
+          </div>
+        </header>
+        <div class="home-overview-grid">
+          ${renderOverviewCard(taskOverview)}
+          ${renderOverviewCard(noticeOverview)}
+          ${renderOverviewCard(companyOverview)}
         </div>
-        <div class="home-workspace-badge">
-          <span class="home-workspace-badge-label">現在の表示</span>
-          <strong class="home-workspace-badge-value">${esc(target.title)}</strong>
-        </div>
-      </header>
-
-      <div class="home-overview-grid">
-        ${renderOverviewCard(taskOverview)}
-        ${renderOverviewCard(noticeOverview)}
-        ${renderOverviewCard(companyOverview)}
       </div>
 
+      <!-- ステージゾーン: サイドバーで切り替わる -->
       <section class="home-workspace-stage home-workspace-panel" data-home-workspace-stage data-tone="${esc(target.tone)}" aria-labelledby="home-workspace-stage-title">
         <div class="home-workspace-stage-head">
           <div>
@@ -194,50 +193,36 @@ export function renderHomeWorkspace() {
         </div>
       </section>
     </section>
-  `;  
+  `;
 
   syncSidebarSelection();
-  renderHomeWorkspaceTop(target);
   hydrateStageContent(targetKey, stageBodyId, target);
 }
 
-function renderHomeWorkspaceTop(targetOverride = null) {
+function renderHomeWorkspaceTop() {
   const host = document.getElementById('home-dashboard');
   if (!host) return;
 
-  const targetKey = normalizeTarget(state.homeWorkspaceTarget);
-  const target = targetOverride || buildTargetConfig(targetKey);
   const overviewTitle = buildOverviewTitle();
   const overviewSubtitle = buildOverviewSubtitle();
   const taskOverview = buildTaskOverview();
   const noticeOverview = buildNoticeOverview();
   const companyOverview = buildCompanyNoticeOverview();
 
-  const headerMarkup = `
-    <header class="home-workspace-header">
-      <div class="home-workspace-header-copy">
-        <p class="home-workspace-kicker">繝帙・繝</p>
-        <h2 class="home-workspace-title" id="home-overview-title">${esc(overviewTitle)}</h2>
-        <p class="home-workspace-copy">${esc(overviewSubtitle)}</p>
-      </div>
-      <div class="home-workspace-badge">
-        <span class="home-workspace-badge-label">迴ｾ蝨ｨ縺ｮ陦ｨ遉ｺ</span>
-        <strong class="home-workspace-badge-value" data-home-workspace-current-target>${esc(target.title)}</strong>
-      </div>
-    </header>
-  `;
-
-  const gridMarkup = `
-    <div class="home-overview-grid">
-      ${renderOverviewCard(taskOverview)}
-      ${renderOverviewCard(noticeOverview)}
-      ${renderOverviewCard(companyOverview)}
-    </div>
-  `;
   const topMarkup = `
     <div class="home-workspace-top" data-home-workspace-top>
-      ${headerMarkup}
-      ${gridMarkup}
+      <header class="home-workspace-header">
+        <div class="home-workspace-header-copy">
+          <p class="home-workspace-kicker">ホーム</p>
+          <h2 class="home-workspace-title" id="home-overview-title">${esc(overviewTitle)}</h2>
+          <p class="home-workspace-copy">${esc(overviewSubtitle)}</p>
+        </div>
+      </header>
+      <div class="home-overview-grid">
+        ${renderOverviewCard(taskOverview)}
+        ${renderOverviewCard(noticeOverview)}
+        ${renderOverviewCard(companyOverview)}
+      </div>
     </div>
   `;
 
@@ -250,46 +235,14 @@ function renderHomeWorkspaceTop(targetOverride = null) {
   const top = shell.querySelector('[data-home-workspace-top]');
   if (top) {
     top.outerHTML = topMarkup;
-    return;
-  }
-
-  const header = shell.querySelector('.home-workspace-header');
-  if (!header) {
+  } else {
     const stage = shell.querySelector('[data-home-workspace-stage]');
     if (stage) {
       stage.insertAdjacentHTML('beforebegin', topMarkup);
     } else {
       shell.insertAdjacentHTML('afterbegin', topMarkup);
     }
-    return;
   }
-
-  const grid = shell.querySelector('.home-overview-grid');
-  if (grid) {
-    header.outerHTML = topMarkup;
-    grid.remove();
-  } else {
-    header.outerHTML = topMarkup;
-  }
-}
-
-function updateHomeWorkspaceTopBadge(target) {
-  const host = document.getElementById('home-dashboard');
-  if (!host) return;
-
-  const shell = host.querySelector('.home-workspace-shell');
-  if (!shell) {
-    renderHomeWorkspace();
-    return;
-  }
-
-  shell.dataset.tone = target.tone;
-  const badge = shell.querySelector('.home-workspace-badge-value');
-  if (badge) {
-    badge.textContent = target.title || '';
-    return;
-  }
-  renderHomeWorkspaceTop(target);
 }
 
 function renderHomeWorkspaceStage(targetKey, target) {
@@ -335,7 +288,7 @@ function buildOverviewSubtitle() {
   if (!state.currentUsername) {
     return 'ユーザー名を設定すると、自分のタスクや通知が表示されます。';
   }
-  return '上部はタスク・通知・社内のお知らせだけ。下のエリアはサイドバーで切り替える試作です。';
+  return 'このゾーンは常に固定。サイドバーで下のエリアを切り替えてください。';
 }
 
 function renderOverviewCard(snapshot) {
@@ -350,12 +303,12 @@ function renderOverviewCard(snapshot) {
       </div>
 
       <p class="home-workspace-copy">${esc(snapshot.meta)}</p>
-      ${renderOverviewList(snapshot.items, snapshot.emptyText)}
+      ${renderOverviewList(snapshot.items)}
     </article>
   `;
 }
 
-function renderOverviewList(items = [], emptyText = '') {
+function renderOverviewList(items = []) {
   if (!Array.isArray(items) || items.length === 0) {
     return '';
   }

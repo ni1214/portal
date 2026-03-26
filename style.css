@@ -19990,7 +19990,12 @@ body {
   scrollbar-gutter: stable;
 }
 
-.home-workspace-shell::before {
+/* シェルの左ストライプは廃止 — ステージ側に移動 */
+.home-workspace-stage {
+  overflow: hidden;
+}
+
+.home-workspace-stage::before {
   content: '';
   position: absolute;
   inset: 0 auto 0 0;
@@ -19998,20 +20003,32 @@ body {
   background: linear-gradient(180deg, var(--workspace-accent), color-mix(in srgb, var(--workspace-accent) 45%, transparent));
 }
 
-.home-workspace-shell[data-tone="notice"] { --workspace-accent: var(--accent-orange); }
-.home-workspace-shell[data-tone="calendar"] { --workspace-accent: var(--accent-blue); }
-.home-workspace-shell[data-tone="task"] { --workspace-accent: #8b5cf6; }
-.home-workspace-shell[data-tone="request"] { --workspace-accent: #06b6d4; }
-.home-workspace-shell[data-tone="order"] { --workspace-accent: #f59e0b; }
-.home-workspace-shell[data-tone="email"] { --workspace-accent: var(--state-success); }
-.home-workspace-shell[data-tone="chat"] { --workspace-accent: #38bdf8; }
-.home-workspace-shell[data-tone="file"] { --workspace-accent: #10b981; }
-.home-workspace-shell[data-tone="property"] { --workspace-accent: #64748b; }
-.home-workspace-shell[data-tone="favorites"] { --workspace-accent: #f472b6; }
-.home-workspace-shell[data-tone="settings"] { --workspace-accent: #94a3b8; }
-.home-workspace-shell[data-tone="help"] { --workspace-accent: var(--accent-blue); }
-.home-workspace-shell[data-tone="diagnostics"] { --workspace-accent: #a855f7; }
-.home-workspace-shell[data-tone="invite"] { --workspace-accent: var(--state-success); }
+/* シェルのトーンは撤廃 — 上部固定ゾーンは常にデフォルト青 */
+
+/* ステージゾーン: サイドバーで切り替わる色 */
+.home-workspace-stage { --workspace-accent: var(--accent-blue); }
+.home-workspace-stage[data-tone="notice"]      { --workspace-accent: var(--accent-orange); }
+.home-workspace-stage[data-tone="calendar"]    { --workspace-accent: var(--accent-blue); }
+.home-workspace-stage[data-tone="task"]        { --workspace-accent: #8b5cf6; }
+.home-workspace-stage[data-tone="request"]     { --workspace-accent: #06b6d4; }
+.home-workspace-stage[data-tone="order"]       { --workspace-accent: #f59e0b; }
+.home-workspace-stage[data-tone="email"]       { --workspace-accent: var(--state-success); }
+.home-workspace-stage[data-tone="chat"]        { --workspace-accent: #38bdf8; }
+.home-workspace-stage[data-tone="file"]        { --workspace-accent: #10b981; }
+.home-workspace-stage[data-tone="property"]    { --workspace-accent: #64748b; }
+.home-workspace-stage[data-tone="favorites"]   { --workspace-accent: #f472b6; }
+.home-workspace-stage[data-tone="settings"]    { --workspace-accent: #94a3b8; }
+.home-workspace-stage[data-tone="help"]        { --workspace-accent: var(--accent-blue); }
+.home-workspace-stage[data-tone="diagnostics"] { --workspace-accent: #a855f7; }
+.home-workspace-stage[data-tone="invite"]      { --workspace-accent: var(--state-success); }
+
+/* 上部サマリーカード: データ状態に応じた独立した色 */
+.home-overview-card                            { --workspace-accent: var(--accent-blue); }
+.home-overview-card[data-tone="notice"]        { --workspace-accent: var(--accent-orange); }
+.home-overview-card[data-tone="task"]          { --workspace-accent: #8b5cf6; }
+.home-overview-card[data-tone="request"]       { --workspace-accent: #06b6d4; }
+.home-overview-card[data-tone="settings"]      { --workspace-accent: #94a3b8; }
+.home-overview-card[data-tone="help"]          { --workspace-accent: var(--accent-blue); }
 
 .home-workspace-header,
 .home-workspace-grid {
