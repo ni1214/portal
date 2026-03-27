@@ -2927,23 +2927,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }, true);
     }
 
-    // クイチE��アクセスボタン ↁE対応するサイドバーボタンに委譲
-    const qaMap = {
-      'hqa-calendar' : 'btn-calendar',
-      'hqa-task'     : 'btn-task',
-      'hqa-order'    : 'btn-order-launch',
-      'hqa-email'    : 'btn-email-assist',
-      'hqa-file'     : 'ft-fab',
-      'hqa-req'      : 'btn-reqboard',
-      'hqa-chat'     : 'chat-fab',
-      'hqa-property' : 'btn-property-summary',
-    };
-    Object.entries(qaMap).forEach(([qaId, targetId]) => {
-      const btn = document.getElementById(qaId);
-      if (btn) btn.addEventListener('click', () => {
-        document.getElementById(targetId)?.click();
-      });
-    });
   })();
 
   // ===== 使ぁE��ガイチE=====

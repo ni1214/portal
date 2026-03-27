@@ -15214,65 +15214,16 @@ body {
   max-width: 1400px;
 }
 
-.home-search-hero {
-  max-width: 860px;
-  margin: 0 auto 64px;
-  padding-top: 8px;
-}
 
-.home-search-container {
-  width: 100% !important;
-  display: flex !important;
-  align-items: center;
-  min-height: 86px;
-  border-radius: 999px;
-  padding: 0 18px;
-  background: color-mix(in srgb, var(--portal-home-card) 88%, transparent);
-  border: 1px solid color-mix(in srgb, var(--portal-home-line) 60%, transparent);
-  box-shadow: var(--portal-home-shadow);
-  gap: 14px;
-}
 
-.home-search-container:hover:not(:focus-within):not(.has-value) {
-  background: color-mix(in srgb, var(--portal-home-elevated) 96%, transparent);
-}
 
 .search-input {
   font-family: var(--portal-home-body-font);
 }
 
-.home-search-container .search-input {
-  flex: 1 1 auto !important;
-  width: auto !important;
-  min-width: 0;
-  padding: 0 !important;
-  font-size: 1.35rem;
-}
 
-.home-search-container .search-icon {
-  position: static;
-  transform: none;
-  font-size: 1.35rem;
-  color: var(--portal-home-copy);
-}
 
-.home-search-tools {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-  color: var(--portal-home-copy);
-}
 
-.home-search-tool {
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-}
 
 .home-content-grid {
   max-width: 1400px;
@@ -15998,17 +15949,8 @@ body {
     padding: 18px 18px 96px;
   }
 
-  .home-search-hero {
-    margin-bottom: 28px;
-  }
 
-  .home-search-container {
-    min-height: 68px;
-  }
 
-  .home-search-container .search-input {
-    font-size: 1.05rem;
-  }
 
   .portal-home-section-title {
     font-size: 1.85rem;
@@ -16063,27 +16005,10 @@ body {
     display: none;
   }
 
-  .home-search-hero {
-    padding-top: 2px;
-  }
 
-  .home-search-container {
-    min-height: 58px;
-    padding: 0 14px;
-  }
 
-  .home-search-container .search-input {
-    font-size: 0.96rem;
-  }
 
-  .home-search-tools {
-    gap: 2px;
-  }
 
-  .home-search-tool {
-    width: 32px;
-    height: 32px;
-  }
 
   .home-content-grid {
     gap: 24px;
@@ -17021,9 +16946,6 @@ button.portal-home-panel:hover,
 }
 
 /* 4. Reduce search hero margin */
-.home-search-hero {
-  margin-bottom: 32px !important;
-}
 
 /* 5. Fix personal space top margin */
 #space-personal {
@@ -17269,44 +17191,11 @@ body {
 }
 
 /* search hero: フル幅・Stitch検索バースタイル */
-.home-search-hero {
-  max-width: 1280px !important;
-  margin: 0 auto 0 !important;
-  padding: 24px 24px 0 !important;
-}
 
 /* 検索バー本体: h-12(48px)・bg #31353c・radius 12px */
-.home-search-container {
-  min-height: 48px !important;
-  height: 48px !important;
-  background: #31353c !important;
-  border: 1px solid rgba(65, 71, 82, 0.20) !important;
-  border-radius: 12px !important;
-  padding: 0 16px !important;
-  box-shadow: none !important;
-  gap: 8px !important;
-  position: static !important;
-}
 
-.home-search-container .search-icon {
-  position: static !important;
-  left: auto !important;
-  top: auto !important;
-  transform: none !important;
-  font-size: 1rem !important;
-  color: #c0c7d4 !important;
-  flex-shrink: 0 !important;
-}
 
-.home-search-container .search-input {
-  font-size: 0.875rem !important;
-  color: #dfe2eb !important;
-  background: transparent !important;
-}
 
-.home-search-container .search-input::placeholder {
-  color: rgba(192, 199, 212, 0.60) !important;
-}
 
 /* content wrapper: p-6 max-w-7xl */
 .home-content-grid {
@@ -17470,10 +17359,6 @@ body {
   border-bottom-color: rgba(65, 71, 82, 0.15) !important;
 }
 
-[data-theme="light"] .home-search-container {
-  background: #eaeef2 !important;
-  border-color: rgba(31, 35, 40, 0.15) !important;
-}
 
 [data-theme="light"] #notice-board .notice-item {
   background: rgba(0, 0, 0, 0.02) !important;
@@ -17527,172 +17412,32 @@ body {
 }
 
 /* サマリーカード 4枚 */
-.hd-summary-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-}
 
-.hd-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 18px;
-  background: var(--portal-home-card);
-  border: 1px solid var(--portal-home-line);
-  border-radius: 12px;
-  box-shadow: var(--portal-home-shadow);
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s, box-shadow 0.15s;
-}
 
-.hd-card:hover {
-  background: var(--portal-home-card-hover);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-}
 
-.hd-card-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  flex-shrink: 0;
-}
 
-.hd-icon-blue  { background: rgba(138,180,248,0.18); color: var(--portal-home-accent); }
-.hd-icon-red   { background: rgba(242,139,130,0.18); color: var(--portal-home-danger); }
-.hd-icon-orange{ background: rgba(253,186,116,0.18); color: #fdba74; }
-.hd-icon-green { background: rgba(129,201,149,0.18); color: var(--portal-home-success); }
 
-[data-theme="light"] .hd-icon-blue  { background: #e8f0fe; color: #1a73e8; }
-[data-theme="light"] .hd-icon-red   { background: #fce8e6; color: #d93025; }
-[data-theme="light"] .hd-icon-orange{ background: #fef3e2; color: #e8710a; }
-[data-theme="light"] .hd-icon-green { background: #e6f4ea; color: #188038; }
 
-.hd-card-body {
-  min-width: 0;
-}
 
-.hd-card-label {
-  font-size: 0.78rem;
-  color: var(--portal-home-copy);
-  font-weight: 500;
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
-.hd-card-value {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--portal-home-title);
-  font-family: var(--portal-home-heading-font);
-}
 
 /* クイックアクセスパネル */
-.hd-panel {
-  background: var(--portal-home-card);
-  border: 1px solid var(--portal-home-line);
-  border-radius: 12px;
-  box-shadow: var(--portal-home-shadow);
-  overflow: hidden;
-}
 
-.hd-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px 10px;
-  border-bottom: 1px solid var(--portal-home-line);
-}
 
-.hd-panel-title {
-  font-family: var(--portal-home-heading-font);
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: var(--portal-home-title);
-}
 
 /* クイックアクセス グリッド */
-.hd-quick-access {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 4px;
-  padding: 12px;
-}
 
-.hqa-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 6px;
-  border: none;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--portal-home-copy);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-  font-size: 0.72rem;
-  font-family: var(--portal-home-body-font);
-  font-weight: 500;
-}
 
-.hqa-btn:hover {
-  background: var(--portal-home-accent-soft);
-  color: var(--portal-home-accent);
-}
 
-.hqa-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: var(--portal-home-elevated);
-  border: 1px solid var(--portal-home-line);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  transition: background 0.15s, border-color 0.15s;
-}
 
-.hqa-btn:hover .hqa-icon {
-  background: var(--portal-home-accent-soft);
-  border-color: var(--portal-home-accent);
-  color: var(--portal-home-accent);
-}
 
 /* search hero: コンパクトに */
-.home-search-hero {
-  max-width: 800px !important;
-  margin-bottom: 24px !important;
-}
 
-.home-search-container {
-  min-height: 52px !important;
-  border-radius: 9999px !important;
-  box-shadow: var(--portal-home-shadow) !important;
-  background: var(--portal-home-card) !important;
-  border: 1px solid var(--portal-home-line) !important;
-}
 
-.home-search-container .search-input {
-  font-size: 1rem !important;
-}
 
-.home-search-container .search-icon {
-  font-size: 1rem !important;
-}
 
 /* レスポンシブ */
 @media (max-width: 900px) {
-  .hd-summary-row { grid-template-columns: repeat(2, 1fr); }
-  .hd-quick-access { grid-template-columns: repeat(4, 1fr); }
 }
 
 @media (max-width: 600px) {
@@ -17722,25 +17467,8 @@ body {
   padding: 20px 28px 56px !important;
 }
 
-.home-search-hero {
-  max-width: 1280px !important;
-  margin: 0 auto 24px !important;
-  padding-top: 4px !important;
-}
 
-.home-search-container {
-  min-height: 58px !important;
-  max-width: 760px;
-  margin: 0;
-  border-radius: 999px !important;
-  background: color-mix(in srgb, var(--portal-home-card) 88%, transparent) !important;
-  border: 1px solid color-mix(in srgb, var(--portal-home-line) 64%, transparent) !important;
-  box-shadow: var(--portal-home-shadow) !important;
-}
 
-.home-search-container .search-input {
-  font-size: 1rem !important;
-}
 
 .home-dashboard {
   display: block !important;
@@ -17748,108 +17476,18 @@ body {
   margin: 0 auto 28px;
 }
 
-.portal-summary-shell {
-  display: block;
-}
 
-.portal-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
-}
 
-.portal-summary-card {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 100%;
-  border: none;
-  border-radius: 24px;
-  background: color-mix(in srgb, var(--portal-home-card) 92%, var(--portal-home-elevated));
-  color: var(--portal-home-title);
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px 22px;
-  text-align: left;
-  cursor: pointer;
-  box-shadow: var(--portal-home-shadow);
-  transition: transform var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
-}
 
-.portal-summary-card:hover {
-  transform: translateY(-2px);
-  background: color-mix(in srgb, var(--portal-home-card-hover) 92%, var(--portal-home-elevated));
-}
 
-.portal-summary-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  flex-shrink: 0;
-}
 
-.portal-summary-card--primary .portal-summary-icon {
-  background: color-mix(in srgb, var(--portal-home-accent) 14%, transparent);
-  color: var(--portal-home-accent);
-}
 
-.portal-summary-card--danger .portal-summary-icon {
-  background: color-mix(in srgb, var(--portal-home-danger) 14%, transparent);
-  color: var(--portal-home-danger);
-}
 
-.portal-summary-card--tertiary .portal-summary-icon {
-  background: color-mix(in srgb, var(--accent-orange) 18%, transparent);
-  color: var(--accent-orange);
-}
 
-.portal-summary-card--neutral .portal-summary-icon {
-  background: color-mix(in srgb, var(--portal-home-line) 56%, transparent);
-  color: var(--portal-home-copy);
-}
 
-.portal-summary-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
 
-.portal-summary-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--portal-home-copy);
-}
 
-.portal-summary-value {
-  font-family: var(--portal-home-heading-font);
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: var(--portal-home-title);
-}
 
-.portal-summary-meta {
-  font-size: 0.82rem;
-  color: var(--portal-home-copy);
-}
-
-.portal-summary-card[data-state="alert"] .portal-summary-value,
-.portal-summary-card[data-state="alert"] .portal-summary-meta {
-  color: var(--portal-home-danger);
-}
-
-.portal-summary-card[data-state="active"] .portal-summary-value {
-  color: var(--portal-home-accent);
-}
-
-.portal-summary-card[data-state="clear"] .portal-summary-value {
-  color: var(--portal-home-success);
-}
 
 .home-content-grid {
   max-width: 1280px !important;
@@ -18382,9 +18020,6 @@ body {
 }
 
 @media (max-width: 1120px) {
-  .portal-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 
   .home-content-grid {
     grid-template-columns: minmax(0, 1fr) !important;
@@ -18414,7 +18049,6 @@ body {
     margin-bottom: 20px;
   }
 
-  .portal-summary-grid,
   .shared-home-lower-grid,
   .shared-home-action-grid,
   .shared-home-link-grid,
@@ -18448,7 +18082,6 @@ body {
     padding: 14px !important;
   }
 
-  .portal-summary-card,
   .shared-home-card,
   .portal-personal-card,
   #todo-section,
@@ -18947,28 +18580,9 @@ body {
   display: none !important;
 }
 
-.app-main.home-compact .hd-panel {
-  display: block !important;
-  margin-bottom: 14px;
-  padding: 12px 14px;
-}
 
-.app-main.home-compact .hd-quick-access {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
 
-.app-main.home-compact .hqa-btn {
-  padding: 8px 6px;
-  gap: 5px;
-}
 
-.app-main.home-compact .hqa-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  font-size: 1rem;
-}
 
 /* --------------------------------------------------
    ミッションバナー（新スタイル）
@@ -18985,157 +18599,18 @@ body {
 /* --------------------------------------------------
    ホームダッシュボード — サマリーカード
    -------------------------------------------------- */
-.hd-summary-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 20px;
-}
 
-.hd-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 18px;
-  background: var(--bg-card);
-  border: 1.5px solid var(--border-glass);
-  border-radius: var(--app-radius);
-  cursor: pointer;
-  text-align: left;
-  transition: background var(--transition-fast), border-color var(--transition-fast), transform 0.12s, box-shadow var(--transition-fast);
-  box-shadow: var(--app-shadow-card);
-}
-.hd-card:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--border-glass-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--app-shadow-float);
-}
-[data-theme="light"] .hd-card {
-  background: #ffffff;
-  border-color: rgba(31,35,40,0.14);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-}
-[data-theme="light"] .hd-card:hover {
-  background: #f6f8fa;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
-}
 
-.hd-card-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-  flex-shrink: 0;
-}
-.hd-icon-blue   { background: rgba(88,166,255,0.15); color: var(--accent-blue); }
-.hd-icon-red    { background: rgba(239,68,68,0.15); color: var(--state-danger); }
-.hd-icon-orange { background: rgba(255,166,87,0.15); color: var(--accent-orange); }
-.hd-icon-green  { background: rgba(16,185,129,0.15); color: var(--state-success); }
-[data-theme="light"] .hd-icon-blue   { background: rgba(9,105,218,0.10); }
-[data-theme="light"] .hd-icon-red    { background: rgba(207,34,46,0.10); color: #cf222e; }
-[data-theme="light"] .hd-icon-orange { background: rgba(188,76,0,0.10); color: #bc4c00; }
-[data-theme="light"] .hd-icon-green  { background: rgba(38,134,65,0.10); color: #1a7f37; }
 
-.hd-card-body { min-width: 0; }
-.hd-card-label {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-bottom: 2px;
-  white-space: nowrap;
-}
-.hd-card-value {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.2;
-}
 
 /* --------------------------------------------------
    クイックアクセスパネル
    -------------------------------------------------- */
-.hd-panel {
-  background: var(--bg-card);
-  border: 1.5px solid var(--border-glass);
-  border-radius: var(--app-radius);
-  padding: 18px 20px;
-  margin-bottom: 24px;
-  display: none !important;
-  box-shadow: var(--app-shadow-card);
-}
-[data-theme="light"] .hd-panel {
-  background: #ffffff;
-  border-color: rgba(31,35,40,0.14);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-}
 
-.hd-panel-header { margin-bottom: 14px; }
-.hd-panel-title {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
 
-.hd-quick-access {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 8px;
-}
 
-.hqa-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 7px;
-  padding: 12px 8px;
-  border: 1.5px solid var(--border-glass);
-  border-radius: 10px;
-  background: var(--bg-glass);
-  cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast), transform 0.12s;
-  font-family: var(--font-family);
-}
-.hqa-btn:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--border-glass-hover);
-  transform: translateY(-2px);
-}
-[data-theme="light"] .hqa-btn {
-  background: #f6f8fa;
-  border-color: rgba(31,35,40,0.14);
-}
-[data-theme="light"] .hqa-btn:hover { background: #eaeef2; }
 
-.hqa-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: var(--bg-card-hover);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-  color: var(--accent-blue);
-  transition: background var(--transition-fast);
-}
-.hqa-btn:hover .hqa-icon { background: rgba(88,166,255,0.18); }
-[data-theme="light"] .hqa-icon {
-  background: rgba(9,105,218,0.08);
-  color: var(--accent-blue);
-}
 
-.hqa-btn span {
-  font-size: 0.72rem;
-  color: var(--text-secondary);
-  text-align: center;
-  line-height: 1.3;
-  white-space: nowrap;
-}
 
 /* --------------------------------------------------
    ホームコンテンツグリッド（全社 + 個人）
@@ -19402,7 +18877,6 @@ body {
    -------------------------------------------------- */
 @media (max-width: 1024px) {
   :root { --app-sidebar-w: 220px; }
-  .hd-quick-access { grid-template-columns: repeat(4, 1fr); }
   .home-content-grid { grid-template-columns: 1fr; }
 }
 
@@ -19447,38 +18921,18 @@ body {
   .bottom-nav { display: flex; }
 
   /* 画面上部の quick access は summary cards と役割が重なるためモバイルでは隠す */
-  .hd-panel { display: none !important; }
 
-  .hd-summary-row {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
-  .hd-card { padding: 13px 14px; }
-  .hd-card-icon { width: 38px; height: 38px; border-radius: 10px; font-size: 1rem; }
-  .hd-card-value { font-size: 1.15rem; }
 
-  .hd-quick-access { grid-template-columns: repeat(4, 1fr); gap: 6px; }
-  .hqa-btn { padding: 10px 6px; gap: 5px; }
-  .hqa-icon { width: 36px; height: 36px; font-size: 1rem; }
-  .hqa-btn span { font-size: 0.68rem; }
 
   .home-content-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
-  .hd-summary-row { grid-template-columns: repeat(2, 1fr); }
-  .hd-quick-access { grid-template-columns: repeat(4, 1fr); }
   .app-main { padding: 12px 10px 76px; }
 
   /* portal-summary-grid をモバイルで2×2に固定（旧CSSの1列指定を上書き） */
-  .portal-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
 
   /* モバイルでサマリーカードの値フォントを縮小（3文字以上の文字列が収まるよう） */
-  .portal-summary-value {
-    font-size: 1.2rem !important;
-  }
 }
 
 /* ================================================================
@@ -19486,90 +18940,18 @@ body {
    ================================================================ */
 
 /* ===== 1. ポータルサマリーカード ===== */
-.portal-summary-card {
-  padding: 16px 18px;
-  min-height: 90px;
-  background: var(--bg-card);
-  border: 1.5px solid var(--border-glass);
-  border-radius: 12px;
-  cursor: pointer;
-  box-shadow: none;
-  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-}
 
-.portal-summary-card:hover {
-  transform: translateY(-2px);
-  background: var(--bg-card-hover);
-  border-color: var(--border-glass-hover);
-}
 
-.portal-summary-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  flex-shrink: 0;
-}
 
-.portal-summary-card--primary .portal-summary-icon {
-  background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
-  color: var(--accent-blue);
-}
 
-.portal-summary-card--danger .portal-summary-icon {
-  background: color-mix(in srgb, var(--accent-orange) 14%, transparent);
-  color: var(--accent-orange);
-}
 
-.portal-summary-card--tertiary .portal-summary-icon {
-  background: color-mix(in srgb, var(--accent-cyan) 14%, transparent);
-  color: var(--accent-cyan);
-}
 
-.portal-summary-card--neutral .portal-summary-icon {
-  background: color-mix(in srgb, var(--accent-purple) 14%, transparent);
-  color: var(--accent-purple);
-}
 
-.portal-summary-label {
-  font-size: 0.73rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
-.portal-summary-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
-.portal-summary-meta {
-  font-size: 0.72rem;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 /* ライトモード: サマリーカード */
-[data-theme="light"] .portal-summary-card {
-  background: #ffffff;
-  border-color: rgba(31,35,40,0.14);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-}
 
-[data-theme="light"] .portal-summary-card:hover {
-  background: #f6f8fa;
-  border-color: rgba(31,35,40,0.28);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-}
 
 /* ===== 2. サイドバー改善 ===== */
 
@@ -19626,9 +19008,6 @@ body {
 }
 
 /* ===== 3. クイックアクセスグリッド修正 ===== */
-.hd-quick-access {
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-}
 
 /* ===== 4. Stitch finale ライトモード補完 ===== */
 [data-theme="light"] body {
@@ -19639,9 +19018,6 @@ body {
   background: var(--bg-secondary) !important;
 }
 
-[data-theme="light"] .home-search-container {
-  background: #f0f2f5 !important;
-}
 
 [data-theme="light"] #notice-board .notice-item {
   background: var(--bg-card) !important;
@@ -19665,22 +19041,9 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.hqa-btn span {
-  letter-spacing: 0.01em;
-}
 
 /* ===== 7. クイックアクセスホバー改善 ===== */
-.hqa-btn:hover {
-  border-color: var(--accent-blue);
-  box-shadow: 0 4px 12px rgba(88,166,255,0.12);
-  transform: translateY(-2px);
-}
 
-[data-theme="light"] .hqa-btn:hover {
-  border-color: var(--accent-blue);
-  box-shadow: 0 4px 12px rgba(9,105,218,0.10);
-  background: #eaeef2;
-}
 
 /* ================================================================
    バグ修正 v1 — 2025-03（Criticエージェント指摘分）
@@ -19707,10 +19070,7 @@ body {
 .app-user-btn:focus-visible,
 .app-sidebar-item:focus-visible,
 .app-sidebar-util:focus-visible,
-.app-sidebar-invite:focus-visible,
-.hqa-btn:focus-visible,
-.portal-summary-card:focus-visible,
-.hd-card:focus-visible {
+.app-sidebar-invite:focus-visible {
   outline: 2px solid var(--accent-blue);
   outline-offset: 2px;
 }
@@ -19727,18 +19087,10 @@ body {
 }
 
 /* ===== 🟡 Fix6: hqa-btn ラベルの折り返し対応（「物件Noまとめ」等） ===== */
-.hqa-btn span {
-  white-space: normal;
-  line-height: 1.25;
-  text-align: center;
-}
 
 /* ===== Bug#6修正: 481px〜760pxでサマリーカードが1列になるバグ ===== */
 /* L.18409の@media(max-width:760px)が portal-summary-grid を1列にしているのを上書き */
 @media (max-width: 760px) {
-  .portal-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
 }
 
 /* ===== サイドバー内FABボタン: position:fixedをリセット ===== */
@@ -19789,16 +19141,8 @@ body {
 /* ===== クイックアクセス: デスクトップ非表示（サイドバーと100%重複 → 認知コスト除去） ===== */
 /* モバイル(<768px)はサイドバーが隠れるため引き続き表示。4列固定で2行に収める */
 @media (min-width: 769px) {
-  .hd-panel { display: none !important; }
-}
-.hd-quick-access {
-  grid-template-columns: repeat(4, minmax(80px, 1fr)) !important;
 }
 @media (max-width: 480px) {
-  .hd-quick-access {
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 6px;
-  }
 }
 
 /* ===== デスクトップ2カラムレイアウト（1024px以上で常時2列） ===== */
@@ -19836,7 +19180,6 @@ body {
 /* ===== デスクトップではクイックアクセスを非表示（サイドバーが代替） ===== */
 /* CLAUDE.md原則: クイックアクセスはモバイル補助のみ / デスクトップでは表示しない */
 @media (min-width: 1024px) {
-  .hd-panel { display: none !important; }
 }
 /* モバイル・タブレットは1列のまま（変更しない） */
 
@@ -19888,18 +19231,9 @@ body {
    UIビューティエージェント 修正 #4
    サマリーカードグリッドの均等配置
    =================================================== */
-.portal-summary-shell {
-  margin-bottom: 20px;
-}
-.portal-summary-grid {
-  gap: 16px;
-}
 
 /* ===== Home Workspace ===== */
 #mission-banner,
-.hd-panel {
-  display: none !important;
-}
 
 #home-dashboard {
   position: relative;
@@ -20007,20 +19341,6 @@ body {
 
 /* ステージゾーン: サイドバーで切り替わる色 */
 .home-workspace-stage { --workspace-accent: var(--accent-blue); }
-.home-workspace-stage[data-tone="notice"]      { --workspace-accent: var(--accent-orange); }
-.home-workspace-stage[data-tone="calendar"]    { --workspace-accent: var(--accent-blue); }
-.home-workspace-stage[data-tone="task"]        { --workspace-accent: #8b5cf6; }
-.home-workspace-stage[data-tone="request"]     { --workspace-accent: #06b6d4; }
-.home-workspace-stage[data-tone="order"]       { --workspace-accent: #f59e0b; }
-.home-workspace-stage[data-tone="email"]       { --workspace-accent: var(--state-success); }
-.home-workspace-stage[data-tone="chat"]        { --workspace-accent: #38bdf8; }
-.home-workspace-stage[data-tone="file"]        { --workspace-accent: #10b981; }
-.home-workspace-stage[data-tone="property"]    { --workspace-accent: #64748b; }
-.home-workspace-stage[data-tone="favorites"]   { --workspace-accent: #f472b6; }
-.home-workspace-stage[data-tone="settings"]    { --workspace-accent: #94a3b8; }
-.home-workspace-stage[data-tone="help"]        { --workspace-accent: var(--accent-blue); }
-.home-workspace-stage[data-tone="diagnostics"] { --workspace-accent: #a855f7; }
-.home-workspace-stage[data-tone="invite"]      { --workspace-accent: var(--state-success); }
 
 /* 上部サマリーカード: データ状態に応じた独立した色 */
 .home-overview-card                            { --workspace-accent: var(--accent-blue); }
@@ -20031,10 +19351,6 @@ body {
 .home-overview-card[data-tone="help"]          { --workspace-accent: var(--accent-blue); }
 
 .home-workspace-header,
-.home-workspace-grid {
-  position: relative;
-  z-index: 1;
-}
 
 .home-workspace-header {
   display: flex;
@@ -20093,12 +19409,6 @@ body {
   line-height: 1.35;
 }
 
-.home-workspace-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.9fr);
-  gap: 18px;
-  margin-top: 20px;
-}
 
 .home-workspace-card {
   min-width: 0;
@@ -20109,9 +19419,6 @@ body {
   box-shadow: var(--app-shadow-card);
 }
 
-.home-workspace-card--aside {
-  background: color-mix(in srgb, var(--bg-glass) 70%, var(--bg-card));
-}
 
 .home-workspace-card-head {
   display: flex;
@@ -20148,33 +19455,9 @@ body {
   white-space: nowrap;
 }
 
-.home-workspace-metric-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
 
-.home-workspace-metric {
-  padding: 14px 15px;
-  border-radius: 18px;
-  border: 1px solid var(--border-glass);
-  background: color-mix(in srgb, var(--bg-glass) 72%, transparent);
-}
 
-.home-workspace-metric-label {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--text-muted);
-  font-size: 0.74rem;
-  letter-spacing: 0.04em;
-}
 
-.home-workspace-metric-value {
-  display: block;
-  color: var(--text-primary);
-  font-size: 1.02rem;
-  line-height: 1.35;
-}
 
 .home-workspace-note-list {
   display: grid;
@@ -20198,12 +19481,6 @@ body {
   color: var(--workspace-accent);
 }
 
-.home-workspace-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 18px;
-}
 
 .home-workspace-action {
   display: inline-flex;
@@ -20227,75 +19504,17 @@ body {
   box-shadow: 0 10px 22px color-mix(in srgb, var(--workspace-accent) 18%, transparent);
 }
 
-.home-workspace-action--primary {
-  border-color: transparent;
-  background: linear-gradient(135deg, var(--workspace-accent), color-mix(in srgb, var(--workspace-accent) 72%, black));
-  color: #fff;
-}
 
-.home-workspace-action--primary:hover {
-  box-shadow: 0 12px 26px color-mix(in srgb, var(--workspace-accent) 28%, transparent);
-}
 
-.home-workspace-action--secondary {
-  background: color-mix(in srgb, var(--bg-glass) 75%, transparent);
-}
 
-.home-workspace-notice-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
 
-.home-workspace-notice-stat {
-  padding: 14px 15px;
-  border-radius: 18px;
-  border: 1px solid var(--border-glass);
-  background: color-mix(in srgb, var(--bg-card) 84%, transparent);
-}
 
-.home-workspace-notice-stat span {
-  display: block;
-  color: var(--text-muted);
-  font-size: 0.74rem;
-  letter-spacing: 0.04em;
-  margin-bottom: 6px;
-}
 
-.home-workspace-notice-stat strong {
-  color: var(--text-primary);
-  font-size: 1.06rem;
-}
 
-.home-workspace-notice-preview {
-  margin-top: 14px;
-}
 
-.home-workspace-notice-list {
-  display: grid;
-  gap: 10px;
-}
 
-.home-workspace-notice-item {
-  padding: 12px 14px;
-  border-radius: 16px;
-  border: 1px solid var(--border-glass);
-  background: color-mix(in srgb, var(--bg-glass) 66%, transparent);
-}
 
-.home-workspace-notice-title {
-  display: block;
-  color: var(--text-primary);
-  font-size: 0.92rem;
-  line-height: 1.45;
-}
 
-.home-workspace-notice-meta {
-  display: block;
-  margin-top: 4px;
-  color: var(--text-muted);
-  font-size: 0.76rem;
-}
 
 .home-workspace-empty {
   margin-top: 12px;
@@ -20308,21 +19527,8 @@ body {
   text-align: center;
 }
 
-.home-workspace-side-actions {
-  margin-top: 16px;
-  display: flex;
-}
 
-.home-workspace-side-actions .home-workspace-action {
-  width: 100%;
-}
 
-.home-workspace-side-note {
-  margin: 12px 0 0;
-  color: var(--text-muted);
-  font-size: 0.82rem;
-  line-height: 1.6;
-}
 
 .home-workspace-stage {
   display: flex;
@@ -20338,17 +19544,7 @@ body {
   min-height: clamp(420px, 56vh, 760px);
 }
 
-.home-workspace-embed {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-}
 
-.home-workspace-embed > .task-embedded-shell {
-  flex: 1;
-  min-height: 100%;
-}
 
 .task-embedded-shell {
   display: flex;
@@ -20381,32 +19577,7 @@ body {
   padding-top: 8px;
 }
 
-.app-sidebar-item.home-nav-active,
-.app-sidebar-util.home-nav-active,
-.app-sidebar-invite.home-nav-active {
-  border-color: color-mix(in srgb, var(--accent-blue) 40%, var(--border-glass)) !important;
-  background: color-mix(in srgb, var(--accent-blue) 16%, transparent) !important;
-  color: var(--accent-blue) !important;
-  box-shadow: 0 10px 24px rgba(88, 166, 255, 0.18);
-}
-
-.app-sidebar-item.home-nav-active .app-sidebar-icon,
-.app-sidebar-util.home-nav-active .app-sidebar-icon,
-.app-sidebar-invite.home-nav-active .app-sidebar-icon {
-  color: var(--accent-blue);
-}
-
-[data-theme="light"] .app-sidebar-item.home-nav-active,
-[data-theme="light"] .app-sidebar-util.home-nav-active,
-[data-theme="light"] .app-sidebar-invite.home-nav-active {
-  background: rgba(9, 105, 218, 0.12) !important;
-  box-shadow: 0 8px 20px rgba(9, 105, 218, 0.14);
-}
-
 @media (max-width: 1100px) {
-  .home-workspace-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 760px) {
@@ -20438,17 +19609,8 @@ body {
     min-width: 0;
   }
 
-  .home-workspace-metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 
-  .home-workspace-notice-summary {
-    grid-template-columns: 1fr;
-  }
 
-  .home-workspace-actions {
-    flex-direction: column;
-  }
 
   .home-workspace-action {
     width: 100%;
@@ -20456,9 +19618,6 @@ body {
 }
 
 @media (max-width: 520px) {
-  .home-workspace-metric-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* ===================================================
@@ -20645,11 +19804,6 @@ body {
     font-size: 0.98rem;
   }
 
-  .home-workspace-metric-grid,
-  .home-workspace-notice-summary {
-    grid-template-columns: 1fr;
-  }
-
   .home-overview-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
@@ -20697,9 +19851,6 @@ body {
     font-size: 1rem;
   }
 
-  .home-workspace-actions {
-    flex-direction: column;
-  }
 
   .home-workspace-action {
     width: 100%;
@@ -20710,9 +19861,6 @@ body {
     margin-top: 12px;
   }
 
-  .home-workspace-embed {
-    min-height: 0;
-  }
 
   .task-embedded-shell {
     border-radius: 18px;
