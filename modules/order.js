@@ -530,7 +530,7 @@ async function loadMasters() {
 // ===== 初期化 =====
 export async function initOrder(d) {
   // d は deps（将来の拡張用）
-  if (!isSupabaseSharedCoreEnabled()) {
+  if (isSupabaseSharedCoreEnabled()) {
     // Supabase モード: シードロジック実行
     await seedInitialData();
     await cleanupFactoryDuplicates();
