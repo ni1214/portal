@@ -155,6 +155,37 @@ export function xxxFunction() { ... }
 | `yearMonth` | string | `'YYYY-MM'`（月別クエリ用インデックス）|
 | `updatedAt` | timestamp | `serverTimestamp()` |
 
+## Supabase CLI 操作（重要・別PC共通）
+
+### プロジェクト情報
+| 項目 | 値 |
+|---|---|
+| プロジェクト名 | Portal |
+| Reference ID | `ydcxgxzeavumvubrqmlq` |
+| URL | `https://ydcxgxzeavumvubrqmlq.supabase.co` |
+| リージョン | Northeast Asia (Tokyo) |
+
+### SQLの実行方法
+`supabase link` は未設定のため、`--project-ref` を直接指定する。
+
+```bash
+# SQLファイルを実行
+npx supabase db query --project-ref ydcxgxzeavumvubrqmlq -f <sqlファイルパス>
+
+# インラインSQLを実行
+npx supabase db query --project-ref ydcxgxzeavumvubrqmlq --sql "SELECT * FROM ..."
+
+# プロジェクト一覧確認
+npx supabase projects list
+```
+
+### 認証情報（Windows）
+- **保存場所**: Windows 資格情報マネージャー（`コントロールパネル > 資格情報マネージャー > Windows 資格情報`）
+- エントリ名: `LegacyGeneric:target=Supabase CLI:supabase`
+- 未ログインの場合: `npx supabase login`（ブラウザが開き、トークンが自動保存される）
+
+---
+
 ## セキュリティ
 - バックエンド: Supabase（Row Level Security + publishable key で公開安全）
 - Firebase は完全廃止。`modules/config.js` は全 Firebase API をスタブ化しエラーを投げる
