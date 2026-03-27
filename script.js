@@ -825,6 +825,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     await loadReadNotices(username);
     setupNoticeObserver();
     startTaskListeners(username);
+    startChatListeners(username);
     await loadUserEmailProfile(username);
     subscribeTodayAttendance(username);
     refreshNoticeVisibility();
@@ -3727,6 +3728,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         requireAcknowledgement,
         targetScope,
         targetDepartments,
+        createdBy: state.currentUsername,
         updatedAt: serverTimestamp()
       });
       closeNoticeModal();
