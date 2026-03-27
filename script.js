@@ -2808,6 +2808,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         'btn-property-summary': () => openPropertySummaryFromHome(),
         'btn-email-assist':     () => openEmailModal(),
         'btn-favorites-only':   () => toggleFavoritesOnly(),
+        'btn-shared-links':     () => { state.sharedLinksCategory = 'all'; void openSharedLinksModal(); },
+        'btn-my-category':      () => openPrivateSectionModal(null),
         'settings-fab':         () => openSettingsPanelFromHome(),
         'help-fab':             () => openGuideModalFromHome(),
         'btn-read-diagnostics': () => openReadDiagnosticsFromHome(),
