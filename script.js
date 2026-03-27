@@ -149,7 +149,7 @@ import {
 
 import { initBottomNav } from './modules/bottom-nav.js';
 
-import { initHomeDashboard, setHomeWorkspaceTarget, updateSummaryCards } from './modules/home-workspace.js?v=20260325a';
+import { initHomeDashboard, setHomeWorkspaceTarget, updateSummaryCards, renderHomeMySpacePanel } from './modules/home-workspace.js?v=20260325a';
 
 import {
   initOrder,
@@ -519,6 +519,7 @@ initHomeDashboard({
   openReadDiagnosticsModal: openReadDiagnosticsFromHome,
   openInviteCodeModal: openInviteCodeModalFromHome,
   renderMySpacePanel: renderHomeMySpacePanel,
+  buildLinkCard,
 });
 initReadDiagnostics();
 
@@ -824,6 +825,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     await loadReadNotices(username);
     setupNoticeObserver();
     startTaskListeners(username);
+    startChatListeners(username);
     await loadUserEmailProfile(username);
     subscribeTodayAttendance(username);
     refreshNoticeVisibility();
@@ -1625,77 +1627,6 @@ function buildLinkCard(card, isFav = false, gradient = '') {
     setupDraggable(a, card);
   }
   return a;
-}
-
-// ===== ホーム マイスペースパネル =====
-function renderHomeMySpacePanel(el) {
-  if (!el) return;
-  el.innerHTML = '';
-
-  const allCards = [...(state.allCards || []), ...(state.privateCards || [])];
-  const favIds = state.personalFavorites || [];
-  const favCards = favIds.map(id => allCards.find(c => c.id === id)).filter(Boolean);
-
-  // お気に入りセクション
-  const favSection = document.createElement('div');
-  favSection.className = 'home-myspace-section';
-
-  const favHeader = document.createElement('h4');
-  favHeader.className = 'home-myspace-section-title';
-  favHeader.innerHTML = '<i class="fa-solid fa-star"></i> お気に入り';
-  favSection.appendChild(favHeader);
-
-  if (favCards.length) {
-    const grid = document.createElement('div');
-    grid.className = 'card-grid home-myspace-grid';
-    favCards.forEach(card => grid.appendChild(buildLinkCard(card, true)));
-    favSection.appendChild(grid);
-  } else {
-    const empty = document.createElement('p');
-    empty.className = 'home-myspace-empty';
-    empty.textContent = 'お気に入り登録がありません。カードの ☆ をクリックして追加できます。';
-    favSection.appendChild(empty);
-  }
-  el.appendChild(favSection);
-
-  // マイカテゴリーセクション
-  const categories = [...(state.privateCategories || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
-  if (categories.length) {
-    const catTitleEl = document.createElement('h4');
-    catTitleEl.className = 'home-myspace-section-title home-myspace-section-title--cat';
-    catTitleEl.innerHTML = '<i class="fa-solid fa-folder"></i> マイカテゴリー';
-    el.appendChild(catTitleEl);
-
-    categories.forEach(cat => {
-      const catCards = (state.privateCards || []).filter(c => c.sectionId === cat.docId);
-
-      const catSection = document.createElement('div');
-      catSection.className = 'home-myspace-cat-section';
-
-      const catHeader = document.createElement('div');
-      catHeader.className = 'home-myspace-cat-header';
-      const iconHtml = cat.icon
-        ? (cat.icon.startsWith('fa-') || cat.icon.startsWith('fas ') || cat.icon.includes('fa-')
-          ? `<i class="${esc(cat.icon)}"></i>`
-          : esc(cat.icon))
-        : '<i class="fa-solid fa-folder"></i>';
-      catHeader.innerHTML = `<span class="home-myspace-cat-icon">${iconHtml}</span><span class="home-myspace-cat-label">${esc(cat.label || '')}</span>`;
-      catSection.appendChild(catHeader);
-
-      if (catCards.length) {
-        const grid = document.createElement('div');
-        grid.className = 'card-grid home-myspace-grid';
-        catCards.forEach(card => grid.appendChild(buildLinkCard(card, false)));
-        catSection.appendChild(grid);
-      } else {
-        const empty = document.createElement('p');
-        empty.className = 'home-myspace-empty';
-        empty.textContent = 'このカテゴリーにはカードがありません。';
-        catSection.appendChild(empty);
-      }
-      el.appendChild(catSection);
-    });
-  }
 }
 
 function buildSolarIconWrap() {
@@ -2927,23 +2858,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }, true);
     }
 
-    // クイチE��アクセスボタン ↁE対応するサイドバーボタンに委譲
-    const qaMap = {
-      'hqa-calendar' : 'btn-calendar',
-      'hqa-task'     : 'btn-task',
-      'hqa-order'    : 'btn-order-launch',
-      'hqa-email'    : 'btn-email-assist',
-      'hqa-file'     : 'ft-fab',
-      'hqa-req'      : 'btn-reqboard',
-      'hqa-chat'     : 'chat-fab',
-      'hqa-property' : 'btn-property-summary',
-    };
-    Object.entries(qaMap).forEach(([qaId, targetId]) => {
-      const btn = document.getElementById(qaId);
-      if (btn) btn.addEventListener('click', () => {
-        document.getElementById(targetId)?.click();
-      });
-    });
   })();
 
   // ===== 使ぁE��ガイチE=====
@@ -3814,6 +3728,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         requireAcknowledgement,
         targetScope,
         targetDepartments,
+        createdBy: state.currentUsername,
         updatedAt: serverTimestamp()
       });
       closeNoticeModal();
