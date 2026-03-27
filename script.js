@@ -1029,7 +1029,27 @@ async function migrateCategories() {
 async function loadCategories() {
   try {
     const categories = await fetchSharedCategoriesFromSupabase();
-    state.allCategories = categories.length > 0 ? categories : [...DEFAULT_CATEGORIES];
+    if (categories.length > 0) {
+      state.allCategories = categories;
+      // Supabaseに存在しないデフォルトカテゴリがあれば自動でINSERT
+      const existingIds = new Set(categories.map(c => c.id));
+      for (const cat of DEFAULT_CATEGORIES) {
+        if (!existingIds.has(cat.id)) {
+          try {
+            await createSharedCategoryInSupabase({ id: cat.id, ...cat });
+            state.allCategories.push({ docId: cat.id, ...cat });
+          } catch (_) { /* 重複エラーは無視 */ }
+        }
+      }
+    } else {
+      // カテゴリが1件もない場合はデフォルトカテゴリを全件INSERT
+      state.allCategories = [...DEFAULT_CATEGORIES];
+      for (const cat of DEFAULT_CATEGORIES) {
+        try {
+          await createSharedCategoryInSupabase({ id: cat.id, ...cat });
+        } catch (_) { /* 重複エラーは無視 */ }
+      }
+    }
   } catch (err) {
     console.error('Supabase category load error:', err);
     state.allCategories = [...DEFAULT_CATEGORIES];
@@ -2200,8 +2220,15 @@ function openServicePicker() {
   grid.querySelectorAll('.svc-pick-btn:not([disabled]):not(.svc-pick-custom)').forEach(btn => {
     btn.addEventListener('click', async () => {
       const { url, icon, label } = btn.dataset;
-      await addCard({ label, icon, url, category: 'external', isExternalTool: true, categoryOrder: 0 });
-      closeServicePicker();
+      btn.disabled = true;
+      try {
+        await addCard({ label, icon, url, category: 'external', isExternalTool: true, categoryOrder: 0 });
+        closeServicePicker();
+      } catch (err) {
+        console.error('外部ツール追加エラー:', err);
+        showToast('追加に失敗しました: ' + (err?.message || '不明なエラー'), 'error');
+        btn.disabled = false;
+      }
     });
   });
 
