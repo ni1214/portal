@@ -160,7 +160,7 @@ export function renderHomeWorkspace() {
       </div>
 
       <!-- マイスペース: お気に入り + マイカテゴリー -->
-      <section class="home-workspace-stage home-workspace-panel" data-home-workspace-stage aria-labelledby="home-workspace-stage-title">
+      <section class="home-workspace-stage home-workspace-stage--flat" data-home-workspace-stage aria-labelledby="home-workspace-stage-title">
         <div class="home-workspace-stage-head">
           <div>
             <p class="home-workspace-card-kicker">マイスペース</p>

@@ -20787,3 +20787,26 @@ body {
   padding: 10px 0;
   margin: 0;
 }
+
+/* ===== home-workspace-stage フラットモード（マイスペース用） ===== */
+.home-workspace-stage--flat {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin-top: 20px;
+  overflow: visible;
+}
+
+.home-workspace-stage--flat::before {
+  display: none;
+}
+
+.home-workspace-stage--flat .home-workspace-stage-head {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.home-workspace-stage--flat .home-workspace-stage-body {
+  margin-top: 16px;
+}
