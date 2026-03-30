@@ -5617,10 +5617,25 @@ html.font-xl { font-size: 21px; }
     bottom: 60px !important;
     width: 100% !important;
     max-height: 80dvh !important;
-    overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
     border-radius: 20px 20px 0 0 !important;
     animation: panel-in-sheet 0.32s cubic-bezier(0.32,0.72,0,1) !important;
     transform-origin: bottom center !important;
+  }
+  .settings-panel-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg-secondary);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  .settings-panel-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
   .settings-panel::before {
     content: '';

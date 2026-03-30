@@ -3372,6 +3372,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     state._ftPanelOpen ? closeFileTransferPanel() : openFileTransferPanel();
   });
   document.getElementById('ft-panel-close')?.addEventListener('click', closeFileTransferPanel);
+  document.addEventListener('click', e => {
+    if (window.innerWidth > 768) return;
+    const panel = document.getElementById('ft-panel');
+    const fab = document.getElementById('ft-fab');
+    if (!panel || panel.hasAttribute('hidden') || !state._ftPanelOpen) return;
+    if (panel.contains(e.target)) return;
+    if (fab && (e.target === fab || fab.contains(e.target))) return;
+    closeFileTransferPanel();
+  });
   document.getElementById('ft-new-btn')?.addEventListener('click', openFtSendModal);
   document.getElementById('ft-cancel-btn')?.addEventListener('click', closeFtSendModal);
   document.getElementById('ft-confirm-btn')?.addEventListener('click', confirmFtSend);
