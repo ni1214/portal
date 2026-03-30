@@ -631,6 +631,64 @@ export function renderHomeMySpacePanel(el) {
   if (!el) return;
   el.innerHTML = '';
 
+  // First-time + language support: quick actions and a tiny glossary.
+  const helpSection = document.createElement('section');
+  helpSection.className = 'home-myspace-section home-myspace-section--help';
+
+  const helpHeader = document.createElement('h4');
+  helpHeader.className = 'home-myspace-section-title home-myspace-section-title--help';
+  helpHeader.innerHTML = '<i class="fa-solid fa-circle-info"></i> はじめに';
+  helpSection.appendChild(helpHeader);
+
+  const helpCopy = document.createElement('p');
+  helpCopy.className = 'home-help-copy';
+  helpCopy.textContent = '迷ったら「ガイド」。よく使う入口と、用語の意味をまとめました。';
+  helpSection.appendChild(helpCopy);
+
+  const actions = document.createElement('div');
+  actions.className = 'home-help-actions';
+
+  const actionDefs = [
+    { action: 'open-guide', icon: 'fa-regular fa-circle-question', label: 'ガイド', aria: '使い方ガイドを開く' },
+    { action: 'open-chat-panel', icon: 'fa-regular fa-comment-dots', label: 'チャット', aria: 'チャットを開く' },
+    { action: 'focus-notice', icon: 'fa-solid fa-bell', label: 'お知らせ', aria: 'お知らせを表示する' },
+    { action: 'open-task-modal', icon: 'fa-solid fa-list-check', label: 'タスク', aria: 'タスク管理を開く' },
+  ];
+
+  actionDefs.forEach(def => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'home-help-chip';
+    btn.dataset.homeAction = def.action;
+    btn.setAttribute('aria-label', def.aria);
+    btn.innerHTML = `<i class="${def.icon}" aria-hidden="true"></i><span>${esc(def.label)}</span>`;
+    actions.appendChild(btn);
+  });
+  helpSection.appendChild(actions);
+
+  const glossary = document.createElement('div');
+  glossary.className = 'home-help-glossary';
+  const glossaryItems = [
+    { term: '通知 / お知らせ', desc: '社内のお知らせ。確認待ちは「確認した」まで対応します。 (Thong bao)' },
+    { term: 'DM', desc: '個別のチャットです。 (Tin nhan rieng)' },
+    { term: '物件No', desc: '現場コード。検索や「物件Noまとめ」で使います。 (Ma cong trinh)' },
+    { term: 'P2P / Drive', desc: 'ファイル転送の種類。P2P=直接、Drive=リンク。' },
+    { term: '招待コード', desc: '初回端末の承認に使う4桁コードです。 (Ma moi)' },
+  ];
+
+  glossaryItems.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'home-help-glossary-item';
+    row.innerHTML = `
+      <span class="home-help-term">${esc(item.term)}</span>
+      <span class="home-help-desc">${esc(item.desc)}</span>
+    `;
+    glossary.appendChild(row);
+  });
+  helpSection.appendChild(glossary);
+
+  el.appendChild(helpSection);
+
   const allCards = [...(state.allCards || []), ...(state.privateCards || [])];
   const favIds = state.personalFavorites || [];
   const favCards = favIds.map(id => allCards.find(c => c.id === id)).filter(Boolean);

@@ -20037,3 +20037,104 @@ body {
 .home-workspace-stage--flat .home-workspace-stage-body {
   margin-top: 16px;
 }
+
+/* ===== home-myspace: quick help / glossary (home-workspace.js) ===== */
+.home-myspace-section--help {
+  padding: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+}
+
+.home-myspace-section-title--help i {
+  color: color-mix(in srgb, var(--accent-blue) 80%, white);
+}
+
+.home-help-copy {
+  margin: 8px 0 0;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+}
+
+.home-help-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.home-help-chip {
+  appearance: none;
+  border: 1px solid var(--border-glass);
+  background: color-mix(in srgb, var(--bg-card) 70%, transparent);
+  color: var(--text-primary);
+  border-radius: 999px;
+  padding: 10px 12px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.home-help-chip i {
+  color: var(--workspace-accent, var(--accent-blue));
+}
+
+.home-help-chip:hover {
+  border-color: color-mix(in srgb, var(--accent-blue) 25%, var(--border-glass));
+  background: var(--bg-card-hover);
+  transform: translateY(-1px);
+}
+
+.home-help-chip:active {
+  transform: translateY(0);
+}
+
+.home-help-chip:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.home-help-glossary {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.home-help-glossary-item {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-glass) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-glass) 60%, transparent);
+}
+
+.home-help-term {
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-help-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+@media (max-width: 480px) {
+  .home-help-glossary-item {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .home-help-term {
+    white-space: normal;
+  }
+}
