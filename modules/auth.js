@@ -30,6 +30,9 @@ let inviteGateResolver = null;
 let preLoginContext = null;
 const INVITE_SESSION_KEY = 'portal-invite-ok';
 const INVITE_TRUST_KEY = 'portal-invite-trusted';
+// Trusted-device invite access should expire to reduce shared-device risk.
+// Keep UX: once trusted, it stays trusted for a while without re-entering the code.
+const INVITE_TRUST_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 // ========== PIN 認証 ==========
 const PIN_SALT = 'seisan-portal-v1';
@@ -98,8 +101,29 @@ export async function loadInviteCodeConfig() {
   return {};
 }
 
+function getInviteTrustExpiryMs() {
+  const raw = localStorage.getItem(INVITE_TRUST_KEY);
+  if (!raw) return 0;
+
+  // Back-compat: legacy value was "1" (never expired). Migrate to TTL on first read.
+  if (raw === '1') {
+    const exp = Date.now() + INVITE_TRUST_TTL_MS;
+    localStorage.setItem(INVITE_TRUST_KEY, String(exp));
+    return exp;
+  }
+
+  const exp = Number(raw);
+  return Number.isFinite(exp) ? exp : 0;
+}
+
 function hasTrustedInviteAccess() {
-  return localStorage.getItem(INVITE_TRUST_KEY) === '1';
+  const exp = getInviteTrustExpiryMs();
+  if (!exp) return false;
+  if (Date.now() > exp) {
+    localStorage.removeItem(INVITE_TRUST_KEY);
+    return false;
+  }
+  return true;
 }
 
 function markInviteSessionVerified() {
@@ -109,7 +133,7 @@ function markInviteSessionVerified() {
 
 function trustInviteAccessForDevice() {
   markInviteSessionVerified();
-  localStorage.setItem(INVITE_TRUST_KEY, '1');
+  localStorage.setItem(INVITE_TRUST_KEY, String(Date.now() + INVITE_TRUST_TTL_MS));
 }
 
 function refreshInviteVerifiedState() {
