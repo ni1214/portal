@@ -3147,7 +3147,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     await submitPreloginPin(document.getElementById('auth-prelogin-input').value);
   });
   document.getElementById('auth-prelogin-input')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('auth-prelogin-submit').click();
+    if (/^[0-9]$/.test(e.key) || e.key === 'Backspace' || e.key === 'Delete' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.stopPropagation();
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('auth-prelogin-submit').click();
+    }
   });
   document.getElementById('auth-prelogin-cancel')?.addEventListener('click', async () => {
     await cancelPreloginPin();
