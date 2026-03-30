@@ -19549,6 +19549,11 @@ body {
   color: var(--workspace-accent);
 }
 
+.home-overview-action-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
 
 .home-workspace-action {
   display: inline-flex;
@@ -19564,6 +19569,12 @@ body {
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.home-workspace-action--compact {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 0.82rem;
 }
 
 .home-workspace-action:hover {

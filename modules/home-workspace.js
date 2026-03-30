@@ -173,6 +173,9 @@ function renderOverviewCard(snapshot) {
   const actionAttrs = snapshot.action
     ? ` data-home-action="${esc(snapshot.action)}" data-home-card-action="true" role="button" tabindex="0" aria-label="${ariaLabel}"`
     : '';
+  const actionLabel = snapshot.action
+    ? esc(snapshot.actionLabel || '開く')
+    : '';
   return `
     <article class="home-workspace-card home-overview-card" data-tone="${esc(snapshot.tone)}"${actionAttrs}>
       <div class="home-workspace-card-head">
@@ -185,6 +188,14 @@ function renderOverviewCard(snapshot) {
 
       <p class="home-workspace-copy">${esc(snapshot.meta)}</p>
       ${renderOverviewList(snapshot.items)}
+      ${snapshot.action ? `
+        <div class="home-overview-action-row" aria-hidden="true">
+          <span class="home-workspace-action home-workspace-action--compact">
+            <span class="home-workspace-action-label">${actionLabel}</span>
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          </span>
+        </div>
+      ` : ''}
     </article>
   `;
 }
@@ -318,6 +329,7 @@ function buildHomeNotificationOverview() {
     items: buildNotificationItems(chatStats, noticeStats),
     emptyText: 'チャットと通知はありません',
     action: hasChatUnread ? 'open-chat-panel' : 'focus-notice',
+    actionLabel: hasChatUnread ? 'チャットを開く' : 'お知らせを開く',
     ariaLabel: hasChatUnread ? 'チャットを開く' : 'お知らせを開く',
   };
 }
@@ -326,6 +338,7 @@ function buildTaskOverviewCard() {
   return {
     ...buildTaskOverview(),
     action: 'open-task-modal',
+    actionLabel: 'タスクを開く',
     ariaLabel: 'タスクを開く',
   };
 }
@@ -334,6 +347,7 @@ function buildCompanyNoticeOverviewCard() {
   return {
     ...buildCompanyNoticeOverview(),
     action: 'focus-notice',
+    actionLabel: 'お知らせを見る',
     ariaLabel: 'お知らせを見る',
   };
 }
