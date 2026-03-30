@@ -687,6 +687,11 @@ export function renderHomeMySpacePanel(el) {
   });
   helpSection.appendChild(glossary);
 
+  const helpNote = document.createElement('p');
+  helpNote.className = 'home-help-copy';
+  helpNote.textContent = '※ ベトナム人実習生の方は、まず「通知」「チャット」「お知らせ」の3つから覚えると使いやすいです。';
+  helpSection.appendChild(helpNote);
+
   el.appendChild(helpSection);
 
   const allCards = [...(state.allCards || []), ...(state.privateCards || [])];

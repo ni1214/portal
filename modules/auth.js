@@ -95,6 +95,7 @@ export async function loadInviteCodeConfig() {
       return data;
     } catch (err) {
       console.error('Supabase invite config load error:', err);
+      showToast('招待コード設定を読み込めませんでした。', 'error');
       return {};
     }
   }
@@ -834,6 +835,7 @@ export async function loadLockSettings(username, lockImmediately = false) {
       }
     } catch (err) {
       console.error('Supabase lock settings load error:', err);
+      showToast('ロック設定の読み込みに失敗しました。', 'error');
     }
     document.getElementById('btn-lock-header').hidden = !(state.lockEnabled && state.lockPinEnabled && state.currentUsername);
     if (state.lockEnabled && state.lockPinEnabled) {
@@ -896,7 +898,10 @@ export async function saveLockSettings() {
         autoLockMinutes: state.autoLockMinutes
       }, { merge: true });
     }
-  } catch (err) { console.error('設定保存エラー:', err); }
+  } catch (err) {
+    console.error('設定保存エラー:', err);
+    showToast('ロック設定の保存に失敗しました。', 'error');
+  }
 }
 
 export function startActivityTracking() {

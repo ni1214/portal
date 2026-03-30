@@ -2728,11 +2728,223 @@ function closeSettingsPanel() {
   document.getElementById('settings-fab').classList.remove('active');
 }
 
+// ===== Dialog accessibility helper =====
+const DIALOG_ROOT_SELECTOR = [
+  '.modal-overlay',
+  '#chat-panel',
+  '#ft-panel',
+  '#settings-panel',
+  '#more-drawer',
+  '#weather-panel',
+].join(', ');
+
+const DIALOG_FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ');
+
+const dialogRestoreFocus = new WeakMap();
+let dialogA11yStarted = false;
+
+function initDialogAccessibility() {
+  if (dialogA11yStarted) return;
+  dialogA11yStarted = true;
+
+  const roots = new Set();
+
+  const attachRoot = root => {
+    if (!root || roots.has(root) || !(root instanceof HTMLElement)) return;
+    roots.add(root);
+    enhanceDialogRoot(root);
+    const rootObserver = new MutationObserver(() => trackDialogState(root));
+    rootObserver.observe(root, { attributes: true, attributeFilter: ['hidden', 'class'] });
+    root.__dialogObserver = rootObserver;
+    trackDialogState(root);
+  };
+
+  document.querySelectorAll(DIALOG_ROOT_SELECTOR).forEach(attachRoot);
+
+  const bodyObserver = new MutationObserver(mutations => {
+    for (const mutation of mutations) {
+      mutation.addedNodes.forEach(node => {
+        if (!(node instanceof HTMLElement)) return;
+        if (node.matches?.(DIALOG_ROOT_SELECTOR)) attachRoot(node);
+        node.querySelectorAll?.(DIALOG_ROOT_SELECTOR).forEach(attachRoot);
+      });
+    }
+  });
+  if (document.body) {
+    bodyObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
+  document.addEventListener('keydown', handleDialogKeydown, true);
+  document.addEventListener('focusin', handleDialogFocusIn, true);
+}
+
+function enhanceDialogRoot(root) {
+  if (!root.hasAttribute('role')) {
+    root.setAttribute('role', 'dialog');
+  }
+  root.setAttribute('aria-modal', 'true');
+  if (!root.hasAttribute('tabindex')) {
+    root.tabIndex = -1;
+  }
+
+  const titleEl = root.querySelector('.modal-title, .guide-title, .settings-panel-header span, .chat-sidebar-header span, .ft-panel-header span, .more-drawer-header span, .weather-panel-title, h1, h2, h3, h4');
+  if (titleEl) {
+    if (!titleEl.id) {
+      titleEl.id = `${root.id || 'dialog'}-label`;
+    }
+    root.setAttribute('aria-labelledby', titleEl.id);
+  }
+
+  root.querySelectorAll('button').forEach(btn => {
+    const label = `${btn.getAttribute('aria-label') || ''} ${btn.getAttribute('title') || ''} ${btn.textContent || ''}`.replace(/\s+/g, ' ').trim();
+    if (/(閉じる|close|xmark)/i.test(label) || /close/i.test(btn.className || '')) {
+      btn.setAttribute('aria-label', '閉じる');
+    }
+    if (!btn.getAttribute('type')) {
+      btn.setAttribute('type', 'button');
+    }
+  });
+}
+
+function trackDialogState(root) {
+  const visible = isDialogVisible(root);
+  root.dataset.dialogVisible = visible ? '1' : '0';
+  if (visible) {
+    if (!dialogRestoreFocus.has(root)) {
+      const active = document.activeElement;
+      dialogRestoreFocus.set(root, active instanceof HTMLElement ? active : null);
+    }
+    requestAnimationFrame(() => focusFirstDialogControl(root));
+  } else if (dialogRestoreFocus.has(root)) {
+    const restoreTarget = dialogRestoreFocus.get(root);
+    dialogRestoreFocus.delete(root);
+    if (restoreTarget instanceof HTMLElement && restoreTarget.isConnected) {
+      setTimeout(() => {
+        try {
+          restoreTarget.focus({ preventScroll: true });
+        } catch (_) {}
+      }, 0);
+    }
+  }
+}
+
+function isDialogVisible(root) {
+  if (!root) return false;
+  if (root.hidden) return false;
+  if (root.id === 'rd-modal') return root.classList.contains('visible') || root.classList.contains('open');
+  if (root.id === 'settings-panel') return !root.hasAttribute('hidden');
+  if (root.id === 'more-drawer') return !root.hasAttribute('hidden');
+  if (root.id === 'chat-panel' || root.id === 'ft-panel' || root.id === 'weather-panel') {
+    return !root.hasAttribute('hidden');
+  }
+  if (root.classList.contains('visible') || root.classList.contains('open')) return true;
+  return !root.hasAttribute('hidden');
+}
+
+function getVisibleDialogRoots() {
+  return [...document.querySelectorAll(DIALOG_ROOT_SELECTOR)].filter(isDialogVisible);
+}
+
+function getActiveDialogRoot() {
+  const roots = getVisibleDialogRoots();
+  return roots.length > 0 ? roots[roots.length - 1] : null;
+}
+
+function getDialogFocusables(root) {
+  if (!root) return [];
+  return [...root.querySelectorAll(DIALOG_FOCUSABLE_SELECTOR)]
+    .filter(el => el instanceof HTMLElement && isElementVisible(el));
+}
+
+function isElementVisible(el) {
+  if (!el || !(el instanceof HTMLElement)) return false;
+  const style = window.getComputedStyle(el);
+  return style.display !== 'none' && style.visibility !== 'hidden' && el.getClientRects().length > 0;
+}
+
+function focusFirstDialogControl(root) {
+  const focusables = getDialogFocusables(root);
+  const target = focusables[0] || root;
+  if (target instanceof HTMLElement) {
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_) {}
+  }
+}
+
+function findDialogCloseButton(root) {
+  if (!root) return null;
+  const buttons = [...root.querySelectorAll('button')];
+  return buttons.find(btn => {
+    const label = `${btn.getAttribute('aria-label') || ''} ${btn.getAttribute('title') || ''} ${btn.textContent || ''}`.replace(/\s+/g, ' ').trim();
+    const cls = `${btn.className || ''}`;
+    return /(閉じる|close|xmark)/i.test(label) || /close/i.test(cls);
+  }) || null;
+}
+
+function handleDialogKeydown(event) {
+  const root = getActiveDialogRoot();
+  if (!root) return;
+
+  if (event.key === 'Escape') {
+    const closeBtn = findDialogCloseButton(root);
+    if (closeBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeBtn.click();
+    }
+    return;
+  }
+
+  if (event.key !== 'Tab') return;
+
+  const focusables = getDialogFocusables(root);
+  if (!focusables.length) {
+    event.preventDefault();
+    focusFirstDialogControl(root);
+    return;
+  }
+
+  const current = document.activeElement;
+  const currentIndex = focusables.indexOf(current);
+  if (currentIndex === -1) {
+    event.preventDefault();
+    focusables[0].focus({ preventScroll: true });
+    return;
+  }
+
+  event.preventDefault();
+  const nextIndex = event.shiftKey
+    ? (currentIndex - 1 + focusables.length) % focusables.length
+    : (currentIndex + 1) % focusables.length;
+  focusables[nextIndex].focus({ preventScroll: true });
+}
+
+function handleDialogFocusIn(event) {
+  const root = getActiveDialogRoot();
+  if (!root || root.contains(event.target)) return;
+  const focusables = getDialogFocusables(root);
+  const target = focusables[0] || root;
+  if (target instanceof HTMLElement) {
+    try {
+      target.focus({ preventScroll: true });
+    } catch (_) {}
+  }
+}
+
 
 // ========== 初期匁E==========
 document.addEventListener('DOMContentLoaded', async () => {
   // 最初に設定を適用�E�フラチE��ュ防止�E�E
   loadSettings();
+  initDialogAccessibility();
 
   updateClock();
   setInterval(updateClock, 1000);
