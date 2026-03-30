@@ -36,7 +36,11 @@ export function initBottomNav() {
   }
 
   // ---- チャット ----
-  bnavChat.addEventListener('click', () => {
+  bnavChat.addEventListener('click', (event) => {
+    // Mobile: bnav-chat の click が document まで bubble すると、
+    // 「パネル外クリックで閉じる」判定に拾われて開いた直後に閉じることがある。
+    // ここで止めてから chat-fab の click を発火させる。
+    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
     const chatFab = document.getElementById('chat-fab');
     if (chatFab) chatFab.click();
     setActive(bnavChat);
