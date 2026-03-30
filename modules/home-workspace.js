@@ -642,7 +642,7 @@ export function renderHomeMySpacePanel(el) {
 
   const helpCopy = document.createElement('p');
   helpCopy.className = 'home-help-copy';
-  helpCopy.textContent = '迷ったら「ガイド」。よく使う入口と、用語の意味をまとめました。';
+  helpCopy.textContent = '迷ったら「ガイド」。最初に使う入口と、用語の意味をまとめました。';
   helpSection.appendChild(helpCopy);
 
   const actions = document.createElement('div');
@@ -669,10 +669,10 @@ export function renderHomeMySpacePanel(el) {
   const glossary = document.createElement('div');
   glossary.className = 'home-help-glossary';
   const glossaryItems = [
-    { term: '通知 / お知らせ', desc: '社内のお知らせ。確認待ちは「確認した」まで対応します。 (Thong bao)' },
-    { term: 'DM', desc: '個別のチャットです。 (Tin nhan rieng)' },
+    { term: 'お知らせ', desc: '社内のお知らせ。確認待ちは「確認した」まで対応します。 (Thong bao)' },
+    { term: 'チャット（個別）', desc: '個別メッセージ。画面では「DM」と表示されることがあります。 (Tin nhan rieng)' },
     { term: '物件No', desc: '現場コード。検索や「物件Noまとめ」で使います。 (Ma cong trinh)' },
-    { term: 'P2P / Drive', desc: 'ファイル転送の種類。P2P=直接、Drive=リンク。' },
+    { term: 'ファイル転送', desc: 'ファイルを送る機能。P2P=直接、Drive=リンク。 (Chuyen tep)' },
     { term: '招待コード', desc: '初回端末の承認に使う4桁コードです。 (Ma moi)' },
   ];
 
@@ -689,7 +689,7 @@ export function renderHomeMySpacePanel(el) {
 
   const helpNote = document.createElement('p');
   helpNote.className = 'home-help-copy';
-  helpNote.textContent = '※ ベトナム人実習生の方は、まず「通知」「チャット」「お知らせ」の3つから覚えると使いやすいです。';
+  helpNote.textContent = '※ ベトナム人実習生の方は、まず「お知らせ」「チャット」「タスク」の3つから覚えると使いやすいです。';
   helpSection.appendChild(helpNote);
 
   el.appendChild(helpSection);

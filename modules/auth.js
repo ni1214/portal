@@ -1154,6 +1154,9 @@ export async function openAdminModal() {
 
 export function closeAdminModal() {
   document.getElementById('admin-modal').classList.remove('visible');
+  state.inviteCodePlain = '';
+  const currentCode = document.getElementById('admin-invite-current-code');
+  if (currentCode) currentCode.textContent = '';
 }
 
 export async function deleteUserData(username) {

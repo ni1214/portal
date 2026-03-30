@@ -2768,19 +2768,6 @@ function initDialogAccessibility() {
 
   document.querySelectorAll(DIALOG_ROOT_SELECTOR).forEach(attachRoot);
 
-  const bodyObserver = new MutationObserver(mutations => {
-    for (const mutation of mutations) {
-      mutation.addedNodes.forEach(node => {
-        if (!(node instanceof HTMLElement)) return;
-        if (node.matches?.(DIALOG_ROOT_SELECTOR)) attachRoot(node);
-        node.querySelectorAll?.(DIALOG_ROOT_SELECTOR).forEach(attachRoot);
-      });
-    }
-  });
-  if (document.body) {
-    bodyObserver.observe(document.body, { childList: true, subtree: true });
-  }
-
   document.addEventListener('keydown', handleDialogKeydown, true);
   document.addEventListener('focusin', handleDialogFocusIn, true);
 }
