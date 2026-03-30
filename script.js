@@ -3321,6 +3321,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.chatPanelOpen ? closeChatPanel() : openChatPanel();
   });
   document.getElementById('chat-panel-close')?.addEventListener('click', closeChatPanel);
+  document.getElementById('chat-room-close')?.addEventListener('click', closeChatPanel);
+  document.addEventListener('click', e => {
+    if (window.innerWidth > 768) return;
+    const panel = document.getElementById('chat-panel');
+    const fab = document.getElementById('chat-fab');
+    if (!panel || panel.hasAttribute('hidden') || !state.chatPanelOpen) return;
+    if (panel.contains(e.target)) return;
+    if (fab && (e.target === fab || fab.contains(e.target))) return;
+    closeChatPanel();
+  });
   initChatResize();
   document.getElementById('chat-tab-dm')?.addEventListener('click', () => switchChatSidebarTab('dm'));
   document.getElementById('chat-tab-group')?.addEventListener('click', () => switchChatSidebarTab('group'));
