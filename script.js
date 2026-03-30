@@ -246,6 +246,7 @@ Object.assign(chatDeps, {
   stopFtListener,
   stopDriveListeners,
   updateLockNotifications,
+  updateSummaryCards,
   confirmDelete,
   loadUsersForChatPicker
 });
@@ -408,14 +409,19 @@ function openInviteCodeModalFromHome() {
 }
 
 function focusNoticeBoardFromDashboard() {
-  focusHomeWorkspace('notice', 'sidebar-home-btn');
+  focusHomeWorkspace('notice', 'sidebar-home-btn', { scrollToNoticeBoard: true });
 }
 
 function focusHomeWorkspace(target = 'notice', activeButtonId = 'sidebar-home-btn', options = {}) {
-  const { scrollToTop = false, closeOnMobile = false } = options;
+  const { scrollToTop = false, closeOnMobile = false, scrollToNoticeBoard = false } = options;
   setHomeWorkspaceTarget(target, activeButtonId);
   if (scrollToTop) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  if (scrollToNoticeBoard) {
+    setTimeout(() => {
+      document.getElementById('notice-board')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
   }
   if (closeOnMobile && isMobile()) {
     closeSidebar();
@@ -472,7 +478,7 @@ initTodayDashboard({
   },
   openTodayAttendance: openTodayAttendanceFromHome,
   openNoticeBoard: () => {
-    setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
+    focusNoticeBoardFromDashboard();
   },
   openFavorites: () => {
     setHomeWorkspaceTarget('favorites', 'btn-favorites-only');
@@ -490,7 +496,7 @@ initTodayDashboard({
 });
 initHomeDashboard({
   focusNoticeBoard: () => {
-    setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
+    focusNoticeBoardFromDashboard();
   },
   renderEmbeddedTaskWorkspace,
   openNoticeModal: openNoticeCreateFromHome,
@@ -518,6 +524,7 @@ initHomeDashboard({
   openGuideModal: openGuideModalFromHome,
   openReadDiagnosticsModal: openReadDiagnosticsFromHome,
   openInviteCodeModal: openInviteCodeModalFromHome,
+  getRoomUnread,
   renderMySpacePanel: renderHomeMySpacePanel,
   buildLinkCard,
 });
@@ -529,7 +536,7 @@ Object.assign(sharedSpaceDeps, {
   openCategoryModal,
   normalizeForSearch,
   focusNoticeBoard: () => {
-    setHomeWorkspaceTarget('notice', 'sidebar-home-btn');
+    focusNoticeBoardFromDashboard();
   },
   focusWeatherWidget,
   openCalendarModal: async () => {

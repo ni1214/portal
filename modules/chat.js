@@ -260,7 +260,6 @@ export function getRoomUnread(room) {
 export function updateChatBadge() {
   const badge = document.getElementById('chat-unread-badge');
   const fab   = document.getElementById('chat-fab');
-  if (!badge || !fab) return;
   // _knownUsernames でフィルタした DM ルームのみカウント（リスト表示と整合）
   const visibleDm = state._knownUsernames
     ? state.dmRooms.filter(room => {
@@ -269,15 +268,18 @@ export function updateChatBadge() {
       })
     : state.dmRooms;
   const total = [...visibleDm, ...state.groupRooms].reduce((sum, r) => sum + getRoomUnread(r), 0);
-  if (total > 0) {
-    badge.textContent = total > 99 ? '99+' : total;
-    badge.hidden = false;
-    fab.classList.add('has-unread');
-  } else {
-    badge.hidden = true;
-    fab.classList.remove('has-unread');
+  if (badge && fab) {
+    if (total > 0) {
+      badge.textContent = total > 99 ? '99+' : total;
+      badge.hidden = false;
+      fab.classList.add('has-unread');
+    } else {
+      badge.hidden = true;
+      fab.classList.remove('has-unread');
+    }
   }
   deps.updateLockNotifications?.();
+  deps.updateSummaryCards?.();
 }
 
 // ===== サイドバータブ切替 =====

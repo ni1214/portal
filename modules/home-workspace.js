@@ -19,7 +19,13 @@ export function initHomeDashboard(d = {}) {
 }
 
 // サイドバーはステージを切り替えなくなったためこの関数は後方互換用のみ
-export function setHomeWorkspaceTarget(_target = DEFAULT_TARGET, _activeButtonId = '') {
+export function setHomeWorkspaceTarget(target = DEFAULT_TARGET, activeButtonId = '') {
+  state.homeWorkspaceTarget = target || DEFAULT_TARGET;
+  if (activeButtonId) {
+    state.homeWorkspaceActiveButtonId = activeButtonId;
+  } else if (!state.homeWorkspaceActiveButtonId) {
+    state.homeWorkspaceActiveButtonId = 'sidebar-home-btn';
+  }
   // no-op: ステージは常に Today's Focus 固定
 }
 
@@ -36,9 +42,9 @@ export function renderHomeWorkspace() {
 
   const overviewTitle = buildOverviewTitle();
   const overviewSubtitle = buildOverviewSubtitle();
-  const taskOverview = buildTaskOverview();
-  const noticeOverview = buildNoticeOverview();
-  const companyOverview = buildCompanyNoticeOverview();
+  const taskOverview = buildTaskOverviewCard();
+  const noticeOverview = buildHomeNotificationOverview();
+  const companyOverview = buildCompanyNoticeOverviewCard();
 
   host.innerHTML = `
     <section class="home-workspace-shell" aria-live="polite" role="region" aria-labelledby="home-overview-title">
@@ -81,9 +87,9 @@ function renderHomeWorkspaceTop() {
 
   const overviewTitle = buildOverviewTitle();
   const overviewSubtitle = buildOverviewSubtitle();
-  const taskOverview = buildTaskOverview();
-  const noticeOverview = buildNoticeOverview();
-  const companyOverview = buildCompanyNoticeOverview();
+  const taskOverview = buildTaskOverviewCard();
+  const noticeOverview = buildHomeNotificationOverview();
+  const companyOverview = buildCompanyNoticeOverviewCard();
 
   const topMarkup = `
     <div class="home-workspace-top" data-home-workspace-top>
@@ -163,8 +169,12 @@ function buildOverviewSubtitle() {
 
 
 function renderOverviewCard(snapshot) {
+  const ariaLabel = esc(snapshot.ariaLabel || snapshot.title || 'Open');
+  const actionAttrs = snapshot.action
+    ? ` data-home-action="${esc(snapshot.action)}" data-home-card-action="true" role="button" tabindex="0" aria-label="${ariaLabel}"`
+    : '';
   return `
-    <article class="home-workspace-card home-overview-card" data-tone="${esc(snapshot.tone)}">
+    <article class="home-workspace-card home-overview-card" data-tone="${esc(snapshot.tone)}"${actionAttrs}>
       <div class="home-workspace-card-head">
         <div>
           <p class="home-workspace-card-kicker">${esc(snapshot.kicker)}</p>
@@ -288,12 +298,152 @@ function buildNoticeStats() {
   };
 }
 
+function buildHomeNotificationOverview() {
+  const noticeStats = buildNoticeStats();
+  const chatStats = buildChatStats();
+  const totalCount = chatStats.unreadCount + noticeStats.pendingAckCount + noticeStats.unreadCount;
+  const metaParts = [];
+  const hasChatUnread = chatStats.unreadCount > 0;
+
+  if (hasChatUnread) metaParts.push(`チャット ${chatStats.unreadCount}件`);
+  if (noticeStats.pendingAckCount > 0) metaParts.push(`確認待ち ${noticeStats.pendingAckCount}件`);
+  if (noticeStats.unreadCount > 0) metaParts.push(`お知らせ ${noticeStats.unreadCount}件`);
+
+  return {
+    kicker: '自分向け',
+    title: '通知',
+    value: `${totalCount}件`,
+    meta: metaParts.length > 0 ? metaParts.join(' / ') : 'チャットと通知はありません',
+    tone: noticeStats.pendingAckCount > 0 ? 'notice' : (hasChatUnread ? 'request' : (noticeStats.unreadCount > 0 ? 'task' : 'settings')),
+    items: buildNotificationItems(chatStats, noticeStats),
+    emptyText: 'チャットと通知はありません',
+    action: hasChatUnread ? 'open-chat-panel' : 'focus-notice',
+    ariaLabel: hasChatUnread ? 'チャットを開く' : 'お知らせを開く',
+  };
+}
+
+function buildTaskOverviewCard() {
+  return {
+    ...buildTaskOverview(),
+    action: 'open-task-modal',
+    ariaLabel: 'タスクを開く',
+  };
+}
+
+function buildCompanyNoticeOverviewCard() {
+  return {
+    ...buildCompanyNoticeOverview(),
+    action: 'focus-notice',
+    ariaLabel: 'お知らせを見る',
+  };
+}
+
+function buildChatStats() {
+  const rooms = collectVisibleChatRooms();
+  const unreadRooms = rooms
+    .map(room => ({ room, unread: getRoomUnreadCount(room) }))
+    .filter(entry => entry.unread > 0)
+    .sort((a, b) => toMillis(b.room?.lastAt) - toMillis(a.room?.lastAt));
+
+  return {
+    unreadCount: unreadRooms.reduce((sum, entry) => sum + entry.unread, 0),
+    unreadRooms,
+  };
+}
+
+function buildNotificationItems(chatStats, noticeStats) {
+  const items = [];
+  const maxItems = 2;
+
+  chatStats.unreadRooms.slice(0, maxItems).forEach(({ room, unread }) => {
+    items.push({
+      title: getChatRoomLabel(room),
+      meta: [
+        `チャット未読 ${unread}件`,
+        formatNoticeDate(room?.lastAt),
+      ].filter(Boolean).join(' / '),
+    });
+  });
+
+  const remaining = Math.max(0, maxItems - items.length);
+  if (remaining > 0) {
+    getNotificationNoticeItems(noticeStats).slice(0, remaining).forEach(item => items.push(item));
+  }
+
+  return items;
+}
+
+function getNotificationNoticeItems(noticeStats) {
+  const actionableNotices = [
+    ...(Array.isArray(noticeStats.pendingAck) ? noticeStats.pendingAck : []),
+    ...(Array.isArray(noticeStats.unread) ? noticeStats.unread : []),
+  ];
+  const seen = new Set();
+
+  return actionableNotices
+    .filter(notice => {
+      const key = notice?.id || '';
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 2)
+    .map(notice => ({
+      title: notice.title || '名称未設定',
+      meta: [
+        notice.requireAcknowledgement ? '確認必須' : '未読',
+        formatNoticeDate(notice.createdAt),
+      ].filter(Boolean).join(' / '),
+    }));
+}
+
+function collectVisibleChatRooms() {
+  const knownUsers = state._knownUsernames;
+  const dmRooms = Array.isArray(state.dmRooms) ? state.dmRooms : [];
+  const groupRooms = Array.isArray(state.groupRooms) ? state.groupRooms : [];
+  const visibleDmRooms = knownUsers
+    ? dmRooms.filter(room => {
+        const other = (room.members || []).find(member => member !== state.currentUsername);
+        return !other || knownUsers.has(other);
+      })
+    : dmRooms;
+
+  return [...visibleDmRooms, ...groupRooms];
+}
+
+function getRoomUnreadCount(room) {
+  if (typeof deps.getRoomUnread === 'function') {
+    return deps.getRoomUnread(room) || 0;
+  }
+  if (!room?.lastAt || !room?.lastSender || room.lastSender === state.currentUsername) return 0;
+  const lastAt = toMillis(room.lastAt);
+  const readTime = toMillis(state.chatReadTimes?.[room.id]);
+  if (!lastAt) return 0;
+  return (!readTime || lastAt > readTime) ? 1 : 0;
+}
+
+function getChatRoomLabel(room) {
+  if (!room) return 'チャット';
+  if (room.type === 'group' || room.name) return room.name || 'グループ';
+  const members = Array.isArray(room.members) ? room.members : [];
+  return members.find(member => member !== state.currentUsername) || 'DM';
+}
+
 function bindWorkspaceHost() {
   const host = document.getElementById('home-dashboard');
   if (!host || host.dataset.workspaceBound === '1') return;
 
   host.dataset.workspaceBound = '1';
   host.addEventListener('click', event => {
+    const button = event.target.closest('[data-home-action]');
+    if (!button || !host.contains(button)) return;
+    const action = button.dataset.homeAction || '';
+    if (!action) return;
+    event.preventDefault();
+    handleWorkspaceAction(action);
+  });
+  host.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
     const button = event.target.closest('[data-home-action]');
     if (!button || !host.contains(button)) return;
     const action = button.dataset.homeAction || '';
@@ -452,6 +602,7 @@ function formatNoticeDate(value) {
 function toMillis(value) {
   if (!value) return 0;
   if (typeof value === 'number') return value;
+  if (value instanceof Date) return value.getTime();
   if (typeof value === 'string') {
     const parsed = Date.parse(value);
     return Number.isFinite(parsed) ? parsed : 0;
