@@ -1475,7 +1475,10 @@ export async function fetchChatReadTimesFromSupabase(username) {
   );
   if (!Array.isArray(rows)) return {};
   const map = {};
-  rows.forEach(r => { map[r.room_key] = r.read_at; });
+  rows.forEach(r => {
+    const readAt = r?.read_at ? new Date(r.read_at) : null;
+    map[r.room_key] = Number.isFinite(readAt?.getTime?.()) ? readAt : null;
+  });
   return map;
 }
 

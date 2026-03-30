@@ -227,6 +227,7 @@ export async function loadChatReadTimes(username) {
         });
       }
     }
+    chatReadTimesLoadedFor = state.currentUsername || username || '';
     updateChatBadge();
   } catch (_) {}
 }

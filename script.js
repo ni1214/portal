@@ -830,6 +830,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     renderMissionBanner();
     loadTodos(username);
     await loadReadNotices(username);
+    await loadChatReadTimes(username);
     setupNoticeObserver();
     startTaskListeners(username);
     startChatListeners(username);
