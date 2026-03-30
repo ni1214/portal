@@ -2826,6 +2826,9 @@ function isDialogVisible(root) {
   if (!root) return false;
   if (root.hidden) return false;
   if (root.id === 'rd-modal') return root.classList.contains('visible') || root.classList.contains('open');
+  if (root.classList.contains('modal-overlay')) {
+    return root.classList.contains('visible') || root.classList.contains('open');
+  }
   if (root.id === 'settings-panel') return !root.hasAttribute('hidden');
   if (root.id === 'more-drawer') return !root.hasAttribute('hidden');
   if (root.id === 'chat-panel' || root.id === 'ft-panel' || root.id === 'weather-panel') {
