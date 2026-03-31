@@ -48,9 +48,15 @@ export function renderTodayDashboard() {
   const focusCard = buildFocusCard(todayKey);
   const favoriteCount = Array.isArray(state.personalFavorites) ? state.personalFavorites.length : 0;
   const personalMeta = buildPersonalMeta(profile);
+  const primaryTarget = state.currentUsername ? (focusCard.target || DASH_TARGETS.PROFILE) : DASH_TARGETS.PROFILE;
   const attendanceTarget = state.currentUsername ? DASH_TARGETS.ATTENDANCE : DASH_TARGETS.PROFILE;
   const taskTarget = state.currentUsername ? DASH_TARGETS.TASK_RECEIVED : DASH_TARGETS.PROFILE;
   const favoritesTarget = state.currentUsername ? DASH_TARGETS.FAVORITES : DASH_TARGETS.PROFILE;
+  const personalSignals = [
+    profile.department || 'プロフィール未設定',
+    profile.roleLabel || (state.currentUsername ? '共通ビュー' : '設定が必要です'),
+    state.currentUsername ? '個人スペースは保存されます' : 'ユーザーネーム設定で有効化',
+  ];
 
   renderHomeHero(heroHost, {
     today,
@@ -62,6 +68,102 @@ export function renderTodayDashboard() {
     focusCard,
     favoriteCount,
   });
+
+  section.hidden = false;
+  section.innerHTML = `
+    <div class="portal-rail-shell home-m3-workspace home-m3-workspace--personal">
+      <header class="home-m3-workspace__header">
+        <div>
+          <p class="home-m3-workspace__eyebrow">Personal Workspace</p>
+          <h2 class="home-m3-workspace__title">${esc(state.currentUsername ? `${username} の個人スペース` : '個人スペースを設定')}</h2>
+          <p class="home-m3-workspace__copy">${esc(state.currentUsername ? personalMeta : 'プロフィールを設定すると個人向けの保存とショートカットが使えるようになります。')}</p>
+        </div>
+        <button type="button" class="home-m3-inline-action" data-dash-target="${esc(DASH_TARGETS.PROFILE)}">プロフィール</button>
+      </header>
+
+      <div class="home-m3-pill-row">
+        ${personalSignals.map(signal => `<span class="home-m3-pill home-m3-pill--soft">${esc(signal)}</span>`).join('')}
+      </div>
+
+      <div class="home-m3-workspace__grid home-m3-workspace__grid--personal">
+        <button
+          type="button"
+          class="home-m3-workspace__card home-m3-workspace__card--wide home-m3-workspace__card--accent"
+          data-dash-target="${esc(primaryTarget)}"
+        >
+          <div class="home-m3-workspace__card-head">
+            <span class="home-m3-workspace__card-icon">
+              <span class="material-symbols-rounded" aria-hidden="true">person_raised_hand</span>
+            </span>
+            <div>
+              <span class="home-m3-workspace__card-label">${esc(focusCard.title || '今日のフォーカス')}</span>
+              <strong class="home-m3-workspace__card-value">${esc(state.currentUsername ? (focusCard.value || '確認') : '設定が必要です')}</strong>
+            </div>
+          </div>
+          <p class="home-m3-workspace__card-meta">${esc(state.currentUsername ? (focusCard.meta || '最初に確認したい内容をここから開けます。') : 'プロフィールを設定すると個人向けの優先事項が表示されます。')}</p>
+          ${renderPersonalList(focusCard.items, focusCard.emptyText)}
+        </button>
+
+        <button
+          type="button"
+          class="home-m3-workspace__card"
+          data-dash-target="${esc(taskTarget)}"
+        >
+          <div class="home-m3-workspace__card-head">
+            <span class="home-m3-workspace__card-icon">
+              <span class="material-symbols-rounded" aria-hidden="true">task_alt</span>
+            </span>
+            <div>
+              <span class="home-m3-workspace__card-label">タスク</span>
+              <strong class="home-m3-workspace__card-value">${esc(state.currentUsername ? taskCard.value : '設定待ち')}</strong>
+            </div>
+          </div>
+          <p class="home-m3-workspace__card-meta">${esc(state.currentUsername ? (taskCard.meta || '受信タスクを確認できます。') : 'プロフィール設定後に有効になります。')}</p>
+          ${renderPersonalChips(taskCard.chips)}
+        </button>
+
+        <button
+          type="button"
+          class="home-m3-workspace__card"
+          data-dash-target="${esc(attendanceTarget)}"
+        >
+          <div class="home-m3-workspace__card-head">
+            <span class="home-m3-workspace__card-icon">
+              <span class="material-symbols-rounded" aria-hidden="true">calendar_month</span>
+            </span>
+            <div>
+              <span class="home-m3-workspace__card-label">勤怠</span>
+              <strong class="home-m3-workspace__card-value">${esc(buildAttendanceValueLabel(attendanceCard, Boolean(state.currentUsername)))}</strong>
+            </div>
+          </div>
+          <p class="home-m3-workspace__card-meta">${esc(attendanceCard.meta || '今日の勤怠を確認できます。')}</p>
+          ${renderPersonalChips(attendanceCard.chips)}
+        </button>
+
+        <button
+          type="button"
+          class="home-m3-workspace__card"
+          data-dash-target="${esc(favoritesTarget)}"
+        >
+          <div class="home-m3-workspace__card-head">
+            <span class="home-m3-workspace__card-icon">
+              <span class="material-symbols-rounded" aria-hidden="true">star</span>
+            </span>
+            <div>
+              <span class="home-m3-workspace__card-label">お気に入り</span>
+              <strong class="home-m3-workspace__card-value">${esc(state.currentUsername ? `${favoriteCount}件` : '設定待ち')}</strong>
+            </div>
+          </div>
+          <p class="home-m3-workspace__card-meta">${esc(state.currentUsername ? 'よく使う導線をまとめて開けます。' : '個人設定後に保存されます。')}</p>
+          <div class="home-m3-pill-row home-m3-pill-row--compact">
+            <span class="home-m3-pill ${favoriteCount > 0 ? 'home-m3-pill--active' : 'home-m3-pill--soft'}">${esc(favoriteCount > 0 ? '保存済み' : '未登録')}</span>
+            <span class="home-m3-pill ${noticeCard.tone ? `home-m3-pill--${noticeCard.tone}` : 'home-m3-pill--soft'}">${esc(noticeCard.value || '0件')}</span>
+          </div>
+        </button>
+      </div>
+    </div>
+  `;
+  return;
 
   section.hidden = false;
   section.innerHTML = `
@@ -237,6 +339,92 @@ function renderHomeHero(host, {
   ];
 
   host.innerHTML = `
+    <section class="home-m3-hero">
+      <div class="home-m3-hero__top">
+        <div class="home-m3-hero__copy">
+          <p class="home-m3-hero__eyebrow">Portal Home</p>
+          <h1 class="home-m3-hero__title">${esc(state.currentUsername ? `${username} さんのホーム` : 'ホームを整える')}</h1>
+          <p class="home-m3-hero__subtitle">${esc(state.currentUsername ? 'Material You の落ち着いた面構成で、次に見るべき導線をすぐ判断できるホームです。' : 'プロフィールを設定すると個人向けの保存や優先事項が使えるようになります。')}</p>
+        </div>
+
+        <div class="home-m3-hero__actions">
+          <button
+            type="button"
+            class="home-m3-button home-m3-button--primary"
+            data-dash-target="${esc(primaryTarget)}"
+          >
+            <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
+            <span>${esc(state.currentUsername ? '今日の優先事項へ' : 'プロフィールを設定')}</span>
+          </button>
+          <button
+            type="button"
+            class="home-m3-button"
+            data-dash-target="${esc(DASH_TARGETS.SHARED_LINKS)}"
+          >
+            <span class="material-symbols-rounded" aria-hidden="true">grid_view</span>
+            <span>共有リンクを見る</span>
+          </button>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="home-m3-search-launch"
+        data-dash-target="${esc(DASH_TARGETS.SEARCH)}"
+        aria-label="${esc(getDashboardActionLabel(DASH_TARGETS.SEARCH))}"
+      >
+        <span class="material-symbols-rounded" aria-hidden="true">search</span>
+        <span class="home-m3-search-launch__copy">リソース・タスク・お知らせを検索</span>
+        <span class="home-m3-search-launch__meta">丸みのある検索バーで絞り込み</span>
+      </button>
+
+      <div class="home-m3-chip-row">
+        ${chips.map(chip => `<span class="home-m3-chip">${esc(chip)}</span>`).join('')}
+      </div>
+
+      <div class="home-m3-overview-grid">
+        <button
+          type="button"
+          class="home-m3-overview-card home-m3-overview-card--wide home-m3-overview-card--accent"
+          data-dash-target="${esc(primaryTarget)}"
+        >
+          <div class="home-m3-overview-card__head">
+            <span class="home-m3-overview-card__icon">
+              <span class="material-symbols-rounded" aria-hidden="true">explore</span>
+            </span>
+            <div>
+              <span class="home-m3-overview-card__label">${esc(focusCard.title || '今日の優先事項')}</span>
+              <strong class="home-m3-overview-card__value">${esc(state.currentUsername ? (focusCard.value || '確認') : '設定から開始')}</strong>
+            </div>
+          </div>
+          <p class="home-m3-overview-card__meta">${esc(state.currentUsername ? (focusCard.meta || '優先事項からすぐに作業を始められます。') : '個人スペースの設定を済ませると、ここに最初の導線が表示されます。')}</p>
+          ${renderPersonalList(focusCard.items, focusCard.emptyText)}
+        </button>
+
+        ${stats.map(stat => `
+          <button
+            type="button"
+            class="home-m3-overview-card home-m3-overview-card--${esc(stat.tone || 'soft')}"
+            data-dash-target="${esc(stat.target)}"
+          >
+            <div class="home-m3-overview-card__head">
+              <span class="home-m3-overview-card__icon">
+                <span class="material-symbols-rounded" aria-hidden="true">${esc(stat.symbol)}</span>
+              </span>
+              <div>
+                <span class="home-m3-overview-card__label">${esc(stat.label)}</span>
+                <strong class="home-m3-overview-card__value">${esc(stat.value)}</strong>
+              </div>
+            </div>
+            <p class="home-m3-overview-card__meta">${esc(stat.meta)}</p>
+          </button>
+        `).join('')}
+      </div>
+    </section>
+  `;
+  return;
+
+  host.innerHTML = `
     <section class="portal-home-command-surface">
       <div class="portal-home-command-top">
         <div class="portal-home-command-copy">
@@ -373,11 +561,17 @@ async function openDashboardTarget(target) {
       case DASH_TARGETS.ATTENDANCE:
         await deps.openTodayAttendance?.();
         return;
+      case DASH_TARGETS.SEARCH:
+        await deps.focusSearch?.();
+        return;
       case DASH_TARGETS.NOTICE:
         await deps.openNoticeBoard?.();
         return;
       case DASH_TARGETS.SHARED_LINKS:
         await deps.openSharedLinks?.();
+        return;
+      case DASH_TARGETS.SERVICE_PICKER:
+        await deps.openServicePicker?.();
         return;
       case DASH_TARGETS.FAVORITES:
         await deps.openFavorites?.();
@@ -407,10 +601,14 @@ function getDashboardActionLabel(target) {
       return '送信依頼を開く';
     case DASH_TARGETS.ATTENDANCE:
       return '勤怠を開く';
+    case DASH_TARGETS.SEARCH:
+      return '検索バーに移動';
     case DASH_TARGETS.NOTICE:
       return '通知を開く';
     case DASH_TARGETS.SHARED_LINKS:
       return '共有リンクを開く';
+    case DASH_TARGETS.SERVICE_PICKER:
+      return 'サービスを追加';
     case DASH_TARGETS.FAVORITES:
       return 'お気に入りを開く';
     case DASH_TARGETS.INVITE:

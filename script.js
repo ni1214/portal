@@ -430,7 +430,7 @@ function toggleSidebarNav() {
 function promptUsernameFor(featureLabel) {
   showUsernameModal(false);
   showUsernameError(`${featureLabel}を使うにはユーザーネームを設定してください。`);
-  const hint = document.getElementById('area-personal-hint');
+  const hint = document.getElementById('area-personal-hint-floating');
   if (hint) hint.hidden = false;
 }
 
@@ -472,6 +472,15 @@ initTodayDashboard({
   openSharedLinks: async () => {
     state.sharedLinksCategory = 'all';
     await openSharedLinksModal();
+  },
+  focusSearch: () => {
+    const input = document.getElementById('search-input');
+    if (!input) return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => input.focus(), 120);
+  },
+  openServicePicker: () => {
+    openServicePicker();
   },
   openFavorites: () => {
     const section = document.getElementById('favorites-section');
@@ -763,6 +772,8 @@ function savePreferencesToFirestore() {
 
 async function loadPersonalData(username, lockOnSwitch = false) {
   if (!username) return;
+  const floatingHint = document.getElementById('area-personal-hint-floating');
+  if (floatingHint) floatingHint.hidden = true;
   try {
     await registerUserLogin(username);
     if (lockOnSwitch) {
@@ -2895,7 +2906,7 @@ async function runInitialPortalBootstrap(storedUsername) {
   }
 
   if (!storedUsername) {
-    const hint = document.getElementById('area-personal-hint');
+    const hint = document.getElementById('area-personal-hint-floating');
     if (hint) hint.hidden = false;
     renderTodoSection();
     return;
@@ -3066,7 +3077,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeUsernameModal();
     // スキップ後：ユーザーネーム未設定バナーを表示
     if (!state.currentUsername) {
-      const hint = document.getElementById('area-personal-hint');
+      const hint = document.getElementById('area-personal-hint-floating');
       if (hint) hint.hidden = false;
     }
   });

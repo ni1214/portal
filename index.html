@@ -235,14 +235,14 @@
 
       <div class="home-content-grid">
       <!-- ==================== 全社共有スペース wrapper ==================== -->
-      <div class="space-wrapper space-shared" id="space-shared">
+      <section class="home-lane home-lane--shared" id="space-shared">
         <div class="area-header area-shared" id="area-shared-header">
           <div class="area-header-title">
             <i class="material-symbols-rounded" aria-hidden="true">groups</i>
             <span>全社共有スペース</span>
           </div>
         </div>
-        <div class="space-body" id="shared-space-body">
+        <div class="home-lane-shell" id="shared-space-body">
 
           <section id="shared-home-panel" class="shared-home-panel"></section>
 
@@ -290,10 +290,11 @@
           <!-- 公開セクション（JS が動的挿入） -->
 
         </div><!-- /shared-space-body -->
-      </div><!-- /space-shared -->
+      </section><!-- /space-shared -->
 
       <!-- ==================== 個人スペース wrapper ==================== -->
-      <div class="space-wrapper space-personal" id="space-personal">
+      <aside class="home-lane home-lane--personal" id="space-personal">
+        <p class="home-lane-hint" id="area-personal-hint-floating" hidden><i class="fa-solid fa-triangle-exclamation" style="color:var(--accent-orange)"></i> ユーザーネームを設定すると個人ホームの保存機能と個人導線が使えるようになります。上の <strong>名前を設定してください</strong> を押してください。</p>
         <div class="area-header area-personal" id="area-personal-header">
           <div class="area-header-title">
             <i class="material-symbols-rounded" aria-hidden="true">person</i>
@@ -301,7 +302,7 @@
           </div>
           <p class="area-header-hint" id="area-personal-hint" hidden><i class="fa-solid fa-triangle-exclamation" style="color:var(--accent-orange)"></i> ユーザーネームを設定するとこのエリアのすべての機能が使えます。上の「<strong>名前を設定してください</strong>」をタップしてください。</p>
         </div>
-        <div class="space-body" id="personal-space-body">
+        <div class="home-lane-shell" id="personal-space-body">
 
           <!-- 個人TODOパネル -->
           <section id="dash-today-section" class="dash-section" hidden></section>
@@ -353,7 +354,7 @@
           <!-- マイカテゴリ（JS が動的挿入） -->
 
         </div><!-- /personal-space-body -->
-      </div><!-- /space-personal -->
+      </aside><!-- /space-personal -->
       </div>
 
       <!-- 検索結果（直接表示） -->
