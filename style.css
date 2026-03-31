@@ -21407,3 +21407,137 @@ body:has(#home-dashboard) #dash-today-section .portal-personal-mini-grid {
     grid-template-columns: minmax(0, 1fr) !important;
   }
 }
+
+/* ===== Home Single Surface Final Lock ===== */
+body:has(#home-dashboard) .home-content-grid {
+  width: min(100%, 1360px) !important;
+  max-width: 1360px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 0 !important;
+}
+
+body:has(#home-dashboard) #space-shared,
+body:has(#home-dashboard) #space-personal,
+body:has(#home-dashboard) #shared-home-panel,
+body:has(#home-dashboard) #dash-today-section,
+body:has(#home-dashboard) #todo-section,
+body:has(#home-dashboard) .shared-home-panel,
+body:has(#home-dashboard) .shared-home-shell,
+body:has(#home-dashboard) .home-m3-workspace,
+body:has(#home-dashboard) .portal-rail-shell,
+body:has(#home-dashboard) .portal-rail-shell--clean,
+body:has(#home-dashboard) .portal-personal-card,
+body:has(#home-dashboard) .portal-personal-mini-grid,
+body:has(#home-dashboard) .home-lane--personal,
+body:has(#home-dashboard) .home-lane--shared {
+  display: none !important;
+}
+
+body:has(#home-dashboard) #home-dashboard {
+  width: min(100%, 1360px) !important;
+  margin: 0 auto !important;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-m3-search-launch,
+body:has(#home-dashboard) #home-dashboard .home-m3-fab,
+body:has(#home-dashboard) #home-dashboard .portal-home-command-surface {
+  display: none !important;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-m3-hero {
+  display: grid !important;
+  gap: 22px !important;
+  padding: 28px !important;
+  border-radius: 34px !important;
+  border: 1px solid color-mix(in srgb, var(--portal-home-line) 62%, transparent) !important;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--portal-home-elevated) 24%, transparent), transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--portal-home-surface) 96%, transparent), color-mix(in srgb, var(--portal-home-surface) 88%, var(--portal-home-elevated))) !important;
+  box-shadow: 0 20px 44px color-mix(in srgb, var(--shadow-ink-soft) 80%, transparent) !important;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-m3-hero__top {
+  align-items: end !important;
+  gap: 24px !important;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-m3-hero__actions {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 10px !important;
+  min-width: 320px !important;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-m3-button {
+  min-height: 54px !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-m3-chip-row {
+  gap: 10px !important;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-m3-overview-grid {
+  gap: 14px !important;
+  grid-template-columns: minmax(0, 1.48fr) repeat(4, minmax(0, 1fr)) !important;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-m3-overview-card {
+  border-radius: 24px !important;
+  min-height: 170px !important;
+  padding: 18px !important;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-m3-overview-card--wide {
+  min-height: 184px !important;
+  padding: 20px !important;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-m3-overview-card__value {
+  font-size: clamp(1.35rem, 1.2vw + 1rem, 1.9rem) !important;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-m3-overview-card__meta {
+  max-width: 34ch !important;
+}
+
+@media (max-width: 1100px) {
+  body:has(#home-dashboard) #home-dashboard .home-m3-hero__top,
+  body:has(#home-dashboard) #home-dashboard .home-m3-hero__actions {
+    grid-template-columns: minmax(0, 1fr) !important;
+    min-width: 0 !important;
+  }
+
+  body:has(#home-dashboard) #home-dashboard .home-m3-overview-grid {
+    grid-template-columns: minmax(0, 1fr) repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  body:has(#home-dashboard) #home-dashboard {
+    width: 100% !important;
+  }
+
+  body:has(#home-dashboard) #home-dashboard .home-m3-hero {
+    padding: 18px !important;
+    border-radius: 24px !important;
+    gap: 18px !important;
+  }
+
+  body:has(#home-dashboard) #home-dashboard .home-m3-hero__top,
+  body:has(#home-dashboard) #home-dashboard .home-m3-overview-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body:has(#home-dashboard) #home-dashboard .home-m3-hero__actions {
+    min-width: 0 !important;
+  }
+
+  body:has(#home-dashboard) #home-dashboard .home-m3-overview-card,
+  body:has(#home-dashboard) #home-dashboard .home-m3-overview-card--wide {
+    min-height: 0 !important;
+    padding: 16px !important;
+  }
+}
