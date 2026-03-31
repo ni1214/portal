@@ -2504,7 +2504,8 @@ function closeContextMenu() {
 
 // ========== お気に入りのみ表示 ==========
 function applyFavoritesOnlyMode() {
-  document.querySelector('.main').classList.toggle('favorites-only', state.favoritesOnlyMode);
+  const main = document.querySelector('.app-main') || document.querySelector('.main');
+  main?.classList.toggle('favorites-only', state.favoritesOnlyMode);
   const btn = document.getElementById('btn-favorites-only');
   if (!btn) return;
   if (state.favoritesOnlyMode) {
@@ -2619,9 +2620,20 @@ function _clearSearchResults() {
 
 function initSearch() {
   const searchInput    = document.getElementById('search-input');
-  const container      = searchInput.closest('.search-container');
+  if (!searchInput) {
+    console.warn('initSearch: search UI elements are missing');
+    return;
+  }
+  const container      = searchInput.closest('.app-search-wrap')
+                        || searchInput.closest('.search-container')
+                        || searchInput.parentElement;
   const noResults      = document.getElementById('no-results');
   const resultsSection = document.getElementById('search-results-section');
+
+  if (!container || !noResults || !resultsSection) {
+    console.warn('initSearch: search UI elements are missing');
+    return;
+  }
 
   container.addEventListener('click', () => searchInput.focus());
 
@@ -3454,8 +3466,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ミッションバナー
-  document.getElementById('mission-banner-toggle').addEventListener('click', toggleMissionBanner);
-  document.getElementById('admin-mission-save-btn').addEventListener('click', saveMissionText);
+  document.getElementById('mission-banner-toggle')?.addEventListener('click', toggleMissionBanner);
+  document.getElementById('admin-mission-save-btn')?.addEventListener('click', saveMissionText);
 
   // ===== カード非表示確認モーダル =====
   document.getElementById('hide-card-confirm-cancel').addEventListener('click', () => {
