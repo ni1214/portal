@@ -1,4 +1,4 @@
-// ========== calendar.js — カレンダー & 個人勤怠管理 ==========
+﻿// ========== calendar.js — カレンダー & 個人勤怠管理 ==========
 import { state } from './state.js';
 import {
   db, collection, doc, setDoc, deleteDoc, getDocs, query, where, onSnapshot, serverTimestamp, deleteField
@@ -39,6 +39,10 @@ let recentWorkSiteCache = {
   items: [],
   promise: null,
 };
+let attendanceLoadSeq = 0;
+let todayAttendanceLoadSeq = 0;
+let prevMonthAttendanceLoadSeq = 0;
+let fiscalYearLoadSeq = 0;
 export function initCalendar(d) { deps = d; }
 
 // ===== Supabase helpers =====
@@ -78,7 +82,20 @@ function refreshTodayDashboard() {
   deps.updateSummaryCards?.();
 }
 
+async function syncPublicAttendanceForDate(dateStr, username, type) {
+  try {
+    if (type && type !== 'normal' && type !== null) {
+      return (await deps.writePublicAttendance?.(dateStr, username, type)) !== false;
+    }
+    return (await deps.removePublicAttendance?.(dateStr, username)) !== false;
+  } catch (err) {
+    console.warn('Public attendance sync failed:', err);
+    return false;
+  }
+}
+
 export function subscribeTodayAttendance(username) {
+  const loadSeq = ++todayAttendanceLoadSeq;
   if (state._todayAttendanceSub) {
     state._todayAttendanceSub();
     state._todayAttendanceSub = null;
@@ -93,10 +110,12 @@ export function subscribeTodayAttendance(username) {
   state.todayAttendanceDate = todayStr;
   if (isSupabaseSharedCoreEnabled()) {
     fetchAttendanceEntriesFromSupabase(username, [todayStr.slice(0, 7)]).then(entries => {
+      if (loadSeq !== todayAttendanceLoadSeq || state.currentUsername !== username) return;
       const todayEntry = (entries || []).find(entry => (entry?.date || entry?.dateStr) === todayStr) || null;
       syncTodayAttendanceState(todayStr, todayEntry ? buildAttendanceStateForStore(todayStr, todayEntry) : null);
       refreshTodayDashboard();
     }).catch(err => {
+      if (loadSeq !== todayAttendanceLoadSeq || state.currentUsername !== username) return;
       console.warn('Today attendance load failed (Supabase):', err);
       syncTodayAttendanceState(todayStr, null);
       refreshTodayDashboard();
@@ -105,6 +124,7 @@ export function subscribeTodayAttendance(username) {
   }
   recordListenerStart('cal.today', '今日の勤怠', `attendance:${username}`);
   state._todayAttendanceSub = wrapTrackedListenerUnsubscribe('cal.today', onSnapshot(attendancePath(username, todayStr), snap => {
+    if (loadSeq !== todayAttendanceLoadSeq || state.currentUsername !== username) return;
     recordListenerSnapshot('cal.today', snap.exists() ? 1 : 0, todayStr, snap.exists() ? [{ id: snap.id, ...snap.data() }] : []);
     syncTodayAttendanceState(todayStr, snap.exists() ? snap.data() : null);
     refreshTodayDashboard();
@@ -112,6 +132,7 @@ export function subscribeTodayAttendance(username) {
 }
 
 export function unsubscribeTodayAttendance() {
+  todayAttendanceLoadSeq += 1;
   if (state._todayAttendanceSub) {
     state._todayAttendanceSub();
     state._todayAttendanceSub = null;
@@ -124,6 +145,25 @@ export async function saveAttendance(dateStr, data) {
   if (!state.currentUsername) return;
   const yearMonth = dateStr.slice(0, 7);
   const todayStr = getTodayDateStr();
+  const isToday = dateStr === todayStr;
+
+  const applyLocalSave = async () => {
+    const publicSyncOk = await syncPublicAttendanceForDate(dateStr, state.currentUsername, data.type);
+    deps.markWorkSummaryStale?.();
+    state.attendanceData[dateStr] = { ...data, yearMonth };
+    if (isToday) {
+      syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
+    }
+    renderCalendar();
+    updateCalendarSummary();
+    refreshTodayDashboard();
+    if (!publicSyncOk) {
+      showToast('Shared calendar sync failed. Personal attendance was saved.', 'warning');
+    }
+    await fetchFiscalYearPaidLeave();
+    return true;
+  };
+
   if (isSupabaseSharedCoreEnabled()) {
     try {
       const map = data.workSiteHours;
@@ -138,28 +178,14 @@ export async function saveAttendance(dateStr, data) {
         workSiteHours,
         projectKeys,
       });
-      // 公開出席への同期
-      if (data.type && data.type !== 'normal' && data.type !== null) {
-        await deps.writePublicAttendance?.(dateStr, state.currentUsername, data.type);
-      } else {
-        await deps.removePublicAttendance?.(dateStr, state.currentUsername);
-      }
-      deps.markWorkSummaryStale?.();
-      state.attendanceData[dateStr] = { ...data, yearMonth };
-      if (dateStr === todayStr) {
-        syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
-      }
-      renderCalendar();
-      updateCalendarSummary();
-      refreshTodayDashboard();
-      void fetchFiscalYearPaidLeave();
-      return true;
+      return await applyLocalSave();
     } catch (err) {
-      console.error('勤怠保存エラー:', err);
-      showToast('保存に失敗しました', 'error');
+      console.error('Attendance save failed (Supabase):', err);
+      showToast('勤怠の保存に失敗しました。', 'error');
       return false;
     }
   }
+
   try {
     const payload = {
       ...data,
@@ -177,25 +203,10 @@ export async function saveAttendance(dateStr, data) {
       payload.projectKeys = keys.length > 0 ? keys : deleteField();
     }
     await setDoc(attendancePath(state.currentUsername, dateStr), payload, { merge: true });
-    // 公開出席への同期
-    if (data.type && data.type !== 'normal' && data.type !== null) {
-      await deps.writePublicAttendance?.(dateStr, state.currentUsername, data.type);
-    } else {
-      await deps.removePublicAttendance?.(dateStr, state.currentUsername);
-    }
-    deps.markWorkSummaryStale?.();
-    state.attendanceData[dateStr] = { ...data, yearMonth };
-    if (dateStr === todayStr) {
-      syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
-    }
-    renderCalendar();
-    updateCalendarSummary();
-    refreshTodayDashboard();
-    void fetchFiscalYearPaidLeave();
-    return true;
+    return await applyLocalSave();
   } catch (err) {
-    console.error('勤怠保存エラー:', err);
-    showToast('保存に失敗しました', 'error');
+    console.error('Attendance save failed:', err);
+    showToast('勤怠の保存に失敗しました。', 'error');
     return false;
   }
 }
@@ -203,37 +214,43 @@ export async function saveAttendance(dateStr, data) {
 export async function deleteAttendance(dateStr) {
   if (!state.currentUsername) return;
   const todayStr = getTodayDateStr();
-  if (isSupabaseSharedCoreEnabled()) {
-    try {
-      await deleteAttendanceEntryInSupabase(state.currentUsername, dateStr);
-      delete state.attendanceData[dateStr];
-      if (dateStr === todayStr) {
-        syncTodayAttendanceState(dateStr, null);
-      }
-      await deps.removePublicAttendance?.(dateStr, state.currentUsername);
-      deps.markWorkSummaryStale?.();
-      renderCalendar();
-      refreshTodayDashboard();
-      void fetchFiscalYearPaidLeave();
-    } catch (err) { console.error('勤怠削除エラー:', err); }
-    return;
-  }
-  try {
-    await deleteDoc(attendancePath(state.currentUsername, dateStr));
+  const isToday = dateStr === todayStr;
+
+  const applyLocalDelete = async () => {
     delete state.attendanceData[dateStr];
-    if (dateStr === todayStr) {
+    if (isToday) {
       syncTodayAttendanceState(dateStr, null);
     }
-    // 公開出席からも削除
-    await deps.removePublicAttendance?.(dateStr, state.currentUsername);
+    const publicSyncOk = await syncPublicAttendanceForDate(dateStr, state.currentUsername, null);
     deps.markWorkSummaryStale?.();
     renderCalendar();
     refreshTodayDashboard();
-    void fetchFiscalYearPaidLeave();
-  } catch (err) { console.error('勤怠削除エラー:', err); }
+    if (!publicSyncOk) {
+      showToast('Shared calendar sync failed. Personal attendance was deleted.', 'warning');
+    }
+    await fetchFiscalYearPaidLeave();
+  };
+
+  if (isSupabaseSharedCoreEnabled()) {
+    try {
+      await deleteAttendanceEntryInSupabase(state.currentUsername, dateStr);
+      await applyLocalDelete();
+    } catch (err) {
+      console.error('Attendance delete failed (Supabase):', err);
+      showToast('勤怠の削除に失敗しました。', 'error');
+    }
+    return;
+  }
+
+  try {
+    await deleteDoc(attendancePath(state.currentUsername, dateStr));
+    await applyLocalDelete();
+  } catch (err) {
+    console.error('Attendance delete failed:', err);
+    showToast('勤怠の削除に失敗しました。', 'error');
+  }
 }
 
-// ===== 月ごとのリスナー =====
 function buildYearMonth(year, month) {
   return `${year}-${String(month + 1).padStart(2, '0')}`;
 }
@@ -272,18 +289,27 @@ function indexAttendanceEntriesByDate(entries = []) {
 
 export function subscribeAttendance(username) {
   if (!username) return;
+  const loadSeq = ++attendanceLoadSeq;
+  prevMonthAttendanceLoadSeq += 1;
   if (state._attendanceSub) { state._attendanceSub(); state._attendanceSub = null; }
   // 月が変わったら前月データをリセット
   state.prevMonthAttendance = {};
   const ym = buildYearMonth(state.calendarYear, state.calendarMonth);
   if (isSupabaseSharedCoreEnabled()) {
     fetchAttendanceEntriesFromSupabase(username, [ym]).then(entries => {
+      if (loadSeq !== attendanceLoadSeq || state.currentUsername !== username) return;
       state.attendanceData = indexAttendanceEntriesByDate(entries);
       renderCalendar();
       updateCalendarSummary();
       refreshTodayDashboard();
     }).catch(err => {
-      console.error('勤怠取得エラー(Supabase):', err);
+      if (loadSeq !== attendanceLoadSeq || state.currentUsername !== username) return;
+      console.error('Attendance load failed (Supabase):', err);
+      state.attendanceData = {};
+      renderCalendar();
+      updateCalendarSummary();
+      refreshTodayDashboard();
+      showToast('勤怠データの取得に失敗しました。', 'warning');
     });
     return;
   }
@@ -293,6 +319,7 @@ export function subscribeAttendance(username) {
   );
   recordListenerStart('cal.month', '月次勤怠', `attendance:${ym}`);
   state._attendanceSub = wrapTrackedListenerUnsubscribe('cal.month', onSnapshot(q, snap => {
+    if (loadSeq !== attendanceLoadSeq || state.currentUsername !== username) return;
     recordListenerSnapshot('cal.month', snap.size, ym, snap.docs);
     state.attendanceData = {};
     snap.docs.forEach(d => { state.attendanceData[d.id] = d.data(); });
@@ -303,6 +330,8 @@ export function subscribeAttendance(username) {
 }
 
 export function unsubscribeAttendance() {
+  attendanceLoadSeq += 1;
+  prevMonthAttendanceLoadSeq += 1;
   if (state._attendanceSub) { state._attendanceSub(); state._attendanceSub = null; }
   state.attendanceData = {};
   refreshTodayDashboard();
@@ -316,9 +345,11 @@ async function fetchPrevMonthAttendance() {
   let m = state.calendarMonth - 1;
   if (m < 0) { m = 11; y--; }
   const ym = `${y}-${String(m + 1).padStart(2, '0')}`;
+  const loadSeq = ++prevMonthAttendanceLoadSeq;
   if (isSupabaseSharedCoreEnabled()) {
     try {
       const entries = await fetchAttendanceEntriesFromSupabase(state.currentUsername, [ym]);
+      if (loadSeq !== prevMonthAttendanceLoadSeq) return;
       state.prevMonthAttendance = { _fetched: true, ...indexAttendanceEntriesByDate(entries) };
     } catch (err) {
       console.warn('前月勤怠取得エラー(Supabase):', err);
@@ -332,6 +363,7 @@ async function fetchPrevMonthAttendance() {
             where('yearMonth', '==', ym))
     );
     recordGetDocsRead('cal.prev-month', '前月勤怠取得', `attendance:${ym}`, snap.size, snap.docs);
+    if (loadSeq !== prevMonthAttendanceLoadSeq) return;
     state.prevMonthAttendance = { _fetched: true };
     snap.docs.forEach(d => { state.prevMonthAttendance[d.id] = d.data(); });
   } catch (err) {
@@ -343,6 +375,8 @@ async function fetchPrevMonthAttendance() {
 // ===== 年度累計有給を取得（カレンダーモーダルを開いたとき） =====
 export async function fetchFiscalYearPaidLeave() {
   if (!state.currentUsername) return;
+  const loadSeq = ++fiscalYearLoadSeq;
+  const username = state.currentUsername;
   const today = new Date();
   // 年度は4月始まり
   const fiscalYear  = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
@@ -351,9 +385,10 @@ export async function fetchFiscalYearPaidLeave() {
   try {
     if (isSupabaseSharedCoreEnabled()) {
       const entries = await fetchAttendanceEntriesFromSupabase(
-        state.currentUsername,
+        username,
         buildYearMonthRange(fiscalStart, fiscalEnd)
       );
+      if (loadSeq !== fiscalYearLoadSeq || username !== state.currentUsername) return;
       let total = 0;
       entries.forEach(att => {
         if (att.type === '有給') total += 1;
@@ -364,10 +399,11 @@ export async function fetchFiscalYearPaidLeave() {
       return;
     }
     const snap = await getDocs(
-      query(collection(db, 'users', state.currentUsername, 'attendance'),
+      query(collection(db, 'users', username, 'attendance'),
             where('yearMonth', '>=', fiscalStart),
             where('yearMonth', '<=', fiscalEnd))
     );
+    if (loadSeq !== fiscalYearLoadSeq || username !== state.currentUsername) return;
     recordGetDocsRead('cal.fiscal-paid', '年度有給集計', `${fiscalStart}..${fiscalEnd}`, snap.size, snap.docs);
     let total = 0;
     snap.docs.forEach(d => {
@@ -380,8 +416,7 @@ export async function fetchFiscalYearPaidLeave() {
     _updateFiscalDisplay();
   } catch (err) {
     console.warn('年度有給取得エラー:', err);
-    state.fiscalYearPaidLeave = 0;
-    _updateFiscalDisplay();
+    showToast('Annual paid leave count could not be refreshed.', 'warning');
   }
 }
 
@@ -642,7 +677,6 @@ export function calNextMonth() {
   renderCalendar();
   if (state.calTab === 'shared') deps.renderSharedCalendar?.();
 }
-
 function buildSharedDayInfoText(dateStr) {
   const info = deps.getDateInfo ? deps.getDateInfo(dateStr) : null;
   if (!info) return '';
