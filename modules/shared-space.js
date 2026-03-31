@@ -3,6 +3,18 @@ import { esc } from './utils.js';
 
 export let deps = {};
 
+function renderHomeIcon(icon, className = '') {
+  if (!icon) return '';
+  const iconName = String(icon).trim();
+  if (!iconName) return '';
+  const classAttr = className ? ` ${className}` : '';
+  const isMaterialSymbol = !iconName.includes(' ') && !iconName.startsWith('fa-');
+  if (isMaterialSymbol) {
+    return `<span class="material-symbols-rounded${classAttr}" aria-hidden="true">${esc(iconName)}</span>`;
+  }
+  return `<i class="${esc(iconName)}${classAttr}" aria-hidden="true"></i>`;
+}
+
 export function initSharedSpace(d = {}) {
   deps = { ...deps, ...d };
   bindSharedSpaceEvents();
@@ -136,37 +148,37 @@ function buildSharedActionItems(requestSummary, taskSummary) {
   return [
     {
       action: 'request',
-      icon: 'fa-solid fa-arrows-left-right',
+      icon: 'swap_horiz',
       label: '部門間依頼',
       meta: requestSummary.activeCount > 0 ? `${requestSummary.activeCount}件を確認` : '新規作成',
     },
     {
       action: 'task',
-      icon: 'fa-solid fa-list-check',
+      icon: 'task_alt',
       label: 'タスク',
       meta: taskSummary.count > 0 ? taskSummary.primaryTitle : '一覧を開く',
     },
     {
       action: 'calendar',
-      icon: 'fa-regular fa-calendar',
+      icon: 'calendar_month',
       label: '勤怠カレンダー',
       meta: '今日の入力を確認',
     },
     {
       action: 'email',
-      icon: 'fa-solid fa-wand-magic-sparkles',
+      icon: 'auto_awesome',
       label: 'メールAI',
       meta: '下書きを作成',
     },
     {
       action: 'order',
-      icon: 'fa-solid fa-boxes-stacked',
+      icon: 'inventory_2',
       label: '鋼材発注',
       meta: '履歴と新規発注',
     },
     {
       action: 'property',
-      icon: 'fa-solid fa-box-archive',
+      icon: 'folder_open',
       label: '物件Noまとめ',
       meta: '横断して確認',
     },
@@ -181,7 +193,7 @@ function renderSharedNoticeItem(item) {
         <strong class="shared-home-notice-title">${esc(item.title || 'お知らせ')}</strong>
         <span class="shared-home-notice-meta">${esc(item.meta || '')}</span>
       </span>
-      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+      ${renderHomeIcon('chevron_right', 'shared-home-notice-chevron')}
     </button>
   `;
 }
@@ -189,7 +201,7 @@ function renderSharedNoticeItem(item) {
 function renderSharedActionItem(item) {
   return `
     <button type="button" class="shared-home-action-item" data-shared-home-action="${esc(item.action)}">
-      <span class="shared-home-action-icon"><i class="${item.icon}"></i></span>
+      <span class="shared-home-action-icon">${renderHomeIcon(item.icon)}</span>
       <span class="shared-home-action-main">
         <strong class="shared-home-action-label">${esc(item.label)}</strong>
         <span class="shared-home-action-meta">${esc(item.meta)}</span>
@@ -206,7 +218,7 @@ function renderSharedQuickLink(link) {
       class="shared-home-link-item"
       data-shared-home-action="${esc(link.action)}"${categoryAttr}
     >
-      <span class="shared-home-link-icon"><i class="${link.icon}"></i></span>
+      <span class="shared-home-link-icon">${renderHomeIcon(link.icon)}</span>
       <span class="shared-home-link-main">
         <strong class="shared-home-link-label">${esc(link.label)}</strong>
         <span class="shared-home-link-meta">${esc(link.meta || '開く')}</span>
@@ -259,25 +271,25 @@ function getHomeQuickLinks(publicCategories, linksSummary, requestSummary, taskS
     {
       action: 'links',
       category: primaryCategory,
-      icon: 'fa-solid fa-link',
+      icon: 'link',
       label: '共有リンク',
       meta: linksSummary.headline,
     },
     {
       action: 'request',
-      icon: 'fa-solid fa-arrows-left-right',
+      icon: 'swap_horiz',
       label: '部門間依頼',
       meta: requestSummary.activeCount > 0 ? `${requestSummary.activeCount}件` : '開く',
     },
     {
       action: 'property',
-      icon: 'fa-solid fa-folder-open',
+      icon: 'folder_open',
       label: '物件Noまとめ',
       meta: '横断検索',
     },
     {
       action: 'order',
-      icon: 'fa-solid fa-box-open',
+      icon: 'inventory_2',
       label: '鋼材発注',
       meta: taskSummary.count > 0 ? '確認' : '作成',
     },

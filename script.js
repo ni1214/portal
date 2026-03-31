@@ -469,6 +469,10 @@ initTodayDashboard({
   openNoticeBoard: () => {
     focusNoticeBoardFromDashboard();
   },
+  openSharedLinks: async () => {
+    state.sharedLinksCategory = 'all';
+    await openSharedLinksModal();
+  },
   openFavorites: () => {
     const section = document.getElementById('favorites-section');
     if (section && !section.hidden) {

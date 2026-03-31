@@ -21,6 +21,7 @@ const DASH_TARGETS = Object.freeze({
   REQUEST_SENT: 'request-sent',
   ATTENDANCE: 'attendance',
   NOTICE: 'notice',
+  SHARED_LINKS: 'shared-links',
   FAVORITES: 'favorites',
   INVITE: 'invite',
 });
@@ -32,8 +33,10 @@ export function initTodayDashboard(d = {}) {
 
 export function renderTodayDashboard() {
   const section = document.getElementById('dash-today-section');
+  const heroHost = document.getElementById('home-dashboard');
   if (!section) return;
   bindDashboardEvents(section);
+  bindDashboardEvents(heroHost);
 
   const today = new Date();
   const todayKey = buildDateKey(today);
@@ -48,6 +51,17 @@ export function renderTodayDashboard() {
   const attendanceTarget = state.currentUsername ? DASH_TARGETS.ATTENDANCE : DASH_TARGETS.PROFILE;
   const taskTarget = state.currentUsername ? DASH_TARGETS.TASK_RECEIVED : DASH_TARGETS.PROFILE;
   const favoritesTarget = state.currentUsername ? DASH_TARGETS.FAVORITES : DASH_TARGETS.PROFILE;
+
+  renderHomeHero(heroHost, {
+    today,
+    username,
+    profile,
+    taskCard,
+    attendanceCard,
+    noticeCard,
+    focusCard,
+    favoriteCount,
+  });
 
   section.hidden = false;
   section.innerHTML = `
@@ -162,6 +176,123 @@ export function renderTodayDashboard() {
   `;
 }
 
+function renderHomeHero(host, {
+  today,
+  username,
+  profile,
+  taskCard,
+  attendanceCard,
+  noticeCard,
+  focusCard,
+  favoriteCount,
+}) {
+  if (!host) return;
+
+  const publicLinkCount = Array.isArray(state.allCategories)
+    ? state.allCategories.filter(category => !category?.isPrivate).length
+    : 0;
+  const primaryTarget = state.currentUsername ? (focusCard.target || DASH_TARGETS.PROFILE) : DASH_TARGETS.PROFILE;
+  const primaryLabel = state.currentUsername ? '今日の優先事項へ' : 'プロフィールを設定';
+  const summaryCopy = state.currentUsername
+    ? (focusCard.meta || '今日の優先度が高い導線をここから開けます。')
+    : 'ユーザーネームを設定すると、個人スペースと保存系の機能が使えるようになります。';
+  const chips = [
+    formatDateLabel(today),
+    profile.department || 'プロフィール未設定',
+    profile.roleLabel || (state.currentUsername ? '共通ビュー' : '設定が必要です'),
+  ];
+  const stats = [
+    {
+      target: DASH_TARGETS.NOTICE,
+      tone: noticeCard.tone || 'clear',
+      symbol: 'notifications',
+      label: 'お知らせ',
+      value: noticeCard.value || '0件',
+      meta: noticeCard.meta || '確認事項はありません',
+    },
+    {
+      target: state.currentUsername ? DASH_TARGETS.TASK_RECEIVED : DASH_TARGETS.PROFILE,
+      tone: taskCard.tone || 'clear',
+      symbol: 'task_alt',
+      label: 'タスク',
+      value: state.currentUsername ? taskCard.value : '設定待ち',
+      meta: state.currentUsername ? (taskCard.meta || '今日のタスクを確認') : 'プロフィール設定後に有効になります',
+    },
+    {
+      target: DASH_TARGETS.SHARED_LINKS,
+      tone: 'clear',
+      symbol: 'dashboard_customize',
+      label: '共有リンク',
+      value: `${publicLinkCount}カテゴリ`,
+      meta: publicLinkCount > 0 ? '必要なリンクへすぐ移動できます' : '共有カテゴリを準備中です',
+    },
+    {
+      target: state.currentUsername ? DASH_TARGETS.FAVORITES : DASH_TARGETS.PROFILE,
+      tone: favoriteCount > 0 ? 'active' : 'idle',
+      symbol: 'star',
+      label: 'お気に入り',
+      value: state.currentUsername ? `${favoriteCount}件` : '設定待ち',
+      meta: state.currentUsername ? 'よく使う導線をまとめて開けます' : '個人設定後に保存されます',
+    },
+  ];
+
+  host.innerHTML = `
+    <section class="portal-home-command-surface">
+      <div class="portal-home-command-top">
+        <div class="portal-home-command-copy">
+          <p class="portal-home-command-kicker">Portal Home</p>
+          <h1 class="portal-home-command-title">${esc(state.currentUsername ? `${username} さんのホーム` : 'ホームを整える')}</h1>
+          <p class="portal-home-command-subtitle">${esc(summaryCopy)}</p>
+        </div>
+
+        <div class="portal-home-command-actions">
+          <button
+            type="button"
+            class="portal-home-command-btn portal-home-command-btn--primary"
+            data-dash-target="${esc(primaryTarget)}"
+          >
+            <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
+            <span>${esc(primaryLabel)}</span>
+          </button>
+          <button
+            type="button"
+            class="portal-home-command-btn"
+            data-dash-target="${esc(DASH_TARGETS.SHARED_LINKS)}"
+          >
+            <span class="material-symbols-rounded" aria-hidden="true">grid_view</span>
+            <span>共有リンクを見る</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="portal-home-command-chip-row">
+        ${chips.map(chip => `
+          <span class="portal-home-command-chip">${esc(chip)}</span>
+        `).join('')}
+      </div>
+
+      <div class="portal-home-command-grid">
+        ${stats.map(stat => `
+          <button
+            type="button"
+            class="portal-home-command-stat portal-home-command-stat--${esc(stat.tone || 'clear')}"
+            data-dash-target="${esc(stat.target)}"
+          >
+            <span class="portal-home-command-stat-icon">
+              <span class="material-symbols-rounded" aria-hidden="true">${esc(stat.symbol)}</span>
+            </span>
+            <span class="portal-home-command-stat-copy">
+              <span class="portal-home-command-stat-label">${esc(stat.label)}</span>
+              <strong class="portal-home-command-stat-value">${esc(stat.value)}</strong>
+              <span class="portal-home-command-stat-meta">${esc(stat.meta)}</span>
+            </span>
+          </button>
+        `).join('')}
+      </div>
+    </section>
+  `;
+}
+
 function renderPersonalList(items, emptyText) {
   if (!Array.isArray(items) || items.length === 0) {
     return `<div class="portal-personal-empty">${esc(emptyText || '表示できる項目はありません')}</div>`;
@@ -245,6 +376,9 @@ async function openDashboardTarget(target) {
       case DASH_TARGETS.NOTICE:
         await deps.openNoticeBoard?.();
         return;
+      case DASH_TARGETS.SHARED_LINKS:
+        await deps.openSharedLinks?.();
+        return;
       case DASH_TARGETS.FAVORITES:
         await deps.openFavorites?.();
         return;
@@ -275,6 +409,8 @@ function getDashboardActionLabel(target) {
       return '勤怠を開く';
     case DASH_TARGETS.NOTICE:
       return '通知を開く';
+    case DASH_TARGETS.SHARED_LINKS:
+      return '共有リンクを開く';
     case DASH_TARGETS.FAVORITES:
       return 'お気に入りを開く';
     case DASH_TARGETS.INVITE:
