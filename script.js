@@ -2929,6 +2929,19 @@ function handleDialogFocusIn(event) {
   }
 }
 
+function syncAccessibleButtonLabels(root = document) {
+  if (!root) return;
+  root.querySelectorAll('button, a[role="button"], [role="button"]').forEach(el => {
+    const title = (el.getAttribute('title') || '').trim();
+    if (title && !el.hasAttribute('aria-label')) {
+      el.setAttribute('aria-label', title);
+    }
+    el.querySelectorAll('i, svg, .material-symbols-rounded').forEach(icon => {
+      icon.setAttribute('aria-hidden', 'true');
+    });
+  });
+}
+
 
 // ========== 初期匁E==========
 document.addEventListener('DOMContentLoaded', async () => {
@@ -2951,6 +2964,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderAllSections();
   initSearch();
   renderFavorites();
+  syncAccessibleButtonLabels();
 
   // お知らせリアクションを�E行読み込み
 

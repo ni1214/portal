@@ -15,6 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
 
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -49,10 +50,10 @@
       <!-- 左：ハンバーガー + ブランド -->
       <div class="app-header-left">
         <button class="app-menu-btn" id="sidebar-toggle" title="メニューを開閉" aria-label="サイドバーを開閉">
-          <i class="fa-solid fa-bars"></i>
+          <i class="material-symbols-rounded">menu</i>
         </button>
         <div class="app-brand">
-          <div class="app-brand-icon"><i class="fa-solid fa-industry"></i></div>
+          <div class="app-brand-icon"><i class="material-symbols-rounded">factory</i></div>
           <span class="app-brand-name">社内ポータル</span>
         </div>
       </div>
@@ -60,11 +61,11 @@
       <!-- 中央：検索バー -->
       <div class="app-header-center">
         <div class="app-search-wrap">
-          <i class="fa-solid fa-magnifying-glass app-search-icon"></i>
+          <i class="material-symbols-rounded app-search-icon">search</i>
           <input type="text" id="search-input" class="app-search-input"
                  placeholder="リソース・タスク・通知を検索..." autocomplete="off">
           <button class="app-search-clear" id="app-search-clear" title="クリア" hidden>
-            <i class="fa-solid fa-xmark"></i>
+            <i class="material-symbols-rounded">close</i>
           </button>
         </div>
       </div>
@@ -72,13 +73,13 @@
       <!-- 右：アクションボタン + ユーザー -->
       <div class="app-header-right">
         <button class="app-header-btn" id="header-help-btn" title="使い方ガイド">
-          <i class="fa-regular fa-circle-question"></i>
+          <i class="material-symbols-rounded">help</i>
         </button>
         <button class="app-header-btn" id="header-notice-btn" title="お知らせ">
-          <i class="fa-solid fa-bell"></i>
+          <i class="material-symbols-rounded">notifications</i>
         </button>
         <button class="app-user-btn" id="btn-user" title="ユーザー設定">
-          <div class="app-user-avatar" id="user-avatar"><i class="fa-solid fa-user"></i></div>
+          <div class="app-user-avatar" id="user-avatar"><i class="material-symbols-rounded">person</i></div>
           <div class="app-user-info">
             <span class="app-user-greeting" id="user-greeting">名前を設定してください</span>
             <span class="app-user-name" id="username-display"></span>
@@ -111,18 +112,18 @@
         <nav class="app-sidebar-nav" aria-label="メインメニュー">
 
           <button class="app-sidebar-item" id="sidebar-home-btn" data-home-target="notice" title="ホームへ戻る">
-            <span class="app-sidebar-icon"><i class="fa-solid fa-house"></i></span>
+            <span class="app-sidebar-icon"><i class="material-symbols-rounded">home</i></span>
             <span class="app-sidebar-label">ホーム</span>
           </button>
 
           <button class="app-sidebar-item" id="btn-calendar" data-home-target="calendar" title="カレンダー・勤怠管理">
-            <span class="app-sidebar-icon"><i class="fa-regular fa-calendar"></i></span>
+            <span class="app-sidebar-icon"><i class="material-symbols-rounded">calendar_month</i></span>
             <span class="app-sidebar-label">カレンダー・勤怠</span>
           </button>
 
           <button class="app-sidebar-item" id="btn-task" data-home-target="task" title="タスク管理">
             <span class="app-sidebar-icon">
-              <i class="fa-solid fa-list-check"></i>
+              <i class="material-symbols-rounded">checklist</i>
               <span class="app-sidebar-badge task-badge" id="task-badge" hidden></span>
             </span>
             <span class="app-sidebar-label">タスク管理</span>
@@ -130,7 +131,7 @@
 
           <button class="app-sidebar-item" id="btn-notice-bell" data-home-target="notice" title="お知らせ">
             <span class="app-sidebar-icon">
-              <i class="fa-solid fa-bullhorn"></i>
+              <i class="material-symbols-rounded">campaign</i>
               <span class="app-sidebar-badge notice-unread-badge" id="notice-unread-badge" hidden></span>
             </span>
             <span class="app-sidebar-label">お知らせ</span>
@@ -138,7 +139,7 @@
 
           <button class="app-sidebar-item chat-fab" id="chat-fab" data-home-target="chat" title="チャット">
             <span class="app-sidebar-icon">
-              <i class="fa-regular fa-comments"></i>
+              <i class="material-symbols-rounded">chat</i>
               <span class="app-sidebar-badge chat-unread-badge" id="chat-unread-badge" hidden></span>
             </span>
             <span class="app-sidebar-label">チャット</span>
@@ -146,7 +147,7 @@
 
           <button class="app-sidebar-item" id="btn-reqboard" data-home-target="request" title="部署間依頼・目安箱">
             <span class="app-sidebar-icon">
-              <i class="fa-solid fa-arrows-left-right"></i>
+              <i class="material-symbols-rounded">swap_horiz</i>
               <span class="app-sidebar-badge req-badge" id="req-badge" hidden></span>
             </span>
             <span class="app-sidebar-label">部署間依頼</span>
@@ -155,32 +156,32 @@
           <div class="app-sidebar-divider"></div>
 
           <button class="app-sidebar-item" id="btn-order-launch" data-home-target="order" title="鋼材発注">
-            <span class="app-sidebar-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+            <span class="app-sidebar-icon"><i class="material-symbols-rounded">inventory_2</i></span>
             <span class="app-sidebar-label">鋼材発注</span>
           </button>
 
           <button class="app-sidebar-item" id="btn-email-assist" data-home-target="email" title="AIがメールを生成します">
-            <span class="app-sidebar-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+            <span class="app-sidebar-icon"><i class="material-symbols-rounded">auto_fix_high</i></span>
             <span class="app-sidebar-label">メール生成AI</span>
           </button>
 
           <button class="app-sidebar-item" id="btn-property-summary" data-home-target="property" title="物件Noごとの情報をまとめて確認">
-            <span class="app-sidebar-icon"><i class="fa-solid fa-box-archive"></i></span>
+            <span class="app-sidebar-icon"><i class="material-symbols-rounded">archive</i></span>
             <span class="app-sidebar-label">物件Noまとめ</span>
           </button>
 
           <button class="app-sidebar-item" id="btn-favorites-only" data-home-target="favorites" title="お気に入りのみ表示">
-            <span class="app-sidebar-icon"><i class="fa-regular fa-star"></i></span>
+            <span class="app-sidebar-icon"><i class="material-symbols-rounded">star</i></span>
             <span class="app-sidebar-label">お気に入り</span>
           </button>
 
           <button class="app-sidebar-item" id="btn-shared-links" data-home-target="shared-links" title="共有リンク一覧">
-            <span class="app-sidebar-icon"><i class="fa-solid fa-share-nodes"></i></span>
+            <span class="app-sidebar-icon"><i class="material-symbols-rounded">share</i></span>
             <span class="app-sidebar-label">共有リンク</span>
           </button>
 
           <button class="app-sidebar-item" id="btn-my-category" data-home-target="my-category" title="マイカテゴリーを追加">
-            <span class="app-sidebar-icon"><i class="fa-solid fa-folder-plus"></i></span>
+            <span class="app-sidebar-icon"><i class="material-symbols-rounded">create_new_folder</i></span>
             <span class="app-sidebar-label">マイカテゴリー</span>
           </button>
 
@@ -190,30 +191,30 @@
         <div class="app-sidebar-footer">
           <button class="app-sidebar-util ft-fab" id="ft-fab" data-home-target="file" title="ファイル転送">
             <span class="app-sidebar-icon">
-              <i class="fa-solid fa-file-arrow-up"></i>
+              <i class="material-symbols-rounded">drive_folder_upload</i>
               <span class="app-sidebar-badge ft-badge" id="ft-badge" hidden></span>
             </span>
             <span class="app-sidebar-label">ファイル転送</span>
           </button>
           <button class="app-sidebar-util settings-fab" id="settings-fab" data-home-target="settings" title="表示設定">
-            <span class="app-sidebar-icon"><i class="fa-solid fa-sliders"></i></span>
+            <span class="app-sidebar-icon"><i class="material-symbols-rounded">tune</i></span>
             <span class="app-sidebar-label">設定</span>
           </button>
           <button class="app-sidebar-util help-fab" id="help-fab" data-home-target="help" title="使い方ガイド">
-            <span class="app-sidebar-icon"><i class="fa-regular fa-circle-question"></i></span>
+            <span class="app-sidebar-icon"><i class="material-symbols-rounded" aria-hidden="true">help</i></span>
             <span class="app-sidebar-label">ガイド</span>
           </button>
           <button class="app-sidebar-util btn-lock-header" id="btn-lock-header" title="ロック" hidden>
-            <span class="app-sidebar-icon"><i class="fa-solid fa-lock"></i></span>
+            <span class="app-sidebar-icon"><i class="material-symbols-rounded" aria-hidden="true">lock</i></span>
             <span class="app-sidebar-label">ロック</span>
           </button>
           <button class="app-sidebar-util" id="btn-read-diagnostics" data-home-target="diagnostics" title="転送診断">
-            <span class="app-sidebar-icon"><i class="fa-solid fa-gauge-high"></i></span>
+            <span class="app-sidebar-icon"><i class="material-symbols-rounded" aria-hidden="true">gauge</i></span>
             <span class="app-sidebar-label">転送診断</span>
           </button>
           <div class="app-sidebar-divider"></div>
           <button class="app-sidebar-invite" id="home-invite-btn" data-home-target="invite" type="button" title="招待コードを入力">
-            <span class="app-sidebar-icon"><i class="fa-solid fa-user-plus"></i></span>
+            <span class="app-sidebar-icon"><i class="material-symbols-rounded" aria-hidden="true">person_add</i></span>
             <span class="app-sidebar-label">招待コードを入力</span>
           </button>
         </div>
@@ -237,7 +238,7 @@
       <div class="space-wrapper space-shared" id="space-shared">
         <div class="area-header area-shared" id="area-shared-header">
           <div class="area-header-title">
-            <i class="fa-solid fa-users"></i>
+            <i class="material-symbols-rounded" aria-hidden="true">groups</i>
             <span>全社共有スペース</span>
           </div>
         </div>
@@ -277,7 +278,7 @@
               <i class="fa-solid fa-arrow-up-right-from-square"></i> 別タブで開く
             </a>
             <button id="wpanel-close" class="wpanel-close" title="閉じる">
-              <i class="fa-solid fa-xmark"></i>
+              <i class="material-symbols-rounded" aria-hidden="true">close</i>
             </button>
           </div>
           <div id="wpanel-content" class="wpanel-content">
@@ -295,7 +296,7 @@
       <div class="space-wrapper space-personal" id="space-personal">
         <div class="area-header area-personal" id="area-personal-header">
           <div class="area-header-title">
-            <i class="fa-solid fa-user-circle"></i>
+            <i class="material-symbols-rounded" aria-hidden="true">person</i>
             <span>個人スペース</span>
           </div>
           <p class="area-header-hint" id="area-personal-hint" hidden><i class="fa-solid fa-triangle-exclamation" style="color:var(--accent-orange)"></i> ユーザーネームを設定するとこのエリアのすべての機能が使えます。上の「<strong>名前を設定してください</strong>」をタップしてください。</p>
@@ -330,7 +331,7 @@
                     <i class="fa-solid fa-check"></i>
                   </button>
                   <button class="todo-cancel-btn" id="todo-cancel-btn">
-                    <i class="fa-solid fa-xmark"></i>
+                    <i class="material-symbols-rounded" aria-hidden="true">close</i>
                   </button>
                 </div>
               </div>
@@ -341,7 +342,7 @@
           <section id="favorites-section" class="favorites-section category-section" hidden>
             <div class="category-header">
               <div class="category-icon" style="background: linear-gradient(135deg, #ffcc00, #dd9900)">
-                <i class="fa-solid fa-star"></i>
+                <i class="material-symbols-rounded" aria-hidden="true">star</i>
               </div>
               <h2 class="category-title">お気に入り</h2>
               <span class="category-count" id="favorites-count">0 件</span>
@@ -372,7 +373,7 @@
   <!-- ==================== サービスピッカーモーダル ==================== -->
   <div class="modal-overlay" id="service-picker-modal">
     <div class="modal-glass service-picker-glass">
-      <h3 class="modal-title"><i class="fa-solid fa-grid-2"></i> サービスを追加</h3>
+      <h3 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">grid_view</i> サービスを追加</h3>
       <p style="font-size:var(--font-size-sm);color:var(--text-muted);margin-bottom:var(--space-md)">追加したいサービスをタップしてください</p>
       <div id="service-picker-grid" class="service-picker-grid"></div>
       <div class="modal-footer" style="margin-top:var(--space-lg)">
@@ -387,11 +388,11 @@
       <div class="shared-links-header">
         <div>
           <div class="shared-links-kicker">Shared Links</div>
-          <h3 class="shared-links-title"><i class="fa-solid fa-grid-2"></i> 共有リンク一覧</h3>
+          <h3 class="shared-links-title"><i class="material-symbols-rounded" aria-hidden="true">grid_view</i> 共有リンク一覧</h3>
           <p class="shared-links-desc">起動時の読み取りを抑えるため、この画面を開いた時だけ共有リンクを読み込みます。</p>
         </div>
         <button type="button" class="shared-links-close" id="shared-links-close" title="閉じる">
-          <i class="fa-solid fa-xmark"></i>
+          <i class="material-symbols-rounded" aria-hidden="true">close</i>
         </button>
       </div>
 
@@ -416,7 +417,7 @@
     <div class="ft-panel-header">
       <span><i class="fa-solid fa-file-arrow-up"></i> ファイル転送</span>
       <button class="ft-panel-close" id="ft-panel-close" title="閉じる">
-        <i class="fa-solid fa-xmark"></i>
+        <i class="material-symbols-rounded" aria-hidden="true">close</i>
       </button>
     </div>
     <!-- P2P / Drive タブ -->
@@ -570,7 +571,7 @@
       <div class="chat-sidebar-header">
         <span><i class="fa-solid fa-comments"></i> チャット</span>
         <button class="chat-panel-close" id="chat-panel-close" title="閉じる">
-          <i class="fa-solid fa-xmark"></i>
+          <i class="material-symbols-rounded" aria-hidden="true">close</i>
         </button>
       </div>
 
@@ -580,7 +581,7 @@
           <i class="fa-solid fa-user"></i> ダイレクト
         </button>
         <button class="chat-sidebar-tab" id="chat-tab-group" data-tab="group">
-          <i class="fa-solid fa-users"></i> グループ
+          <i class="material-symbols-rounded" aria-hidden="true">groups</i> グループ
         </button>
       </div>
 
@@ -622,7 +623,7 @@
           </div>
           <div class="chat-room-header-right">
             <button class="chat-room-close" id="chat-room-close" title="閉じる">
-              <i class="fa-solid fa-xmark"></i>
+              <i class="material-symbols-rounded" aria-hidden="true">close</i>
             </button>
           </div>
         </div>
@@ -653,7 +654,7 @@
   <!-- ==================== 新規DMモーダル ==================== -->
   <div class="modal-overlay" id="new-dm-modal">
     <div class="modal-glass">
-      <h3 class="modal-title"><i class="fa-solid fa-user-plus"></i> ダイレクトメッセージ</h3>
+      <h3 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">person_add</i> ダイレクトメッセージ</h3>
       <p class="modal-desc">話しかけたいメンバーを選んでください</p>
       <input type="text" id="new-dm-search" class="form-input" placeholder="名前で検索..." autocomplete="off" style="margin-bottom:10px">
       <div id="new-dm-user-list" class="new-dm-user-list"></div>
@@ -666,7 +667,7 @@
   <!-- ==================== 新規グループモーダル ==================== -->
   <div class="modal-overlay" id="new-group-modal">
     <div class="modal-glass">
-      <h3 class="modal-title"><i class="fa-solid fa-users"></i> グループを作成</h3>
+      <h3 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">groups</i> グループを作成</h3>
       <div class="form-group">
         <label class="form-label">グループ名</label>
         <input type="text" id="new-group-name" class="form-input" placeholder="例：朝会メンバー" maxlength="30">
@@ -687,9 +688,9 @@
   <!-- ==================== 設定パネル ==================== -->
   <div id="settings-panel" class="settings-panel" hidden>
     <div class="settings-panel-header">
-      <span><i class="fa-solid fa-gear"></i> 表示設定</span>
+      <span><i class="material-symbols-rounded" aria-hidden="true">settings</i> 表示設定</span>
       <button class="settings-panel-close" id="settings-panel-close" title="閉じる">
-        <i class="fa-solid fa-xmark"></i>
+        <i class="material-symbols-rounded" aria-hidden="true">close</i>
       </button>
     </div>
     <div class="settings-panel-body">
@@ -764,7 +765,7 @@
 
   <div class="modal-overlay" id="username-modal">
     <div class="modal-glass">
-      <h3 class="modal-title" id="username-modal-title"><i class="fa-solid fa-user-circle"></i> ユーザーネームを設定</h3>
+      <h3 class="modal-title" id="username-modal-title"><i class="material-symbols-rounded" aria-hidden="true">person</i> ユーザーネームを設定</h3>
       <p class="modal-desc" id="username-modal-desc">あなただけの名前（ID）を入力してください。<br><strong>タスク管理・お気に入り・個人メモ・テーマ設定</strong>がこの名前に紐づいて保存されます。<br><small style="color:var(--text-muted)">同じ名前を別の端末で入力すれば設定が引き継がれます。</small></p>
       <div class="form-group">
         <label class="form-label">ユーザーネーム</label>
@@ -788,7 +789,7 @@
       </div>
       <div class="username-security-row" id="username-security-row" hidden>
         <button class="btn-open-security" id="btn-open-security">
-          <i class="fa-solid fa-lock"></i> PINロックを設定する
+          <i class="material-symbols-rounded" aria-hidden="true">lock</i> PINロックを設定する
         </button>
       </div>
     </div>
@@ -797,7 +798,7 @@
   <!-- ==================== マイカテゴリ編集モーダル ==================== -->
   <div class="modal-overlay" id="private-section-modal">
     <div class="modal-glass">
-      <h3 class="modal-title" id="private-section-modal-title"><i class="fa-solid fa-lock"></i> マイカテゴリを追加</h3>
+      <h3 class="modal-title" id="private-section-modal-title"><i class="material-symbols-rounded" aria-hidden="true">lock</i> マイカテゴリを追加</h3>
       <div class="form-group">
         <label class="form-label">セクション名</label>
         <input type="text" id="private-section-label" class="form-input" placeholder="例：マイリンク">
@@ -981,7 +982,7 @@
     <div class="modal-glass guide-glass">
       <div class="guide-header">
         <h3 class="modal-title"><i class="fa-solid fa-circle-question"></i> 使い方ガイド</h3>
-        <button class="guide-close" id="guide-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+        <button class="guide-close" id="guide-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
       <div class="guide-body">
 
@@ -1116,7 +1117,7 @@
 
   <div class="modal-overlay" id="auth-prelogin-modal">
     <div class="modal-glass auth-access-modal">
-      <h3 class="modal-title" id="auth-prelogin-title"><i class="fa-solid fa-lock"></i> ログイン前PIN確認</h3>
+      <h3 class="modal-title" id="auth-prelogin-title"><i class="material-symbols-rounded" aria-hidden="true">lock</i> ログイン前PIN確認</h3>
       <p class="modal-desc" id="auth-prelogin-desc">このユーザーはPIN保護されています。4桁のPINを入力するとログインできます。</p>
       <div class="auth-prelogin-user" id="auth-prelogin-username"></div>
       <div class="form-group">
@@ -1137,32 +1138,32 @@
   <!-- ==================== ボトムナビ（スマホ用）==================== -->
   <nav class="bottom-nav" id="bottom-nav">
     <button class="bottom-nav-item" id="bnav-home">
-      <i class="fa-solid fa-house"></i>
+      <i class="material-symbols-rounded" aria-hidden="true">home</i>
       <span>ホーム</span>
     </button>
     <button class="bottom-nav-item" id="bnav-chat">
       <span class="bnav-icon-wrap">
-        <i class="fa-solid fa-comments"></i>
+        <i class="material-symbols-rounded" aria-hidden="true">chat</i>
         <span id="bnav-chat-badge" class="bnav-badge" hidden></span>
       </span>
       <span>チャット</span>
     </button>
     <button class="bottom-nav-item" id="bnav-notice">
       <span class="bnav-icon-wrap">
-        <i class="fa-solid fa-bell"></i>
+        <i class="material-symbols-rounded" aria-hidden="true">notifications</i>
         <span id="bnav-notice-badge" class="bnav-badge" hidden></span>
       </span>
       <span>お知らせ</span>
     </button>
     <button class="bottom-nav-item" id="bnav-task">
       <span class="bnav-icon-wrap">
-        <i class="fa-solid fa-list-check"></i>
+        <i class="material-symbols-rounded" aria-hidden="true">checklist</i>
         <span id="bnav-task-badge" class="bnav-badge" hidden></span>
       </span>
       <span>タスク</span>
     </button>
     <button class="bottom-nav-item" id="bnav-more">
-      <i class="fa-solid fa-ellipsis"></i>
+      <i class="material-symbols-rounded" aria-hidden="true">more_horiz</i>
       <span>その他</span>
     </button>
   </nav>
@@ -1173,11 +1174,11 @@
     <div class="more-drawer-panel">
       <div class="more-drawer-header">
         <span>その他の機能</span>
-        <button class="more-drawer-close" id="more-drawer-close"><i class="fa-solid fa-xmark"></i></button>
+        <button class="more-drawer-close" id="more-drawer-close"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
       <div class="more-drawer-grid">
         <button class="more-drawer-item" data-target="btn-user">
-          <i class="fa-solid fa-user-circle"></i>
+          <i class="material-symbols-rounded" aria-hidden="true">person</i>
           <span>ユーザー設定</span>
         </button>
         <button class="more-drawer-item" data-target="btn-calendar">
@@ -1212,7 +1213,7 @@
           <span>ファイル転送</span>
         </button>
         <button class="more-drawer-item" data-target="settings-fab">
-          <i class="fa-solid fa-gear"></i>
+          <i class="material-symbols-rounded" aria-hidden="true">settings</i>
           <span>表示設定</span>
         </button>
         <button class="more-drawer-item" data-target="help-fab">
@@ -1220,7 +1221,7 @@
           <span>ヘルプ</span>
         </button>
         <button class="more-drawer-item mdr-lock-item" data-target="btn-lock-header" hidden>
-          <i class="fa-solid fa-lock"></i>
+          <i class="material-symbols-rounded" aria-hidden="true">lock</i>
           <span>ロック</span>
         </button>
       </div>
@@ -1263,14 +1264,14 @@
     <div class="modal-glass security-modal-inner">
       <h3 class="modal-title"><i class="fa-solid fa-shield-halved"></i> セキュリティ設定</h3>
       <div class="security-recommend-box" id="security-recommend-box" hidden>
-        <i class="fa-solid fa-circle-info"></i>
+        <i class="material-symbols-rounded" aria-hidden="true">info</i>
         <span id="security-recommend-text">なりすまし防止のため、PINロック設定をおすすめします。</span>
       </div>
 
       <!-- ① ロック機能 ON/OFF トグル -->
       <div class="security-row">
         <div class="security-row-left">
-          <i class="fa-solid fa-lock"></i>
+          <i class="material-symbols-rounded" aria-hidden="true">lock</i>
           <div>
             <div class="security-row-title">PINロック機能</div>
             <div class="security-row-desc">オンにするとロック・自動ロックが有効になります</div>
@@ -1374,7 +1375,7 @@
       <!-- ユーザー管理（認証後） -->
       <div id="admin-panel-area" hidden>
         <div class="admin-panel-header">
-          <span class="admin-panel-subtitle"><i class="fa-solid fa-users"></i> ユーザー管理（PINリセット・削除）</span>
+          <span class="admin-panel-subtitle"><i class="material-symbols-rounded" aria-hidden="true">groups</i> ユーザー管理（PINリセット・削除）</span>
           <button class="btn-modal-secondary" id="admin-close">閉じる</button>
         </div>
         <div class="admin-user-list" id="admin-user-list">
@@ -1461,7 +1462,7 @@
           <p class="email-modal-subtitle" id="email-modal-subtitle">メール作成専用です。所属部署・署名の変更はプロフィール設定から行います。</p>
         </div>
         <button class="email-modal-close" id="email-modal-close" title="閉じる">
-          <i class="fa-solid fa-xmark"></i>
+          <i class="material-symbols-rounded" aria-hidden="true">close</i>
         </button>
       </div>
 
@@ -1593,7 +1594,7 @@
           <p class="email-modal-subtitle">所属部署・役割・署名を設定します。メール作成は左メニューの「メール生成AI」から開けます。</p>
         </div>
         <button class="profile-modal-close" id="profile-modal-close" title="閉じる">
-          <i class="fa-solid fa-xmark"></i>
+          <i class="material-symbols-rounded" aria-hidden="true">close</i>
         </button>
       </div>
 
@@ -1664,13 +1665,13 @@
           <button class="cal-today-btn" id="cal-today-btn">今月</button>
         </div>
         <button class="cal-nav-btn" id="cal-next-btn" title="次月"><i class="fa-solid fa-chevron-right"></i></button>
-        <button class="cal-close-btn" id="cal-close-btn" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+        <button class="cal-close-btn" id="cal-close-btn" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
 
       <!-- タブバー: 個人 / 共有 -->
       <div class="cal-tab-bar">
         <button class="cal-tab-btn active" id="cal-tab-personal"><i class="fa-solid fa-user"></i> 個人</button>
-        <button class="cal-tab-btn" id="cal-tab-shared"><i class="fa-solid fa-users"></i> 共有</button>
+        <button class="cal-tab-btn" id="cal-tab-shared"><i class="material-symbols-rounded" aria-hidden="true">groups</i> 共有</button>
       </div>
 
       <!-- 個人カレンダーコンテナ -->
@@ -1793,7 +1794,7 @@
           <div class="calw-work-filter-input-wrap">
             <i class="fa-solid fa-magnifying-glass calw-work-filter-icon"></i>
             <input type="text" id="calw-work-project-filter" class="form-input calw-work-search-input" placeholder="物件Noで絞り込み" autocomplete="off">
-            <button type="button" class="calw-work-filter-clear" id="calw-work-project-filter-clear" hidden><i class="fa-solid fa-xmark"></i></button>
+            <button type="button" class="calw-work-filter-clear" id="calw-work-project-filter-clear" hidden><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
           </div>
           <div class="calw-work-filter-count" id="calw-work-project-filter-count">-</div>
         </div>
@@ -1862,7 +1863,7 @@
       <!-- ヘッダー -->
       <div class="ccs-modal-header">
         <h3 class="ccs-modal-title"><i class="fa-solid fa-building-circle-check" style="color:var(--accent-blue)"></i> 会社カレンダー設定</h3>
-        <button class="btn-modal-secondary" id="ccs-close-btn" style="padding:4px 10px;" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+        <button class="btn-modal-secondary" id="ccs-close-btn" style="padding:4px 10px;" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
 
       <!-- PIN認証ゲート -->
@@ -1916,7 +1917,7 @@
       <div class="task-modal-header">
         <span><i class="fa-solid fa-list-check"></i> タスク管理</span>
         <button class="task-modal-close" id="task-modal-close" title="閉じる">
-          <i class="fa-solid fa-xmark"></i>
+          <i class="material-symbols-rounded" aria-hidden="true">close</i>
         </button>
       </div>
 
@@ -1950,7 +1951,7 @@
       <div class="reqboard-modal-header">
         <span><i class="fa-solid fa-clipboard-list"></i> 部門間依頼・目安箱</span>
         <button class="reqboard-modal-close" id="reqboard-modal-close" title="閉じる">
-          <i class="fa-solid fa-xmark"></i>
+          <i class="material-symbols-rounded" aria-hidden="true">close</i>
         </button>
       </div>
 
@@ -2014,7 +2015,7 @@
         <div class="task-assignee-row">
           <span class="task-assignee-display" id="req-taskify-assignee-display">未選択</span>
           <button type="button" class="task-pick-btn" id="req-taskify-pick-user">
-            <i class="fa-solid fa-user-plus"></i> 選択
+            <i class="material-symbols-rounded" aria-hidden="true">person_add</i> 選択
           </button>
         </div>
       </div>
@@ -2051,7 +2052,7 @@
   <!-- ==================== タスク担当者ピッカーモーダル ==================== -->
   <div class="modal-overlay" id="task-user-picker-modal">
     <div class="modal-glass">
-      <h3 class="modal-title"><i class="fa-solid fa-user-plus"></i> 担当者を選択</h3>
+      <h3 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">person_add</i> 担当者を選択</h3>
       <input type="text" id="task-user-search" class="form-input" placeholder="名前で検索..." autocomplete="off" style="margin-bottom:10px">
       <div id="task-user-list" class="new-dm-user-list"></div>
       <div class="modal-actions">
@@ -2148,8 +2149,8 @@
       <div class="modal-header">
         <h2 class="modal-title"><i class="fa-solid fa-boxes-stacked"></i> 鋼材発注</h2>
         <div style="display:flex;gap:6px;align-items:center;">
-          <button class="btn-modal-secondary ord-admin-open-btn" id="ord-open-admin-btn" title="発注先・鋼材・GAS設定"><i class="fa-solid fa-gear"></i> 設定</button>
-          <button class="modal-close" id="ord-modal-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+          <button class="btn-modal-secondary ord-admin-open-btn" id="ord-open-admin-btn" title="発注先・鋼材・GAS設定"><i class="material-symbols-rounded" aria-hidden="true">settings</i> 設定</button>
+          <button class="modal-close" id="ord-modal-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
         </div>
       </div>
 
@@ -2194,7 +2195,7 @@
         <div class="ord-search-bar-wrap">
           <i class="fa-solid fa-magnifying-glass ord-search-icon"></i>
           <input type="text" id="ord-search-input" class="form-input ord-search-input" placeholder="品種・サイズで検索（例：アングル、25×25）" autocomplete="off">
-          <button class="ord-search-clear" id="ord-search-clear" hidden><i class="fa-solid fa-xmark"></i></button>
+          <button class="ord-search-clear" id="ord-search-clear" hidden><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
         </div>
         <!-- カテゴリ絞り込み（ドロップダウン） -->
         <select id="ord-cat-select" class="form-input ord-cat-select"></select>
@@ -2233,7 +2234,7 @@
     <div class="modal-glass ord-modal-inner ord-preview-inner">
       <div class="modal-header">
         <h2 class="modal-title"><i class="fa-solid fa-envelope-open-text"></i> メール送信プレビュー</h2>
-        <button class="modal-close" id="ord-preview-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+        <button class="modal-close" id="ord-preview-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
       <div class="ord-preview-subject-row">
         <span class="ord-preview-label">件名</span>
@@ -2256,7 +2257,7 @@
     <div class="modal-glass ord-modal-inner">
       <div class="modal-header">
         <h2 class="modal-title"><i class="fa-solid fa-clock-rotate-left"></i> 発注履歴</h2>
-        <button class="modal-close" id="ord-history-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+        <button class="modal-close" id="ord-history-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
 
       <!-- 期間ナビゲーション -->
@@ -2270,7 +2271,7 @@
         <div class="ord-history-filter-input-wrap">
           <i class="fa-solid fa-magnifying-glass ord-history-filter-icon"></i>
           <input type="text" id="ord-history-project-filter" class="form-input ord-history-filter-input" placeholder="物件Noで絞り込み" autocomplete="off">
-          <button type="button" class="ord-history-filter-clear" id="ord-history-project-filter-clear" hidden><i class="fa-solid fa-xmark"></i></button>
+          <button type="button" class="ord-history-filter-clear" id="ord-history-project-filter-clear" hidden><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
         </div>
         <div class="ord-history-filter-count" id="ord-history-project-filter-count">-</div>
       </div>
@@ -2288,7 +2289,7 @@
     <div class="modal-glass ord-modal-inner ord-detail-inner">
       <div class="modal-header">
         <h2 class="modal-title"><i class="fa-solid fa-file-lines"></i> 発注詳細</h2>
-        <button class="modal-close" id="ord-detail-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+        <button class="modal-close" id="ord-detail-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
       <div id="ord-detail-content" class="ord-detail-content"></div>
       <div class="modal-actions">
@@ -2305,7 +2306,7 @@
     <div class="modal-glass ord-modal-inner">
       <div class="modal-header">
         <h2 class="modal-title"><i class="fa-solid fa-screwdriver-wrench"></i> 発注管理</h2>
-        <button class="modal-close" id="ord-admin-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+        <button class="modal-close" id="ord-admin-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
 
       <!-- 管理パネル -->
@@ -2382,7 +2383,7 @@
     <div class="modal-glass prop-summary-inner">
       <div class="modal-header prop-summary-header">
         <h2 class="modal-title"><i class="fa-solid fa-magnifying-glass-chart"></i> 物件Noまとめ</h2>
-        <button class="modal-close" id="prop-summary-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+        <button class="modal-close" id="prop-summary-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
       <div class="prop-summary-search-row">
         <div class="prop-summary-search-input-wrap">
@@ -2400,7 +2401,7 @@
             id="prop-summary-search-clear"
             title="検索をクリア"
             hidden
-          ><i class="fa-solid fa-xmark"></i></button>
+          ><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
         </div>
         <button class="btn-modal-primary prop-summary-search-btn" id="prop-summary-search-btn">
           <i class="fa-solid fa-magnifying-glass"></i> 検索
@@ -2420,8 +2421,8 @@
   <div class="modal-overlay" id="rd-modal">
     <div class="modal-glass rd-modal-inner">
       <div class="modal-header rd-modal-header">
-        <h2 class="modal-title"><i class="fa-solid fa-gauge-high"></i> 転送診断</h2>
-        <button class="modal-close" id="rd-close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+        <h2 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">gauge</i> 転送診断</h2>
+        <button class="modal-close" id="rd-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
       <div class="rd-note">
           Supabase の請求値そのものではなく、取得データを JSON 化したときの推定転送量ベースの概算です。どこが重いか、5GB/月に対してどのくらいか、30人利用だとどう見えるかを判断するための画面です。
@@ -2448,3 +2449,4 @@
 </body>
 
 </html>
+

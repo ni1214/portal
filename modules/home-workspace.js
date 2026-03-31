@@ -58,8 +58,8 @@ export function renderHomeWorkspace() {
           </div>
         </header>
         <div class="home-overview-grid">
-          ${renderOverviewCard(taskOverview)}
           ${renderOverviewCard(noticeOverview)}
+          ${renderOverviewCard(taskOverview)}
           ${renderOverviewCard(companyOverview)}
         </div>
       </div>
@@ -69,8 +69,8 @@ export function renderHomeWorkspace() {
         <div class="home-workspace-stage-head">
           <div>
             <p class="home-workspace-card-kicker">マイスペース</p>
-            <h3 class="home-workspace-stage-title" id="home-workspace-stage-title">お気に入り・マイカテゴリー</h3>
-            <p class="home-workspace-stage-copy">よく使うカードとマイカテゴリーをまとめて確認できます。</p>
+            <h3 class="home-workspace-stage-title" id="home-workspace-stage-title">お気に入り・よく使うカテゴリ</h3>
+            <p class="home-workspace-stage-copy">よく使うカードとカテゴリをまとめて確認できます。</p>
           </div>
         </div>
         <div class="home-workspace-stage-body" id="home-stage-myspace-panel"></div>
@@ -92,17 +92,17 @@ function renderHomeWorkspaceTop() {
   const companyOverview = buildCompanyNoticeOverviewCard();
 
   const topMarkup = `
-    <div class="home-workspace-top" data-home-workspace-top>
-      <header class="home-workspace-header">
-        <div class="home-workspace-header-copy">
-          <p class="home-workspace-kicker">ホーム</p>
-          <h2 class="home-workspace-title" id="home-overview-title">${esc(overviewTitle)}</h2>
-          <p class="home-workspace-copy">${esc(overviewSubtitle)}</p>
-        </div>
-      </header>
+      <div class="home-workspace-top" data-home-workspace-top>
+        <header class="home-workspace-header">
+          <div class="home-workspace-header-copy">
+            <p class="home-workspace-kicker">ホーム</p>
+            <h2 class="home-workspace-title" id="home-overview-title">${esc(overviewTitle)}</h2>
+            <p class="home-workspace-copy">${esc(overviewSubtitle)}</p>
+          </div>
+        </header>
       <div class="home-overview-grid">
-        ${renderOverviewCard(taskOverview)}
         ${renderOverviewCard(noticeOverview)}
+        ${renderOverviewCard(taskOverview)}
         ${renderOverviewCard(companyOverview)}
       </div>
     </div>
@@ -145,8 +145,8 @@ function renderHomeWorkspaceStage() {
     <div class="home-workspace-stage-head">
       <div>
         <p class="home-workspace-card-kicker">マイスペース</p>
-        <h3 class="home-workspace-stage-title" id="home-workspace-stage-title">お気に入り・マイカテゴリー</h3>
-        <p class="home-workspace-stage-copy">よく使うカードとマイカテゴリーをまとめて確認できます。</p>
+        <h3 class="home-workspace-stage-title" id="home-workspace-stage-title">お気に入り・よく使うカテゴリ</h3>
+        <p class="home-workspace-stage-copy">よく使うカードとカテゴリをまとめて確認できます。</p>
       </div>
     </div>
     <div class="home-workspace-stage-body" id="home-stage-myspace-panel"></div>
@@ -162,14 +162,18 @@ function buildOverviewTitle() {
 
 function buildOverviewSubtitle() {
   if (!state.currentUsername) {
-    return 'ユーザー名を設定すると、自分のタスクや通知が表示されます。';
+    return 'ユーザー名を設定すると、あなたのタスクや通知が表示されます。';
   }
-  return 'サイドバーのボタンは直接モーダルを開きます。下は今日の要確認事項です。';
+  return 'サイドバーのボタンで各画面が開きます。まずは上の通知を確認してください。';
 }
 
 
 function renderOverviewCard(snapshot) {
   const ariaLabel = esc(snapshot.ariaLabel || snapshot.title || 'Open');
+  const cardClasses = ['home-workspace-card', 'home-overview-card'];
+  if (snapshot.primary) {
+    cardClasses.push('home-overview-card--primary');
+  }
   const actionAttrs = snapshot.action
     ? ` data-home-action="${esc(snapshot.action)}" data-home-card-action="true" role="button" tabindex="0" aria-label="${ariaLabel}"`
     : '';
@@ -177,7 +181,7 @@ function renderOverviewCard(snapshot) {
     ? esc(snapshot.actionLabel || '開く')
     : '';
   return `
-    <article class="home-workspace-card home-overview-card" data-tone="${esc(snapshot.tone)}"${actionAttrs}>
+    <article class="${cardClasses.join(' ')}" data-tone="${esc(snapshot.tone)}"${actionAttrs}>
       <div class="home-workspace-card-head">
         <div>
           <p class="home-workspace-card-kicker">${esc(snapshot.kicker)}</p>
@@ -192,7 +196,7 @@ function renderOverviewCard(snapshot) {
         <div class="home-overview-action-row" aria-hidden="true">
           <span class="home-workspace-action home-workspace-action--compact">
             <span class="home-workspace-action-label">${actionLabel}</span>
-            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            <i class="material-symbols-rounded" aria-hidden="true">arrow_forward</i>
           </span>
         </div>
       ` : ''}
@@ -209,7 +213,7 @@ function renderOverviewList(items = []) {
     <ul class="home-workspace-note-list">
       ${items.map(item => `
         <li class="home-workspace-note-item">
-          <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+          <i class="material-symbols-rounded" aria-hidden="true">check_circle</i>
           <span>
             <strong>${esc(item.title || '')}</strong>
             ${item.meta ? `<span class="home-workspace-note-meta">${esc(item.meta)}</span>` : ''}
@@ -231,8 +235,8 @@ function buildTaskOverview() {
     title: '自分のタスク',
     value: `${tasks.length}件`,
     meta: tasks.length > 0
-      ? `承諾待ち ${pending}件 / 進行中 ${accepted}件`
-      : '受信タスクはありません',
+      ? `未対応 ${pending}件 / 進行中 ${accepted}件`
+      : '自分宛てのタスクはありません',
     tone: overdue > 0 ? 'notice' : (pending > 0 ? 'task' : 'settings'),
     items: tasks.slice(0, 2).map(task => ({
       title: task.title || '名称未設定',
@@ -242,7 +246,7 @@ function buildTaskOverview() {
         formatDueLabel(task.dueDate),
       ].filter(Boolean).join(' / '),
     })),
-    emptyText: '受信タスクはまだありません',
+    emptyText: '自分宛てのタスクはまだありません',
   };
 }
 
@@ -302,7 +306,7 @@ function buildNoticeStats() {
     items: notices.slice(0, 2).map(notice => ({
       title: notice.title || '名称未設定',
       meta: [
-        notice.requireAcknowledgement ? '確認必須' : (notice.priority === 'urgent' ? '重要' : '通常'),
+        notice.requireAcknowledgement ? '確認が必要' : (notice.priority === 'urgent' ? '重要' : '通常'),
         formatNoticeDate(notice.createdAt),
       ].filter(Boolean).join(' / '),
     })),
@@ -316,7 +320,7 @@ function buildHomeNotificationOverview() {
   const metaParts = [];
   const hasChatUnread = chatStats.unreadCount > 0;
 
-  if (hasChatUnread) metaParts.push(`チャット ${chatStats.unreadCount}件`);
+  if (hasChatUnread) metaParts.push(`チャット未読 ${chatStats.unreadCount}件`);
   if (noticeStats.pendingAckCount > 0) metaParts.push(`確認待ち ${noticeStats.pendingAckCount}件`);
   if (noticeStats.unreadCount > 0) metaParts.push(`お知らせ ${noticeStats.unreadCount}件`);
 
@@ -324,13 +328,14 @@ function buildHomeNotificationOverview() {
     kicker: '自分向け',
     title: '通知',
     value: `${totalCount}件`,
-    meta: metaParts.length > 0 ? metaParts.join(' / ') : 'チャットと通知はありません',
+    meta: metaParts.length > 0 ? metaParts.join(' / ') : 'チャット / お知らせはありません',
     tone: noticeStats.pendingAckCount > 0 ? 'notice' : (hasChatUnread ? 'request' : (noticeStats.unreadCount > 0 ? 'task' : 'settings')),
     items: buildNotificationItems(chatStats, noticeStats),
-    emptyText: 'チャットと通知はありません',
+    emptyText: 'チャット / お知らせはありません',
     action: hasChatUnread ? 'open-chat-panel' : 'focus-notice',
     actionLabel: hasChatUnread ? 'チャットを開く' : 'お知らせを開く',
     ariaLabel: hasChatUnread ? 'チャットを開く' : 'お知らせを開く',
+    primary: true,
   };
 }
 
@@ -405,7 +410,7 @@ function getNotificationNoticeItems(noticeStats) {
     .map(notice => ({
       title: notice.title || '名称未設定',
       meta: [
-        notice.requireAcknowledgement ? '確認必須' : '未読',
+        notice.requireAcknowledgement ? '確認が必要' : '未読',
         formatNoticeDate(notice.createdAt),
       ].filter(Boolean).join(' / '),
     }));
@@ -440,7 +445,7 @@ function getChatRoomLabel(room) {
   if (!room) return 'チャット';
   if (room.type === 'group' || room.name) return room.name || 'グループ';
   const members = Array.isArray(room.members) ? room.members : [];
-  return members.find(member => member !== state.currentUsername) || 'DM';
+  return members.find(member => member !== state.currentUsername) || '個別チャット';
 }
 
 function bindWorkspaceHost() {
@@ -637,22 +642,22 @@ export function renderHomeMySpacePanel(el) {
 
   const helpHeader = document.createElement('h4');
   helpHeader.className = 'home-myspace-section-title home-myspace-section-title--help';
-  helpHeader.innerHTML = '<i class="fa-solid fa-circle-info"></i> はじめに';
+  helpHeader.innerHTML = '<i class="material-symbols-rounded" aria-hidden="true">info</i> はじめに';
   helpSection.appendChild(helpHeader);
 
   const helpCopy = document.createElement('p');
   helpCopy.className = 'home-help-copy';
-  helpCopy.textContent = '迷ったら「ガイド」。最初に使う入口と、用語の意味をまとめました。';
+  helpCopy.textContent = '迷ったら「ガイド」。よく使う入口と用語の意味をまとめました。';
   helpSection.appendChild(helpCopy);
 
   const actions = document.createElement('div');
   actions.className = 'home-help-actions';
 
   const actionDefs = [
-    { action: 'open-guide', icon: 'fa-regular fa-circle-question', label: 'ガイド', aria: '使い方ガイドを開く' },
-    { action: 'open-chat-panel', icon: 'fa-regular fa-comment-dots', label: 'チャット', aria: 'チャットを開く' },
-    { action: 'focus-notice', icon: 'fa-solid fa-bell', label: 'お知らせ', aria: 'お知らせを表示する' },
-    { action: 'open-task-modal', icon: 'fa-solid fa-list-check', label: 'タスク', aria: 'タスク管理を開く' },
+    { action: 'open-guide', icon: 'help', label: 'ガイド', aria: '使い方ガイドを開く' },
+    { action: 'open-chat-panel', icon: 'chat', label: 'チャット', aria: 'チャットを開く' },
+    { action: 'focus-notice', icon: 'notifications', label: 'お知らせ', aria: 'お知らせを表示する' },
+    { action: 'open-task-modal', icon: 'checklist', label: 'タスク', aria: 'タスク管理を開く' },
   ];
 
   actionDefs.forEach(def => {
@@ -661,18 +666,24 @@ export function renderHomeMySpacePanel(el) {
     btn.className = 'home-help-chip';
     btn.dataset.homeAction = def.action;
     btn.setAttribute('aria-label', def.aria);
-    btn.innerHTML = `<i class="${def.icon}" aria-hidden="true"></i><span>${esc(def.label)}</span>`;
+    btn.innerHTML = `<i class="material-symbols-rounded" aria-hidden="true">${esc(def.icon)}</i><span>${esc(def.label)}</span>`;
     actions.appendChild(btn);
   });
   helpSection.appendChild(actions);
 
-  const glossary = document.createElement('div');
-  glossary.className = 'home-help-glossary';
+  const glossary = document.createElement('details');
+  glossary.className = 'home-help-glossary home-help-glossary-details';
+  const glossarySummary = document.createElement('summary');
+  glossarySummary.className = 'home-help-glossary-summary';
+  glossarySummary.innerHTML = '<i class="material-symbols-rounded" aria-hidden="true">library_books</i><span>用語を確認</span>';
+  glossary.appendChild(glossarySummary);
+  const glossaryList = document.createElement('div');
+  glossaryList.className = 'home-help-glossary-list';
   const glossaryItems = [
-    { term: 'お知らせ', desc: '社内のお知らせ。確認待ちは「確認した」まで対応します。 (Thong bao)' },
-    { term: 'チャット（個別）', desc: '個別メッセージ。画面では「DM」と表示されることがあります。 (Tin nhan rieng)' },
-    { term: '物件No', desc: '現場コード。検索や「物件Noまとめ」で使います。 (Ma cong trinh)' },
-    { term: 'ファイル転送', desc: 'ファイルを送る機能。P2P=直接、Drive=リンク。 (Chuyen tep)' },
+    { term: 'お知らせ', desc: '社内のお知らせ。確認が必要なものは「確認した」まで対応します。 (Thong bao)' },
+    { term: '個別チャット', desc: '1対1のチャットです。 (Tin nhan rieng)' },
+    { term: '物件No', desc: '現場の番号（コード）。検索や「物件Noまとめ」で使います。 (Ma cong trinh)' },
+    { term: 'ファイル転送', desc: 'ファイルを送る機能。P2P=直接送信、Drive=リンク共有。 (Chuyen tep)' },
     { term: '招待コード', desc: '初回端末の承認に使う4桁コードです。 (Ma moi)' },
   ];
 
@@ -683,13 +694,14 @@ export function renderHomeMySpacePanel(el) {
       <span class="home-help-term">${esc(item.term)}</span>
       <span class="home-help-desc">${esc(item.desc)}</span>
     `;
-    glossary.appendChild(row);
+    glossaryList.appendChild(row);
   });
+  glossary.appendChild(glossaryList);
   helpSection.appendChild(glossary);
 
   const helpNote = document.createElement('p');
   helpNote.className = 'home-help-copy';
-  helpNote.textContent = '※ ベトナム人実習生の方は、まず「お知らせ」「チャット」「タスク」の3つから覚えると使いやすいです。';
+  helpNote.textContent = '※ まずは「お知らせ」「チャット」「タスク」の3つだけ覚えれば使えます。';
   helpSection.appendChild(helpNote);
 
   el.appendChild(helpSection);
@@ -704,7 +716,7 @@ export function renderHomeMySpacePanel(el) {
 
   const favHeader = document.createElement('h4');
   favHeader.className = 'home-myspace-section-title';
-  favHeader.innerHTML = '<i class="fa-solid fa-star"></i> お気に入り';
+  favHeader.innerHTML = '<i class="material-symbols-rounded" aria-hidden="true">star</i> お気に入り';
   favSection.appendChild(favHeader);
 
   if (favCards.length) {
@@ -715,7 +727,7 @@ export function renderHomeMySpacePanel(el) {
   } else {
     const empty = document.createElement('p');
     empty.className = 'home-myspace-empty';
-    empty.textContent = 'お気に入り登録がありません。カードの ☆ をクリックして追加できます。';
+    empty.textContent = 'お気に入りがありません。カードの星を押して追加できます。';
     favSection.appendChild(empty);
   }
   el.appendChild(favSection);
@@ -725,7 +737,7 @@ export function renderHomeMySpacePanel(el) {
   if (categories.length) {
     const catTitleEl = document.createElement('h4');
     catTitleEl.className = 'home-myspace-section-title home-myspace-section-title--cat';
-    catTitleEl.innerHTML = '<i class="fa-solid fa-folder"></i> マイカテゴリー';
+    catTitleEl.innerHTML = '<i class="material-symbols-rounded" aria-hidden="true">folder</i> 自分のカテゴリ';
     el.appendChild(catTitleEl);
 
     categories.forEach(cat => {
