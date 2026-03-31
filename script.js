@@ -401,6 +401,39 @@ function bindProfileQuickActions() {
   };
 }
 
+function isSidebarDrawerViewport() {
+  return window.matchMedia?.('(max-width: 768px)')?.matches ?? window.innerWidth <= 768;
+}
+
+function closeSidebarNav() {
+  const layout = document.getElementById('app-layout');
+  const toggle = document.getElementById('sidebar-toggle');
+  layout?.classList.remove('sidebar-open');
+  if (toggle) toggle.setAttribute('aria-expanded', 'false');
+}
+
+function toggleSidebarNav() {
+  const layout = document.getElementById('app-layout');
+  const toggle = document.getElementById('sidebar-toggle');
+  if (!layout) return;
+
+  if (isSidebarDrawerViewport()) {
+    const willOpen = !layout.classList.contains('sidebar-open');
+    layout.classList.toggle('sidebar-open', willOpen);
+    if (toggle) toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    return;
+  }
+
+  layout.classList.toggle('sidebar-collapsed');
+}
+
+function promptUsernameFor(featureLabel) {
+  showUsernameModal(false);
+  showUsernameError(`${featureLabel}を使うにはユーザーネームを設定してください。`);
+  const hint = document.getElementById('area-personal-hint');
+  if (hint) hint.hidden = false;
+}
+
 initTodayDashboard({
   openProfileSettings: () => {
     openProfileModal();
@@ -2281,7 +2314,7 @@ function openServicePicker() {
     });
   });
 
-  document.getElementById('svc-custom-btn').addEventListener('click', () => {
+  document.getElementById('svc-custom-btn')?.addEventListener('click', () => {
     closeServicePicker();
     openCardModal(null, 'external');
   });
@@ -2839,6 +2872,37 @@ function closeSettingsPanel() {
 
 
 // ========== 初期化 ==========
+async function runInitialPortalBootstrap(storedUsername) {
+  const inviteOk = await ensureInviteAccess();
+  if (!inviteOk) return;
+
+  try {
+    if (!isSupabaseSharedCoreEnabled()) {
+      await migrateIfNeeded();
+      await migrateCategories();
+      await migrateAddBox();
+    }
+    await loadCategories();
+    await subscribeNotices();
+    renderAllSections();
+    renderFavorites();
+  } catch (err) {
+    console.error('Firestore 繧ｨ繝ｩ繝ｼ:', err);
+  }
+
+  if (!storedUsername) {
+    const hint = document.getElementById('area-personal-hint');
+    if (hint) hint.hidden = false;
+    renderTodoSection();
+    return;
+  }
+
+  const restored = await restoreStoredUsernameSession(storedUsername);
+  if (!restored && !state.currentUsername) {
+    renderTodoSection();
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   // 最初に設定を適用（フラッシュ防止）
   loadSettings();
@@ -2914,6 +2978,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('service-picker-cancel').addEventListener('click', closeServicePicker);
   document.getElementById('service-picker-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeServicePicker();
+  });
+
+  document.getElementById('sidebar-toggle').setAttribute('aria-expanded', 'false');
+  document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebarNav);
+  document.getElementById('sidebar-overlay').addEventListener('click', closeSidebarNav);
+  document.getElementById('app-sidebar').addEventListener('click', event => {
+    if (!isSidebarDrawerViewport()) return;
+    if (!event.target.closest('button')) return;
+    window.setTimeout(closeSidebarNav, 0);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('app-layout')?.classList.contains('sidebar-open')) {
+      closeSidebarNav();
+    }
+  });
+  document.getElementById('sidebar-home-btn').addEventListener('click', () => {
+    closeSettingsPanel();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  document.getElementById('btn-shared-links').addEventListener('click', () => {
+    state.sharedLinksCategory = 'all';
+    void openSharedLinksModal();
+  });
+  false && document.getElementById('btn-my-category').addEventListener('click', () => {
+    if (!state.currentUsername) {
+      promptUsernameFor('繝槭う繧ｫ繝・ざ繝ｪ繝ｼ');
+      return;
+    }
+    openPrivateSectionModal(null);
   });
 
   // ===== ニックネーム / プロフィール =====
@@ -3232,15 +3325,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // 初回訪問時にニックネームモーダル
-  if (!storedUsername) {
-    setTimeout(() => showUsernameModal(false), 600);
-    renderTodoSection();
-  } else {
-    const restored = await restoreStoredUsernameSession(storedUsername);
-    if (!restored && !state.currentUsername) {
-      renderTodoSection();
-    }
-  }
+  await runInitialPortalBootstrap(storedUsername);
 
   // ===== TODO パネル =====
   document.getElementById('todo-toggle-btn').addEventListener('click', () => {
@@ -3490,6 +3575,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== カレンダー =====
   document.getElementById('btn-calendar').addEventListener('click', async () => {
+    if (!state.currentUsername) {
+      promptUsernameFor('カレンダー・勤怠');
+      return;
+    }
     await openCalendarModal();
     if (document.getElementById('cal-modal')?.classList.contains('visible')) {
       await onCalendarModalOpen();
@@ -3568,8 +3657,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ===== ベル通知ボタン（お知らせ追加モーダルを開く） =====
-  document.getElementById('btn-notice-bell').addEventListener('click', () => {
-    openNoticeModal(null);
+  document.getElementById('btn-notice-bell').addEventListener('click', focusNoticeBoardFromDashboard);
+  document.getElementById('btn-my-category').addEventListener('click', () => {
+    if (!state.currentUsername) {
+      promptUsernameFor('マイカテゴリー');
+      return;
+    }
+    openPrivateSectionModal(null);
   });
 
   // ===== プライベートセクションモーダル =====
