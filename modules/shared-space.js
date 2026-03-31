@@ -31,21 +31,35 @@ export function renderSharedHome() {
   const taskSummary = getTaskSummary();
   const publicCategories = getPublicCategories();
   const linksSummary = getLinksSummary(publicCategories);
-  const quickLinks = getHomeQuickLinks(publicCategories, linksSummary, requestSummary, taskSummary);
+  const overviewCopy = buildSharedWorkspaceCopy(noticeSummary, requestSummary, taskSummary, linksSummary);
+  const metrics = buildSharedWorkspaceMetrics(noticeSummary, requestSummary, taskSummary, linksSummary);
+  const actionItems = buildSharedActionItems(requestSummary, taskSummary, linksSummary);
+  const quickLinks = getHomeQuickLinks(publicCategories, linksSummary, requestSummary);
+  const primaryCategory = quickLinks[0]?.category || 'all';
 
   host.innerHTML = `
     <section class="shared-home-shell shared-home-shell--clean">
       <header class="shared-home-head">
         <div class="shared-home-head-copy">
-          <p class="shared-home-kicker">共有スペース</p>
-          <h2 class="shared-home-title">共有ワークスペース</h2>
-          <p class="shared-home-copy">${esc(buildSharedWorkspaceCopy(noticeSummary, requestSummary, taskSummary, linksSummary))}</p>
+          <p class="shared-home-kicker">共有ワークスペース</p>
+          <h2 class="shared-home-title">必要な情報だけを、ひと目で。</h2>
+          <p class="shared-home-copy">${esc(overviewCopy)}</p>
+          <button
+            type="button"
+            class="shared-home-inline-link"
+            data-shared-home-action="links"
+            data-shared-home-category="${esc(primaryCategory)}"
+          >
+            共有リンクを開く
+          </button>
         </div>
+
         <div class="shared-home-metrics">
-          ${buildSharedWorkspaceMetrics(noticeSummary, requestSummary, taskSummary, linksSummary).map(metric => `
+          ${metrics.map(metric => `
             <div class="shared-home-metric">
               <span class="shared-home-metric-label">${esc(metric.label)}</span>
               <strong class="shared-home-metric-value">${esc(metric.value)}</strong>
+              <span class="shared-home-metric-meta">${esc(metric.meta)}</span>
             </div>
           `).join('')}
         </div>
@@ -58,7 +72,7 @@ export function renderSharedHome() {
               <h3 class="shared-home-card-title">お知らせ</h3>
               <p class="shared-home-card-copy">${esc(noticeSummary.headline)}</p>
             </div>
-            <button type="button" class="shared-home-inline-link" data-shared-home-action="notice">すべて見る</button>
+            <button type="button" class="shared-home-inline-link" data-shared-home-action="notice">一覧を見る</button>
           </div>
 
           <div class="shared-home-notice-list">
@@ -70,13 +84,13 @@ export function renderSharedHome() {
           <section class="shared-home-card shared-home-card--actions">
             <div class="shared-home-card-head">
               <div>
-                <h3 class="shared-home-card-title">クイックアクション</h3>
-                <p class="shared-home-card-copy">よく使う操作へそのまま移動できます。</p>
+                <h3 class="shared-home-card-title">主要アクション</h3>
+                <p class="shared-home-card-copy">迷いやすい操作だけを、すぐ開ける位置にまとめています。</p>
               </div>
             </div>
 
             <div class="shared-home-action-grid">
-              ${buildSharedActionItems(requestSummary, taskSummary).map(item => renderSharedActionItem(item)).join('')}
+              ${actionItems.map(item => renderSharedActionItem(item)).join('')}
             </div>
           </section>
 
@@ -86,7 +100,7 @@ export function renderSharedHome() {
                 <h3 class="shared-home-card-title">共有リンク</h3>
                 <p class="shared-home-card-copy">${esc(linksSummary.description)}</p>
               </div>
-              <button type="button" class="shared-home-inline-link" data-shared-home-action="links">一覧を開く</button>
+              <button type="button" class="shared-home-inline-link" data-shared-home-action="links">カテゴリ一覧</button>
             </div>
 
             <div class="shared-home-link-grid">
@@ -116,7 +130,7 @@ function buildSharedWorkspaceCopy(noticeSummary, requestSummary, taskSummary, li
   if (requestSummary.activeCount > 0) parts.push(`進行中の依頼 ${requestSummary.activeCount}件`);
   if (taskSummary.count > 0) parts.push(`関連タスク ${taskSummary.count}件`);
   if (parts.length === 0) {
-    return `${linksSummary.count}カテゴリの共有リンクと主要導線をここにまとめています。`;
+    return `${linksSummary.count}カテゴリの共有リンクと主要導線をひとつにまとめています。`;
   }
   return `${parts.join(' / ')} をすぐ確認できます。`;
 }
@@ -128,23 +142,27 @@ function buildSharedWorkspaceMetrics(noticeSummary, requestSummary, taskSummary,
       value: noticeSummary.pendingAckCount > 0
         ? `要確認 ${noticeSummary.pendingAckCount}件`
         : (noticeSummary.unreadCount > 0 ? `未読 ${noticeSummary.unreadCount}件` : '安定'),
+      meta: noticeSummary.visibleCount > 0 ? `${noticeSummary.visibleCount}件表示` : '表示なし',
     },
     {
       label: '依頼',
       value: requestSummary.activeCount > 0 ? `${requestSummary.activeCount}件` : '新着なし',
+      meta: requestSummary.activeCount > 0 ? '進行中' : '落ち着いています',
     },
     {
       label: 'リンク',
       value: `${linksSummary.count}カテゴリ`,
+      meta: linksSummary.count > 0 ? '整理済み' : '未設定',
     },
     {
       label: 'タスク',
       value: taskSummary.count > 0 ? `${taskSummary.count}件` : '落ち着いています',
+      meta: taskSummary.count > 0 ? '対応中あり' : '進行中なし',
     },
   ];
 }
 
-function buildSharedActionItems(requestSummary, taskSummary) {
+function buildSharedActionItems(requestSummary, taskSummary, linksSummary) {
   return [
     {
       action: 'request',
@@ -159,28 +177,10 @@ function buildSharedActionItems(requestSummary, taskSummary) {
       meta: taskSummary.count > 0 ? taskSummary.primaryTitle : '一覧を開く',
     },
     {
-      action: 'calendar',
-      icon: 'calendar_month',
-      label: '勤怠カレンダー',
-      meta: '今日の入力を確認',
-    },
-    {
-      action: 'email',
-      icon: 'auto_awesome',
-      label: 'メールAI',
-      meta: '下書きを作成',
-    },
-    {
-      action: 'order',
-      icon: 'inventory_2',
-      label: '鋼材発注',
-      meta: '履歴と新規発注',
-    },
-    {
-      action: 'property',
-      icon: 'folder_open',
-      label: '物件Noまとめ',
-      meta: '横断して確認',
+      action: 'links',
+      icon: 'link',
+      label: '共有リンク',
+      meta: linksSummary.headline,
     },
   ];
 }
@@ -240,11 +240,11 @@ function getTaskSummary() {
   return {
     count: activeTasks.length,
     primaryTitle: primaryTask?.title || '進行中のタスクはありません',
-    meta: metaTokens.join(' / ') || '新しいタスクが入るとここに表示されます',
+    meta: metaTokens.join(' / ') || '新しいタスクが入るとここに表示されます。',
     description: activeTasks.length > 0
-      ? `承諾待ち ${pendingTasks.length}件 / 進行中 ${acceptedTasks.length}件`
+      ? `承認待ち ${pendingTasks.length}件 / 進行中 ${acceptedTasks.length}件`
       : '落ち着いています',
-    badgeText: primaryTask ? (primaryTask.status === 'pending' ? '承諾待ち' : '進行中') : 'クリア',
+    badgeText: primaryTask ? (primaryTask.status === 'pending' ? '承認待ち' : '進行中') : 'クリア',
     badgeTone: primaryTask ? (primaryTask.status === 'pending' ? 'alert' : 'success') : 'neutral',
   };
 }
@@ -265,7 +265,7 @@ function collectActiveTasks() {
   });
 }
 
-function getHomeQuickLinks(publicCategories, linksSummary, requestSummary, taskSummary) {
+function getHomeQuickLinks(publicCategories, linksSummary, requestSummary) {
   const primaryCategory = publicCategories[0]?.id || 'all';
   return [
     {
@@ -286,12 +286,6 @@ function getHomeQuickLinks(publicCategories, linksSummary, requestSummary, taskS
       icon: 'folder_open',
       label: '物件Noまとめ',
       meta: '横断検索',
-    },
-    {
-      action: 'order',
-      icon: 'inventory_2',
-      label: '鋼材発注',
-      meta: taskSummary.count > 0 ? '確認' : '作成',
     },
   ];
 }
@@ -324,7 +318,7 @@ function getRequestSummary() {
   ].slice(0, 3);
   const primary = items[0] || {
     title: '新しい依頼を作成',
-    meta: '部門間の連携や相談をここから開けます',
+    meta: '部門間の相談や依頼をここから始められます。',
   };
 
   return {
@@ -333,8 +327,8 @@ function getRequestSummary() {
     primaryMeta: primary.meta,
     headline: activeCount > 0 ? `${activeCount}件 進行中` : '新着なし',
     description: activeCount > 0
-      ? `受信 ${receivedCount}件 / 送信 ${sentCount}件 を確認できます。`
-      : '連携や依頼を行うとここに表示されます。',
+      ? `受信 ${receivedCount}件 / 送信 ${sentCount}件`
+      : '落ち着いています',
     items: items.length > 0 ? items : [primary],
     tone: receivedCount > 0 ? 'active' : 'neutral',
   };
@@ -367,10 +361,8 @@ export function closeSharedLinksModal() {
 
 function collectSharedLinkSearchCards(cards, queryText) {
   if (!queryText) return cards;
-
   const normalizedQuery = normalizeSearch(queryText);
   if (!normalizedQuery) return cards;
-
   return cards.filter(card => normalizeSearch(card.label).includes(normalizedQuery));
 }
 
@@ -402,11 +394,11 @@ export function renderSharedLinksBrowser() {
     status.textContent = '共有リンクはまだ読み込まれていません';
     body.innerHTML = `
       <div class="shared-links-empty-state">
-        <div class="shared-links-empty-icon"><i class="fa-solid fa-grid-2"></i></div>
-        <h3>共有リンクをまだ読み込んでいません</h3>
-        <p>この画面を開いたときだけ共有リンクを取得して、起動時の読み取りを抑えています。</p>
+        <div class="shared-links-empty-icon">${renderHomeIcon('grid_view')}</div>
+        <h3>共有リンクを読み込むとここに表示されます</h3>
+        <p>この画面を開いたタイミングで共有リンクを取得します。必要な時だけ読み込むので軽く保てます。</p>
         <button type="button" class="btn-modal-primary" id="shared-links-load-btn">
-          <i class="fa-solid fa-download"></i> 共有リンクを読み込む
+          ${renderHomeIcon('download')} 共有リンクを読み込む
         </button>
       </div>
     `;
@@ -439,16 +431,16 @@ export function renderSharedLinksBrowser() {
   });
 
   status.textContent = queryText
-    ? `「${state.sharedLinksQuery.trim()}」の検索結果 ${sections.length}カテゴリ`
+    ? `「${state.sharedLinksQuery.trim()}」 の検索結果 ${sections.length}カテゴリ`
     : `共有リンク ${cards.length}件 / ${publicCategories.length}カテゴリ`;
 
   body.innerHTML = '';
   if (!sections.length) {
     body.innerHTML = `
       <div class="shared-links-empty-state">
-        <div class="shared-links-empty-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
-        <h3>一致する共有リンクがありません</h3>
-        <p>検索語を変えるか、カテゴリを「すべて」に戻して確認してください。</p>
+        <div class="shared-links-empty-icon">${renderHomeIcon('search')}</div>
+        <h3>見つかりませんでした</h3>
+        <p>検索条件を変えるか、カテゴリを切り替えて確認してください。</p>
       </div>
     `;
   } else {
@@ -460,9 +452,9 @@ export function renderSharedLinksBrowser() {
     manageWrap.className = 'shared-links-manage';
     manageWrap.innerHTML = `
       <button type="button" class="btn-modal-secondary shared-links-manage-btn" id="shared-links-add-category">
-        <i class="fa-solid fa-plus"></i> 共有カテゴリを追加
+        ${renderHomeIcon('add')} 共有カテゴリを追加
       </button>
-      <p class="shared-links-manage-note">共有リンクの追加や編集はこの画面の一覧から続けて行えます。</p>
+      <p class="shared-links-manage-note">共有リンクの追加や編集は、この画面からまとめて行えます。</p>
     `;
     manageWrap.querySelector('#shared-links-add-category')?.addEventListener('click', () => {
       deps.openCategoryModal?.(null);
@@ -538,26 +530,14 @@ async function handleSharedHomeAction(action) {
     case 'notice':
       deps.focusNoticeBoard?.();
       return;
-    case 'weather':
-      deps.focusWeatherWidget?.();
-      return;
-    case 'calendar':
-      await deps.openCalendarModal?.();
+    case 'request':
+      deps.openReqModal?.();
       return;
     case 'task':
       deps.openTaskModal?.();
       return;
     case 'property':
       deps.openPropertySummary?.();
-      return;
-    case 'order':
-      await deps.openOrderModal?.();
-      return;
-    case 'request':
-      deps.openReqModal?.();
-      return;
-    case 'email':
-      deps.openEmailModal?.();
       return;
     default:
       return;
@@ -566,7 +546,7 @@ async function handleSharedHomeAction(action) {
 
 function getNoticeSummary() {
   const visible = Array.isArray(state.visibleNotices) ? state.visibleNotices : [];
-  const items = visible.slice(0, 3).map(notice => ({
+  const items = visible.slice(0, 2).map(notice => ({
     title: notice.title || 'お知らせ',
     meta: notice.priority === 'urgent' ? '重要なお知らせ' : 'お知らせ',
     date: formatCompactDate(notice.createdAt),
@@ -585,13 +565,13 @@ function getNoticeSummary() {
     pendingAckCount,
     unreadCount,
     headline: pendingAckCount > 0
-      ? `確認待ち ${pendingAckCount}件`
+      ? `要確認 ${pendingAckCount}件`
       : (unreadCount > 0 ? `未読 ${unreadCount}件` : '安定しています'),
     description: pendingAckCount > 0
-      ? '重要なお知らせの確認が必要です。'
-      : (unreadCount > 0 ? 'まだ読んでいないお知らせがあります。' : '大きな確認待ちはありません。'),
+      ? '重要なお知らせがあります。'
+      : (unreadCount > 0 ? 'まだ読んでいないお知らせがあります。' : '大きな更新はありません。'),
     items: items.length > 0 ? items : [{
-      title: 'お知らせを確認',
+      title: 'お知らせはありません',
       meta: '未読のお知らせはありません',
       date: 'Portal',
     }],
