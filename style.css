@@ -20318,3 +20318,264 @@ grid-template-rows: auto;
     align-items: flex-start;
   }
 }
+
+/* ===== home material 3 final override ===== */
+body:has(#home-dashboard) .home-dashboard,
+body:has(#home-dashboard) .home-content-grid {
+  max-width: 1360px !important;
+}
+
+body:has(#home-dashboard) .home-dashboard {
+  display: block !important;
+  margin: 0 auto 20px !important;
+}
+
+body:has(#home-dashboard) .home-content-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr) !important;
+  gap: 20px !important;
+  align-items: start !important;
+  padding: 0 !important;
+}
+
+body:has(#home-dashboard) .space-wrapper {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+}
+
+body:has(#home-dashboard) .space-body {
+  padding: 0 !important;
+  gap: 18px !important;
+}
+
+body:has(#home-dashboard) #space-shared,
+body:has(#home-dashboard) #space-personal {
+  overflow: visible !important;
+}
+
+body:has(#home-dashboard) .area-header {
+  display: none !important;
+}
+
+body:has(#home-dashboard) #shared-home-panel,
+body:has(#home-dashboard) #dash-today-section {
+  display: block !important;
+  margin: 0 !important;
+}
+
+body:has(#home-dashboard) #shared-home-panel {
+  min-height: 0 !important;
+}
+
+body:has(#home-dashboard) #dash-today-section {
+  padding: 0 !important;
+}
+
+body:has(#home-dashboard) .shared-home-shell {
+  padding: 24px !important;
+  border-radius: 32px !important;
+  border: 1px solid color-mix(in srgb, var(--portal-home-line) 72%, transparent) !important;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--portal-home-accent) 12%, transparent), transparent 40%),
+    radial-gradient(circle at bottom left, color-mix(in srgb, var(--portal-home-info) 10%, transparent), transparent 36%),
+    color-mix(in srgb, var(--portal-home-surface) 88%, var(--portal-home-elevated)) !important;
+  box-shadow: 0 18px 42px color-mix(in srgb, var(--shadow-ink-soft) 84%, transparent) !important;
+}
+
+body:has(#home-dashboard) .shared-home-shell--clean {
+  gap: 18px !important;
+}
+
+body:has(#home-dashboard) .shared-home-head {
+  grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr) !important;
+  gap: 18px !important;
+  align-items: start !important;
+}
+
+body:has(#home-dashboard) .shared-home-head-copy,
+body:has(#home-dashboard) .portal-personal-card,
+body:has(#home-dashboard) .portal-home-command-surface,
+body:has(#home-dashboard) .shared-home-card {
+  min-width: 0 !important;
+}
+
+body:has(#home-dashboard) .shared-home-kicker,
+body:has(#home-dashboard) .portal-personal-kicker,
+body:has(#home-dashboard) .portal-home-command-kicker {
+  color: var(--portal-home-copy) !important;
+  letter-spacing: 0.18em !important;
+}
+
+body:has(#home-dashboard) .shared-home-title,
+body:has(#home-dashboard) .portal-personal-title,
+body:has(#home-dashboard) .portal-home-command-title {
+  font-family: var(--portal-home-heading-font) !important;
+  letter-spacing: -0.03em !important;
+}
+
+body:has(#home-dashboard) .shared-home-copy,
+body:has(#home-dashboard) .portal-personal-section-copy,
+body:has(#home-dashboard) .portal-personal-focus-copy,
+body:has(#home-dashboard) .portal-personal-mini-copy,
+body:has(#home-dashboard) .portal-home-command-subtitle {
+  color: var(--portal-home-copy) !important;
+}
+
+body:has(#home-dashboard) .shared-home-layout,
+body:has(#home-dashboard) .shared-home-lower-grid,
+body:has(#home-dashboard) .portal-personal-mini-grid {
+  gap: 14px !important;
+}
+
+body:has(#home-dashboard) .shared-home-card,
+body:has(#home-dashboard) .portal-personal-card {
+  padding: 20px !important;
+  border-radius: 28px !important;
+}
+
+body:has(#home-dashboard) .shared-home-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+body:has(#home-dashboard) .shared-home-metric,
+body:has(#home-dashboard) .portal-personal-inline-metric,
+body:has(#home-dashboard) .portal-personal-card[data-dash-target],
+body:has(#home-dashboard) .shared-home-action-item,
+body:has(#home-dashboard) .shared-home-link-item,
+body:has(#home-dashboard) .shared-home-notice-item {
+  border-radius: 22px !important;
+  border: 1px solid color-mix(in srgb, var(--portal-home-line) 68%, transparent) !important;
+  background: color-mix(in srgb, var(--portal-home-card) 90%, var(--portal-home-elevated)) !important;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--shadow-ink-soft) 90%, transparent) !important;
+}
+
+body:has(#home-dashboard) .shared-home-action-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+body:has(#home-dashboard) .shared-home-link-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+body:has(#home-dashboard) .portal-personal-inline-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+body:has(#home-dashboard) .portal-personal-mini-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+body:has(#home-dashboard) .portal-personal-focus {
+  background: color-mix(in srgb, var(--portal-home-card) 86%, transparent) !important;
+  border-color: color-mix(in srgb, var(--portal-home-line) 62%, transparent) !important;
+}
+
+body:has(#home-dashboard) .portal-personal-chip {
+  background: color-mix(in srgb, var(--portal-home-card) 88%, transparent) !important;
+}
+
+body:has(#home-dashboard) .portal-home-command-surface,
+body:has(#home-dashboard) .shared-home-shell,
+body:has(#home-dashboard) .shared-home-card,
+body:has(#home-dashboard) .portal-personal-card {
+  backdrop-filter: blur(14px);
+}
+
+body:has(#home-dashboard) #dash-today-section .portal-rail-shell,
+body:has(#home-dashboard) #dash-today-section .portal-personal-card--profile {
+  display: grid !important;
+  gap: 14px !important;
+}
+
+body:has(#home-dashboard) #dash-today-section .portal-personal-card--profile {
+  grid-template-columns: 1fr !important;
+}
+
+body:has(#home-dashboard) #dash-today-section .portal-personal-card--profile .portal-personal-card-head {
+  flex-direction: row !important;
+  align-items: flex-start !important;
+}
+
+body:has(#home-dashboard) #dash-today-section .portal-personal-card--task,
+body:has(#home-dashboard) #dash-today-section .portal-personal-card--attendance {
+  min-height: 0 !important;
+}
+
+body:has(#home-dashboard) #dash-today-section .portal-personal-empty,
+body:has(#home-dashboard) #dash-today-section .portal-personal-list-item {
+  border-radius: 18px !important;
+}
+
+body:has(#home-dashboard) .shared-home-notice-item {
+  padding: 14px 16px !important;
+}
+
+body:has(#home-dashboard) .shared-home-action-item,
+body:has(#home-dashboard) .shared-home-link-item {
+  padding: 15px !important;
+}
+
+body:has(#home-dashboard) .shared-home-action-icon,
+body:has(#home-dashboard) .shared-home-link-icon {
+  background: color-mix(in srgb, var(--portal-home-line) 28%, transparent) !important;
+}
+
+@media (max-width: 1120px) {
+  body:has(#home-dashboard) .home-content-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body:has(#home-dashboard) .shared-home-head,
+  body:has(#home-dashboard) .portal-home-command-top {
+    grid-template-columns: 1fr !important;
+  }
+
+  body:has(#home-dashboard) .shared-home-metrics,
+  body:has(#home-dashboard) .portal-home-command-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  body:has(#home-dashboard) .home-content-grid {
+    gap: 14px !important;
+  }
+
+  body:has(#home-dashboard) #home-dashboard {
+    margin-bottom: 14px !important;
+  }
+
+  body:has(#home-dashboard) .portal-home-command-surface,
+  body:has(#home-dashboard) .shared-home-shell,
+  body:has(#home-dashboard) .shared-home-card,
+  body:has(#home-dashboard) .portal-personal-card {
+    border-radius: 24px !important;
+    padding: 18px !important;
+  }
+
+  body:has(#home-dashboard) .shared-home-metrics,
+  body:has(#home-dashboard) .shared-home-action-grid,
+  body:has(#home-dashboard) .shared-home-link-grid,
+  body:has(#home-dashboard) .portal-home-command-grid,
+  body:has(#home-dashboard) .portal-personal-inline-metrics,
+  body:has(#home-dashboard) .portal-personal-mini-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body:has(#home-dashboard) .portal-home-command-btn,
+  body:has(#home-dashboard) .shared-home-inline-link {
+    width: 100% !important;
+  }
+
+  body:has(#home-dashboard) .shared-home-card-head,
+  body:has(#home-dashboard) .portal-personal-card-head {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  body:has(#home-dashboard) #dash-today-section .portal-personal-card--profile .portal-personal-card-head {
+    flex-direction: column !important;
+  }
+}
