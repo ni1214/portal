@@ -1,13 +1,13 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>譌･蟒ｺ繝輔Ξ繝｡繝・け繧ｹ 遉ｾ蜀・・繝ｼ繧ｿ繝ｫ</title>
-  <meta name="description" content="譌･蟒ｺ繝輔Ξ繝｡繝・け繧ｹ遉ｾ蜀・・繝ｼ繧ｿ繝ｫ繧ｵ繧､繝医よ･ｭ蜍吶↓蠢・ｦ√↑諠・ｱ繧・ヤ繝ｼ繝ｫ縺ｸ邏譌ｩ縺上い繧ｯ繧ｻ繧ｹ縺ｧ縺阪∪縺吶・>
+  <title>日建フレメックス 社内ポータル</title>
+  <meta name="description" content="日建フレメックス社内ポータルサイト。業務に必要な情報やツールへ素早くアクセスできます。">
 
-  <!-- 繝輔ぃ繝薙さ繝ｳ -->
+  <!-- ファビコン -->
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="apple-touch-icon" href="favicon.svg">
 
@@ -23,13 +23,13 @@
   <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css">
 
-  <!-- 繝・・繝槭・譁・ｭ励し繧､繧ｺ繧辰SS繝ｭ繝ｼ繝臥峩蠕後↓蜊ｳ譎る←逕ｨ・医ヵ繝ｩ繝・す繝･髦ｲ豁｢・・-->
+  <!-- テーマ・文字サイズをCSSロード直後に即時適用（フラッシュ防止） -->
   <script>
     (function() {
       var t = localStorage.getItem('portal-theme')     || 'dark';
       var f = localStorage.getItem('portal-font-size') || 'font-md';
       document.documentElement.classList.add(f);
-      // body 縺後∪縺縺ｪ縺・ｴ蜷医・ html 縺ｫ莉ｮ驕ｩ逕ｨ縺励｜ody 逕滓・蠕後↓遘ｻ縺・
+      // body がまだない場合は html に仮適用し、body 生成後に移す
       document.documentElement.setAttribute('data-theme', t);
       document.addEventListener('DOMContentLoaded', function() {
         document.body.setAttribute('data-theme', t);
@@ -42,46 +42,46 @@
 <body>
 
   <!-- ============================================================
-       繧｢繝励Μ繝倥ャ繝繝ｼ
+       アプリヘッダー
        ============================================================ -->
   <header class="app-header">
     <div class="app-header-inner">
 
-      <!-- 蟾ｦ・壹ワ繝ｳ繝舌・繧ｬ繝ｼ + 繝悶Λ繝ｳ繝・-->
+      <!-- 左：ハンバーガー + ブランド -->
       <div class="app-header-left">
-        <button class="app-menu-btn" id="sidebar-toggle" title="繝｡繝九Η繝ｼ繧帝幕髢・ aria-label="繧ｵ繧､繝峨ヰ繝ｼ繧帝幕髢・>
+        <button class="app-menu-btn" id="sidebar-toggle" title="メニューを開閉" aria-label="サイドバーを開閉">
           <i class="material-symbols-rounded">menu</i>
         </button>
         <div class="app-brand">
           <div class="app-brand-icon"><i class="material-symbols-rounded">factory</i></div>
-          <span class="app-brand-name">遉ｾ蜀・・繝ｼ繧ｿ繝ｫ</span>
+          <span class="app-brand-name">社内ポータル</span>
         </div>
       </div>
 
-      <!-- 荳ｭ螟ｮ・壽､懃ｴ｢繝舌・ -->
+      <!-- 中央：検索バー -->
       <div class="app-header-center">
         <div class="app-search-wrap">
           <i class="material-symbols-rounded app-search-icon">search</i>
           <input type="text" id="search-input" class="app-search-input"
-                 placeholder="繝ｪ繧ｽ繝ｼ繧ｹ繝ｻ繧ｿ繧ｹ繧ｯ繝ｻ縺顔衍繧峨○繧呈､懃ｴ｢..." autocomplete="off">
-          <button class="app-search-clear" id="app-search-clear" title="繧ｯ繝ｪ繧｢" hidden>
+                 placeholder="リソース・タスク・お知らせを検索..." autocomplete="off">
+          <button class="app-search-clear" id="app-search-clear" title="クリア" hidden>
             <i class="material-symbols-rounded">close</i>
           </button>
         </div>
       </div>
 
-      <!-- 蜿ｳ・壹い繧ｯ繧ｷ繝ｧ繝ｳ繝懊ち繝ｳ + 繝ｦ繝ｼ繧ｶ繝ｼ -->
+      <!-- 右：アクションボタン + ユーザー -->
       <div class="app-header-right">
-        <button class="app-header-btn" id="header-help-btn" title="菴ｿ縺・婿繧ｬ繧､繝・>
+        <button class="app-header-btn" id="header-help-btn" title="使い方ガイド">
           <i class="material-symbols-rounded">help</i>
         </button>
-        <button class="app-header-btn" id="header-notice-btn" title="縺顔衍繧峨○">
+        <button class="app-header-btn" id="header-notice-btn" title="お知らせ">
           <i class="material-symbols-rounded">notifications</i>
         </button>
-        <button class="app-user-btn" id="btn-user" title="繝ｦ繝ｼ繧ｶ繝ｼ險ｭ螳・>
+        <button class="app-user-btn" id="btn-user" title="ユーザー設定">
           <div class="app-user-avatar" id="user-avatar"><i class="material-symbols-rounded">person</i></div>
           <div class="app-user-info">
-            <span class="app-user-greeting" id="user-greeting">蜷榊燕繧定ｨｭ螳壹＠縺ｦ縺上□縺輔＞</span>
+            <span class="app-user-greeting" id="user-greeting">名前を設定してください</span>
             <span class="app-user-name" id="username-display"></span>
           </div>
         </button>
@@ -89,7 +89,7 @@
 
     </div>
 
-    <!-- JS 莠呈鋤逕ｨ縺ｮ髱櫁｡ｨ遉ｺ繝翫ン繝懊ち繝ｳ -->
+    <!-- JS 互換用の非表示ナビボタン -->
     <nav aria-hidden="true" style="display:none">
       <button id="header-home-btn"></button>
       <button id="header-shared-btn"></button>
@@ -99,221 +99,221 @@
   </header>
 
   <!-- ============================================================
-       繧｢繝励Μ繝ｬ繧､繧｢繧ｦ繝・
+       アプリレイアウト
        ============================================================ -->
   <div class="app-layout" id="app-layout">
 
     <!-- ============================================================
-         繧ｵ繧､繝峨ヰ繝ｼ・医ョ繧ｹ繧ｯ繝医ャ繝暦ｼ・
+         サイドバー（デスクトップ）
          ============================================================ -->
     <aside class="app-sidebar" id="app-sidebar">
       <div class="app-sidebar-inner">
 
-        <nav class="app-sidebar-nav" aria-label="繝｡繧､繝ｳ繝｡繝九Η繝ｼ">
+        <nav class="app-sidebar-nav" aria-label="メインメニュー">
 
-          <button class="app-sidebar-item" id="sidebar-home-btn" data-home-target="notice" title="繝帙・繝縺ｸ謌ｻ繧・>
+          <button class="app-sidebar-item" id="sidebar-home-btn" data-home-target="notice" title="ホームへ戻る">
             <span class="app-sidebar-icon"><i class="material-symbols-rounded">home</i></span>
-            <span class="app-sidebar-label">繝帙・繝</span>
+            <span class="app-sidebar-label">ホーム</span>
           </button>
 
-          <button class="app-sidebar-item" id="btn-calendar" data-home-target="calendar" title="繧ｫ繝ｬ繝ｳ繝繝ｼ繝ｻ蜍､諤邂｡逅・>
+          <button class="app-sidebar-item" id="btn-calendar" data-home-target="calendar" title="カレンダー・勤怠管理">
             <span class="app-sidebar-icon"><i class="material-symbols-rounded">calendar_month</i></span>
-            <span class="app-sidebar-label">繧ｫ繝ｬ繝ｳ繝繝ｼ繝ｻ蜍､諤</span>
+            <span class="app-sidebar-label">カレンダー・勤怠</span>
           </button>
 
-          <button class="app-sidebar-item" id="btn-task" data-home-target="task" title="繧ｿ繧ｹ繧ｯ邂｡逅・>
+          <button class="app-sidebar-item" id="btn-task" data-home-target="task" title="タスク管理">
             <span class="app-sidebar-icon">
               <i class="material-symbols-rounded">checklist</i>
               <span class="app-sidebar-badge task-badge" id="task-badge" hidden></span>
             </span>
-            <span class="app-sidebar-label">繧ｿ繧ｹ繧ｯ邂｡逅・/span>
+            <span class="app-sidebar-label">タスク管理</span>
           </button>
 
-          <button class="app-sidebar-item" id="btn-notice-bell" data-home-target="notice" title="縺顔衍繧峨○">
+          <button class="app-sidebar-item" id="btn-notice-bell" data-home-target="notice" title="お知らせ">
             <span class="app-sidebar-icon">
               <i class="material-symbols-rounded">campaign</i>
               <span class="app-sidebar-badge notice-unread-badge" id="notice-unread-badge" hidden></span>
             </span>
-            <span class="app-sidebar-label">縺顔衍繧峨○</span>
+            <span class="app-sidebar-label">お知らせ</span>
           </button>
 
-          <button class="app-sidebar-item chat-fab" id="chat-fab" data-home-target="chat" title="繝√Ε繝・ヨ">
+          <button class="app-sidebar-item chat-fab" id="chat-fab" data-home-target="chat" title="チャット">
             <span class="app-sidebar-icon">
               <i class="material-symbols-rounded">chat</i>
               <span class="app-sidebar-badge chat-unread-badge" id="chat-unread-badge" hidden></span>
             </span>
-            <span class="app-sidebar-label">繝√Ε繝・ヨ</span>
+            <span class="app-sidebar-label">チャット</span>
           </button>
 
-          <button class="app-sidebar-item" id="btn-reqboard" data-home-target="request" title="驛ｨ鄂ｲ髢謎ｾ晞ｼ繝ｻ逶ｮ螳臥ｮｱ">
+          <button class="app-sidebar-item" id="btn-reqboard" data-home-target="request" title="部署間依頼・目安箱">
             <span class="app-sidebar-icon">
               <i class="material-symbols-rounded">swap_horiz</i>
               <span class="app-sidebar-badge req-badge" id="req-badge" hidden></span>
             </span>
-            <span class="app-sidebar-label">驛ｨ鄂ｲ髢謎ｾ晞ｼ</span>
+            <span class="app-sidebar-label">部署間依頼</span>
           </button>
 
           <div class="app-sidebar-divider"></div>
 
-          <button class="app-sidebar-item" id="btn-order-launch" data-home-target="order" title="驪ｼ譚千匱豕ｨ">
+          <button class="app-sidebar-item" id="btn-order-launch" data-home-target="order" title="鋼材発注">
             <span class="app-sidebar-icon"><i class="material-symbols-rounded">inventory_2</i></span>
-            <span class="app-sidebar-label">驪ｼ譚千匱豕ｨ</span>
+            <span class="app-sidebar-label">鋼材発注</span>
           </button>
 
-          <button class="app-sidebar-item" id="btn-email-assist" data-home-target="email" title="AI縺後Γ繝ｼ繝ｫ繧堤函謌舌＠縺ｾ縺・>
+          <button class="app-sidebar-item" id="btn-email-assist" data-home-target="email" title="AIがメールを生成します">
             <span class="app-sidebar-icon"><i class="material-symbols-rounded">auto_fix_high</i></span>
-            <span class="app-sidebar-label">繝｡繝ｼ繝ｫ逕滓・AI</span>
+            <span class="app-sidebar-label">メール生成AI</span>
           </button>
 
-          <button class="app-sidebar-item" id="btn-property-summary" data-home-target="property" title="迚ｩ莉ｶNo縺斐→縺ｮ諠・ｱ繧偵∪縺ｨ繧√※遒ｺ隱・>
+          <button class="app-sidebar-item" id="btn-property-summary" data-home-target="property" title="物件Noごとの情報をまとめて確認">
             <span class="app-sidebar-icon"><i class="material-symbols-rounded">archive</i></span>
-            <span class="app-sidebar-label">迚ｩ莉ｶNo縺ｾ縺ｨ繧・/span>
+            <span class="app-sidebar-label">物件Noまとめ</span>
           </button>
 
-          <button class="app-sidebar-item" id="btn-favorites-only" data-home-target="favorites" title="縺頑ｰ励↓蜈･繧翫・縺ｿ陦ｨ遉ｺ">
+          <button class="app-sidebar-item" id="btn-favorites-only" data-home-target="favorites" title="お気に入りのみ表示">
             <span class="app-sidebar-icon"><i class="material-symbols-rounded">star</i></span>
-            <span class="app-sidebar-label">縺頑ｰ励↓蜈･繧・/span>
+            <span class="app-sidebar-label">お気に入り</span>
           </button>
 
-          <button class="app-sidebar-item" id="btn-shared-links" data-home-target="shared-links" title="蜈ｱ譛峨Μ繝ｳ繧ｯ荳隕ｧ">
+          <button class="app-sidebar-item" id="btn-shared-links" data-home-target="shared-links" title="共有リンク一覧">
             <span class="app-sidebar-icon"><i class="material-symbols-rounded">share</i></span>
-            <span class="app-sidebar-label">蜈ｱ譛峨Μ繝ｳ繧ｯ</span>
+            <span class="app-sidebar-label">共有リンク</span>
           </button>
 
-          <button class="app-sidebar-item" id="btn-my-category" data-home-target="my-category" title="繝槭う繧ｫ繝・ざ繝ｪ繝ｼ繧定ｿｽ蜉">
+          <button class="app-sidebar-item" id="btn-my-category" data-home-target="my-category" title="マイカテゴリーを追加">
             <span class="app-sidebar-icon"><i class="material-symbols-rounded">create_new_folder</i></span>
-            <span class="app-sidebar-label">繝槭う繧ｫ繝・ざ繝ｪ繝ｼ</span>
+            <span class="app-sidebar-label">マイカテゴリー</span>
           </button>
 
         </nav>
 
-        <!-- 繝輔ャ繧ｿ繝ｼ・壹Θ繝ｼ繝・ぅ繝ｪ繝・ぅ -->
+        <!-- フッター：ユーティリティ -->
         <div class="app-sidebar-footer">
-          <button class="app-sidebar-util ft-fab" id="ft-fab" data-home-target="file" title="繝輔ぃ繧､繝ｫ霆｢騾・>
+          <button class="app-sidebar-util ft-fab" id="ft-fab" data-home-target="file" title="ファイル転送">
             <span class="app-sidebar-icon">
               <i class="material-symbols-rounded">drive_folder_upload</i>
               <span class="app-sidebar-badge ft-badge" id="ft-badge" hidden></span>
             </span>
-            <span class="app-sidebar-label">繝輔ぃ繧､繝ｫ霆｢騾・/span>
+            <span class="app-sidebar-label">ファイル転送</span>
           </button>
-          <button class="app-sidebar-util settings-fab" id="settings-fab" data-home-target="settings" title="陦ｨ遉ｺ險ｭ螳・>
+          <button class="app-sidebar-util settings-fab" id="settings-fab" data-home-target="settings" title="表示設定">
             <span class="app-sidebar-icon"><i class="material-symbols-rounded">tune</i></span>
-            <span class="app-sidebar-label">險ｭ螳・/span>
+            <span class="app-sidebar-label">設定</span>
           </button>
-          <button class="app-sidebar-util help-fab" id="help-fab" data-home-target="help" title="菴ｿ縺・婿繧ｬ繧､繝・>
+          <button class="app-sidebar-util help-fab" id="help-fab" data-home-target="help" title="使い方ガイド">
             <span class="app-sidebar-icon"><i class="material-symbols-rounded" aria-hidden="true">help</i></span>
-            <span class="app-sidebar-label">繧ｬ繧､繝・/span>
+            <span class="app-sidebar-label">ガイド</span>
           </button>
-          <button class="app-sidebar-util btn-lock-header" id="btn-lock-header" title="繝ｭ繝・け" hidden>
+          <button class="app-sidebar-util btn-lock-header" id="btn-lock-header" title="ロック" hidden>
             <span class="app-sidebar-icon"><i class="material-symbols-rounded" aria-hidden="true">lock</i></span>
-            <span class="app-sidebar-label">繝ｭ繝・け</span>
+            <span class="app-sidebar-label">ロック</span>
           </button>
-          <button class="app-sidebar-util" id="btn-read-diagnostics" data-home-target="diagnostics" title="霆｢騾∬ｨｺ譁ｭ">
+          <button class="app-sidebar-util" id="btn-read-diagnostics" data-home-target="diagnostics" title="転送診断">
             <span class="app-sidebar-icon"><i class="material-symbols-rounded" aria-hidden="true">gauge</i></span>
-            <span class="app-sidebar-label">霆｢騾∬ｨｺ譁ｭ</span>
+            <span class="app-sidebar-label">転送診断</span>
           </button>
           <div class="app-sidebar-divider"></div>
-          <button class="app-sidebar-invite" id="home-invite-btn" data-home-target="invite" type="button" title="諡帛ｾ・さ繝ｼ繝峨ｒ蜈･蜉・>
+          <button class="app-sidebar-invite" id="home-invite-btn" data-home-target="invite" type="button" title="招待コードを入力">
             <span class="app-sidebar-icon"><i class="material-symbols-rounded" aria-hidden="true">person_add</i></span>
-            <span class="app-sidebar-label">諡帛ｾ・さ繝ｼ繝峨ｒ蜈･蜉・/span>
+            <span class="app-sidebar-label">招待コードを入力</span>
           </button>
         </div>
 
       </div>
     </aside>
 
-    <!-- 繧ｵ繧､繝峨ヰ繝ｼ繧ｪ繝ｼ繝舌・繝ｬ繧､・医Δ繝舌う繝ｫ逕ｨ・・-->
+    <!-- サイドバーオーバーレイ（モバイル用） -->
     <div class="app-sidebar-overlay" id="sidebar-overlay"></div>
 
     <!-- ============================================================
-         繝｡繧､繝ｳ繧ｳ繝ｳ繝・Φ繝・
+         メインコンテンツ
          ============================================================ -->
     <main class="app-main" id="app-main">
 
-      <!-- 繝帙・繝 workspace・亥ｷｦ繧ｵ繧､繝峨ヰ繝ｼ縺ｮ驕ｸ謚槫・螳ｹ繧定｡ｨ遉ｺ・・-->
+      <!-- ホーム workspace（左サイドバーの選択内容を表示） -->
       <div class="home-dashboard" id="home-dashboard"></div>
 
       <div class="home-content-grid" hidden>
-      <!-- ==================== 蜈ｨ遉ｾ蜈ｱ譛峨せ繝壹・繧ｹ wrapper ==================== -->
+      <!-- ==================== 全社共有スペース wrapper ==================== -->
       <div class="space-wrapper space-shared" id="space-shared">
         <div class="area-header area-shared" id="area-shared-header">
           <div class="area-header-title">
             <i class="material-symbols-rounded" aria-hidden="true">groups</i>
-            <span>蜈ｨ遉ｾ蜈ｱ譛峨せ繝壹・繧ｹ</span>
+            <span>全社共有スペース</span>
           </div>
         </div>
         <div class="space-body" id="shared-space-body">
 
           <section id="shared-home-panel" class="shared-home-panel"></section>
 
-          <!-- 縺顔衍繧峨○繝懊・繝・-->
+          <!-- お知らせボード -->
           <section id="notice-board" class="notice-board"></section>
 
-          <!-- 螟ｩ豌励え繧｣繧ｸ繧ｧ繝・ヨ・磯壼ｸｸ縺ｯ髱櫁｡ｨ遉ｺ縲∝､ｪ髯ｽ蜈峨き繝ｼ繝峨〒螻暮幕・・-->
+          <!-- 天気ウィジェット（通常は非表示、太陽光カードで展開） -->
           <section id="weather-widget" class="weather-widget" hidden>
         <div class="weather-section-header">
           <div class="weather-title-area">
             <i class="fa-solid fa-cloud-sun weather-section-icon"></i>
-            <span class="weather-section-title">鬮伜ｴ主ｸゅ・螟ｩ豌・/span>
+            <span class="weather-section-title">高崎市の天気</span>
           </div>
           <span id="weather-updated" class="weather-updated"></span>
         </div>
         <div class="weather-body">
           <div id="weather-current" class="weather-current">
-            <div class="weather-loading"><i class="fa-solid fa-spinner fa-spin"></i> 螟ｩ豌玲ュ蝣ｱ繧貞叙蠕嶺ｸｭ...</div>
+            <div class="weather-loading"><i class="fa-solid fa-spinner fa-spin"></i> 天気情報を取得中...</div>
           </div>
           <div id="weather-forecast" class="forecast-scroll"></div>
         </div>
 
-        <!-- 螻暮幕繝代ロ繝ｫ・磯岑髮ｲ繝ｬ繝ｼ繝繝ｼ / 螟ｪ髯ｽ蜈臥匱髮ｻ 繧ｿ繝厄ｼ・-->
+        <!-- 展開パネル（雨雲レーダー / 太陽光発電 タブ） -->
         <div id="weather-panel" class="weather-panel" hidden>
           <div class="wpanel-tabs">
             <button class="wpanel-tab" id="tab-radar" data-tab="radar">
-              <i class="fa-solid fa-map"></i> 髮ｨ髮ｲ繝ｬ繝ｼ繝繝ｼ
+              <i class="fa-solid fa-map"></i> 雨雲レーダー
             </button>
             <button class="wpanel-tab" id="tab-solar" data-tab="solar">
-              <i class="fa-solid fa-solar-panel"></i> 螟ｪ髯ｽ蜈臥匱髮ｻ
+              <i class="fa-solid fa-solar-panel"></i> 太陽光発電
             </button>
             <a id="wpanel-external" href="#" target="_blank" rel="noopener" class="wpanel-external">
-              <i class="fa-solid fa-arrow-up-right-from-square"></i> 蛻･繧ｿ繝悶〒髢九￥
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> 別タブで開く
             </a>
-            <button id="wpanel-close" class="wpanel-close" title="髢峨§繧・>
+            <button id="wpanel-close" class="wpanel-close" title="閉じる">
               <i class="material-symbols-rounded" aria-hidden="true">close</i>
             </button>
           </div>
           <div id="wpanel-content" class="wpanel-content">
-            <!-- iframe 縺ｯ JS 縺梧諺蜈･ -->
+            <!-- iframe は JS が挿入 -->
           </div>
         </div>
       </section>
 
-          <!-- 蜈ｬ髢九そ繧ｯ繧ｷ繝ｧ繝ｳ・・S 縺悟虚逧・諺蜈･・・-->
+          <!-- 公開セクション（JS が動的挿入） -->
 
         </div><!-- /shared-space-body -->
       </div><!-- /space-shared -->
 
-      <!-- ==================== 蛟倶ｺｺ繧ｹ繝壹・繧ｹ wrapper ==================== -->
+      <!-- ==================== 個人スペース wrapper ==================== -->
       <div class="space-wrapper space-personal" id="space-personal">
         <div class="area-header area-personal" id="area-personal-header">
           <div class="area-header-title">
             <i class="material-symbols-rounded" aria-hidden="true">person</i>
-            <span>蛟倶ｺｺ繧ｹ繝壹・繧ｹ</span>
+            <span>個人スペース</span>
           </div>
-          <p class="area-header-hint" id="area-personal-hint" hidden><i class="fa-solid fa-triangle-exclamation" style="color:var(--accent-orange)"></i> 繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝繧定ｨｭ螳壹☆繧九→縺薙・繧ｨ繝ｪ繧｢縺ｮ縺吶∋縺ｦ縺ｮ讖溯・縺御ｽｿ縺医∪縺吶ゆｸ翫・縲・strong>蜷榊燕繧定ｨｭ螳壹＠縺ｦ縺上□縺輔＞</strong>縲阪ｒ繧ｿ繝・・縺励※縺上□縺輔＞縲・/p>
+          <p class="area-header-hint" id="area-personal-hint" hidden><i class="fa-solid fa-triangle-exclamation" style="color:var(--accent-orange)"></i> ユーザーネームを設定するとこのエリアのすべての機能が使えます。上の「<strong>名前を設定してください</strong>」をタップしてください。</p>
         </div>
         <div class="space-body" id="personal-space-body">
 
-          <!-- 蛟倶ｺｺTODO繝代ロ繝ｫ -->
+          <!-- 個人TODOパネル -->
           <section id="dash-today-section" class="dash-section" hidden></section>
 
           <section id="todo-section" class="todo-section" hidden>
             <div class="todo-header">
               <div class="todo-header-left">
                 <div class="todo-icon"><i class="fa-solid fa-circle-check"></i></div>
-                <h2 class="todo-title">閾ｪ蛻・・繧ｿ繧ｹ繧ｯ</h2>
+                <h2 class="todo-title">自分のタスク</h2>
                 <span class="todo-count" id="todo-count"></span>
               </div>
-              <button class="todo-toggle-btn" id="todo-toggle-btn" title="謚倥ｊ縺溘◆繧">
+              <button class="todo-toggle-btn" id="todo-toggle-btn" title="折りたたむ">
                 <i class="fa-solid fa-chevron-up"></i>
               </button>
             </div>
@@ -322,11 +322,11 @@
               <ul class="todo-list" id="todo-list"></ul>
               <div class="todo-add-area" id="todo-add-area">
                 <button class="todo-open-btn" id="todo-open-btn">
-                  <i class="fa-solid fa-plus"></i> 霑ｽ蜉
+                  <i class="fa-solid fa-plus"></i> 追加
                 </button>
                 <div class="todo-add-row" id="todo-add-row" hidden>
-                  <input type="text" id="todo-input" class="todo-input" placeholder="繧ｿ繧ｹ繧ｯ繧貞・蜉・.." maxlength="100" autocomplete="off">
-                  <input type="date" id="todo-due-select" class="date-icon-only" title="譛滄剞譌･繧帝∈謚橸ｼ育ｩｺ谺・譛滄剞縺ｪ縺暦ｼ・>
+                  <input type="text" id="todo-input" class="todo-input" placeholder="タスクを入力..." maxlength="100" autocomplete="off">
+                  <input type="date" id="todo-due-select" class="date-icon-only" title="期限日を選択（空欄=期限なし）">
                   <button class="todo-add-btn" id="todo-add-btn">
                     <i class="fa-solid fa-check"></i>
                   </button>
@@ -338,30 +338,30 @@
             </div>
           </section>
 
-          <!-- 縺頑ｰ励↓蜈･繧翫そ繧ｯ繧ｷ繝ｧ繝ｳ・・S 縺悟宛蠕｡・・-->
+          <!-- お気に入りセクション（JS が制御） -->
           <section id="favorites-section" class="favorites-section category-section" hidden>
             <div class="category-header">
               <div class="category-icon" style="background: linear-gradient(135deg, #ffcc00, #dd9900)">
                 <i class="material-symbols-rounded" aria-hidden="true">star</i>
               </div>
-              <h2 class="category-title">縺頑ｰ励↓蜈･繧・/h2>
-              <span class="category-count" id="favorites-count">0 莉ｶ</span>
+              <h2 class="category-title">お気に入り</h2>
+              <span class="category-count" id="favorites-count">0 件</span>
             </div>
             <div class="card-grid" id="favorites-grid"></div>
           </section>
 
-          <!-- 繝槭う繧ｫ繝・ざ繝ｪ・・S 縺悟虚逧・諺蜈･・・-->
+          <!-- マイカテゴリ（JS が動的挿入） -->
 
         </div><!-- /personal-space-body -->
       </div><!-- /space-personal -->
       </div>
 
-      <!-- 讀懃ｴ｢邨先棡・育峩謗･陦ｨ遉ｺ・・-->
+      <!-- 検索結果（直接表示） -->
       <div id="search-results-section" class="search-results-section" hidden></div>
 
       <div class="no-results" id="no-results">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <p>隧ｲ蠖薙☆繧九Γ繝九Η繝ｼ縺瑚ｦ九▽縺九ｊ縺ｾ縺帙ｓ</p>
+        <p>該当するメニューが見つかりません</p>
       </div>
     </main>
     <!-- /app-main -->
@@ -370,28 +370,28 @@
   <!-- /app-layout -->
 
 
-  <!-- ==================== 繧ｵ繝ｼ繝薙せ繝斐ャ繧ｫ繝ｼ繝｢繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== サービスピッカーモーダル ==================== -->
   <div class="modal-overlay" id="service-picker-modal">
     <div class="modal-glass service-picker-glass">
-      <h3 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">grid_view</i> 繧ｵ繝ｼ繝薙せ繧定ｿｽ蜉</h3>
-      <p style="font-size:var(--font-size-sm);color:var(--text-muted);margin-bottom:var(--space-md)">霑ｽ蜉縺励◆縺・し繝ｼ繝薙せ繧偵ち繝・・縺励※縺上□縺輔＞</p>
+      <h3 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">grid_view</i> サービスを追加</h3>
+      <p style="font-size:var(--font-size-sm);color:var(--text-muted);margin-bottom:var(--space-md)">追加したいサービスをタップしてください</p>
       <div id="service-picker-grid" class="service-picker-grid"></div>
       <div class="modal-footer" style="margin-top:var(--space-lg)">
-        <button id="service-picker-cancel" class="btn-modal-secondary">髢峨§繧・/button>
+        <button id="service-picker-cancel" class="btn-modal-secondary">閉じる</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 蜈ｱ譛峨Μ繝ｳ繧ｯ繝｢繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== 共有リンクモーダル ==================== -->
   <div class="modal-overlay" id="shared-links-modal">
     <div class="modal-glass shared-links-glass">
       <div class="shared-links-header">
         <div>
           <div class="shared-links-kicker">Shared Links</div>
-          <h3 class="shared-links-title"><i class="material-symbols-rounded" aria-hidden="true">grid_view</i> 蜈ｱ譛峨Μ繝ｳ繧ｯ荳隕ｧ</h3>
-          <p class="shared-links-desc">襍ｷ蜍墓凾縺ｮ隱ｭ縺ｿ蜿悶ｊ繧呈椛縺医ｋ縺溘ａ縲√％縺ｮ逕ｻ髱｢繧帝幕縺・◆譎ゅ□縺大・譛峨Μ繝ｳ繧ｯ繧定ｪｭ縺ｿ霎ｼ縺ｿ縺ｾ縺吶・/p>
+          <h3 class="shared-links-title"><i class="material-symbols-rounded" aria-hidden="true">grid_view</i> 共有リンク一覧</h3>
+          <p class="shared-links-desc">起動時の読み取りを抑えるため、この画面を開いた時だけ共有リンクを読み込みます。</p>
         </div>
-        <button type="button" class="shared-links-close" id="shared-links-close" title="髢峨§繧・>
+        <button type="button" class="shared-links-close" id="shared-links-close" title="閉じる">
           <i class="material-symbols-rounded" aria-hidden="true">close</i>
         </button>
       </div>
@@ -401,7 +401,7 @@
           type="text"
           id="shared-links-search"
           class="form-input shared-links-search"
-          placeholder="蜈ｱ譛峨Μ繝ｳ繧ｯ蜷阪〒讀懃ｴ｢"
+          placeholder="共有リンク名で検索"
           autocomplete="off"
         >
         <div class="shared-links-status" id="shared-links-status"></div>
@@ -412,207 +412,207 @@
     </div>
   </div>
 
-  <!-- ==================== 繝輔ぃ繧､繝ｫ霆｢騾√ヱ繝阪Ν ==================== -->
+  <!-- ==================== ファイル転送パネル ==================== -->
   <div id="ft-panel" class="ft-panel" hidden>
     <div class="ft-panel-header">
-      <span><i class="fa-solid fa-file-arrow-up"></i> 繝輔ぃ繧､繝ｫ霆｢騾・/span>
-      <button class="ft-panel-close" id="ft-panel-close" title="髢峨§繧・>
+      <span><i class="fa-solid fa-file-arrow-up"></i> ファイル転送</span>
+      <button class="ft-panel-close" id="ft-panel-close" title="閉じる">
         <i class="material-symbols-rounded" aria-hidden="true">close</i>
       </button>
     </div>
-    <!-- P2P / Drive 繧ｿ繝・-->
+    <!-- P2P / Drive タブ -->
     <div class="ft-tabs">
       <button class="ft-tab active" data-tab="p2p" id="ft-tab-p2p">
-        <i class="fa-solid fa-wifi"></i> P2P霆｢騾・
+        <i class="fa-solid fa-wifi"></i> P2P転送
       </button>
       <button class="ft-tab" data-tab="drive" id="ft-tab-drive">
-        <i class="fa-brands fa-google-drive"></i> Drive蜈ｱ譛・
+        <i class="fa-brands fa-google-drive"></i> Drive共有
         <span class="ft-tab-badge" id="ft-drive-tab-badge" hidden></span>
       </button>
     </div>
     <div class="ft-panel-body">
       <div class="ft-login-required" id="ft-login-required" hidden>
-        <i class="fa-solid fa-user-lock"></i> 繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝繧定ｨｭ螳壹＠縺ｦ縺上□縺輔＞
+        <i class="fa-solid fa-user-lock"></i> ユーザーネームを設定してください
       </div>
       <div id="ft-content">
-        <!-- P2P 繧ｨ繝ｪ繧｢ -->
+        <!-- P2P エリア -->
         <div id="ft-p2p-area">
           <div class="ft-how-it-works" id="ft-p2p-desc">
             <i class="fa-solid fa-wifi ft-how-icon"></i>
             <div class="ft-how-content">
               <div class="ft-how-header">
-                <span><b>P2P霆｢騾・/b> 窶・繝悶Λ繧ｦ繧ｶ蜷悟｣ｫ縺ｧ逶ｴ謗･繧・ｊ蜿悶ｊ</span>
-                <button class="ft-how-toggle" id="ft-p2p-desc-toggle" title="隱ｬ譏弱ｒ謚倥ｊ縺溘◆繧">
+                <span><b>P2P転送</b> — ブラウザ同士で直接やり取り</span>
+                <button class="ft-how-toggle" id="ft-p2p-desc-toggle" title="説明を折りたたむ">
                   <i class="fa-solid fa-chevron-up"></i>
                 </button>
               </div>
               <div class="ft-how-body" id="ft-p2p-desc-body">
-                <span class="ft-how-merit">笨・繧ｵ繝ｼ繝舌・繧堤ｵ檎罰縺励↑縺・・豈碑ｼ・噪螟ｧ縺阪＞繝輔ぃ繧､繝ｫ繧ょ庄</span><br>
-                <span class="ft-how-demerit">笞 騾∝女菫｡閠・′蜷梧凾繧ｪ繝ｳ繝ｩ繧､繝ｳ繝ｻ蜷御ｸ繝阪ャ繝医Ρ繝ｼ繧ｯ謗ｨ螂ｨ</span><br>
-                <span class="ft-how-best">竊・莉翫☆縺千嶌謇九↓逶ｴ謗･貂｡縺励◆縺・→縺阪↓蜷代＞縺ｦ縺・∪縺・/span>
+                <span class="ft-how-merit">✅ サーバーを経由しない・比較的大きいファイルも可</span><br>
+                <span class="ft-how-demerit">⚠ 送受信者が同時オンライン・同一ネットワーク推奨</span><br>
+                <span class="ft-how-best">→ 今すぐ相手に直接渡したいときに向いています</span>
               </div>
             </div>
           </div>
           <button class="btn-ft-new" id="ft-new-btn">
-            <i class="fa-solid fa-plus"></i> 繝輔ぃ繧､繝ｫ繧帝√ｋ
+            <i class="fa-solid fa-plus"></i> ファイルを送る
           </button>
-          <div class="ft-section-title" id="ft-incoming-title" hidden>蜿嶺ｿ｡蠕・■</div>
+          <div class="ft-section-title" id="ft-incoming-title" hidden>受信待ち</div>
           <div id="ft-incoming-list"></div>
-          <div class="ft-section-title" id="ft-outgoing-title" hidden>騾∽ｿ｡荳ｭ繝ｻ螳御ｺ・/div>
+          <div class="ft-section-title" id="ft-outgoing-title" hidden>送信中・完了</div>
           <div id="ft-outgoing-list"></div>
-          <div class="ft-empty" id="ft-empty">霆｢騾∽ｸｭ縺ｮ繝輔ぃ繧､繝ｫ縺ｯ縺ゅｊ縺ｾ縺帙ｓ</div>
+          <div class="ft-empty" id="ft-empty">転送中のファイルはありません</div>
         </div>
-        <!-- Drive 繧ｨ繝ｪ繧｢ -->
+        <!-- Drive エリア -->
         <div id="ft-drive-area" hidden>
-          <!-- 隱ｬ譏趣ｼ域釜繧翫◆縺溘∩蜿ｯ・・-->
+          <!-- 説明（折りたたみ可） -->
           <div class="ft-how-it-works ft-how-drive" id="ft-drive-desc">
             <i class="fa-brands fa-google-drive ft-how-icon" style="color:#34a853"></i>
             <div class="ft-how-content">
               <div class="ft-how-header">
-              <span><b>Drive蜈ｱ譛・/b> 窶・Drive繝輔か繝ｫ繝縺ｮURL繧偵♀莠偵＞縺ｫ蜈ｱ譛・/span>
-                <button class="ft-how-toggle" id="ft-drive-desc-toggle" title="隱ｬ譏弱ｒ謚倥ｊ縺溘◆繧">
+              <span><b>Drive共有</b> — DriveフォルダのURLをお互いに共有</span>
+                <button class="ft-how-toggle" id="ft-drive-desc-toggle" title="説明を折りたたむ">
                   <i class="fa-solid fa-chevron-up"></i>
                 </button>
               </div>
               <div class="ft-how-body" id="ft-drive-desc-body">
-                <span class="ft-how-merit">笨・繝阪ャ繝医Ρ繝ｼ繧ｯ荳榊撫繝ｻ繧ｵ繧､繧ｺ蛻ｶ髯舌↑縺励・逶ｸ謇九′繧ｪ繝輔Λ繧､繝ｳ縺ｧ繧０K</span><br>
-                <span class="ft-how-demerit">笞 Drive繝輔か繝ｫ繝繧偵後Μ繝ｳ繧ｯ繧堤衍縺｣縺ｦ縺・ｋ蜈ｨ蜩｡縺檎ｷｨ髮・庄縲阪↓隕∬ｨｭ螳・/span><br>
-                <span class="ft-how-best">竊・縺贋ｺ偵＞縺ｮ繝ｪ繝ｳ繧ｯ繧剃ｺ､謠帙＠縺ｦ逶ｸ謇九・繝輔か繝ｫ繝繧堤峩謗･髢九￠縺ｾ縺・/span>
+                <span class="ft-how-merit">✅ ネットワーク不問・サイズ制限なし・相手がオフラインでもOK</span><br>
+                <span class="ft-how-demerit">⚠ Driveフォルダを「リンクを知っている全員が編集可」に要設定</span><br>
+                <span class="ft-how-best">→ お互いのリンクを交換して相手のフォルダを直接開けます</span>
               </div>
             </div>
           </div>
-          <!-- 閾ｪ蛻・・Drive繝ｪ繝ｳ繧ｯ蜈･蜉幢ｼ・・譛峨え繧｣繧ｸ繧ｧ繝・ヨ -->
+          <!-- 自分のDriveリンク入力＆共有ウィジェット -->
           <div class="ft-my-link-widget">
             <div class="ft-my-link-label">
-              <i class="fa-solid fa-user"></i> 閾ｪ蛻・・蜈ｱ譛峨ヵ繧ｩ繝ｫ繝繝ｪ繝ｳ繧ｯ
+              <i class="fa-solid fa-user"></i> 自分の共有フォルダリンク
             </div>
             <div class="ft-my-link-row">
-              <input type="url" id="ft-my-link-input" class="ft-my-link-input" placeholder="Drive繝輔か繝ｫ繝URL繧定ｲｼ繧贋ｻ倥￠窶ｦ">
-              <button class="ft-my-link-icon-btn" id="ft-my-link-copy" title="URL繧偵さ繝斐・" hidden>
+              <input type="url" id="ft-my-link-input" class="ft-my-link-input" placeholder="DriveフォルダURLを貼り付け…">
+              <button class="ft-my-link-icon-btn" id="ft-my-link-copy" title="URLをコピー" hidden>
                 <i class="fa-solid fa-copy"></i>
               </button>
-              <button class="ft-my-link-icon-btn ft-my-link-icon-open" id="ft-my-link-open" title="閾ｪ蛻・・Drive繧帝幕縺・ hidden>
+              <button class="ft-my-link-icon-btn ft-my-link-icon-open" id="ft-my-link-open" title="自分のDriveを開く" hidden>
                 <i class="fa-solid fa-arrow-up-right-from-square"></i>
               </button>
             </div>
             <button class="btn-ft-drive-share" id="ft-drive-send-btn" disabled>
-              <i class="fa-brands fa-google-drive"></i> Drive繝ｪ繝ｳ繧ｯ繧貞・譛峨☆繧・
+              <i class="fa-brands fa-google-drive"></i> Driveリンクを共有する
             </button>
           </div>
-          <!-- 逋ｻ骭ｲ貂医∩騾｣邨｡蜈茨ｼ育嶌謇九・繝輔か繝ｫ繝繧帝幕縺擾ｼ・-->
-          <div class="ft-section-title" id="ft-contacts-title" hidden>逶ｸ謇九・繝輔か繝ｫ繝繧帝幕縺・/div>
+          <!-- 登録済み連絡先（相手のフォルダを開く） -->
+          <div class="ft-section-title" id="ft-contacts-title" hidden>相手のフォルダを開く</div>
           <div id="ft-contacts-list"></div>
-          <!-- 蜿嶺ｿ｡縺励◆繝ｪ繝ｳ繧ｯ -->
-          <div class="ft-section-title" id="ft-drive-incoming-title" hidden>蜿嶺ｿ｡縺励◆繝ｪ繝ｳ繧ｯ</div>
+          <!-- 受信したリンク -->
+          <div class="ft-section-title" id="ft-drive-incoming-title" hidden>受信したリンク</div>
           <div id="ft-drive-incoming-list"></div>
-          <div class="ft-empty" id="ft-drive-empty">Drive繝ｪ繝ｳ繧ｯ縺ｮ蜿励￠貂｡縺励・縺ゅｊ縺ｾ縺帙ｓ</div>
+          <div class="ft-empty" id="ft-drive-empty">Driveリンクの受け渡しはありません</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ==================== Drive 繝ｪ繝ｳ繧ｯ蜈ｱ譛峨Δ繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== Drive リンク共有モーダル ==================== -->
   <div class="modal-overlay" id="ft-drive-send-modal">
     <div class="modal-glass">
-      <h3 class="modal-title"><i class="fa-brands fa-google-drive" style="color:#34a853"></i> Drive繝ｪ繝ｳ繧ｯ繧貞・譛峨☆繧・/h3>
-      <p class="modal-desc">閾ｪ蛻・・Google繝峨Λ繧､繝悶ヵ繧ｩ繝ｫ繝URL繧堤嶌謇九↓蜈ｱ譛峨＠縺ｾ縺吶ら嶌謇九・縺昴％縺ｫ繝輔ぃ繧､繝ｫ繧貞・繧後ｋ縺薙→縺後〒縺阪∪縺吶・/p>
+      <h3 class="modal-title"><i class="fa-brands fa-google-drive" style="color:#34a853"></i> Driveリンクを共有する</h3>
+      <p class="modal-desc">自分のGoogleドライブフォルダURLを相手に共有します。相手はそこにファイルを入れることができます。</p>
       <div class="form-group" style="margin-bottom:10px">
-        <label class="form-label">騾∽ｿ｡蜈医ｒ讀懃ｴ｢</label>
-        <input type="text" id="ft-drive-user-search" class="form-input" placeholder="蜷榊燕縺ｧ讀懃ｴ｢..." autocomplete="off" style="margin-bottom:8px">
+        <label class="form-label">送信先を検索</label>
+        <input type="text" id="ft-drive-user-search" class="form-input" placeholder="名前で検索..." autocomplete="off" style="margin-bottom:8px">
         <div id="ft-drive-user-list" class="new-dm-user-list"></div>
       </div>
       <div id="ft-drive-form-group" hidden>
         <div class="form-group">
-          <label class="form-label">繝｡繝・そ繝ｼ繧ｸ・井ｻｻ諢上・200譁・ｭ嶺ｻ･蜀・ｼ・/label>
-          <textarea id="ft-drive-message" class="form-input" rows="2" placeholder="萓具ｼ壹％縺｡繧峨↓繝輔ぃ繧､繝ｫ繧貞・繧後※縺上□縺輔＞" maxlength="200"></textarea>
+          <label class="form-label">メッセージ（任意・200文字以内）</label>
+          <textarea id="ft-drive-message" class="form-input" rows="2" placeholder="例：こちらにファイルを入れてください" maxlength="200"></textarea>
         </div>
-        <p class="ft-drive-url-hint"><i class="fa-solid fa-arrows-left-right" style="color:var(--accent-blue)"></i> 逶ｸ謇九ｂDrive繝ｪ繝ｳ繧ｯ繧帝√▲縺ｦ縺上ｌ繧九→縲√♀莠偵＞縺ｮ繝輔か繝ｫ繝繧堤峩謗･髢九￠縺ｾ縺吶・/p>
+        <p class="ft-drive-url-hint"><i class="fa-solid fa-arrows-left-right" style="color:var(--accent-blue)"></i> 相手もDriveリンクを送ってくれると、お互いのフォルダを直接開けます。</p>
       </div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="ft-drive-cancel-btn">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
-        <button class="btn-modal-primary" id="ft-drive-confirm-btn" hidden>蜈ｱ譛峨☆繧・/button>
+        <button class="btn-modal-secondary" id="ft-drive-cancel-btn">キャンセル</button>
+        <button class="btn-modal-primary" id="ft-drive-confirm-btn" hidden>共有する</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 繝輔ぃ繧､繝ｫ騾∽ｿ｡繝｢繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== ファイル送信モーダル ==================== -->
   <div class="modal-overlay" id="ft-send-modal">
     <div class="modal-glass">
-      <h3 class="modal-title"><i class="fa-solid fa-file-arrow-up"></i> 繝輔ぃ繧､繝ｫ繧帝√ｋ</h3>
-      <p class="modal-desc">騾∽ｿ｡蜈医ｒ驕ｸ繧薙〒繝輔ぃ繧､繝ｫ繧帝∈謚槭＠縺ｦ縺上□縺輔＞縲・br>逶ｸ謇九′繧ｪ繝ｳ繝ｩ繧､繝ｳ縺ｮ縺ｨ縺阪↓蜿励￠蜿悶ｌ縺ｾ縺吶・/p>
+      <h3 class="modal-title"><i class="fa-solid fa-file-arrow-up"></i> ファイルを送る</h3>
+      <p class="modal-desc">送信先を選んでファイルを選択してください。<br>相手がオンラインのときに受け取れます。</p>
       <div class="form-group" style="margin-bottom:10px">
-        <label class="form-label">騾∽ｿ｡蜈・/label>
-        <input type="text" id="ft-user-search" class="form-input" placeholder="蜷榊燕縺ｧ讀懃ｴ｢..." autocomplete="off" style="margin-bottom:8px">
+        <label class="form-label">送信先</label>
+        <input type="text" id="ft-user-search" class="form-input" placeholder="名前で検索..." autocomplete="off" style="margin-bottom:8px">
         <div id="ft-user-list" class="new-dm-user-list"></div>
       </div>
       <div class="form-group" id="ft-file-group" hidden>
-        <label class="form-label" id="ft-target-label">騾∽ｿ｡蜈茨ｼ・/label>
+        <label class="form-label" id="ft-target-label">送信先：</label>
         <div class="ft-file-drop" id="ft-file-drop">
           <i class="fa-solid fa-cloud-arrow-up"></i>
-          <span>繧ｯ繝ｪ繝・け縺ｾ縺溘・繝峨Ο繝・・縺ｧ繝輔ぃ繧､繝ｫ繧帝∈謚・/span>
+          <span>クリックまたはドロップでファイルを選択</span>
           <input type="file" id="ft-file-input" style="position:absolute;inset:0;opacity:0;cursor:pointer">
         </div>
         <div id="ft-selected-file" class="ft-selected-file" hidden></div>
       </div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="ft-cancel-btn">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
-        <button class="btn-modal-primary" id="ft-confirm-btn" hidden>騾∽ｿ｡縺吶ｋ</button>
+        <button class="btn-modal-secondary" id="ft-cancel-btn">キャンセル</button>
+        <button class="btn-modal-primary" id="ft-confirm-btn" hidden>送信する</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 繝√Ε繝・ヨ繝代ロ繝ｫ ==================== -->
+  <!-- ==================== チャットパネル ==================== -->
   <div id="chat-panel" class="chat-panel" hidden>
-    <!-- 繝ｪ繧ｵ繧､繧ｺ繝上Φ繝峨Ν・亥ｷｦ荳翫さ繝ｼ繝翫・繧偵ラ繝ｩ繝・げ・・-->
-    <div class="chat-resize-handle" id="chat-resize-handle" title="繝峨Λ繝・げ縺励※繧ｵ繧､繧ｺ繧貞､画峩"></div>
+    <!-- リサイズハンドル（左上コーナーをドラッグ） -->
+    <div class="chat-resize-handle" id="chat-resize-handle" title="ドラッグしてサイズを変更"></div>
 
-    <!-- 蟾ｦ・壹Ν繝ｼ繝繝ｪ繧ｹ繝・-->
+    <!-- 左：ルームリスト -->
     <div class="chat-sidebar">
       <div class="chat-sidebar-header">
-        <span><i class="fa-solid fa-comments"></i> 繝√Ε繝・ヨ</span>
-        <button class="chat-panel-close" id="chat-panel-close" title="髢峨§繧・>
+        <span><i class="fa-solid fa-comments"></i> チャット</span>
+        <button class="chat-panel-close" id="chat-panel-close" title="閉じる">
           <i class="material-symbols-rounded" aria-hidden="true">close</i>
         </button>
       </div>
 
-      <!-- 繧ｿ繝門・繧頑崛縺・-->
+      <!-- タブ切り替え -->
       <div class="chat-sidebar-tabs">
         <button class="chat-sidebar-tab active" id="chat-tab-dm" data-tab="dm">
-          <i class="fa-solid fa-user"></i> 蛟句挨繝√Ε繝・ヨ
+          <i class="fa-solid fa-user"></i> 個別チャット
         </button>
         <button class="chat-sidebar-tab" id="chat-tab-group" data-tab="group">
-          <i class="material-symbols-rounded" aria-hidden="true">groups</i> 繧ｰ繝ｫ繝ｼ繝・
+          <i class="material-symbols-rounded" aria-hidden="true">groups</i> グループ
         </button>
       </div>
 
-      <!-- 蛟句挨繝√Ε繝・ヨ繝代ロ繝ｫ -->
+      <!-- 個別チャットパネル -->
       <div class="chat-sidebar-panel" id="chat-panel-dm">
         <div class="chat-sidebar-panel-header">
-          <span>蛟句挨繝√Ε繝・ヨ</span>
-          <button class="chat-sidebar-add-btn" id="btn-new-dm" title="譁ｰ縺励＞繝√Ε繝・ヨ">
-            <i class="fa-solid fa-plus"></i> 譁ｰ隕上メ繝｣繝・ヨ
+          <span>個別チャット</span>
+          <button class="chat-sidebar-add-btn" id="btn-new-dm" title="新しいチャット">
+            <i class="fa-solid fa-plus"></i> 新規チャット
           </button>
         </div>
         <div id="dm-room-list" class="chat-room-list"></div>
       </div>
 
-      <!-- 繧ｰ繝ｫ繝ｼ繝・繝代ロ繝ｫ -->
+      <!-- グループ パネル -->
       <div class="chat-sidebar-panel" id="chat-panel-group" hidden>
         <div class="chat-sidebar-panel-header">
-          <span>繧ｰ繝ｫ繝ｼ繝・/span>
-          <button class="chat-sidebar-add-btn" id="btn-new-group" title="譁ｰ縺励＞繧ｰ繝ｫ繝ｼ繝・>
-            <i class="fa-solid fa-plus"></i> 繧ｰ繝ｫ繝ｼ繝嶺ｽ懈・
+          <span>グループ</span>
+          <button class="chat-sidebar-add-btn" id="btn-new-group" title="新しいグループ">
+            <i class="fa-solid fa-plus"></i> グループ作成
           </button>
         </div>
         <div id="group-room-list" class="chat-room-list"></div>
       </div>
     </div>
 
-    <!-- 蜿ｳ・壹Γ繝・そ繝ｼ繧ｸ繧ｨ繝ｪ繧｢ -->
+    <!-- 右：メッセージエリア -->
     <div class="chat-main">
       <div class="chat-no-room" id="chat-no-room">
         <i class="fa-solid fa-comment-dots"></i>
-        <p>繝ｫ繝ｼ繝繧帝∈謚槭＠縺ｦ縺上□縺輔＞</p>
+        <p>ルームを選択してください</p>
       </div>
 
       <div class="chat-room-view" id="chat-room-view" hidden>
@@ -622,7 +622,7 @@
             <span id="chat-room-members" class="chat-room-members"></span>
           </div>
           <div class="chat-room-header-right">
-            <button class="chat-room-close" id="chat-room-close" title="髢峨§繧・>
+            <button class="chat-room-close" id="chat-room-close" title="閉じる">
               <i class="material-symbols-rounded" aria-hidden="true">close</i>
             </button>
           </div>
@@ -630,19 +630,19 @@
         <div class="chat-messages" id="chat-messages"></div>
         <div class="chat-input-area">
           <div class="chat-login-required" id="chat-login-required" hidden>
-            <i class="fa-solid fa-user-lock"></i> 繝√Ε繝・ヨ縺吶ｋ縺ｫ縺ｯ繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝繧定ｨｭ螳壹＠縺ｦ縺上□縺輔＞
+            <i class="fa-solid fa-user-lock"></i> チャットするにはユーザーネームを設定してください
           </div>
           <div class="chat-action-bar" id="chat-action-bar">
-            <button class="chat-action-btn" id="chat-launch-task" title="繧ｿ繧ｹ繧ｯ邂｡逅・ｒ髢九￥">
-              <i class="fa-solid fa-list-check"></i> 繧ｿ繧ｹ繧ｯ蜑ｲ謖ｯ
+            <button class="chat-action-btn" id="chat-launch-task" title="タスク管理を開く">
+              <i class="fa-solid fa-list-check"></i> タスク割振
             </button>
-            <button class="chat-action-btn" id="chat-launch-ft" title="繝輔ぃ繧､繝ｫ霆｢騾√ｒ髢九￥">
-              <i class="fa-solid fa-file-arrow-up"></i> 繝輔ぃ繧､繝ｫ霆｢騾・
+            <button class="chat-action-btn" id="chat-launch-ft" title="ファイル転送を開く">
+              <i class="fa-solid fa-file-arrow-up"></i> ファイル転送
             </button>
           </div>
           <div class="chat-input-row" id="chat-input-row">
-            <input type="text" id="chat-input" class="chat-input" placeholder="繝｡繝・そ繝ｼ繧ｸ繧貞・蜉・.." maxlength="300" autocomplete="off">
-            <button class="chat-send-btn" id="chat-send-btn" title="騾∽ｿ｡">
+            <input type="text" id="chat-input" class="chat-input" placeholder="メッセージを入力..." maxlength="300" autocomplete="off">
+            <button class="chat-send-btn" id="chat-send-btn" title="送信">
               <i class="fa-solid fa-paper-plane"></i>
             </button>
           </div>
@@ -651,113 +651,113 @@
     </div>
   </div>
 
-  <!-- ==================== 蛟句挨繝√Ε繝・ヨ繝｢繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== 個別チャットモーダル ==================== -->
   <div class="modal-overlay" id="new-dm-modal">
     <div class="modal-glass">
-      <h3 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">person_add</i> 蛟句挨繝√Ε繝・ヨ</h3>
-      <p class="modal-desc">隧ｱ縺励°縺代◆縺・Γ繝ｳ繝舌・繧帝∈繧薙〒縺上□縺輔＞</p>
-      <input type="text" id="new-dm-search" class="form-input" placeholder="蜷榊燕縺ｧ讀懃ｴ｢..." autocomplete="off" style="margin-bottom:10px">
+      <h3 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">person_add</i> 個別チャット</h3>
+      <p class="modal-desc">話しかけたいメンバーを選んでください</p>
+      <input type="text" id="new-dm-search" class="form-input" placeholder="名前で検索..." autocomplete="off" style="margin-bottom:10px">
       <div id="new-dm-user-list" class="new-dm-user-list"></div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="new-dm-cancel">髢峨§繧・/button>
+        <button class="btn-modal-secondary" id="new-dm-cancel">閉じる</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 譁ｰ隕上げ繝ｫ繝ｼ繝励Δ繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== 新規グループモーダル ==================== -->
   <div class="modal-overlay" id="new-group-modal">
     <div class="modal-glass">
-      <h3 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">groups</i> 繧ｰ繝ｫ繝ｼ繝励ｒ菴懈・</h3>
+      <h3 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">groups</i> グループを作成</h3>
       <div class="form-group">
-        <label class="form-label">繧ｰ繝ｫ繝ｼ繝怜錐</label>
-        <input type="text" id="new-group-name" class="form-input" placeholder="萓具ｼ壽悃莨壹Γ繝ｳ繝舌・" maxlength="30">
+        <label class="form-label">グループ名</label>
+        <input type="text" id="new-group-name" class="form-input" placeholder="例：朝会メンバー" maxlength="30">
       </div>
       <div class="form-group">
-        <label class="form-label">繝｡繝ｳ繝舌・繧定ｿｽ蜉</label>
-        <input type="text" id="new-group-member-search" class="form-input" placeholder="蜷榊燕縺ｧ讀懃ｴ｢..." autocomplete="off">
+        <label class="form-label">メンバーを追加</label>
+        <input type="text" id="new-group-member-search" class="form-input" placeholder="名前で検索..." autocomplete="off">
       </div>
       <div id="new-group-member-list" class="new-dm-user-list" style="margin-bottom:10px"></div>
       <div id="new-group-selected" class="new-group-selected"></div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="new-group-cancel">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
-        <button class="btn-modal-primary" id="new-group-create">菴懈・縺吶ｋ</button>
+        <button class="btn-modal-secondary" id="new-group-cancel">キャンセル</button>
+        <button class="btn-modal-primary" id="new-group-create">作成する</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 險ｭ螳壹ヱ繝阪Ν ==================== -->
+  <!-- ==================== 設定パネル ==================== -->
   <div id="settings-panel" class="settings-panel" hidden>
     <div class="settings-panel-header">
-      <span><i class="material-symbols-rounded" aria-hidden="true">settings</i> 陦ｨ遉ｺ險ｭ螳・/span>
-      <button class="settings-panel-close" id="settings-panel-close" title="髢峨§繧・>
+      <span><i class="material-symbols-rounded" aria-hidden="true">settings</i> 表示設定</span>
+      <button class="settings-panel-close" id="settings-panel-close" title="閉じる">
         <i class="material-symbols-rounded" aria-hidden="true">close</i>
       </button>
     </div>
     <div class="settings-panel-body">
 
       <div class="settings-section">
-        <div class="settings-section-title">繝・・繝・/div>
+        <div class="settings-section-title">テーマ</div>
         <div class="theme-grid" id="theme-grid">
           <button class="theme-card" data-theme="dark">
             <div class="theme-preview theme-preview--dark">
               <div class="tp-bar"></div><div class="tp-cards"><div></div><div></div><div></div></div>
             </div>
-            <span>繝繝ｼ繧ｯ</span>
+            <span>ダーク</span>
           </button>
           <button class="theme-card" data-theme="light">
             <div class="theme-preview theme-preview--light">
               <div class="tp-bar"></div><div class="tp-cards"><div></div><div></div><div></div></div>
             </div>
-            <span>繝ｩ繧､繝・/span>
+            <span>ライト</span>
           </button>
         </div>
       </div>
 
       <div class="settings-section">
-        <div class="settings-section-title">譁・ｭ励し繧､繧ｺ</div>
+        <div class="settings-section-title">文字サイズ</div>
         <div class="fontsize-grid" id="fontsize-grid">
-          <button class="fontsize-btn" data-size="font-sm">蟆・span>縺・/span></button>
-          <button class="fontsize-btn" data-size="font-md">讓呎ｺ・span>縺・/span></button>
-          <button class="fontsize-btn" data-size="font-lg">螟ｧ<span>縺・/span></button>
-          <button class="fontsize-btn" data-size="font-xl">迚ｹ螟ｧ<span>縺・/span></button>
+          <button class="fontsize-btn" data-size="font-sm">小<span>あ</span></button>
+          <button class="fontsize-btn" data-size="font-md">標準<span>あ</span></button>
+          <button class="fontsize-btn" data-size="font-lg">大<span>あ</span></button>
+          <button class="fontsize-btn" data-size="font-xl">特大<span>あ</span></button>
         </div>
       </div>
 
       <div class="settings-section settings-section-admin">
-        <div class="settings-section-title">邂｡逅・・/div>
+        <div class="settings-section-title">管理者</div>
         <button class="btn-open-admin" id="btn-open-admin">
-          <i class="fa-solid fa-user-shield"></i> 邂｡逅・・ヱ繝阪Ν繧帝幕縺・
+          <i class="fa-solid fa-user-shield"></i> 管理者パネルを開く
         </button>
       </div>
 
       <div class="settings-section">
         <div class="settings-section-title">
-          髱櫁｡ｨ遉ｺ繧ｫ繝ｼ繝臥ｮ｡逅・
+          非表示カード管理
           <span class="hidden-cards-count-badge" id="hidden-cards-count">0</span>
         </div>
-        <p class="settings-hint">繧ｫ繝ｼ繝峨↓繧ｫ繝ｼ繧ｽ繝ｫ繧貞粋繧上○繧九→ <i class="fa-solid fa-eye-slash"></i> 縺瑚｡ｨ遉ｺ縺輔ｌ縺ｾ縺吶ゅけ繝ｪ繝・け縺ｧ髱櫁｡ｨ遉ｺ縺ｫ縺ｪ繧翫∪縺吶・/p>
+        <p class="settings-hint">カードにカーソルを合わせると <i class="fa-solid fa-eye-slash"></i> が表示されます。クリックで非表示になります。</p>
         <div id="hidden-cards-list" class="hidden-cards-list">
-          <p class="hidden-cards-empty">髱櫁｡ｨ遉ｺ縺ｫ縺励◆繧ｫ繝ｼ繝峨・縺ゅｊ縺ｾ縺帙ｓ</p>
+          <p class="hidden-cards-empty">非表示にしたカードはありません</p>
         </div>
       </div>
 
     </div>
   </div>
 
-  <!-- ==================== 繝ｦ繝ｼ繧ｶ繝ｼ蜷崎ｨｭ螳壹Δ繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== ユーザー名設定モーダル ==================== -->
   <div class="modal-overlay" id="auth-invite-modal">
     <div class="modal-glass auth-access-modal">
-      <h3 class="modal-title"><i class="fa-solid fa-user-check"></i> 諡帛ｾ・さ繝ｼ繝・/h3>
-      <p class="modal-desc">縺薙・繝昴・繧ｿ繝ｫ縺ｯ諡帛ｾ・宛縺ｧ縺吶よ悴謇ｿ隱咲ｫｯ譛ｫ縺ｧ縺ｮ蛻晏屓蛻ｩ逕ｨ譎ゅ・縲∫ｮ｡逅・・°繧牙・譛峨＆繧後◆4譯√・諡帛ｾ・さ繝ｼ繝峨ｒ蜈･蜉帙＠縺ｦ縺上□縺輔＞縲・/p>
+      <h3 class="modal-title"><i class="fa-solid fa-user-check"></i> 招待コード</h3>
+      <p class="modal-desc">このポータルは招待制です。未承認端末での初回利用時は、管理者から共有された4桁の招待コードを入力してください。</p>
       <div class="form-group">
-        <label class="form-label" for="auth-invite-input">諡帛ｾ・さ繝ｼ繝・/label>
-        <input type="password" id="auth-invite-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="繝ｻ繝ｻ繝ｻ繝ｻ" autocomplete="off">
+        <label class="form-label" for="auth-invite-input">招待コード</label>
+        <input type="password" id="auth-invite-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・" autocomplete="off">
       </div>
       <div class="security-error" id="auth-invite-error" hidden></div>
       <div class="modal-actions">
         <button class="btn-modal-primary" id="auth-invite-submit">
           <i class="fa-solid fa-spinner fa-spin" id="auth-invite-spinner" hidden></i>
-          <span>繧ｳ繝ｼ繝峨ｒ遒ｺ隱阪☆繧・/span>
+          <span>コードを確認する</span>
         </button>
       </div>
     </div>
@@ -765,70 +765,70 @@
 
   <div class="modal-overlay" id="username-modal">
     <div class="modal-glass">
-      <h3 class="modal-title" id="username-modal-title"><i class="material-symbols-rounded" aria-hidden="true">person</i> 繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝繧定ｨｭ螳・/h3>
-      <p class="modal-desc" id="username-modal-desc">縺ゅ↑縺溘□縺代・蜷榊燕・・D・峨ｒ蜈･蜉帙＠縺ｦ縺上□縺輔＞縲・br><strong>繧ｿ繧ｹ繧ｯ邂｡逅・・縺頑ｰ励↓蜈･繧翫・蛟倶ｺｺ繝｡繝｢繝ｻ繝・・繝櫁ｨｭ螳・/strong>縺後％縺ｮ蜷榊燕縺ｫ邏舌▼縺・※菫晏ｭ倥＆繧後∪縺吶・br><small style="color:var(--text-muted)">蜷後§蜷榊燕繧貞挨縺ｮ遶ｯ譛ｫ縺ｧ蜈･蜉帙☆繧後・險ｭ螳壹′蠑輔″邯吶′繧後∪縺吶・/small></p>
+      <h3 class="modal-title" id="username-modal-title"><i class="material-symbols-rounded" aria-hidden="true">person</i> ユーザーネームを設定</h3>
+      <p class="modal-desc" id="username-modal-desc">あなただけの名前（ID）を入力してください。<br><strong>タスク管理・お気に入り・個人メモ・テーマ設定</strong>がこの名前に紐づいて保存されます。<br><small style="color:var(--text-muted)">同じ名前を別の端末で入力すれば設定が引き継がれます。</small></p>
       <div class="form-group">
-        <label class="form-label">繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝</label>
-        <input type="text" id="username-input" class="form-input" placeholder="萓具ｼ夂伐荳ｭ" maxlength="20" autocomplete="off">
+        <label class="form-label">ユーザーネーム</label>
+        <input type="text" id="username-input" class="form-input" placeholder="例：田中" maxlength="20" autocomplete="off">
       </div>
       <div class="username-warn-box">
         <i class="fa-solid fa-triangle-exclamation"></i>
-        <span>縺薙・蜷榊燕縺ｯ縺ゅ↑縺溘・ID縺ｧ縺吶・strong>蠢倥ｌ繧九→險ｭ螳壹′蠕ｩ蜈・〒縺阪∪縺帙ｓ縲・/strong>莉悶・莠ｺ縺ｨ驥崎､・＠縺ｪ縺・錐蜑阪ｒ菴ｿ縺｣縺ｦ縺上□縺輔＞縲・/span>
+        <span>この名前はあなたのIDです。<strong>忘れると設定が復元できません。</strong>他の人と重複しない名前を使ってください。</span>
       </div>
       <div class="username-error-box" id="username-error-box" hidden>
         <i class="fa-solid fa-circle-xmark"></i>
-        <span id="username-error-msg">縺薙・繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝縺ｯ縺吶〒縺ｫ菴ｿ逕ｨ縺輔ｌ縺ｦ縺・∪縺・/span>
-        <button class="btn-reclaim" id="username-reclaim" hidden>縺薙ｌ縺ｯ遘√・繧｢繧ｫ繧ｦ繝ｳ繝・竊・/button>
+        <span id="username-error-msg">このユーザーネームはすでに使用されています</span>
+        <button class="btn-reclaim" id="username-reclaim" hidden>これは私のアカウント →</button>
       </div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="username-skip" title="繧ｹ繧ｭ繝・・縺吶ｋ縺ｨ繧ｿ繧ｹ繧ｯ繝ｻ蛟倶ｺｺ繝｡繝｢縺ｪ縺ｩ縺御ｽｿ縺医∪縺帙ｓ">蠕後〒險ｭ螳壹☆繧・/button>
+        <button class="btn-modal-secondary" id="username-skip" title="スキップするとタスク・個人メモなどが使えません">後で設定する</button>
         <button class="btn-modal-primary" id="username-submit">
           <i class="fa-solid fa-spinner fa-spin" id="username-submit-spinner" hidden></i>
-          <span id="username-submit-text">險ｭ螳壹＠縺ｦ蟋九ａ繧・/span>
+          <span id="username-submit-text">設定して始める</span>
         </button>
       </div>
       <div class="username-security-row" id="username-security-row" hidden>
         <button class="btn-open-security" id="btn-open-security">
-          <i class="material-symbols-rounded" aria-hidden="true">lock</i> PIN繝ｭ繝・け繧定ｨｭ螳壹☆繧・
+          <i class="material-symbols-rounded" aria-hidden="true">lock</i> PINロックを設定する
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 繝槭う繧ｫ繝・ざ繝ｪ邱ｨ髮・Δ繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== マイカテゴリ編集モーダル ==================== -->
   <div class="modal-overlay" id="private-section-modal">
     <div class="modal-glass">
-      <h3 class="modal-title" id="private-section-modal-title"><i class="material-symbols-rounded" aria-hidden="true">lock</i> 繝槭う繧ｫ繝・ざ繝ｪ繧定ｿｽ蜉</h3>
+      <h3 class="modal-title" id="private-section-modal-title"><i class="material-symbols-rounded" aria-hidden="true">lock</i> マイカテゴリを追加</h3>
       <div class="form-group">
-        <label class="form-label">繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ蜷・/label>
-        <input type="text" id="private-section-label" class="form-input" placeholder="萓具ｼ壹・繧､繝ｪ繝ｳ繧ｯ">
+        <label class="form-label">セクション名</label>
+        <input type="text" id="private-section-label" class="form-input" placeholder="例：マイリンク">
       </div>
       <div class="form-group">
-        <label class="form-label">繧｢繧､繧ｳ繝ｳ</label>
+        <label class="form-label">アイコン</label>
         <div class="icon-manual-row">
           <div class="icon-preview" id="private-section-icon-preview"></div>
           <input type="text" id="private-section-icon" class="form-input" placeholder="fa-solid fa-star">
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">繧ｫ繝ｩ繝ｼ</label>
+        <label class="form-label">カラー</label>
         <div id="private-section-color-grid" class="color-picker-grid"></div>
       </div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="private-section-cancel">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
+        <button class="btn-modal-secondary" id="private-section-cancel">キャンセル</button>
         <button class="btn-modal-danger" id="private-section-delete" style="display:none">
-          <i class="fa-solid fa-trash"></i> 蜑企勁
+          <i class="fa-solid fa-trash"></i> 削除
         </button>
-        <button class="btn-modal-primary" id="private-section-save">菫晏ｭ・/button>
+        <button class="btn-modal-primary" id="private-section-save">保存</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== PIN隱崎ｨｼ繝｢繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== PIN認証モーダル ==================== -->
   <div class="modal-overlay" id="pin-modal">
     <div class="modal-glass">
-      <h3 class="modal-title" id="pin-modal-title">邂｡逅・・ｪ崎ｨｼ</h3>
-      <p class="modal-desc" id="pin-modal-desc">4譯√・PIN繧貞・蜉帙＠縺ｦ縺上□縺輔＞</p>
+      <h3 class="modal-title" id="pin-modal-title">管理者認証</h3>
+      <p class="modal-desc" id="pin-modal-desc">4桁のPINを入力してください</p>
 
       <div class="pin-inputs">
         <input type="text" inputmode="numeric" maxlength="1" class="pin-digit" autocomplete="off">
@@ -838,7 +838,7 @@
       </div>
 
       <div id="pin-confirm-group" style="display:none">
-        <p class="modal-desc" style="text-align:center;margin-bottom:0.5rem">遒ｺ隱阪・縺溘ａ蜀榊・蜉・/p>
+        <p class="modal-desc" style="text-align:center;margin-bottom:0.5rem">確認のため再入力</p>
         <div class="pin-inputs">
           <input type="text" inputmode="numeric" maxlength="1" class="pin-digit-confirm" autocomplete="off">
           <input type="text" inputmode="numeric" maxlength="1" class="pin-digit-confirm" autocomplete="off">
@@ -850,112 +850,112 @@
       <p class="pin-error" id="pin-error"></p>
 
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="pin-cancel">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
-        <button class="btn-modal-primary" id="pin-submit">隱崎ｨｼ</button>
+        <button class="btn-modal-secondary" id="pin-cancel">キャンセル</button>
+        <button class="btn-modal-primary" id="pin-submit">認証</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 繧ｫ繝ｼ繝臥ｷｨ髮・Δ繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== カード編集モーダル ==================== -->
   <div class="modal-overlay" id="card-modal">
     <div class="modal-glass">
-      <h3 class="modal-title" id="card-modal-title">繧ｫ繝ｼ繝峨ｒ邱ｨ髮・/h3>
+      <h3 class="modal-title" id="card-modal-title">カードを編集</h3>
 
       <div class="form-group">
-        <label class="form-label">繧ｫ繝ｼ繝牙錐</label>
-        <input type="text" id="edit-label" class="form-input" placeholder="萓・ 蟾･遞狗ｮ｡逅・>
+        <label class="form-label">カード名</label>
+        <input type="text" id="edit-label" class="form-input" placeholder="例: 工程管理">
       </div>
 
       <div class="form-group" id="edit-icon-group">
-        <label class="form-label">繧｢繧､繧ｳ繝ｳ</label>
+        <label class="form-label">アイコン</label>
         <div class="icon-picker" id="icon-picker"></div>
         <div class="icon-manual-row">
           <div class="icon-preview" id="icon-preview"></div>
-          <input type="text" id="edit-icon" class="form-input" placeholder="fa-solid fa-star・育峩謗･蜈･蜉帙ｂ蜿ｯ・・>
+          <input type="text" id="edit-icon" class="form-input" placeholder="fa-solid fa-star（直接入力も可）">
         </div>
       </div>
 
       <div class="form-group">
-        <label class="form-label">繝ｪ繝ｳ繧ｯ蜈・URL</label>
+        <label class="form-label">リンク先 URL</label>
         <input type="url" id="edit-url" class="form-input" placeholder="https://...">
       </div>
 
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="card-cancel">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
+        <button class="btn-modal-secondary" id="card-cancel">キャンセル</button>
         <button class="btn-modal-danger" id="card-delete" style="display:none">
-          <i class="fa-solid fa-trash"></i> 蜑企勁
+          <i class="fa-solid fa-trash"></i> 削除
         </button>
-        <button class="btn-modal-primary" id="card-save">菫晏ｭ・/button>
+        <button class="btn-modal-primary" id="card-save">保存</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 縺顔衍繧峨○邱ｨ髮・Δ繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== お知らせ編集モーダル ==================== -->
   <div class="modal-overlay" id="notice-modal">
     <div class="modal-glass">
-      <h3 class="modal-title" id="notice-modal-title">縺顔衍繧峨○繧定ｿｽ蜉</h3>
+      <h3 class="modal-title" id="notice-modal-title">お知らせを追加</h3>
 
       <div class="form-group">
-        <label class="form-label">蜆ｪ蜈亥ｺｦ</label>
+        <label class="form-label">優先度</label>
         <select id="notice-priority" class="form-input">
-          <option value="normal">騾壼ｸｸ</option>
-          <option value="urgent">驥崎ｦ・/option>
+          <option value="normal">通常</option>
+          <option value="urgent">重要</option>
         </select>
       </div>
 
       <div class="form-group">
-        <label class="form-label">驟堺ｿ｡蜈・/label>
+        <label class="form-label">配信先</label>
         <select id="notice-target-scope" class="form-input">
-          <option value="all">蜈ｨ菴薙↓驟堺ｿ｡</option>
-          <option value="departments">驛ｨ鄂ｲ繧帝∈繧薙〒驟堺ｿ｡</option>
+          <option value="all">全体に配信</option>
+          <option value="departments">部署を選んで配信</option>
         </select>
         <div class="notice-target-picker" id="notice-target-picker" hidden>
-          <div class="notice-target-picker-label">蟇ｾ雎｡驛ｨ鄂ｲ</div>
+          <div class="notice-target-picker-label">対象部署</div>
           <div class="notice-target-grid" id="notice-target-departments"></div>
         </div>
-        <div class="notice-target-hint" id="notice-target-hint">蜈ｨ菴薙↓陦ｨ遉ｺ縺輔ｌ縺ｾ縺吶・/div>
+        <div class="notice-target-hint" id="notice-target-hint">全体に表示されます。</div>
       </div>
 
       <div class="form-group">
-        <label class="form-label">繧ｿ繧､繝医Ν</label>
-        <input type="text" id="notice-title" class="form-input" placeholder="萓・ 譏取律縺ｯ蟾･蝣ｴ莠亥ｮ壼､画峩">
+        <label class="form-label">タイトル</label>
+        <input type="text" id="notice-title" class="form-input" placeholder="例: 明日は工場予定変更">
       </div>
 
       <div class="form-group">
-        <label class="form-label">譛ｬ譁・ｼ育怐逡･蜿ｯ・・/label>
-        <textarea id="notice-body" class="form-input" rows="3" placeholder="隧ｳ邏ｰ繝｡繝・そ繝ｼ繧ｸ..."></textarea>
+        <label class="form-label">本文（省略可）</label>
+        <textarea id="notice-body" class="form-input" rows="3" placeholder="詳細メッセージ..."></textarea>
       </div>
 
       <div class="form-group">
         <label class="notice-ack-setting" for="notice-require-ack">
           <input type="checkbox" id="notice-require-ack">
-          <span>遒ｺ隱榊ｿ・医↓縺吶ｋ</span>
+          <span>確認必須にする</span>
         </label>
-        <div class="notice-target-hint">繧ｪ繝ｳ縺ｫ縺吶ｋ縺ｨ縲∝ｯｾ雎｡繝ｦ繝ｼ繧ｶ繝ｼ縺後檎｢ｺ隱阪＠縺溘阪ｒ謚ｼ縺励◆螻･豁ｴ繧呈ｮ九○縺ｾ縺吶・/div>
+        <div class="notice-target-hint">オンにすると、対象ユーザーが「確認した」を押した履歴を残せます。</div>
       </div>
 
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="notice-cancel">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
+        <button class="btn-modal-secondary" id="notice-cancel">キャンセル</button>
         <button class="btn-modal-danger" id="notice-delete" style="display:none">
-          <i class="fa-solid fa-trash"></i> 蜑企勁
+          <i class="fa-solid fa-trash"></i> 削除
         </button>
-        <button class="btn-modal-primary" id="notice-save">菫晏ｭ・/button>
+        <button class="btn-modal-primary" id="notice-save">保存</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 繧ｫ繝・ざ繝ｪ邱ｨ髮・Δ繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== カテゴリ編集モーダル ==================== -->
   <div class="modal-overlay" id="category-modal">
     <div class="modal-glass">
-      <h3 class="modal-title" id="category-modal-title">繧ｫ繝・ざ繝ｪ繧定ｿｽ蜉</h3>
+      <h3 class="modal-title" id="category-modal-title">カテゴリを追加</h3>
 
       <div class="form-group">
-        <label class="form-label">繧ｫ繝・ざ繝ｪ蜷・/label>
-        <input type="text" id="cat-label" class="form-input" placeholder="萓・ 蜩∬ｳｪ邂｡逅・>
+        <label class="form-label">カテゴリ名</label>
+        <input type="text" id="cat-label" class="form-input" placeholder="例: 品質管理">
       </div>
 
       <div class="form-group">
-        <label class="form-label">繧｢繧､繧ｳ繝ｳ</label>
+        <label class="form-label">アイコン</label>
         <div class="icon-manual-row">
           <div class="icon-preview" id="cat-icon-preview"></div>
           <input type="text" id="cat-icon" class="form-input" placeholder="fa-solid fa-star">
@@ -963,272 +963,272 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">繧ｫ繝ｩ繝ｼ</label>
+        <label class="form-label">カラー</label>
         <div id="color-picker-grid" class="color-picker-grid"></div>
       </div>
 
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="cat-cancel">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
+        <button class="btn-modal-secondary" id="cat-cancel">キャンセル</button>
         <button class="btn-modal-danger" id="cat-delete" style="display:none">
-          <i class="fa-solid fa-trash"></i> 蜑企勁
+          <i class="fa-solid fa-trash"></i> 削除
         </button>
-        <button class="btn-modal-primary" id="cat-save">菫晏ｭ・/button>
+        <button class="btn-modal-primary" id="cat-save">保存</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 菴ｿ縺・婿繧ｬ繧､繝峨Δ繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== 使い方ガイドモーダル ==================== -->
   <div class="modal-overlay" id="guide-modal">
     <div class="modal-glass guide-glass">
       <div class="guide-header">
-        <h3 class="modal-title"><i class="fa-solid fa-circle-question"></i> 菴ｿ縺・婿繧ｬ繧､繝・/h3>
-        <button class="guide-close" id="guide-close" title="髢峨§繧・><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
+        <h3 class="modal-title"><i class="fa-solid fa-circle-question"></i> 使い方ガイド</h3>
+        <button class="guide-close" id="guide-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
       <div class="guide-body">
 
         <div class="guide-section">
-          <h4 class="guide-section-title"><span class="guide-icon">務・・/span> 蝓ｺ譛ｬ謫堺ｽ・/h4>
+          <h4 class="guide-section-title"><span class="guide-icon">🖱️</span> 基本操作</h4>
           <ul class="guide-list">
-            <li><strong>譛蛻昴・蛻ｩ逕ｨ譎・/strong>縺ｯ <strong>諡帛ｾ・さ繝ｼ繝・竊・繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝</strong> 縺ｮ鬆・〒騾ｲ縺ｿ縺ｾ縺吶ゆｸ蠎ｦ縺昴・遶ｯ譛ｫ縺ｧ騾夐℃縺励※繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝繧剃ｽ懊ｋ縺ｨ縲∵ｬ｡蝗樔ｻ･髯阪・諡帛ｾ・さ繝ｼ繝峨ｒ逵∫払縺ｧ縺阪∪縺吶１IN繝ｭ繝・け貂医∩縺ｮ蜷榊燕縺ｯ縲￣C縺ｧ縺ｯ蜀崎ｪｭ縺ｿ霎ｼ縺ｿ蠕後・蠕ｩ蟶ｰ譎ゅ→繝ｦ繝ｼ繧ｶ繝ｼ蛻・ｊ譖ｿ縺域凾縲√せ繝槭・縺ｧ縺ｯ繝ｦ繝ｼ繧ｶ繝ｼ蛻・ｊ譖ｿ縺域凾縺縺代Ο繧ｰ繧､繝ｳ蜑阪↓4譯￣IN縺悟ｿ・ｦ√〒縺吶・/li>
-            <li>繧ｫ繝ｼ繝峨ｒ繧ｯ繝ｪ繝・け・医せ繝槭・縺ｯ繧ｿ繝・・・峨☆繧九→縲∫匳骭ｲ縺輔ｌ縺溘・繝ｼ繧ｸ縺・strong>譁ｰ縺励＞繧ｿ繝・/strong>縺ｧ髢九″縺ｾ縺吶・/li>
-            <li><strong>PC・・/strong>繧ｫ繝ｼ繝峨ｒ<strong>蜿ｳ繧ｯ繝ｪ繝・け</strong>縺吶ｋ縺ｨ縲檎ｷｨ髮・阪悟炎髯､縲阪Γ繝九Η繝ｼ縺瑚｡ｨ遉ｺ縺輔ｌ縺ｾ縺吶・/li>
-            <li><strong>繧ｹ繝槭・・・/strong>繧ｫ繝ｼ繝峨ｒ<strong>髟ｷ謚ｼ縺・/strong>縺吶ｋ縺ｨ縲檎ｷｨ髮・阪悟炎髯､縲阪Γ繝九Η繝ｼ縺瑚｡ｨ遉ｺ縺輔ｌ縺ｾ縺吶・/li>
-            <li>逕ｻ髱｢荳企Κ縺ｮ<strong>讀懃ｴ｢繝舌・</strong>縺ｫ繧ｭ繝ｼ繝ｯ繝ｼ繝峨ｒ蜈･蜉帙☆繧九→縲√き繝ｼ繝牙錐縺ｧ繝ｪ繧｢繝ｫ繧ｿ繧､繝讀懃ｴ｢縺ｧ縺阪∪縺吶・/li>
-            <li>繧ｪ繝ｬ繝ｳ繧ｸ縺ｮ遐ｴ邱壽棧・九袈RL譛ｪ險ｭ螳壹阪ヰ繝・ず縺ｮ繧ｫ繝ｼ繝峨・縲√∪縺繝ｪ繝ｳ繧ｯ蜈医′逋ｻ骭ｲ縺輔ｌ縺ｦ縺・∪縺帙ｓ縲ょ承繧ｯ繝ｪ繝・け・磯聞謚ｼ縺暦ｼ俄・縲檎ｷｨ髮・阪〒URL繧定ｨｭ螳壹〒縺阪∪縺吶・/li>
+            <li><strong>最初の利用時</strong>は <strong>招待コード → ユーザーネーム</strong> の順で進みます。一度その端末で通過してユーザーネームを作ると、次回以降は招待コードを省略できます。PINロック済みの名前は、PCでは再読み込み後の復帰時とユーザー切り替え時、スマホではユーザー切り替え時だけログイン前に4桁PINが必要です。</li>
+            <li>カードをクリック（スマホはタップ）すると、登録されたページが<strong>新しいタブ</strong>で開きます。</li>
+            <li><strong>PC：</strong>カードを<strong>右クリック</strong>すると「編集」「削除」メニューが表示されます。</li>
+            <li><strong>スマホ：</strong>カードを<strong>長押し</strong>すると「編集」「削除」メニューが表示されます。</li>
+            <li>画面上部の<strong>検索バー</strong>にキーワードを入力すると、カード名でリアルタイム検索できます。</li>
+            <li>オレンジの破線枠＋「URL未設定」バッジのカードは、まだリンク先が登録されていません。右クリック（長押し）→「編集」でURLを設定できます。</li>
           </ul>
         </div>
 
         <div class="guide-section">
-          <h4 class="guide-section-title"><span class="guide-icon">箝・/span> 縺頑ｰ励↓蜈･繧・/h4>
+          <h4 class="guide-section-title"><span class="guide-icon">⭐</span> お気に入り</h4>
           <ul class="guide-list">
-            <li><strong>PC・・/strong>繧ｫ繝ｼ繝峨↓繧ｫ繝ｼ繧ｽ繝ｫ繧貞粋繧上○繧九→蜿ｳ荳翫↓<strong>笘・・繧ｿ繝ｳ</strong>縺檎樟繧後∪縺吶ゅけ繝ｪ繝・け縺ｧ縺頑ｰ励↓蜈･繧顔匳骭ｲ/隗｣髯､縲・/li>
-            <li><strong>繧ｹ繝槭・・・/strong>繧ｫ繝ｼ繝峨ｒ髟ｷ謚ｼ縺・竊・縲後♀豌励↓蜈･繧顔匳骭ｲ/隗｣髯､縲阪ｒ驕ｸ謚槭＠縺ｾ縺吶・/li>
-            <li>繧ｫ繝・ざ繝ｪ蜷阪・蜿ｳ遶ｯ縺ｫ縺ゅｋ<strong>笘・・繧ｿ繝ｳ</strong>縺ｧ縺昴・繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ蜈ｨ菴薙ｒ縺ｾ縺ｨ繧√※縺頑ｰ励↓蜈･繧顔匳骭ｲ/隗｣髯､縺ｧ縺阪∪縺吶・/li>
-            <li>繧ｵ繧､繝峨ヰ繝ｼ・・C縺ｯ蟾ｦ遶ｯ・峨・<strong>縲後♀豌励↓蜈･繧翫・縺ｿ縲・/strong>繧偵け繝ｪ繝・け縺吶ｋ縺ｨ縲∫匳骭ｲ貂医∩縺ｮ繧ｫ繝ｼ繝峨□縺代ｒ陦ｨ遉ｺ縺励∪縺吶ゅｂ縺・ｸ蠎ｦ繧ｯ繝ｪ繝・け縺ｧ蜈ｨ陦ｨ遉ｺ縺ｫ謌ｻ繧翫∪縺吶・/li>
+            <li><strong>PC：</strong>カードにカーソルを合わせると右上に<strong>☆ボタン</strong>が現れます。クリックでお気に入り登録/解除。</li>
+            <li><strong>スマホ：</strong>カードを長押し → 「お気に入り登録/解除」を選択します。</li>
+            <li>カテゴリ名の右端にある<strong>☆ボタン</strong>でそのセクション全体をまとめてお気に入り登録/解除できます。</li>
+            <li>サイドバー（PCは左端）の<strong>「お気に入りのみ」</strong>をクリックすると、登録済みのカードだけを表示します。もう一度クリックで全表示に戻ります。</li>
           </ul>
         </div>
 
         <div class="guide-section">
-          <h4 class="guide-section-title"><span class="guide-icon">笨擾ｸ・/span> 繧ｫ繝ｼ繝峨・邱ｨ髮・/h4>
+          <h4 class="guide-section-title"><span class="guide-icon">✏️</span> カードの編集</h4>
           <ul class="guide-list">
-            <li>繧ｫ繝ｼ繝峨ｒ<strong>蜿ｳ繧ｯ繝ｪ繝・け 竊・縲檎ｷｨ髮・・/strong>縺ｧ繧ｫ繝ｼ繝牙錐繝ｻ繧｢繧､繧ｳ繝ｳ繝ｻURL繧貞､画峩縺ｧ縺阪∪縺吶・/li>
-            <li>繧ｫ繝ｼ繝峨ｒ<strong>蜿ｳ繧ｯ繝ｪ繝・け 竊・縲悟炎髯､縲・/strong>縺ｧ繧ｫ繝ｼ繝峨ｒ蜑企勁縺ｧ縺阪∪縺吶・/li>
-            <li>繧ｫ繝ｼ繝峨ｒ繝峨Λ繝・げ・・ラ繝ｭ繝・・縺吶ｋ縺ｨ<strong>蜷御ｸ繧ｫ繝・ざ繝ｪ蜀・・荳ｦ縺ｳ鬆・/strong>繧貞､画峩縺ｧ縺阪∪縺吶・/li>
-            <li>繧ｫ繝・ざ繝ｪ譛ｫ蟆ｾ縺ｮ<strong>縲鯉ｼ・繧ｫ繝ｼ繝峨ｒ霑ｽ蜉縲・/strong>繝懊ち繝ｳ縺ｧ譁ｰ縺励＞繧ｫ繝ｼ繝峨ｒ霑ｽ蜉縺ｧ縺阪∪縺吶・/li>
+            <li>カードを<strong>右クリック → 「編集」</strong>でカード名・アイコン・URLを変更できます。</li>
+            <li>カードを<strong>右クリック → 「削除」</strong>でカードを削除できます。</li>
+            <li>カードをドラッグ＆ドロップすると<strong>同一カテゴリ内の並び順</strong>を変更できます。</li>
+            <li>カテゴリ末尾の<strong>「＋ カードを追加」</strong>ボタンで新しいカードを追加できます。</li>
           </ul>
         </div>
 
         <div class="guide-section">
-          <h4 class="guide-section-title"><span class="guide-icon">刀</span> 螟夜Κ繝・・繝ｫ縺ｮ邱ｨ髮・/h4>
+          <h4 class="guide-section-title"><span class="guide-icon">📁</span> 外部ツールの編集</h4>
           <ul class="guide-list">
-            <li>螟夜Κ繝・・繝ｫ縺ｮ繧｢繧､繧ｳ繝ｳ繧・strong>蜿ｳ繧ｯ繝ｪ繝・け</strong>縺吶ｋ縺ｨ縲檎ｷｨ髮・阪悟炎髯､縲阪Γ繝九Η繝ｼ縺瑚｡ｨ遉ｺ縺輔ｌ縺ｾ縺吶・/li>
-            <li>螟夜Κ繝・・繝ｫ繧ｨ繝ｪ繧｢縺ｮ<strong>縲鯉ｼ・霑ｽ蜉縲阪・繧ｿ繝ｳ</strong>縺九ｉ繝励Μ繧ｻ繝・ヨ荳隕ｧ縺ｾ縺溘・繧ｫ繧ｹ繧ｿ繝逋ｻ骭ｲ縺ｧ繧｢繧､繧ｳ繝ｳ繧定ｿｽ蜉縺ｧ縺阪∪縺吶・/li>
-            <li>縲悟､ｪ髯ｽ蜈臥匱髮ｻ縲阪い繧､繧ｳ繝ｳ縺ｯ蝗ｺ螳夊｡ｨ遉ｺ縺ｧ蜑企勁縺ｧ縺阪∪縺帙ｓ縲・/li>
+            <li>外部ツールのアイコンを<strong>右クリック</strong>すると「編集」「削除」メニューが表示されます。</li>
+            <li>外部ツールエリアの<strong>「＋ 追加」ボタン</strong>からプリセット一覧またはカスタム登録でアイコンを追加できます。</li>
+            <li>「太陽光発電」アイコンは固定表示で削除できません。</li>
           </ul>
         </div>
 
         <div class="guide-section">
-          <h4 class="guide-section-title"><span class="guide-icon">翌・・/span> 繧ｫ繝・ざ繝ｪ繝ｻ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ縺ｮ謫堺ｽ・/h4>
+          <h4 class="guide-section-title"><span class="guide-icon">🗂️</span> カテゴリ・セクションの操作</h4>
           <ul class="guide-list">
-            <li>繧ｫ繝・ざ繝ｪ蜷肴ｨｪ縺ｮ<strong>驩帷ｭ・・繧ｿ繝ｳ</strong>縺ｧ繧ｫ繝・ざ繝ｪ蜷阪・繧｢繧､繧ｳ繝ｳ繝ｻ繧ｫ繝ｩ繝ｼ繧貞､画峩縺ｧ縺阪∪縺吶・/li>
-            <li>繝壹・繧ｸ荳矩Κ縺ｮ<strong>縲鯉ｼ・繧ｫ繝・ざ繝ｪ繧定ｿｽ蜉縲・/strong>縺ｧ蜈ｨ蜩｡蜈ｱ譛峨・譁ｰ縺励＞繧ｫ繝・ざ繝ｪ繧剃ｽ懈・縺ｧ縺阪∪縺吶・/li>
-            <li>繧ｫ繝ｼ繝峨′蟄伜惠縺吶ｋ繧ｫ繝・ざ繝ｪ縺ｯ蜑企勁縺ｧ縺阪∪縺帙ｓ・亥・縺ｫ繧ｫ繝ｼ繝峨ｒ蜑企勁縺励※縺上□縺輔＞・峨・/li>
+            <li>カテゴリ名横の<strong>鉛筆ボタン</strong>でカテゴリ名・アイコン・カラーを変更できます。</li>
+            <li>ページ下部の<strong>「＋ カテゴリを追加」</strong>で全員共有の新しいカテゴリを作成できます。</li>
+            <li>カードが存在するカテゴリは削除できません（先にカードを削除してください）。</li>
           </ul>
         </div>
 
         <div class="guide-section">
-          <h4 class="guide-section-title"><span class="guide-icon">竊包ｸ・/span> 繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ縺ｮ荳ｦ縺ｳ譖ｿ縺茨ｼ亥倶ｺｺ險ｭ螳夲ｼ・/h4>
+          <h4 class="guide-section-title"><span class="guide-icon">↕️</span> セクションの並び替え（個人設定）</h4>
           <ul class="guide-list">
-            <li>繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝繧定ｨｭ螳壹☆繧九→縲∝推繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ繝倥ャ繝繝ｼ蟾ｦ遶ｯ縺ｫ<strong>縲娯横縲阪ワ繝ｳ繝峨Ν</strong>縺瑚｡ｨ遉ｺ縺輔ｌ縺ｾ縺吶・/li>
-            <li>縺薙・繝上Φ繝峨Ν繧偵ラ繝ｩ繝・げ縺吶ｋ縺ｨ<strong>繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ縺ｮ陦ｨ遉ｺ鬆・ｒ閾ｪ蛻・□縺大､画峩</strong>縺ｧ縺阪∪縺吶・/li>
-                <li>荳ｦ縺ｳ鬆・・Supabase縺ｫ菫晏ｭ倥＆繧後ｋ縺溘ａ縲√Μ繝ｭ繝ｼ繝峨＠縺ｦ繧らｶｭ謖√＆繧後∪縺吶・/li>
+            <li>ユーザーネームを設定すると、各セクションヘッダー左端に<strong>「≡」ハンドル</strong>が表示されます。</li>
+            <li>このハンドルをドラッグすると<strong>セクションの表示順を自分だけ変更</strong>できます。</li>
+                <li>並び順はSupabaseに保存されるため、リロードしても維持されます。</li>
           </ul>
         </div>
 
         <div class="guide-section guide-section--admin">
-          <h4 class="guide-section-title"><span class="guide-icon">白</span> 繝槭う繧ｫ繝・ざ繝ｪ・亥倶ｺｺ蟆ら畑・・/h4>
+          <h4 class="guide-section-title"><span class="guide-icon">🔒</span> マイカテゴリ（個人専用）</h4>
           <ul class="guide-list">
-            <li>繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝繧定ｨｭ螳壹☆繧九→縲√・繝ｼ繧ｸ荳矩Κ縺ｫ<strong>縲鯉ｼ・繝槭う繧ｫ繝・ざ繝ｪ繧定ｿｽ蜉縲・/strong>繝懊ち繝ｳ縺瑚｡ｨ遉ｺ縺輔ｌ縺ｾ縺吶・/li>
-            <li>繝槭う繧ｫ繝・ざ繝ｪ縺ｯ<strong>閾ｪ蛻・□縺代↓陦ｨ遉ｺ</strong>縺輔ｌ縲∽ｻ悶・繝ｦ繝ｼ繧ｶ繝ｼ縺ｫ縺ｯ荳蛻・ｦ九∴縺ｾ縺帙ｓ縲・/li>
-            <li>繝槭う繧ｫ繝・ざ繝ｪ蜀・・繧ｫ繝ｼ繝峨・<strong>蜿ｳ繧ｯ繝ｪ繝・け縺ｧ邱ｨ髮・・蜑企勁</strong>縺ｧ縺阪∪縺吶・/li>
-            <li>繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ蜷肴ｨｪ縺ｮ<strong>驩帷ｭ・・繧ｿ繝ｳ</strong>縺ｧ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ閾ｪ菴薙ｒ邱ｨ髮・・蜑企勁縺ｧ縺阪∪縺吶・/li>
-                <li>繝・・繧ｿ縺ｯSupabase縺ｫ菫晏ｭ倥＆繧後ｋ縺溘ａ縲・strong>繝ｪ繝ｭ繝ｼ繝峨＠縺ｦ繧よｶ医∴縺ｾ縺帙ｓ</strong>縲・/li>
+            <li>ユーザーネームを設定すると、ページ下部に<strong>「＋ マイカテゴリを追加」</strong>ボタンが表示されます。</li>
+            <li>マイカテゴリは<strong>自分だけに表示</strong>され、他のユーザーには一切見えません。</li>
+            <li>マイカテゴリ内のカードは<strong>右クリックで編集・削除</strong>できます。</li>
+            <li>セクション名横の<strong>鉛筆ボタン</strong>でセクション自体を編集・削除できます。</li>
+                <li>データはSupabaseに保存されるため、<strong>リロードしても消えません</strong>。</li>
           </ul>
         </div>
 
         <div class="guide-section">
-          <h4 class="guide-section-title"><span class="guide-icon">側</span> 繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝險ｭ螳・/h4>
+          <h4 class="guide-section-title"><span class="guide-icon">👤</span> ユーザーネーム設定</h4>
           <ul class="guide-list">
-            <li>蛻晏屓繧｢繧ｯ繧ｻ繧ｹ譎ゅ↓繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝險ｭ螳壹ム繧､繧｢繝ｭ繧ｰ縺瑚｡ｨ遉ｺ縺輔ｌ縺ｾ縺吶・/li>
-            <li>繝倥ャ繝繝ｼ蜿ｳ縺ｮ<strong>縲交汨､ 蜷榊燕縲阪・繧ｿ繝ｳ</strong>繧偵け繝ｪ繝・け縺吶ｋ縺ｨ縲√・繝ｭ繝輔ぅ繝ｼ繝ｫ險ｭ螳壹′髢九″縺ｾ縺吶よ園螻樣Κ鄂ｲ繝ｻ蠖ｹ蜑ｲ縺ｮ險ｭ螳壹ｄ縲√◎縺薙°繧峨・繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝螟画峩繧ゅ〒縺阪∪縺吶・/li>
-            <li>蜷後§繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝繧貞挨縺ｮPC縺ｧ蜈･蜉帙☆繧後・縲√そ繧ｯ繧ｷ繝ｧ繝ｳ鬆・ｺ上ｄ繝槭う繧ｫ繝・ざ繝ｪ繧貞ｼ輔″邯吶￡縺ｾ縺吶・/li>
-            <li>繝励Ο繝輔ぅ繝ｼ繝ｫ縺ｧ<strong>謇螻樣Κ鄂ｲ縺ｨ蠖ｹ蜑ｲ</strong>繧貞・繧後ｋ縺ｨ縲√ム繝・す繝･繝懊・繝牙・鬆ｭ縺ｮ繝輔か繝ｼ繧ｫ繧ｹ陦ｨ遉ｺ縺瑚・蛻・髄縺代↓蛻・ｊ譖ｿ繧上ｊ縺ｾ縺吶・/li>
+            <li>初回アクセス時にユーザーネーム設定ダイアログが表示されます。</li>
+            <li>ヘッダー右の<strong>「👤 名前」ボタン</strong>をクリックすると、プロフィール設定が開きます。所属部署・役割の設定や、そこからのユーザーネーム変更もできます。</li>
+            <li>同じユーザーネームを別のPCで入力すれば、セクション順序やマイカテゴリを引き継げます。</li>
+            <li>プロフィールで<strong>所属部署と役割</strong>を入れると、ダッシュボード先頭のフォーカス表示が自分向けに切り替わります。</li>
           </ul>
         </div>
 
         <div class="guide-section">
-          <h4 class="guide-section-title"><span class="guide-icon">討</span> 縺顔衍繧峨○謗ｲ遉ｺ譚ｿ</h4>
+          <h4 class="guide-section-title"><span class="guide-icon">📢</span> お知らせ掲示板</h4>
           <ul class="guide-list">
-            <li>驛ｨ鄂ｲ蜀・・縺顔衍繧峨○縺後き繝ｼ繝我ｸ企Κ縺ｫ陦ｨ遉ｺ縺輔ｌ縺ｾ縺吶・/li>
-            <li><strong>縲碁㍾隕√阪ヰ繝・ず・郁ｵ､・・/strong>縺ｮ縺顔衍繧峨○縺ｯ蜆ｪ蜈亥ｺｦ縺碁ｫ倥＞蜀・ｮｹ縺ｧ縺吶・/li>
-            <li>縺顔衍繧峨○谺・・<strong>縲鯉ｼ・縺顔衍繧峨○繧定ｿｽ蜉縲・/strong>縺ｧ蜈ｨ菴灘髄縺代∪縺溘・驛ｨ鄂ｲ蜷代￠縺ｮ縺顔衍繧峨○繧呈兜遞ｿ縺ｧ縺阪∪縺吶・/li>
-            <li>譌｢蟄倥・縺顔衍繧峨○縺ｮ<strong>驩帷ｭ・い繧､繧ｳ繝ｳ</strong>縺ｧ邱ｨ髮・・蜑企勁縺ｧ縺阪∪縺吶・/li>
+            <li>部署内のお知らせがカード上部に表示されます。</li>
+            <li><strong>「重要」バッジ（赤）</strong>のお知らせは優先度が高い内容です。</li>
+            <li>お知らせ欄の<strong>「＋ お知らせを追加」</strong>で全体向けまたは部署向けのお知らせを投稿できます。</li>
+            <li>既存のお知らせの<strong>鉛筆アイコン</strong>で編集・削除できます。</li>
           </ul>
         </div>
 
         <div class="guide-section">
-          <h4 class="guide-section-title"><span class="guide-icon">欄・・/span> 繧ｫ繝ｬ繝ｳ繝繝ｼ繝ｻ蜍､蜍吝・螳ｹ陦ｨ</h4>
+          <h4 class="guide-section-title"><span class="guide-icon">🗓️</span> カレンダー・勤務内容表</h4>
           <ul class="guide-list">
-            <li>縲後き繝ｬ繝ｳ繝繝ｼ繝ｻ蜍､諤縲阪Δ繝ｼ繝繝ｫ縺ｮ蛟倶ｺｺ繧ｿ繝門・縺ｫ縲・strong>蜍､諤繧ｫ繝ｬ繝ｳ繝繝ｼ / 蜍､蜍吝・螳ｹ陦ｨ / 蜍､蜍吝・螳ｹ髮・ｨ郁｡ｨ / 逋ｻ骭ｲ迴ｾ蝣ｴ</strong>縺ｮ4縺､縺ｮ繧ｵ繝悶ち繝悶′縺ゅｊ縺ｾ縺吶・/li>
-            <li><strong>蜍､蜍吝・螳ｹ陦ｨ</strong>縺ｯ21譌･邱繧・ｼ亥燕譛・1譌･縲懷ｽ捺怦20譌･・峨〒縲∵律縺斐→縺ｮ迴ｾ蝣ｴ蟾･謨ｰ繧・.5譎る俣蛻ｻ縺ｿ縺ｧ蜈･蜉帙〒縺阪∪縺吶・/li>
-            <li>菴懈･ｭ迴ｾ蝣ｴ縺ｨ蟾･謨ｰ縺ｮ蜈･蜉帙・縲∝共諤繧ｫ繝ｬ繝ｳ繝繝ｼ縺ｮ譌･莉倩ｩｳ邏ｰ繝代ロ繝ｫ蜀・〒陦後＞縺ｾ縺吶ら樟蝣ｴ繧ｳ繝ｼ繝画､懃ｴ｢縲∵怙霑台ｽｿ縺｣縺溽樟蝣ｴ縺ｮ蜀埼∈謚槭・譎る俣雜・℃譎ゅ・譌ｩ蜃ｺ繝ｻ谿区･ｭ蜑ｲ繧頑険繧翫↓蟇ｾ蠢懊＠縺ｦ縺・∪縺吶・/li>
-            <li>蜈ｱ譛峨き繝ｬ繝ｳ繝繝ｼ縺ｧ險ｭ螳壹＠縺滉ｼ夂､ｾ莨第律繝ｻ險育判莉倅ｸ弱・縲∝倶ｺｺ繧ｫ繝ｬ繝ｳ繝繝ｼ縺ｮ譌･隧ｳ邏ｰ縺ｨ蜍､蜍吝・螳ｹ陦ｨ/蜍､蜍吝・螳ｹ髮・ｨ郁｡ｨ縺ｫ蜷梧悄陦ｨ遉ｺ縺輔ｌ縺ｾ縺吶・/li>
-            <li><strong>蜍､蜍吝・螳ｹ髮・ｨ郁｡ｨ</strong>縺ｧ縺ｯ蜈ｨ繝ｦ繝ｼ繧ｶ繝ｼ縺ｮ蜈･蜉帷ｵ先棡繧堤樟蝣ｴ蛻･繝ｻ莠ｺ蛻･縺ｫ髮・ｨ医＠縲∝ｷ･謨ｰ・域凾髢難ｼ峨ｒ遒ｺ隱阪〒縺阪∪縺吶りｪｭ縺ｿ蜿悶ｊ繧呈椛縺医ｋ縺溘ａ縲∝ｿ・ｦ√↑譎ゅ□縺代碁寔險医☆繧九阪ｒ謚ｼ縺励※隱ｭ縺ｿ霎ｼ縺ｿ縺ｾ縺吶・/li>
-            <li><strong>蜍､蜍吝・螳ｹ髮・ｨ郁｡ｨ</strong>縺ｯ髮・ｨ亥ｾ後↓CSV蜃ｺ蜉帙→蜊ｰ蛻ｷ繧貞茜逕ｨ縺ｧ縺阪∪縺吶・/li>
-                <li><strong>逋ｻ骭ｲ迴ｾ蝣ｴ</strong>繧ｿ繝悶〒迴ｾ蝣ｴ繧ｳ繝ｼ繝峨・迴ｾ蝣ｴ蜷阪ｒ霑ｽ蜉/邱ｨ髮・蜑企勁縺ｧ縺阪∪縺呻ｼ・upabase縺ｫ菫晏ｭ假ｼ峨・/li>
-            <li>逋ｻ骭ｲ迴ｾ蝣ｴ繧ｿ繝悶・<strong>縲窪xcel隗｣譫舌＠縺ｦ蜿冶ｾｼ縲・/strong>縺ｧ縲∫樟蝣ｴ繝槭せ繧ｿ繧剃ｸ諡ｬ逋ｻ骭ｲ縺ｧ縺阪∪縺呻ｼ磯㍾隍・さ繝ｼ繝峨・蜷咲ｧｰ繧定・蜍慕ｵｱ蜷茨ｼ峨・/li>
-            <li>驛ｨ髢髢謎ｾ晞ｼ繝ｻ繧ｿ繧ｹ繧ｯ繝ｻ驪ｼ譚千匱豕ｨ繝ｻ蛟倶ｺｺ繧ｫ繝ｬ繝ｳ繝繝ｼ縺ｧ縺ｯ<strong>迚ｩ莉ｶNo・育樟蝣ｴ繧ｳ繝ｼ繝会ｼ・/strong>繧貞・繧後※縺翫￥縺ｨ縲∝ｾ後°繧臥黄莉ｶ縺斐→縺ｫ霑ｽ縺・ｄ縺吶￥縺ｪ繧翫∪縺吶るΚ髢髢謎ｾ晞ｼ縺ｨ繧ｿ繧ｹ繧ｯ縺ｯ蜷・ｸ隕ｧ縺ｮ荳企Κ縺九ｉ迚ｩ莉ｶNo縺ｧ邨槭ｊ霎ｼ縺ｿ繧ゅ〒縺阪∪縺吶・/li>
+            <li>「カレンダー・勤怠」モーダルの個人タブ内に、<strong>勤怠カレンダー / 勤務内容表 / 勤務内容集計表 / 登録現場</strong>の4つのサブタブがあります。</li>
+            <li><strong>勤務内容表</strong>は21日締め（前月21日〜当月20日）で、日ごとの現場工数を0.5時間刻みで入力できます。</li>
+            <li>作業現場と工数の入力は、勤怠カレンダーの日付詳細パネル内で行います。現場コード検索、最近使った現場の再選択、8時間超過時の早出・残業割り振りに対応しています。</li>
+            <li>共有カレンダーで設定した会社休日・計画付与は、個人カレンダーの日詳細と勤務内容表/勤務内容集計表に同期表示されます。</li>
+            <li><strong>勤務内容集計表</strong>では全ユーザーの入力結果を現場別・人別に集計し、工数（時間）を確認できます。読み取りを抑えるため、必要な時だけ「集計する」を押して読み込みます。</li>
+            <li><strong>勤務内容集計表</strong>は集計後にCSV出力と印刷を利用できます。</li>
+                <li><strong>登録現場</strong>タブで現場コード・現場名を追加/編集/削除できます（Supabaseに保存）。</li>
+            <li>登録現場タブの<strong>「Excel解析して取込」</strong>で、現場マスタを一括登録できます（重複コードは名称を自動統合）。</li>
+            <li>部門間依頼・タスク・鋼材発注・個人カレンダーでは<strong>物件No（現場コード）</strong>を入れておくと、後から物件ごとに追いやすくなります。部門間依頼とタスクは各一覧の上部から物件Noで絞り込みもできます。</li>
           </ul>
         </div>
 
         <div class="guide-section">
-          <h4 class="guide-section-title"><span class="guide-icon">笘・・/span> 螟ｩ豌励・螟ｪ髯ｽ蜈臥匱髮ｻ繝代ロ繝ｫ</h4>
+          <h4 class="guide-section-title"><span class="guide-icon">☀️</span> 天気・太陽光発電パネル</h4>
           <ul class="guide-list">
-            <li>螟夜Κ繝・・繝ｫ縺ｮ<strong>縲悟､ｪ髯ｽ蜈臥匱髮ｻ縲阪い繧､繧ｳ繝ｳ</strong>繧偵け繝ｪ繝・け縺吶ｋ縺ｨ繝代ロ繝ｫ縺悟ｱ暮幕縺輔ｌ縺ｾ縺吶・/li>
-            <li><strong>迴ｾ蝨ｨ縺ｮ豌玲ｸｩ繝ｻ貉ｿ蠎ｦ繝ｻ鬚ｨ騾溘・菴捺─貂ｩ蠎ｦ</strong>縺ｨ24譎る俣莠亥ｱ縺瑚｡ｨ遉ｺ縺輔ｌ縺ｾ縺吶・/li>
-            <li><strong>辭ｱ荳ｭ逞・些髯ｺ蠎ｦ繝舌リ繝ｼ</strong>縺ｧ菴懈･ｭ蜑阪・螳牙・遒ｺ隱阪′縺ｧ縺阪∪縺呻ｼ亥些髯ｺ繝ｻ蜴ｳ驥崎ｭｦ謌呈凾縺ｯ轤ｹ貊・ｼ峨・/li>
-            <li>繧ｿ繝悶〒<strong>縲碁岑髮ｲ繝ｬ繝ｼ繝繝ｼ縲・/strong>縺ｨ<strong>縲悟､ｪ髯ｽ蜈臥匱髮ｻ繝｢繝九ち繝ｪ繝ｳ繧ｰ縲・/strong>繧貞・繧頑崛縺医ｉ繧後∪縺吶・/li>
+            <li>外部ツールの<strong>「太陽光発電」アイコン</strong>をクリックするとパネルが展開されます。</li>
+            <li><strong>現在の気温・湿度・風速・体感温度</strong>と24時間予報が表示されます。</li>
+            <li><strong>熱中症危険度バナー</strong>で作業前の安全確認ができます（危険・厳重警戒時は点滅）。</li>
+            <li>タブで<strong>「雨雲レーダー」</strong>と<strong>「太陽光発電モニタリング」</strong>を切り替えられます。</li>
           </ul>
         </div>
 
         <div class="guide-section">
-          <h4 class="guide-section-title"><span class="guide-icon">博</span> 迚ｩ莉ｶNo縺ｾ縺ｨ繧・/h4>
+          <h4 class="guide-section-title"><span class="guide-icon">🔎</span> 物件Noまとめ</h4>
           <ul class="guide-list">
-            <li>繧ｵ繧､繝峨ヰ繝ｼ縺ｮ<strong>縲檎黄莉ｶNo縺ｾ縺ｨ繧√・/strong>縺九ｉ縲∝酔縺倡黄莉ｶNo縺ｫ縺ｲ繧ゅ▼縺丈ｾ晞ｼ繝ｻ繧ｿ繧ｹ繧ｯ繝ｻ驪ｼ譚千匱豕ｨ繝ｻ菴懈･ｭ險倬鹸繧呈ｨｪ譁ｭ縺励※遒ｺ隱阪〒縺阪∪縺吶・strong>迴ｾ蝣ｴ蜷阪°繧牙呵｣懊ｒ蜃ｺ縺励※讀懃ｴ｢</strong>縺吶ｋ縺薙→繧ゅ〒縺阪∪縺吶・/li>
-            <li>荳閾ｴ縺励◆繝・・繧ｿ莉ｶ謨ｰ繧定ｦ九↑縺後ｉ縲・strong>萓晞ｼ逕ｻ髱｢ / 繧ｿ繧ｹ繧ｯ逕ｻ髱｢ / 逋ｺ豕ｨ螻･豁ｴ / 蜍､蜍吝・螳ｹ陦ｨ</strong>縺ｸ縺昴・縺ｾ縺ｾ遘ｻ蜍輔〒縺阪∪縺吶・/li>
-            <li>菴懈･ｭ險倬鹸縺ｯ迴ｾ蝣ｴ繧ｳ繝ｼ繝峨・繝ｼ繧ｹ縺ｮ陬懷ｮ後ｂ蜈･繧九◆繧√∫黄莉ｶNo閾ｪ蜍募・蜉帛燕縺ｮ逶ｴ霑代ョ繝ｼ繧ｿ繧りｿｽ縺・ｄ縺吶￥縺励※縺・∪縺吶・/li>
+            <li>サイドバーの<strong>「物件Noまとめ」</strong>から、同じ物件Noにひもづく依頼・タスク・鋼材発注・作業記録を横断して確認できます。<strong>現場名から候補を出して検索</strong>することもできます。</li>
+            <li>一致したデータ件数を見ながら、<strong>依頼画面 / タスク画面 / 発注履歴 / 勤務内容表</strong>へそのまま移動できます。</li>
+            <li>作業記録は現場コードベースの補完も入るため、物件No自動入力前の直近データも追いやすくしています。</li>
           </ul>
         </div>
 
-        <p class="guide-version">譛邨よ峩譁ｰ: 2026蟷ｴ3譛・/p>
+        <p class="guide-version">最終更新: 2026年3月</p>
       </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="auth-prelogin-modal">
     <div class="modal-glass auth-access-modal">
-      <h3 class="modal-title" id="auth-prelogin-title"><i class="material-symbols-rounded" aria-hidden="true">lock</i> 繝ｭ繧ｰ繧､繝ｳ蜑恒IN遒ｺ隱・/h3>
-      <p class="modal-desc" id="auth-prelogin-desc">縺薙・繝ｦ繝ｼ繧ｶ繝ｼ縺ｯPIN菫晁ｭｷ縺輔ｌ縺ｦ縺・∪縺吶・譯√・PIN繧貞・蜉帙☆繧九→繝ｭ繧ｰ繧､繝ｳ縺ｧ縺阪∪縺吶・/p>
+      <h3 class="modal-title" id="auth-prelogin-title"><i class="material-symbols-rounded" aria-hidden="true">lock</i> ログイン前PIN確認</h3>
+      <p class="modal-desc" id="auth-prelogin-desc">このユーザーはPIN保護されています。4桁のPINを入力するとログインできます。</p>
       <div class="auth-prelogin-user" id="auth-prelogin-username"></div>
       <div class="form-group">
         <label class="form-label" for="auth-prelogin-input">PIN</label>
-        <input type="password" id="auth-prelogin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="繝ｻ繝ｻ繝ｻ繝ｻ" autocomplete="off">
+        <input type="password" id="auth-prelogin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・" autocomplete="off">
       </div>
       <div class="security-error" id="auth-prelogin-error" hidden></div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="auth-prelogin-cancel">蛻･縺ｮ蜷榊燕縺ｧ繝ｭ繧ｰ繧､繝ｳ</button>
+        <button class="btn-modal-secondary" id="auth-prelogin-cancel">別の名前でログイン</button>
         <button class="btn-modal-primary" id="auth-prelogin-submit">
           <i class="fa-solid fa-spinner fa-spin" id="auth-prelogin-spinner" hidden></i>
-          <span>PIN繧堤｢ｺ隱阪☆繧・/span>
+          <span>PINを確認する</span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 繝懊ヨ繝繝翫ン・医せ繝槭・逕ｨ・・=================== -->
+  <!-- ==================== ボトムナビ（スマホ用）==================== -->
   <nav class="bottom-nav" id="bottom-nav">
     <button class="bottom-nav-item" id="bnav-home">
       <i class="material-symbols-rounded" aria-hidden="true">home</i>
-      <span>繝帙・繝</span>
+      <span>ホーム</span>
     </button>
     <button class="bottom-nav-item" id="bnav-chat">
       <span class="bnav-icon-wrap">
         <i class="material-symbols-rounded" aria-hidden="true">chat</i>
         <span id="bnav-chat-badge" class="bnav-badge" hidden></span>
       </span>
-      <span>繝√Ε繝・ヨ</span>
+      <span>チャット</span>
     </button>
     <button class="bottom-nav-item" id="bnav-notice">
       <span class="bnav-icon-wrap">
         <i class="material-symbols-rounded" aria-hidden="true">notifications</i>
         <span id="bnav-notice-badge" class="bnav-badge" hidden></span>
       </span>
-      <span>縺顔衍繧峨○</span>
+      <span>お知らせ</span>
     </button>
     <button class="bottom-nav-item" id="bnav-task">
       <span class="bnav-icon-wrap">
         <i class="material-symbols-rounded" aria-hidden="true">checklist</i>
         <span id="bnav-task-badge" class="bnav-badge" hidden></span>
       </span>
-      <span>繧ｿ繧ｹ繧ｯ</span>
+      <span>タスク</span>
     </button>
     <button class="bottom-nav-item" id="bnav-more">
       <i class="material-symbols-rounded" aria-hidden="true">more_horiz</i>
-      <span>縺昴・莉・/span>
+      <span>その他</span>
     </button>
   </nav>
 
-  <!-- ==================== 縺昴・莉悶ラ繝ｭ繝ｯ繝ｼ・医せ繝槭・逕ｨ・・=================== -->
+  <!-- ==================== その他ドロワー（スマホ用）==================== -->
   <div class="more-drawer" id="more-drawer" hidden>
     <div class="more-drawer-backdrop" id="more-drawer-backdrop"></div>
     <div class="more-drawer-panel">
       <div class="more-drawer-header">
-        <span>縺昴・莉悶・讖溯・</span>
+        <span>その他の機能</span>
         <button class="more-drawer-close" id="more-drawer-close"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
       <div class="more-drawer-grid">
         <button class="more-drawer-item" data-target="btn-user">
           <i class="material-symbols-rounded" aria-hidden="true">person</i>
-          <span>繝ｦ繝ｼ繧ｶ繝ｼ險ｭ螳・/span>
+          <span>ユーザー設定</span>
         </button>
         <button class="more-drawer-item" data-target="btn-calendar">
           <i class="fa-regular fa-calendar"></i>
-          <span>繧ｫ繝ｬ繝ｳ繝繝ｼ</span>
+          <span>カレンダー</span>
         </button>
         <button class="more-drawer-item" data-target="btn-favorites-only">
           <i class="fa-regular fa-star"></i>
-          <span>縺頑ｰ励↓蜈･繧翫・縺ｿ</span>
+          <span>お気に入りのみ</span>
         </button>
         <button class="more-drawer-item" data-target="btn-reqboard">
           <span class="mdr-icon-wrap">
             <i class="fa-solid fa-clipboard-list"></i>
             <span id="mdr-req-badge" class="mdr-badge" hidden></span>
           </span>
-          <span>驛ｨ鄂ｲ髢薙・萓晞ｼ</span>
+          <span>部署間の依頼</span>
         </button>
         <button class="more-drawer-item" data-target="btn-email-assist">
           <i class="fa-solid fa-envelope-open-text"></i>
-          <span>繝｡繝ｼ繝ｫ逕滓・AI</span>
+          <span>メール生成AI</span>
         </button>
         <button class="more-drawer-item" data-target="btn-order-launch">
           <i class="fa-solid fa-boxes-stacked"></i>
-          <span>驪ｼ譚千匱豕ｨ</span>
+          <span>鋼材発注</span>
         </button>
         <button class="more-drawer-item" data-target="btn-property-summary">
           <i class="fa-solid fa-magnifying-glass-chart"></i>
-          <span>迚ｩ莉ｶNo縺ｾ縺ｨ繧・/span>
+          <span>物件Noまとめ</span>
         </button>
         <button class="more-drawer-item" data-target="ft-fab">
           <i class="fa-solid fa-file-arrow-up"></i>
-          <span>繝輔ぃ繧､繝ｫ霆｢騾・/span>
+          <span>ファイル転送</span>
         </button>
         <button class="more-drawer-item" data-target="settings-fab">
           <i class="material-symbols-rounded" aria-hidden="true">settings</i>
-          <span>陦ｨ遉ｺ險ｭ螳・/span>
+          <span>表示設定</span>
         </button>
         <button class="more-drawer-item" data-target="help-fab">
           <i class="fa-solid fa-question"></i>
-          <span>繝倥Ν繝・/span>
+          <span>ヘルプ</span>
         </button>
         <button class="more-drawer-item mdr-lock-item" data-target="btn-lock-header" hidden>
           <i class="material-symbols-rounded" aria-hidden="true">lock</i>
-          <span>繝ｭ繝・け</span>
+          <span>ロック</span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 繝ｭ繝・け逕ｻ髱｢ ==================== -->
+  <!-- ==================== ロック画面 ==================== -->
   <div id="lock-screen" class="lock-screen" hidden>
     <div class="lock-clock" id="lock-clock"></div>
     <div class="lock-avatar" id="lock-avatar"></div>
@@ -1237,7 +1237,7 @@
     <div class="lock-pin-dots" id="lock-pin-dots">
       <span></span><span></span><span></span><span></span>
     </div>
-    <div class="lock-pin-error" id="lock-pin-error" hidden>PIN縺碁＆縺・∪縺・/div>
+    <div class="lock-pin-error" id="lock-pin-error" hidden>PINが違います</div>
     <div class="lock-numpad">
       <button class="lock-key" data-digit="1">1</button>
       <button class="lock-key" data-digit="2">2</button>
@@ -1254,27 +1254,27 @@
     </div>
     <div class="lock-switch-user">
       <button class="btn-lock-switch" id="btn-lock-switch-user">
-        <i class="fa-solid fa-right-left"></i> 蛻･縺ｮ繝ｦ繝ｼ繧ｶ繝ｼ縺ｨ縺励※邯壹￠繧・
+        <i class="fa-solid fa-right-left"></i> 別のユーザーとして続ける
       </button>
     </div>
   </div>
 
-  <!-- ==================== 繧ｻ繧ｭ繝･繝ｪ繝・ぅ險ｭ螳壹Δ繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== セキュリティ設定モーダル ==================== -->
   <div class="modal-overlay" id="security-modal">
     <div class="modal-glass security-modal-inner">
-      <h3 class="modal-title"><i class="fa-solid fa-shield-halved"></i> 繧ｻ繧ｭ繝･繝ｪ繝・ぅ險ｭ螳・/h3>
+      <h3 class="modal-title"><i class="fa-solid fa-shield-halved"></i> セキュリティ設定</h3>
       <div class="security-recommend-box" id="security-recommend-box" hidden>
         <i class="material-symbols-rounded" aria-hidden="true">info</i>
-        <span id="security-recommend-text">縺ｪ繧翫☆縺ｾ縺鈴亟豁｢縺ｮ縺溘ａ縲￣IN繝ｭ繝・け險ｭ螳壹ｒ縺翫☆縺吶ａ縺励∪縺吶・/span>
+        <span id="security-recommend-text">なりすまし防止のため、PINロック設定をおすすめします。</span>
       </div>
 
-      <!-- 竭 繝ｭ繝・け讖溯・ ON/OFF 繝医げ繝ｫ -->
+      <!-- ① ロック機能 ON/OFF トグル -->
       <div class="security-row">
         <div class="security-row-left">
           <i class="material-symbols-rounded" aria-hidden="true">lock</i>
           <div>
-            <div class="security-row-title">PIN繝ｭ繝・け讖溯・</div>
-            <div class="security-row-desc">繧ｪ繝ｳ縺ｫ縺吶ｋ縺ｨ繝ｭ繝・け繝ｻ閾ｪ蜍輔Ο繝・け縺梧怏蜉ｹ縺ｫ縺ｪ繧翫∪縺・/div>
+            <div class="security-row-title">PINロック機能</div>
+            <div class="security-row-desc">オンにするとロック・自動ロックが有効になります</div>
           </div>
         </div>
         <label class="toggle-switch">
@@ -1283,185 +1283,185 @@
         </label>
       </div>
 
-      <!-- 竭｡ 閾ｪ蜍輔Ο繝・け譎る俣・域ｩ溯・ON縺ｮ縺ｨ縺阪・縺ｿ陦ｨ遉ｺ・・-->
+      <!-- ② 自動ロック時間（機能ONのときのみ表示） -->
       <div class="security-autolock-section" id="security-autolock-section" hidden>
-        <div class="security-subsection-title"><i class="fa-solid fa-clock"></i> 閾ｪ蜍輔Ο繝・け縺ｾ縺ｧ縺ｮ譎る俣</div>
+        <div class="security-subsection-title"><i class="fa-solid fa-clock"></i> 自動ロックまでの時間</div>
         <div class="autolock-time-grid" id="autolock-time-grid">
-          <button class="autolock-time-btn" data-minutes="1">1蛻・/button>
-          <button class="autolock-time-btn" data-minutes="3">3蛻・/button>
-          <button class="autolock-time-btn active" data-minutes="5">5蛻・/button>
-          <button class="autolock-time-btn" data-minutes="10">10蛻・/button>
-          <button class="autolock-time-btn" data-minutes="30">30蛻・/button>
+          <button class="autolock-time-btn" data-minutes="1">1分</button>
+          <button class="autolock-time-btn" data-minutes="3">3分</button>
+          <button class="autolock-time-btn active" data-minutes="5">5分</button>
+          <button class="autolock-time-btn" data-minutes="10">10分</button>
+          <button class="autolock-time-btn" data-minutes="30">30分</button>
         </div>
 
-        <!-- 竭｢ PIN險ｭ螳・-->
-        <div class="security-subsection-title" style="margin-top:14px"><i class="fa-solid fa-key"></i> PIN逡ｪ蜿ｷ</div>
+        <!-- ③ PIN設定 -->
+        <div class="security-subsection-title" style="margin-top:14px"><i class="fa-solid fa-key"></i> PIN番号</div>
 
-        <!-- PIN譛ｪ險ｭ螳・-->
+        <!-- PIN未設定 -->
         <div id="security-setup-area">
-          <p class="security-hint-text">4譯√・PIN繧定ｨｭ螳壹＠縺ｦ縺上□縺輔＞縲ゅΟ繝・け隗｣髯､譎ゅ↓菴ｿ逕ｨ縺励∪縺吶・/p>
+          <p class="security-hint-text">4桁のPINを設定してください。ロック解除時に使用します。</p>
           <div class="form-group">
-            <label class="form-label">譁ｰ縺励＞PIN・・譯・ｼ・/label>
-            <input type="password" id="new-pin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="繝ｻ繝ｻ繝ｻ繝ｻ">
+            <label class="form-label">新しいPIN（4桁）</label>
+            <input type="password" id="new-pin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・">
           </div>
           <div class="form-group">
-            <label class="form-label">遒ｺ隱・/label>
-            <input type="password" id="confirm-pin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="繝ｻ繝ｻ繝ｻ繝ｻ">
+            <label class="form-label">確認</label>
+            <input type="password" id="confirm-pin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・">
           </div>
           <div class="security-error" id="security-pin-error" hidden></div>
-          <button class="btn-modal-primary" id="btn-set-pin" style="width:100%">PIN繧定ｨｭ螳壹☆繧・/button>
+          <button class="btn-modal-primary" id="btn-set-pin" style="width:100%">PINを設定する</button>
         </div>
 
-        <!-- PIN險ｭ螳壽ｸ医∩ -->
+        <!-- PIN設定済み -->
         <div id="security-manage-area" hidden>
           <div class="security-pin-set-badge">
-            <i class="fa-solid fa-circle-check"></i> PIN縺瑚ｨｭ螳壹＆繧後※縺・∪縺・
+            <i class="fa-solid fa-circle-check"></i> PINが設定されています
           </div>
           <div class="form-group" style="margin-top:10px">
-            <label class="form-label">迴ｾ蝨ｨ縺ｮPIN・亥､画峩繝ｻ隗｣髯､縺吶ｋ縺ｫ縺ｯ蜈･蜉幢ｼ・/label>
-            <input type="password" id="current-pin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="繝ｻ繝ｻ繝ｻ繝ｻ">
+            <label class="form-label">現在のPIN（変更・解除するには入力）</label>
+            <input type="password" id="current-pin-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・">
           </div>
           <div class="security-error" id="security-current-error" hidden></div>
           <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
-            <button class="btn-modal-danger" id="btn-remove-pin">PIN繧定ｧ｣髯､縺吶ｋ</button>
-            <button class="btn-modal-primary" id="btn-change-pin">PIN繧貞､画峩縺吶ｋ</button>
+            <button class="btn-modal-danger" id="btn-remove-pin">PINを解除する</button>
+            <button class="btn-modal-primary" id="btn-change-pin">PINを変更する</button>
           </div>
         </div>
       </div>
 
       <div class="modal-actions" style="margin-top:16px">
-        <button class="btn-modal-secondary" id="security-cancel">髢峨§繧・/button>
+        <button class="btn-modal-secondary" id="security-cancel">閉じる</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 邂｡逅・・ヱ繝阪Ν 繝｢繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== 管理者パネル モーダル ==================== -->
   <div class="modal-overlay" id="admin-modal">
     <div class="modal-glass admin-modal-inner">
-      <h3 class="modal-title"><i class="fa-solid fa-user-shield"></i> 邂｡逅・・ヱ繝阪Ν</h3>
+      <h3 class="modal-title"><i class="fa-solid fa-user-shield"></i> 管理者パネル</h3>
 
-      <!-- 邂｡逅・・ｪ崎ｨｼ -->
+      <!-- 管理者認証 -->
       <div id="admin-auth-area">
-        <p class="modal-desc">邂｡逅・・IN繧貞・蜉帙＠縺ｦ縺上□縺輔＞縲・/p>
+        <p class="modal-desc">管理者PINを入力してください。</p>
         <div class="form-group">
-          <label class="form-label">邂｡逅・・IN</label>
-          <input type="password" id="admin-pin-input" class="form-input pin-input" maxlength="6" inputmode="numeric" placeholder="繝ｻ繝ｻ繝ｻ繝ｻ">
+          <label class="form-label">管理者PIN</label>
+          <input type="password" id="admin-pin-input" class="form-input pin-input" maxlength="6" inputmode="numeric" placeholder="・・・・">
         </div>
-        <div class="security-error" id="admin-auth-error" hidden>PIN縺碁＆縺・∪縺・/div>
+        <div class="security-error" id="admin-auth-error" hidden>PINが違います</div>
         <div class="modal-actions">
-          <button class="btn-modal-secondary" id="admin-cancel">髢峨§繧・/button>
-          <button class="btn-modal-primary" id="admin-auth-btn">隱崎ｨｼ縺吶ｋ</button>
+          <button class="btn-modal-secondary" id="admin-cancel">閉じる</button>
+          <button class="btn-modal-primary" id="admin-auth-btn">認証する</button>
         </div>
       </div>
 
-      <!-- 邂｡逅・・IN蛻晏屓險ｭ螳夲ｼ域悴險ｭ螳壽凾縺ｮ縺ｿ陦ｨ遉ｺ・・-->
+      <!-- 管理者PIN初回設定（未設定時のみ表示） -->
       <div id="admin-setup-area" hidden>
-        <p class="modal-desc">邂｡逅・・IN縺梧悴險ｭ螳壹〒縺吶よ眠縺励＞邂｡逅・・IN繧定ｨｭ螳壹＠縺ｦ縺上□縺輔＞縲・/p>
+        <p class="modal-desc">管理者PINが未設定です。新しい管理者PINを設定してください。</p>
         <div class="form-group">
-          <label class="form-label">譁ｰ縺励＞邂｡逅・・IN・・縲・譯・ｼ・/label>
-          <input type="password" id="admin-new-pin" class="form-input pin-input" maxlength="6" inputmode="numeric" placeholder="繝ｻ繝ｻ繝ｻ繝ｻ">
+          <label class="form-label">新しい管理者PIN（4〜6桁）</label>
+          <input type="password" id="admin-new-pin" class="form-input pin-input" maxlength="6" inputmode="numeric" placeholder="・・・・">
         </div>
         <div class="form-group">
-          <label class="form-label">遒ｺ隱・/label>
-          <input type="password" id="admin-new-pin-confirm" class="form-input pin-input" maxlength="6" inputmode="numeric" placeholder="繝ｻ繝ｻ繝ｻ繝ｻ">
+          <label class="form-label">確認</label>
+          <input type="password" id="admin-new-pin-confirm" class="form-input pin-input" maxlength="6" inputmode="numeric" placeholder="・・・・">
         </div>
         <div class="security-error" id="admin-setup-error" hidden></div>
         <div class="modal-actions">
-          <button class="btn-modal-secondary" id="admin-setup-cancel">髢峨§繧・/button>
-          <button class="btn-modal-primary" id="admin-setup-btn">PIN繧定ｨｭ螳壹☆繧・/button>
+          <button class="btn-modal-secondary" id="admin-setup-cancel">閉じる</button>
+          <button class="btn-modal-primary" id="admin-setup-btn">PINを設定する</button>
         </div>
       </div>
 
-      <!-- 繝ｦ繝ｼ繧ｶ繝ｼ邂｡逅・ｼ郁ｪ崎ｨｼ蠕鯉ｼ・-->
+      <!-- ユーザー管理（認証後） -->
       <div id="admin-panel-area" hidden>
         <div class="admin-panel-header">
-          <span class="admin-panel-subtitle"><i class="material-symbols-rounded" aria-hidden="true">groups</i> 繝ｦ繝ｼ繧ｶ繝ｼ邂｡逅・ｼ・IN繝ｪ繧ｻ繝・ヨ繝ｻ蜑企勁・・/span>
-          <button class="btn-modal-secondary" id="admin-close">髢峨§繧・/button>
+          <span class="admin-panel-subtitle"><i class="material-symbols-rounded" aria-hidden="true">groups</i> ユーザー管理（PINリセット・削除）</span>
+          <button class="btn-modal-secondary" id="admin-close">閉じる</button>
         </div>
         <div class="admin-user-list" id="admin-user-list">
-          <div class="admin-loading">隱ｭ縺ｿ霎ｼ縺ｿ荳ｭ...</div>
+          <div class="admin-loading">読み込み中...</div>
         </div>
 
-        <!-- 繝溘ャ繧ｷ繝ｧ繝ｳ繝舌リ繝ｼ 繝・く繧ｹ繝郁ｨｭ螳・-->
+        <!-- ミッションバナー テキスト設定 -->
         <div class="admin-section">
-          <span class="admin-panel-subtitle"><i class="fa-solid fa-bullseye"></i> 繝昴・繧ｿ繝ｫ縺ｮ逶ｮ逧・ユ繧ｭ繧ｹ繝郁ｨｭ螳・/span>
-          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">繝医ャ繝励↓陦ｨ遉ｺ縺吶ｋ繝昴・繧ｿ繝ｫ縺ｮ逶ｮ逧・・譁ｹ驥昴↑縺ｩ繧定ｨｭ螳壹＠縺ｦ縺上□縺輔＞縲らｩｺ谺・↓縺吶ｋ縺ｨ繝舌リ繝ｼ縺碁撼陦ｨ遉ｺ縺ｫ縺ｪ繧翫∪縺吶・/p>
-          <textarea id="admin-mission-input" class="form-input" rows="4" placeholder="萓具ｼ壹％縺ｮ繝昴・繧ｿ繝ｫ縺ｯ逕溽肇邂｡逅・ｪｲ縺ｮ讌ｭ蜍吝柑邇・喧繝ｻ諠・ｱ蜈ｱ譛峨ｒ逶ｮ逧・→縺励※驕狗畑縺励※縺・∪縺吶ょ推繧ｫ繝・ざ繝ｪ縺ｮ繝ｪ繝ｳ繧ｯ繧・ち繧ｹ繧ｯ讖溯・繧呈ｴｻ逕ｨ縺励※縺上□縺輔＞縲・ style="resize:vertical;min-height:80px;"></textarea>
+          <span class="admin-panel-subtitle"><i class="fa-solid fa-bullseye"></i> ポータルの目的テキスト設定</span>
+          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">トップに表示するポータルの目的・方針などを設定してください。空欄にするとバナーが非表示になります。</p>
+          <textarea id="admin-mission-input" class="form-input" rows="4" placeholder="例：このポータルは生産管理課の業務効率化・情報共有を目的として運用しています。各カテゴリのリンクやタスク機能を活用してください。" style="resize:vertical;min-height:80px;"></textarea>
           <div style="display:flex;justify-content:flex-end;margin-top:8px;">
-            <button class="btn-modal-primary" id="admin-mission-save-btn"><i class="fa-solid fa-floppy-disk"></i> 菫晏ｭ・/button>
+            <button class="btn-modal-primary" id="admin-mission-save-btn"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
           </div>
         </div>
 
         <div class="admin-section">
-          <span class="admin-panel-subtitle"><i class="fa-solid fa-key"></i> 諡帛ｾ・さ繝ｼ繝芽ｨｭ螳・/span>
-          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">險ｭ螳壹☆繧九→縲∵悴謇ｿ隱咲ｫｯ譛ｫ縺ｧ縺ｯ繝ｭ繧ｰ繧､繝ｳ逕ｻ髱｢縺ｸ騾ｲ繧蜑阪↓4譯√・諡帛ｾ・さ繝ｼ繝牙・蜉帙′蠢・ｦ√↓縺ｪ繧翫∪縺吶・/p>
+          <span class="admin-panel-subtitle"><i class="fa-solid fa-key"></i> 招待コード設定</span>
+          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">設定すると、未承認端末ではログイン画面へ進む前に4桁の招待コード入力が必要になります。</p>
           <div class="admin-invite-row">
-            <input type="password" id="admin-invite-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="繝ｻ繝ｻ繝ｻ繝ｻ" autocomplete="off">
-            <button class="btn-modal-primary" id="admin-invite-save-btn">菫晏ｭ・/button>
-            <button class="btn-modal-danger" id="admin-invite-clear-btn" hidden>隗｣髯､</button>
+            <input type="password" id="admin-invite-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・" autocomplete="off">
+            <button class="btn-modal-primary" id="admin-invite-save-btn">保存</button>
+            <button class="btn-modal-danger" id="admin-invite-clear-btn" hidden>解除</button>
           </div>
           <div class="admin-invite-status-row">
-            <span class="admin-invite-status" id="admin-invite-status">譛ｪ險ｭ螳・/span>
-            <span class="admin-invite-hint" id="admin-invite-hint">譛ｪ險ｭ螳壹・髢薙・諡帛ｾ・さ繝ｼ繝峨↑縺励〒繝ｭ繧ｰ繧､繝ｳ逕ｻ髱｢縺ｸ騾ｲ縺ｿ縺ｾ縺吶・/span>
+            <span class="admin-invite-status" id="admin-invite-status">未設定</span>
+            <span class="admin-invite-hint" id="admin-invite-hint">未設定の間は招待コードなしでログイン画面へ進みます。</span>
           </div>
           <div class="admin-invite-current-wrap" id="admin-invite-current-wrap" hidden>
-            <span class="admin-invite-current-label">迴ｾ蝨ｨ縺ｮ繧ｳ繝ｼ繝・/span>
+            <span class="admin-invite-current-label">現在のコード</span>
             <span class="admin-invite-current-code" id="admin-invite-current-code">----</span>
           </div>
           <div class="security-error" id="admin-invite-error" hidden></div>
         </div>
 
-        <!-- Supabase 謗･邯夊ｨｭ螳・-->
+        <!-- Supabase 接続設定 -->
         <div class="admin-section">
-          <span class="admin-panel-subtitle"><i class="fa-solid fa-database"></i> Supabase 謗･邯夊ｨｭ螳・/span>
-          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">蜈ｨ繝・・繧ｿ繧・Supabase 縺ｧ邂｡逅・＠縺ｾ縺吶６RL 縺ｨ API繧ｭ繝ｼ繧定ｨｭ螳壹＠縺ｦ縺上□縺輔＞縲・/p>
+          <span class="admin-panel-subtitle"><i class="fa-solid fa-database"></i> Supabase 接続設定</span>
+          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">全データを Supabase で管理します。URL と APIキーを設定してください。</p>
           <div class="form-group">
             <label class="form-label" for="admin-supabase-url">Supabase URL</label>
             <input type="url" id="admin-supabase-url" class="form-input" placeholder="https://xxxxx.supabase.co" autocomplete="off">
           </div>
           <div class="form-group">
-            <label class="form-label" for="admin-supabase-key">Supabase API繧ｭ繝ｼ・・ublishable 謗ｨ螂ｨ・・/label>
+            <label class="form-label" for="admin-supabase-key">Supabase APIキー（publishable 推奨）</label>
             <textarea id="admin-supabase-key" class="form-input admin-supabase-key-input" rows="3" placeholder="sb_publishable_..." spellcheck="false"></textarea>
           </div>
           <div class="admin-supabase-status-row">
-            <span class="admin-invite-status" id="admin-supabase-status">Supabase 譛ｪ險ｭ螳・/span>
-            <span class="admin-invite-hint" id="admin-supabase-hint">URL 縺ｨ API繧ｭ繝ｼ繧貞・蜉帙＠縺ｦ菫晏ｭ倥＠縺ｦ縺上□縺輔＞縲・/span>
+            <span class="admin-invite-status" id="admin-supabase-status">Supabase 未設定</span>
+            <span class="admin-invite-hint" id="admin-supabase-hint">URL と APIキーを入力して保存してください。</span>
           </div>
           <div class="admin-invite-current-wrap">
-            <span class="admin-invite-current-label">迴ｾ蝨ｨ縺ｮ繧ｭ繝ｼ陦ｨ遉ｺ</span>
-            <span class="admin-invite-current-code admin-supabase-key-preview" id="admin-supabase-key-preview">譛ｪ險ｭ螳・/span>
+            <span class="admin-invite-current-label">現在のキー表示</span>
+            <span class="admin-invite-current-code admin-supabase-key-preview" id="admin-supabase-key-preview">未設定</span>
           </div>
           <div class="admin-supabase-actions">
-            <button class="btn-modal-secondary" id="admin-repair-categories-btn"><i class="fa-solid fa-wrench"></i> 繧ｫ繝・ざ繝ｪ菫ｮ蠕ｩ</button>
-            <button class="btn-modal-primary" id="admin-supabase-save-btn"><i class="fa-solid fa-floppy-disk"></i> 菫晏ｭ・/button>
+            <button class="btn-modal-secondary" id="admin-repair-categories-btn"><i class="fa-solid fa-wrench"></i> カテゴリ修復</button>
+            <button class="btn-modal-primary" id="admin-supabase-save-btn"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
           </div>
           <div class="security-error" id="admin-supabase-error" hidden></div>
         </div>
 
-        <!-- 逶ｮ螳臥ｮｱ 髢ｲ隕ｧ閠・ｮ｡逅・-->
+        <!-- 目安箱 閲覧者管理 -->
         <div class="admin-section">
-          <span class="admin-panel-subtitle"><i class="fa-solid fa-box-open"></i> 逶ｮ螳臥ｮｱ 髢ｲ隕ｧ閠・ｮ｡逅・/span>
-          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">謚慕ｨｿ縺輔ｌ縺溽岼螳臥ｮｱ縺ｮ蜀・ｮｹ繧帝夢隕ｧ縺ｧ縺阪ｋ繝ｦ繝ｼ繧ｶ繝ｼ蜷阪ｒ逋ｻ骭ｲ縺励※縺上□縺輔＞縲・/p>
+          <span class="admin-panel-subtitle"><i class="fa-solid fa-box-open"></i> 目安箱 閲覧者管理</span>
+          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">投稿された目安箱の内容を閲覧できるユーザー名を登録してください。</p>
           <div id="admin-suggbox-viewers" class="admin-suggbox-viewers"></div>
           <div class="admin-suggbox-add-row">
-            <input type="text" id="admin-suggbox-add-input" class="form-input" placeholder="繝ｦ繝ｼ繧ｶ繝ｼ蜷阪ｒ蜈･蜉・ style="flex:1;min-width:0">
-            <button class="btn-modal-primary" id="admin-suggbox-add-btn">霑ｽ蜉</button>
+            <input type="text" id="admin-suggbox-add-input" class="form-input" placeholder="ユーザー名を入力" style="flex:1;min-width:0">
+            <button class="btn-modal-primary" id="admin-suggbox-add-btn">追加</button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 繝｡繝ｼ繝ｫ繧｢繧ｷ繧ｹ繧ｿ繝ｳ繝・繝｢繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== メールアシスタント モーダル ==================== -->
   <div class="modal-overlay" id="email-modal">
     <div class="email-modal-inner">
 
       <div class="email-modal-header">
         <div class="email-modal-heading">
-          <span id="email-modal-title"><i class="fa-solid fa-envelope-open-text"></i> 繝｡繝ｼ繝ｫ繧｢繧ｷ繧ｹ繧ｿ繝ｳ繝・/span>
-          <p class="email-modal-subtitle" id="email-modal-subtitle">繝｡繝ｼ繝ｫ菴懈・蟆ら畑縺ｧ縺吶よ園螻樣Κ鄂ｲ繝ｻ鄂ｲ蜷阪・螟画峩縺ｯ繝励Ο繝輔ぅ繝ｼ繝ｫ險ｭ螳壹°繧芽｡後＞縺ｾ縺吶・/p>
+          <span id="email-modal-title"><i class="fa-solid fa-envelope-open-text"></i> メールアシスタント</span>
+          <p class="email-modal-subtitle" id="email-modal-subtitle">メール作成専用です。所属部署・署名の変更はプロフィール設定から行います。</p>
         </div>
-        <button class="email-modal-close" id="email-modal-close" title="髢峨§繧・>
+        <button class="email-modal-close" id="email-modal-close" title="閉じる">
           <i class="material-symbols-rounded" aria-hidden="true">close</i>
         </button>
       </div>
@@ -1469,114 +1469,114 @@
       <div class="email-tab-content email-compose-panel" id="email-tab-compose">
         <div class="email-compose-info">
           <div class="email-compose-info-text">
-            鄂ｲ蜷阪ｄ謇螻樣Κ鄂ｲ縺ｯ繝励Ο繝輔ぅ繝ｼ繝ｫ險ｭ螳壹〒螟画峩縺励∪縺吶ょ承荳翫・縲交汨､ 蜷榊燕縲阪∪縺溘・荳九・繝懊ち繝ｳ縺九ｉ髢九￠縺ｾ縺吶・
+            署名や所属部署はプロフィール設定で変更します。右上の「👤 名前」または下のボタンから開けます。
           </div>
           <button class="btn-modal-secondary email-compose-info-btn" id="email-open-profile-btn">
-            <i class="fa-solid fa-id-card"></i> 繝励Ο繝輔ぅ繝ｼ繝ｫ險ｭ螳・
+            <i class="fa-solid fa-id-card"></i> プロフィール設定
           </button>
         </div>
 
-        <!-- 繧ｹ繝・ャ繝・・壽眠隕・霑比ｿ｡驕ｸ謚・-->
+        <!-- ステップ1：新規/返信選択 -->
         <div class="email-type-select" id="email-type-select">
-          <p class="email-type-lead">菴輔ｒ縺励∪縺吶°・・/p>
+          <p class="email-type-lead">何をしますか？</p>
           <div class="email-type-btns">
             <button class="email-type-btn" id="email-type-new" data-type="new">
               <i class="fa-solid fa-envelope"></i>
-              <span>譁ｰ隕上Γ繝ｼ繝ｫ</span>
-              <small>荳縺九ｉ菴懈・縺吶ｋ</small>
+              <span>新規メール</span>
+              <small>一から作成する</small>
             </button>
             <button class="email-type-btn" id="email-type-reply" data-type="reply">
               <i class="fa-solid fa-reply"></i>
-              <span>霑比ｿ｡繝｡繝ｼ繝ｫ</span>
-              <small>蜿嶺ｿ｡繝｡繝ｼ繝ｫ縺ｫ霑比ｿ｡縺吶ｋ</small>
+              <span>返信メール</span>
+              <small>受信メールに返信する</small>
             </button>
           </div>
         </div>
 
-        <!-- 繧ｹ繝・ャ繝・・壻ｽ懈・繝輔か繝ｼ繝・磯∈謚槫ｾ瑚｡ｨ遉ｺ・・-->
+        <!-- ステップ2：作成フォーム（選択後表示） -->
         <div class="email-compose-form" id="email-compose-form" hidden>
 
           <button class="email-back-btn" id="email-back-btn">
-            <i class="fa-solid fa-arrow-left"></i> 驕ｸ謚槭↓謌ｻ繧・
+            <i class="fa-solid fa-arrow-left"></i> 選択に戻る
           </button>
 
-          <!-- 逶ｸ謇区ュ蝣ｱ -->
+          <!-- 相手情報 -->
           <div class="email-form-section">
-            <label class="email-label"><i class="fa-solid fa-user-tie"></i> 逶ｸ謇・/label>
+            <label class="email-label"><i class="fa-solid fa-user-tie"></i> 相手</label>
             <div class="email-contact-row">
               <select class="form-input email-contact-select" id="email-contact-select">
-                <option value="">逶ｸ謇九ｒ驕ｸ謚橸ｼ医∪縺溘・譁ｰ隕剰ｿｽ蜉・・..</option>
+                <option value="">相手を選択（または新規追加）...</option>
               </select>
-              <button class="email-contact-add-btn" id="email-contact-add-btn" title="譁ｰ縺励＞騾｣邨｡蜈医ｒ霑ｽ蜉">
+              <button class="email-contact-add-btn" id="email-contact-add-btn" title="新しい連絡先を追加">
                 <i class="fa-solid fa-plus"></i>
               </button>
             </div>
-            <!-- 譁ｰ隕剰ｿｽ蜉繝輔か繝ｼ繝 -->
+            <!-- 新規追加フォーム -->
             <div class="email-new-contact" id="email-new-contact" hidden>
-              <input type="text" id="email-contact-company" class="form-input" placeholder="莨夂､ｾ蜷搾ｼ井ｾ具ｼ壼ｱｱ逕ｰ蟒ｺ險ｭ譬ｪ蠑丈ｼ夂､ｾ・・ maxlength="60">
-              <input type="text" id="email-contact-person" class="form-input" placeholder="諡・ｽ楢・錐・井ｾ具ｼ壼ｱｱ逕ｰ 螟ｪ驛取ｧ假ｼ・ maxlength="40">
+              <input type="text" id="email-contact-company" class="form-input" placeholder="会社名（例：山田建設株式会社）" maxlength="60">
+              <input type="text" id="email-contact-person" class="form-input" placeholder="担当者名（例：山田 太郎様）" maxlength="40">
               <div class="email-contact-actions">
                 <button class="btn-modal-primary" id="email-contact-save-btn" style="font-size:0.8rem;padding:5px 12px;">
-                  <i class="fa-solid fa-floppy-disk"></i> 菫晏ｭ倥＠縺ｦ驕ｸ謚・
+                  <i class="fa-solid fa-floppy-disk"></i> 保存して選択
                 </button>
-                <button class="btn-modal-secondary" id="email-contact-cancel-btn" style="font-size:0.8rem;padding:5px 12px;">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
+                <button class="btn-modal-secondary" id="email-contact-cancel-btn" style="font-size:0.8rem;padding:5px 12px;">キャンセル</button>
               </div>
             </div>
           </div>
 
-          <!-- 蜿嶺ｿ｡繝｡繝ｼ繝ｫ・郁ｿ比ｿ｡繝｢繝ｼ繝画凾縺ｮ縺ｿ陦ｨ遉ｺ・・-->
+          <!-- 受信メール（返信モード時のみ表示） -->
           <div class="email-form-section" id="email-section-received" hidden>
-            <label class="email-label"><i class="fa-solid fa-inbox"></i> 蜿嶺ｿ｡縺励◆繝｡繝ｼ繝ｫ・郁ｲｼ繧贋ｻ倥￠・・/label>
-            <textarea id="email-received" class="email-received-area" rows="5" placeholder="霑比ｿ｡縺励◆縺・Γ繝ｼ繝ｫ繧偵％縺薙↓縺昴・縺ｾ縺ｾ雋ｼ繧贋ｻ倥￠縺ｦ縺上□縺輔＞..."></textarea>
+            <label class="email-label"><i class="fa-solid fa-inbox"></i> 受信したメール（貼り付け）</label>
+            <textarea id="email-received" class="email-received-area" rows="5" placeholder="返信したいメールをここにそのまま貼り付けてください..."></textarea>
           </div>
 
-          <!-- 莨昴∴縺溘＞縺薙→ -->
+          <!-- 伝えたいこと -->
           <div class="email-form-section">
-            <label class="email-label" id="email-content-label"><i class="fa-solid fa-comment-dots"></i> 莨昴∴縺溘＞縺薙→</label>
-            <textarea id="email-content" class="email-content-area" rows="4" placeholder="邂・擅譖ｸ縺阪ｄ邁｡蜊倥↑繝｡繝｢縺ｧ螟ｧ荳亥､ｫ縺ｧ縺吶・I縺梧紛縺医∪縺・.."></textarea>
+            <label class="email-label" id="email-content-label"><i class="fa-solid fa-comment-dots"></i> 伝えたいこと</label>
+            <textarea id="email-content" class="email-content-area" rows="4" placeholder="箇条書きや簡単なメモで大丈夫です。AIが整えます..."></textarea>
           </div>
 
-          <!-- 譁・ｽ馴∈謚・-->
+          <!-- 文体選択 -->
           <div class="email-form-section">
-            <label class="email-label"><i class="fa-solid fa-sliders"></i> 譁・ｽ・/label>
+            <label class="email-label"><i class="fa-solid fa-sliders"></i> 文体</label>
             <div class="email-tone-btns" id="email-tone-btns">
-              <button class="email-tone-btn active" data-tone="business">繝薙ず繝阪せ</button>
-              <button class="email-tone-btn" data-tone="polite">荳∝ｯｧ</button>
-              <button class="email-tone-btn" data-tone="internal">遉ｾ蜀・/button>
-              <button class="email-tone-btn" data-tone="strict">蜴ｳ譬ｼ</button>
+              <button class="email-tone-btn active" data-tone="business">ビジネス</button>
+              <button class="email-tone-btn" data-tone="polite">丁寧</button>
+              <button class="email-tone-btn" data-tone="internal">社内</button>
+              <button class="email-tone-btn" data-tone="strict">厳格</button>
             </div>
           </div>
 
-          <!-- 逕滓・繝懊ち繝ｳ -->
+          <!-- 生成ボタン -->
           <button class="btn-generate" id="email-generate">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> 繝｡繝ｼ繝ｫ繧堤函謌舌☆繧・
+            <i class="fa-solid fa-wand-magic-sparkles"></i> メールを生成する
           </button>
 
-          <!-- 蜃ｺ蜉帙お繝ｪ繧｢ -->
+          <!-- 出力エリア -->
           <div class="email-output-area" id="email-output-area" hidden>
             <div class="email-output-header">
-              <span><i class="fa-solid fa-file-lines"></i> 逕滓・縺輔ｌ縺溘Γ繝ｼ繝ｫ</span>
+              <span><i class="fa-solid fa-file-lines"></i> 生成されたメール</span>
               <div class="email-output-header-btns">
                 <button class="btn-reset-output" id="btn-reset-output">
-                  <i class="fa-solid fa-rotate-left"></i> 繝ｪ繧ｻ繝・ヨ
+                  <i class="fa-solid fa-rotate-left"></i> リセット
                 </button>
                 <button class="btn-copy-output" id="btn-copy-output">
-                  <i class="fa-solid fa-copy"></i> 繧ｳ繝斐・
+                  <i class="fa-solid fa-copy"></i> コピー
                 </button>
               </div>
             </div>
             <div class="email-output" id="email-output"></div>
           </div>
 
-          <!-- API繧ｭ繝ｼ險ｭ螳夲ｼ域悴險ｭ螳壽凾縺ｮ縺ｿ陦ｨ遉ｺ・・-->
+          <!-- APIキー設定（未設定時のみ表示） -->
           <div class="email-api-key-area" id="email-api-key-area" hidden>
             <div class="email-api-key-label">
-              <i class="fa-solid fa-key"></i> Gemini API繧ｭ繝ｼ繧定ｨｭ螳壹＠縺ｦ縺上□縺輔＞
-              <span class="email-api-key-hint">・郁ｨｭ螳壹・蜈ｨ蜩｡縺ｫ蜈ｱ譛峨＆繧後∪縺呻ｼ・/span>
+              <i class="fa-solid fa-key"></i> Gemini APIキーを設定してください
+              <span class="email-api-key-hint">（設定は全員に共有されます）</span>
             </div>
             <div class="email-api-key-row">
               <input type="password" id="email-api-key-input" class="email-api-key-input" placeholder="AIzaSy..." autocomplete="off">
-              <button class="btn-save-apikey" id="email-api-key-save">險ｭ螳壹☆繧・/button>
+              <button class="btn-save-apikey" id="email-api-key-save">設定する</button>
             </div>
           </div>
 
@@ -1590,210 +1590,210 @@
     <div class="profile-modal-inner">
       <div class="profile-modal-header">
         <div class="email-modal-heading">
-          <span><i class="fa-solid fa-id-card"></i> 繝励Ο繝輔ぅ繝ｼ繝ｫ險ｭ螳・/span>
-          <p class="email-modal-subtitle">謇螻樣Κ鄂ｲ繝ｻ蠖ｹ蜑ｲ繝ｻ鄂ｲ蜷阪ｒ險ｭ螳壹＠縺ｾ縺吶ゅΓ繝ｼ繝ｫ菴懈・縺ｯ蟾ｦ繝｡繝九Η繝ｼ縺ｮ縲後Γ繝ｼ繝ｫ逕滓・AI縲阪°繧蛾幕縺代∪縺吶・/p>
+          <span><i class="fa-solid fa-id-card"></i> プロフィール設定</span>
+          <p class="email-modal-subtitle">所属部署・役割・署名を設定します。メール作成は左メニューの「メール生成AI」から開けます。</p>
         </div>
-        <button class="profile-modal-close" id="profile-modal-close" title="髢峨§繧・>
+        <button class="profile-modal-close" id="profile-modal-close" title="閉じる">
           <i class="material-symbols-rounded" aria-hidden="true">close</i>
         </button>
       </div>
 
       <div class="profile-modal-body" id="profile-modal-body">
-        <div class="ep-section-title"><i class="fa-solid fa-user"></i> 蛟倶ｺｺ諠・ｱ・医Γ繝ｼ繝ｫ縺ｮ譖ｸ縺榊・縺励↓菴ｿ逕ｨ・・/div>
-        <p class="ep-profile-note">謇螻樣Κ鄂ｲ繝ｻ蠖ｹ蜑ｲ縺ｯ縺薙％縺ｧ險ｭ螳壹＠縺ｾ縺吶ょ承荳翫・縲交汨､ 蜷榊燕縲阪°繧峨＞縺､縺ｧ繧る幕縺代∪縺吶・/p>
+        <div class="ep-section-title"><i class="fa-solid fa-user"></i> 個人情報（メールの書き出しに使用）</div>
+        <p class="ep-profile-note">所属部署・役割はここで設定します。右上の「👤 名前」からいつでも開けます。</p>
         <div class="ep-form-grid">
           <div class="ep-form-row">
-            <label class="ep-label">豁｣蠑丞錐蜑・<span class="ep-required">*</span></label>
-            <input type="text" id="ep-real-name" class="ep-input" placeholder="萓具ｼ壼ｱｱ逕ｰ 螟ｪ驛・ maxlength="30">
+            <label class="ep-label">正式名前 <span class="ep-required">*</span></label>
+            <input type="text" id="ep-real-name" class="ep-input" placeholder="例：山田 太郎" maxlength="30">
           </div>
           <div class="ep-form-row">
-            <label class="ep-label">謇螻樣Κ鄂ｲ</label>
+            <label class="ep-label">所属部署</label>
             <select id="ep-department" class="ep-input">
-              <option value="">驛ｨ鄂ｲ繧帝∈謚・/option>
+              <option value="">部署を選択</option>
             </select>
           </div>
           <div class="ep-form-row">
-            <label class="ep-label">蠖ｹ蜑ｲ</label>
+            <label class="ep-label">役割</label>
             <select id="ep-role-type" class="ep-input">
-              <option value="member">荳闊ｬ</option>
-              <option value="leader">繝ｪ繝ｼ繝繝ｼ</option>
-              <option value="manager">邂｡逅・・/option>
+              <option value="member">一般</option>
+              <option value="leader">リーダー</option>
+              <option value="manager">管理者</option>
             </select>
           </div>
           <div class="ep-form-row">
-            <label class="ep-label">繝｡繝ｼ繝ｫ繧｢繝峨Ξ繧ｹ</label>
-            <input type="email" id="ep-email" class="ep-input" placeholder="萓具ｼ噐amada@nikken-fr.co.jp" maxlength="80">
+            <label class="ep-label">メールアドレス</label>
+            <input type="email" id="ep-email" class="ep-input" placeholder="例：yamada@nikken-fr.co.jp" maxlength="80">
           </div>
           <div class="ep-form-row">
-            <label class="ep-label">髮ｻ隧ｱ逡ｪ蜿ｷ</label>
-            <input type="text" id="ep-phone" class="ep-input" placeholder="萓具ｼ・3-XXXX-XXXX" maxlength="30">
+            <label class="ep-label">電話番号</label>
+            <input type="text" id="ep-phone" class="ep-input" placeholder="例：03-XXXX-XXXX" maxlength="30">
           </div>
         </div>
 
         <div class="ep-section-title" style="margin-top:16px">
-          <i class="fa-solid fa-signature"></i> 鄂ｲ蜷阪ユ繝ｳ繝励Ξ繝ｼ繝・
-          <span class="ep-hint">繝励Ξ繝ｼ繧ｹ繝帙Ν繝繝ｼ・嘴realName} {department} {roleType} {email} {phone}</span>
+          <i class="fa-solid fa-signature"></i> 署名テンプレート
+          <span class="ep-hint">プレースホルダー：{realName} {department} {roleType} {email} {phone}</span>
         </div>
-        <textarea id="ep-signature" class="ep-signature-area" rows="7" placeholder="鄂ｲ蜷阪ユ繝ｳ繝励Ξ繝ｼ繝医ｒ蜈･蜉・.."></textarea>
-        <div class="ep-signature-preview-label">繝励Ξ繝薙Η繝ｼ・・/div>
+        <textarea id="ep-signature" class="ep-signature-area" rows="7" placeholder="署名テンプレートを入力..."></textarea>
+        <div class="ep-signature-preview-label">プレビュー：</div>
         <div class="ep-signature-preview" id="ep-signature-preview"></div>
 
         <div class="ep-actions">
           <button class="btn-save-profile" id="ep-save">
-            <i class="fa-solid fa-floppy-disk"></i> 菫晏ｭ倥☆繧・
+            <i class="fa-solid fa-floppy-disk"></i> 保存する
           </button>
           <button class="btn-reset-sig" id="ep-edit-username">
-            <i class="fa-solid fa-user-pen"></i> 繝ｦ繝ｼ繧ｶ繝ｼ繝阪・繝螟画峩
+            <i class="fa-solid fa-user-pen"></i> ユーザーネーム変更
           </button>
           <button class="btn-reset-sig" id="ep-reset-sig">
-            <i class="fa-solid fa-rotate-left"></i> 鄂ｲ蜷阪ｒ繝・ヵ繧ｩ繝ｫ繝医↓謌ｻ縺・
+            <i class="fa-solid fa-rotate-left"></i> 署名をデフォルトに戻す
           </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 繧ｫ繝ｬ繝ｳ繝繝ｼ繝ｻ蜍､諤邂｡逅・Δ繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== カレンダー・勤怠管理モーダル ==================== -->
   <div class="modal-overlay" id="cal-modal">
     <div class="cal-modal-glass">
 
-      <!-- 繝倥ャ繝繝ｼ: 繝翫ン + 繧ｿ繧､繝医Ν + 髢峨§繧・-->
+      <!-- ヘッダー: ナビ + タイトル + 閉じる -->
       <div class="cal-modal-header">
-        <button class="cal-nav-btn" id="cal-prev-btn" title="蜑肴怦"><i class="fa-solid fa-chevron-left"></i></button>
+        <button class="cal-nav-btn" id="cal-prev-btn" title="前月"><i class="fa-solid fa-chevron-left"></i></button>
         <div class="cal-modal-title-area">
-          <h3 class="cal-modal-title" id="cal-title">2026蟷ｴ3譛・/h3>
-          <button class="cal-today-btn" id="cal-today-btn">莉頑怦</button>
+          <h3 class="cal-modal-title" id="cal-title">2026年3月</h3>
+          <button class="cal-today-btn" id="cal-today-btn">今月</button>
         </div>
-        <button class="cal-nav-btn" id="cal-next-btn" title="谺｡譛・><i class="fa-solid fa-chevron-right"></i></button>
-        <button class="cal-close-btn" id="cal-close-btn" title="髢峨§繧・><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
+        <button class="cal-nav-btn" id="cal-next-btn" title="次月"><i class="fa-solid fa-chevron-right"></i></button>
+        <button class="cal-close-btn" id="cal-close-btn" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
 
-      <!-- 繧ｿ繝悶ヰ繝ｼ: 蛟倶ｺｺ / 蜈ｱ譛・-->
+      <!-- タブバー: 個人 / 共有 -->
       <div class="cal-tab-bar">
-        <button class="cal-tab-btn active" id="cal-tab-personal"><i class="fa-solid fa-user"></i> 蛟倶ｺｺ</button>
-        <button class="cal-tab-btn" id="cal-tab-shared"><i class="material-symbols-rounded" aria-hidden="true">groups</i> 蜈ｱ譛・/button>
+        <button class="cal-tab-btn active" id="cal-tab-personal"><i class="fa-solid fa-user"></i> 個人</button>
+        <button class="cal-tab-btn" id="cal-tab-shared"><i class="material-symbols-rounded" aria-hidden="true">groups</i> 共有</button>
       </div>
 
-      <!-- 蛟倶ｺｺ繧ｫ繝ｬ繝ｳ繝繝ｼ繧ｳ繝ｳ繝・リ -->
+      <!-- 個人カレンダーコンテナ -->
       <div id="cal-personal-container">
 
       <div class="calw-subtab-bar">
-        <button class="calw-subtab-btn active" id="calw-tab-calendar" data-tab="calendar"><i class="fa-regular fa-calendar"></i> 蜍､諤繧ｫ繝ｬ繝ｳ繝繝ｼ</button>
-        <button class="calw-subtab-btn" id="calw-tab-work" data-tab="work"><i class="fa-solid fa-table-cells-large"></i> 蜍､蜍吝・螳ｹ陦ｨ</button>
-        <button class="calw-subtab-btn" id="calw-tab-summary" data-tab="summary"><i class="fa-solid fa-chart-column"></i> 蜍､蜍吝・螳ｹ髮・ｨ郁｡ｨ</button>
-        <button class="calw-subtab-btn" id="calw-tab-sites" data-tab="sites"><i class="fa-solid fa-industry"></i> 逋ｻ骭ｲ迴ｾ蝣ｴ</button>
+        <button class="calw-subtab-btn active" id="calw-tab-calendar" data-tab="calendar"><i class="fa-regular fa-calendar"></i> 勤怠カレンダー</button>
+        <button class="calw-subtab-btn" id="calw-tab-work" data-tab="work"><i class="fa-solid fa-table-cells-large"></i> 勤務内容表</button>
+        <button class="calw-subtab-btn" id="calw-tab-summary" data-tab="summary"><i class="fa-solid fa-chart-column"></i> 勤務内容集計表</button>
+        <button class="calw-subtab-btn" id="calw-tab-sites" data-tab="sites"><i class="fa-solid fa-industry"></i> 登録現場</button>
       </div>
 
       <div id="calw-view-calendar" class="calw-view">
-        <!-- 譛磯俣繧ｵ繝槭Μ繝ｼ・亥倶ｺｺ繧ｿ繝悶・縺ｿ陦ｨ遉ｺ・・-->
+        <!-- 月間サマリー（個人タブのみ表示） -->
         <div class="cal-summary">
-          <span class="cal-summary-item cal-summary-yukyu"><i class="fa-solid fa-umbrella-beach"></i> 譛臥ｵｦ <b id="cal-cnt-yukyu">0</b>譌･</span>
-          <span class="cal-summary-item cal-summary-hankyu"><i class="fa-solid fa-clock-rotate-left"></i> 蜊贋ｼ・<b id="cal-cnt-hankyu">0</b>譌･</span>
-          <span class="cal-summary-item cal-summary-hayade"><i class="fa-solid fa-sunrise"></i> 譌ｩ蜃ｺ <b id="cal-cnt-hayade">0h</b></span>
-          <span class="cal-summary-item cal-summary-zangyo"><i class="fa-solid fa-moon"></i> 谿区･ｭ <b id="cal-cnt-zangyo">0h</b></span>
-          <span class="cal-summary-item cal-summary-fiscal"><i class="fa-solid fa-calendar-check"></i> 蟷ｴ蠎ｦ譛臥ｵｦ <b id="cal-cnt-fiscal-paid">0譌･</b></span>
+          <span class="cal-summary-item cal-summary-yukyu"><i class="fa-solid fa-umbrella-beach"></i> 有給 <b id="cal-cnt-yukyu">0</b>日</span>
+          <span class="cal-summary-item cal-summary-hankyu"><i class="fa-solid fa-clock-rotate-left"></i> 半休 <b id="cal-cnt-hankyu">0</b>日</span>
+          <span class="cal-summary-item cal-summary-hayade"><i class="fa-solid fa-sunrise"></i> 早出 <b id="cal-cnt-hayade">0h</b></span>
+          <span class="cal-summary-item cal-summary-zangyo"><i class="fa-solid fa-moon"></i> 残業 <b id="cal-cnt-zangyo">0h</b></span>
+          <span class="cal-summary-item cal-summary-fiscal"><i class="fa-solid fa-calendar-check"></i> 年度有給 <b id="cal-cnt-fiscal-paid">0日</b></span>
         </div>
 
-        <!-- 繧ｫ繝ｬ繝ｳ繝繝ｼ繧ｰ繝ｪ繝・ラ -->
+        <!-- カレンダーグリッド -->
         <div id="cal-grid-container" class="cal-grid-container"></div>
 
-        <!-- 譌･莉倩ｩｳ邏ｰ繝代ロ繝ｫ -->
+        <!-- 日付詳細パネル -->
         <div id="cal-day-panel" class="cal-day-panel" hidden>
           <div class="cal-day-panel-header">
-            <div class="cal-day-title" id="cal-day-title">3譛・3譌･・域惠・・/div>
+            <div class="cal-day-title" id="cal-day-title">3月13日（木）</div>
           </div>
           <div id="cal-day-shared-info" class="cal-day-shared-info" hidden></div>
 
-          <!-- 蜍､蜍吝玄蛻・-->
+          <!-- 勤務区分 -->
           <div class="form-group">
-            <label class="form-label">蜍､蜍吝玄蛻・/label>
+            <label class="form-label">勤務区分</label>
             <div class="cal-type-btns" id="cal-type-btns"></div>
           </div>
 
-          <!-- 譌ｩ蜃ｺ繝ｻ谿区･ｭ・域ｨｪ荳ｦ縺ｳ・・-->
+          <!-- 早出・残業（横並び） -->
           <div class="cal-time-row">
             <div class="form-group" style="flex:1">
-              <label class="form-label"><i class="fa-solid fa-sun" style="color:#f59e0b"></i> 譌ｩ蜃ｺ譎る俣</label>
+              <label class="form-label"><i class="fa-solid fa-sun" style="color:#f59e0b"></i> 早出時間</label>
               <select id="cal-hayade-time" class="form-input cal-hours-select">
-                <option value="">縺ｪ縺・/option>
-                <option value="0.5">0.5譎る俣・・0蛻・ｼ・/option>
-                <option value="1">1譎る俣</option>
-                <option value="1.5">1.5譎る俣</option>
-                <option value="2">2譎る俣</option>
-                <option value="2.5">2.5譎る俣</option>
-                <option value="3">3譎る俣</option>
-                <option value="3.5">3.5譎る俣</option>
-                <option value="4">4譎る俣</option>
-                <option value="4.5">4.5譎る俣</option>
-                <option value="5">5譎る俣</option>
+                <option value="">なし</option>
+                <option value="0.5">0.5時間（30分）</option>
+                <option value="1">1時間</option>
+                <option value="1.5">1.5時間</option>
+                <option value="2">2時間</option>
+                <option value="2.5">2.5時間</option>
+                <option value="3">3時間</option>
+                <option value="3.5">3.5時間</option>
+                <option value="4">4時間</option>
+                <option value="4.5">4.5時間</option>
+                <option value="5">5時間</option>
               </select>
             </div>
             <div class="form-group" style="flex:1">
-              <label class="form-label"><i class="fa-solid fa-moon" style="color:#818cf8"></i> 谿区･ｭ譎る俣</label>
+              <label class="form-label"><i class="fa-solid fa-moon" style="color:#818cf8"></i> 残業時間</label>
               <select id="cal-zangyo-time" class="form-input cal-hours-select">
-                <option value="">縺ｪ縺・/option>
-                <option value="0.5">0.5譎る俣・・0蛻・ｼ・/option>
-                <option value="1">1譎る俣</option>
-                <option value="1.5">1.5譎る俣</option>
-                <option value="2">2譎る俣</option>
-                <option value="2.5">2.5譎る俣</option>
-                <option value="3">3譎る俣</option>
-                <option value="3.5">3.5譎る俣</option>
-                <option value="4">4譎る俣</option>
-                <option value="4.5">4.5譎る俣</option>
-                <option value="5">5譎る俣</option>
+                <option value="">なし</option>
+                <option value="0.5">0.5時間（30分）</option>
+                <option value="1">1時間</option>
+                <option value="1.5">1.5時間</option>
+                <option value="2">2時間</option>
+                <option value="2.5">2.5時間</option>
+                <option value="3">3時間</option>
+                <option value="3.5">3.5時間</option>
+                <option value="4">4時間</option>
+                <option value="4.5">4.5時間</option>
+                <option value="5">5時間</option>
               </select>
             </div>
           </div>
-          <!-- 蜷郁ｨ郁｡ｨ遉ｺ -->
+          <!-- 合計表示 -->
           <div id="cal-time-total" class="cal-time-total" hidden></div>
           <div id="cal-work-overflow-helper" class="cal-work-overflow-helper" hidden></div>
 
-          <!-- 菴懈･ｭ迴ｾ蝣ｴ蜈･蜉・-->
+          <!-- 作業現場入力 -->
           <div class="form-group">
-            <label class="form-label"><i class="fa-solid fa-industry"></i> 菴懈･ｭ迴ｾ蝣ｴ縺ｨ譎る俣</label>
+            <label class="form-label"><i class="fa-solid fa-industry"></i> 作業現場と時間</label>
             <div id="cal-day-worksites" class="cal-day-worksites"></div>
             <button type="button" class="btn-modal-secondary cal-day-work-add-btn" id="cal-day-work-add-btn">
-              <i class="fa-solid fa-plus"></i> 迴ｾ蝣ｴ陦後ｒ霑ｽ蜉
+              <i class="fa-solid fa-plus"></i> 現場行を追加
             </button>
-            <div class="cal-day-work-help">迴ｾ蝣ｴ繧ｳ繝ｼ繝峨・迴ｾ蝣ｴ蜷阪〒讀懃ｴ｢縺ｧ縺阪∵怙霑台ｽｿ縺｣縺溽樟蝣ｴ縺九ｉ繧ゅ☆縺宣∈縺ｹ縺ｾ縺吶よ凾髢薙・0.5譎る俣蛻ｻ縺ｿ縺ｧ蜈･蜉帙＠縲・譎る俣雜・℃譎ゅ・荳翫・陬懷勧縺九ｉ譌ｩ蜃ｺ繝ｻ谿区･ｭ縺ｸ蜑ｲ繧頑険繧後∪縺吶・/div>
+            <div class="cal-day-work-help">現場コード・現場名で検索でき、最近使った現場からもすぐ選べます。時間は0.5時間刻みで入力し、8時間超過時は上の補助から早出・残業へ割り振れます。</div>
           </div>
 
           <div class="form-group">
-            <label class="form-label"><i class="fa-solid fa-key"></i> 迚ｩ莉ｶNo・郁・蜍募・蜉帙・霑ｽ險伜庄・・/label>
-            <input type="text" id="cal-project-keys" class="form-input" placeholder="驕ｸ繧薙□迴ｾ蝣ｴ縺ｮ迚ｩ莉ｶNo縺瑚・蜍募・蜉帙＆繧後∪縺・ maxlength="160" autocomplete="off">
+            <label class="form-label"><i class="fa-solid fa-key"></i> 物件No（自動入力・追記可）</label>
+            <input type="text" id="cal-project-keys" class="form-input" placeholder="選んだ現場の物件Noが自動入力されます" maxlength="160" autocomplete="off">
             <div id="cal-project-key-preview" class="cal-project-key-preview" hidden></div>
-            <div class="cal-day-work-help">驕ｸ繧薙□迴ｾ蝣ｴ縺ｮ迚ｩ莉ｶNo繧定・蜍輔〒蜈･繧後∪縺吶ょｿ・ｦ√↑繧峨き繝ｳ繝槫玄蛻・ｊ縺ｧ霑ｽ險倥ｂ縺ｧ縺阪∪縺吶・/div>
+            <div class="cal-day-work-help">選んだ現場の物件Noを自動で入れます。必要ならカンマ区切りで追記もできます。</div>
           </div>
 
-          <!-- 繝｡繝｢ -->
+          <!-- メモ -->
           <div class="form-group">
-            <label class="form-label">繝｡繝｢・井ｻｻ諢擾ｼ・/label>
-            <input type="text" id="cal-note" class="form-input" placeholder="萓具ｼ壻ｻ｣莨醍筏隲区ｸ医∩" maxlength="50">
+            <label class="form-label">メモ（任意）</label>
+            <input type="text" id="cal-note" class="form-input" placeholder="例：代休申請済み" maxlength="50">
           </div>
 
-          <!-- 縺薙・譌･縺ｮ繧ｿ繧ｹ繧ｯ -->
+          <!-- この日のタスク -->
           <div id="cal-day-tasks" class="cal-day-tasks" hidden></div>
 
-          <!-- 繧｢繧ｯ繧ｷ繝ｧ繝ｳ -->
+          <!-- アクション -->
           <div class="modal-actions">
-            <button class="btn-modal-secondary" id="cal-day-cancel-btn">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
-            <button class="btn-modal-danger" id="cal-day-delete-btn" hidden>蜑企勁</button>
-            <button class="btn-modal-primary" id="cal-day-save-btn">菫晏ｭ・/button>
+            <button class="btn-modal-secondary" id="cal-day-cancel-btn">キャンセル</button>
+            <button class="btn-modal-danger" id="cal-day-delete-btn" hidden>削除</button>
+            <button class="btn-modal-primary" id="cal-day-save-btn">保存</button>
           </div>
         </div>
       </div>
 
       <div id="calw-view-work" class="calw-view" style="display:none">
       <div class="calw-view-header">
-        <div class="calw-view-title"><i class="fa-solid fa-table-cells-large"></i> 蜍､蜍吝・螳ｹ陦ｨ</div>
+        <div class="calw-view-title"><i class="fa-solid fa-table-cells-large"></i> 勤務内容表</div>
         <div class="calw-view-period" id="calw-work-period-label">-</div>
       </div>
       <div class="calw-work-tools">
         <div class="calw-work-filter-row">
           <div class="calw-work-filter-input-wrap">
             <i class="fa-solid fa-magnifying-glass calw-work-filter-icon"></i>
-            <input type="text" id="calw-work-project-filter" class="form-input calw-work-search-input" placeholder="迚ｩ莉ｶNo縺ｧ邨槭ｊ霎ｼ縺ｿ" autocomplete="off">
+            <input type="text" id="calw-work-project-filter" class="form-input calw-work-search-input" placeholder="物件Noで絞り込み" autocomplete="off">
             <button type="button" class="calw-work-filter-clear" id="calw-work-project-filter-clear" hidden><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
           </div>
           <div class="calw-work-filter-count" id="calw-work-project-filter-count">-</div>
@@ -1804,44 +1804,44 @@
 
       <div id="calw-view-summary" class="calw-view" style="display:none">
           <div class="calw-view-header">
-            <div class="calw-view-title"><i class="fa-solid fa-chart-column"></i> 蜍､蜍吝・螳ｹ髮・ｨ郁｡ｨ</div>
+            <div class="calw-view-title"><i class="fa-solid fa-chart-column"></i> 勤務内容集計表</div>
             <div class="calw-view-header-right">
               <div class="calw-view-period" id="calw-summary-period-label">-</div>
-              <button class="btn-modal-secondary calw-refresh-btn" id="calw-summary-export-csv-btn"><i class="fa-solid fa-file-csv"></i> CSV蜃ｺ蜉・/button>
-              <button class="btn-modal-secondary calw-refresh-btn" id="calw-summary-print-btn"><i class="fa-solid fa-print"></i> 蜊ｰ蛻ｷ</button>
-              <button class="btn-modal-secondary calw-refresh-btn" id="calw-summary-refresh-btn"><i class="fa-solid fa-rotate"></i> 蜀埼寔險・/button>
+              <button class="btn-modal-secondary calw-refresh-btn" id="calw-summary-export-csv-btn"><i class="fa-solid fa-file-csv"></i> CSV出力</button>
+              <button class="btn-modal-secondary calw-refresh-btn" id="calw-summary-print-btn"><i class="fa-solid fa-print"></i> 印刷</button>
+              <button class="btn-modal-secondary calw-refresh-btn" id="calw-summary-refresh-btn"><i class="fa-solid fa-rotate"></i> 再集計</button>
             </div>
           </div>
-        <div class="calw-summary-total" id="calw-summary-total-hours">邱冗ｨｼ蜒肴凾髢・ 0h</div>
+        <div class="calw-summary-total" id="calw-summary-total-hours">総稼働時間: 0h</div>
         <div id="calw-summary-table-container" class="calw-summary-table-container"></div>
       </div>
 
       <div id="calw-view-sites" class="calw-view" style="display:none">
         <div class="calw-view-header">
-          <div class="calw-view-title"><i class="fa-solid fa-industry"></i> 逋ｻ骭ｲ迴ｾ蝣ｴ</div>
+          <div class="calw-view-title"><i class="fa-solid fa-industry"></i> 登録現場</div>
         </div>
         <div class="calw-site-import-row">
           <label class="calw-file-picker" for="calw-site-import-file">
-            <span class="calw-file-picker-btn"><i class="fa-solid fa-file"></i> 繝輔ぃ繧､繝ｫ繧帝∈謚・/span>
-            <span class="calw-file-picker-name" id="calw-site-import-filename">驕ｸ謚槭＆繧後※縺・∪縺帙ｓ</span>
+            <span class="calw-file-picker-btn"><i class="fa-solid fa-file"></i> ファイルを選択</span>
+            <span class="calw-file-picker-name" id="calw-site-import-filename">選択されていません</span>
           </label>
-          <button class="btn-modal-secondary" id="calw-site-import-btn"><i class="fa-solid fa-file-import"></i> Excel隗｣譫舌＠縺ｦ蜿冶ｾｼ</button>
+          <button class="btn-modal-secondary" id="calw-site-import-btn"><i class="fa-solid fa-file-import"></i> Excel解析して取込</button>
         </div>
         <input id="calw-site-import-file" class="calw-site-import-file" type="file" accept=".xlsx,.xls,.xlsm">
-        <div class="calw-site-import-status" id="calw-site-import-status">繧ｵ繝ｳ繝励Ν: 縲檎樟蝣ｴ蜷咲匳骭ｲ縲阪す繝ｼ繝医・繧ｳ繝ｼ繝・蜷咲ｧｰ繧定ｧ｣譫舌＠縺ｦ驥崎､・紛逅・＠縺ｦ蜿悶ｊ霎ｼ縺ｿ縺ｾ縺吶・/div>
+        <div class="calw-site-import-status" id="calw-site-import-status">サンプル: 「現場名登録」シートのコード/名称を解析して重複整理して取り込みます。</div>
         <div class="calw-site-form-row">
-          <input id="calw-site-code-input" class="form-input" type="text" maxlength="20" placeholder="迴ｾ蝣ｴ繧ｳ繝ｼ繝会ｼ井ｾ・ 61065・・>
-          <input id="calw-site-name-input" class="form-input" type="text" maxlength="80" placeholder="迴ｾ蝣ｴ蜷・>
-          <button class="btn-modal-primary" id="calw-site-add-btn"><i class="fa-solid fa-plus"></i> 霑ｽ蜉</button>
+          <input id="calw-site-code-input" class="form-input" type="text" maxlength="20" placeholder="現場コード（例: 61065）">
+          <input id="calw-site-name-input" class="form-input" type="text" maxlength="80" placeholder="現場名">
+          <button class="btn-modal-primary" id="calw-site-add-btn"><i class="fa-solid fa-plus"></i> 追加</button>
         </div>
-        <div class="calw-site-help">逋ｻ骭ｲ縺励◆迴ｾ蝣ｴ縺ｯ蜍､蜍吝・螳ｹ陦ｨ縺ｮ蛻励→蜍､蜍吝・螳ｹ髮・ｨ郁｡ｨ縺ｮ陦後↓蜿肴丐縺輔ｌ縺ｾ縺吶・/div>
+        <div class="calw-site-help">登録した現場は勤務内容表の列と勤務内容集計表の行に反映されます。</div>
         <div class="calw-site-table-wrap">
           <table class="calw-site-table">
             <thead>
               <tr>
-                <th>繧ｳ繝ｼ繝・/th>
-                <th>迴ｾ蝣ｴ蜷・/th>
-                <th>謫堺ｽ・/th>
+                <th>コード</th>
+                <th>現場名</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody id="calw-site-table-body"></tbody>
@@ -1851,35 +1851,35 @@
 
       </div><!-- /#cal-personal-container -->
 
-      <!-- 蜈ｱ譛峨き繝ｬ繝ｳ繝繝ｼ繧ｳ繝ｳ繝・リ・・S 縺梧緒逕ｻ・・-->
+      <!-- 共有カレンダーコンテナ（JS が描画） -->
       <div id="cal-shared-container" style="display:none"></div>
 
     </div>
   </div>
 
-  <!-- ==================== 莨夂､ｾ繧ｫ繝ｬ繝ｳ繝繝ｼ險ｭ螳壹Δ繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== 会社カレンダー設定モーダル ==================== -->
   <div class="modal-overlay" id="company-cal-settings-modal">
     <div class="modal-glass ccs-modal-outer">
-      <!-- 繝倥ャ繝繝ｼ -->
+      <!-- ヘッダー -->
       <div class="ccs-modal-header">
-        <h3 class="ccs-modal-title"><i class="fa-solid fa-building-circle-check" style="color:var(--accent-blue)"></i> 莨夂､ｾ繧ｫ繝ｬ繝ｳ繝繝ｼ險ｭ螳・/h3>
-        <button class="btn-modal-secondary" id="ccs-close-btn" style="padding:4px 10px;" title="髢峨§繧・><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
+        <h3 class="ccs-modal-title"><i class="fa-solid fa-building-circle-check" style="color:var(--accent-blue)"></i> 会社カレンダー設定</h3>
+        <button class="btn-modal-secondary" id="ccs-close-btn" style="padding:4px 10px;" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
 
-      <!-- PIN隱崎ｨｼ繧ｲ繝ｼ繝・-->
+      <!-- PIN認証ゲート -->
       <div id="ccs-pin-gate" class="ccs-pin-gate">
         <i class="fa-solid fa-lock" style="font-size:2rem;color:var(--accent-blue);margin-bottom:12px;"></i>
-        <p style="color:var(--text-secondary);margin-bottom:16px;font-size:0.9rem;">邂｡逅・IN繧貞・蜉帙＠縺ｦ縺上□縺輔＞</p>
+        <p style="color:var(--text-secondary);margin-bottom:16px;font-size:0.9rem;">管理PINを入力してください</p>
         <div class="ccs-pin-row">
-          <input type="password" id="ccs-pin-input" class="form-input" placeholder="邂｡逅・IN" maxlength="20" autocomplete="current-password">
-          <button class="btn-modal-primary" id="ccs-pin-submit">隱崎ｨｼ</button>
+          <input type="password" id="ccs-pin-input" class="form-input" placeholder="管理PIN" maxlength="20" autocomplete="current-password">
+          <button class="btn-modal-primary" id="ccs-pin-submit">認証</button>
         </div>
-        <p id="ccs-pin-error" class="ccs-pin-error" hidden>PIN縺碁＆縺・∪縺・/p>
+        <p id="ccs-pin-error" class="ccs-pin-error" hidden>PINが違います</p>
       </div>
 
-      <!-- 險ｭ螳壽悽菴難ｼ・IN隱崎ｨｼ蠕後↓陦ｨ遉ｺ・・-->
+      <!-- 設定本体（PIN認証後に表示） -->
       <div id="ccs-body" class="ccs-body" hidden>
-        <!-- 繝・・繝ｫ繝舌・: 蟷ｴ蠎ｦ驕ｸ謚・& 繝｢繝ｼ繝蛾∈謚・-->
+        <!-- ツールバー: 年度選択 & モード選択 -->
         <div class="ccs-toolbar">
           <div class="ccs-year-nav">
             <button class="ccs-year-btn" id="ccs-prev-fy"><i class="fa-solid fa-chevron-left"></i></button>
@@ -1894,10 +1894,10 @@
           </div>
         </div>
 
-        <!-- 繝｢繝ｼ繝芽ｪｬ譏・-->
+        <!-- モード説明 -->
         <div id="ccs-mode-hint" class="ccs-mode-hint"></div>
 
-        <!-- 蜃｡萓・-->
+        <!-- 凡例 -->
         <div class="ccs-legend">
           <span class="ccs-legend-item"><span class="ccs-legend-dot" style="background:#60a5fa"></span>出勤土曜</span>
           <span class="ccs-legend-item"><span class="ccs-legend-dot" style="background:#34d399"></span>計画付与</span>
@@ -1905,38 +1905,38 @@
           <span class="ccs-legend-item"><span class="ccs-legend-dot" style="background:#a78bfa"></span>行事</span>
         </div>
 
-        <!-- 蟷ｴ髢・2繝ｶ譛医げ繝ｪ繝・ラ -->
+        <!-- 年間12ヶ月グリッド -->
         <div class="ccs-annual-grid" id="ccs-annual-grid"></div>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 繧ｿ繧ｹ繧ｯ邂｡逅・Δ繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== タスク管理モーダル ==================== -->
   <div class="modal-overlay" id="task-modal">
     <div class="task-modal-inner">
 
       <div class="task-modal-header">
-        <span><i class="fa-solid fa-list-check"></i> 繧ｿ繧ｹ繧ｯ邂｡逅・/span>
-        <button class="task-modal-close" id="task-modal-close" title="髢峨§繧・>
+        <span><i class="fa-solid fa-list-check"></i> タスク管理</span>
+        <button class="task-modal-close" id="task-modal-close" title="閉じる">
           <i class="material-symbols-rounded" aria-hidden="true">close</i>
         </button>
       </div>
 
       <div class="task-tabs">
         <button class="task-tab active" data-tab="received">
-          蜿励￠蜿悶▲縺溘ち繧ｹ繧ｯ
+          受け取ったタスク
           <span class="task-tab-badge" id="task-tab-received-badge" hidden></span>
         </button>
         <button class="task-tab" data-tab="sent">
-          萓晞ｼ縺励◆繧ｿ繧ｹ繧ｯ
+          依頼したタスク
           <span class="task-tab-badge" id="task-tab-sent-badge" hidden></span>
         </button>
         <button class="task-tab" data-tab="shared">
-          蜈ｱ譛峨＆繧後◆繧ｿ繧ｹ繧ｯ
+          共有されたタスク
           <span class="task-tab-badge" id="task-tab-shared-badge" hidden></span>
         </button>
         <button class="task-tab" data-tab="new">
-          <i class="fa-solid fa-plus"></i> 譁ｰ隕丈ｾ晞ｼ
+          <i class="fa-solid fa-plus"></i> 新規依頼
         </button>
       </div>
 
@@ -1945,41 +1945,41 @@
     </div>
   </div>
 
-  <!-- ==================== 驛ｨ髢髢謎ｾ晞ｼ繝ｻ逶ｮ螳臥ｮｱ 繝｢繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== 部門間依頼・目安箱 モーダル ==================== -->
   <div class="modal-overlay" id="reqboard-modal">
     <div class="reqboard-modal-inner">
 
       <div class="reqboard-modal-header">
-        <span><i class="fa-solid fa-clipboard-list"></i> 驛ｨ髢髢謎ｾ晞ｼ繝ｻ逶ｮ螳臥ｮｱ</span>
-        <button class="reqboard-modal-close" id="reqboard-modal-close" title="髢峨§繧・>
+        <span><i class="fa-solid fa-clipboard-list"></i> 部門間依頼・目安箱</span>
+        <button class="reqboard-modal-close" id="reqboard-modal-close" title="閉じる">
           <i class="material-symbols-rounded" aria-hidden="true">close</i>
         </button>
       </div>
 
-      <!-- 繝｡繧､繝ｳ繧ｿ繝・-->
+      <!-- メインタブ -->
       <div class="reqboard-tabs">
         <button class="reqboard-tab active" data-tab="request">
-          <i class="fa-solid fa-arrows-left-right-to-line"></i> 驛ｨ髢髢謎ｾ晞ｼ
+          <i class="fa-solid fa-arrows-left-right-to-line"></i> 部門間依頼
           <span class="reqboard-tab-badge" id="req-tab-request-badge" hidden></span>
         </button>
         <button class="reqboard-tab" data-tab="suggestion">
-          <i class="fa-solid fa-box-open"></i> 逶ｮ螳臥ｮｱ
+          <i class="fa-solid fa-box-open"></i> 目安箱
           <span class="reqboard-tab-badge" id="req-tab-suggestion-badge" hidden></span>
         </button>
       </div>
 
-      <!-- 驛ｨ髢髢謎ｾ晞ｼ繧ｳ繝ｳ繝・Φ繝・-->
+      <!-- 部門間依頼コンテンツ -->
       <div id="reqboard-request-area">
         <div class="reqboard-subtabs">
-          <button class="reqboard-subtab active" data-subtab="received">蜿励￠蜿悶▲縺滉ｾ晞ｼ</button>
-          <button class="reqboard-subtab" data-subtab="sent">閾ｪ蛻・・萓晞ｼ</button>
-          <button class="reqboard-subtab" data-subtab="new"><i class="fa-solid fa-plus"></i> 譁ｰ隕乗兜遞ｿ</button>
-          <button class="reqboard-subtab" data-subtab="archived"><i class="fa-solid fa-box-archive"></i> 繧｢繝ｼ繧ｫ繧､繝・/button>
+          <button class="reqboard-subtab active" data-subtab="received">受け取った依頼</button>
+          <button class="reqboard-subtab" data-subtab="sent">自分の依頼</button>
+          <button class="reqboard-subtab" data-subtab="new"><i class="fa-solid fa-plus"></i> 新規投稿</button>
+          <button class="reqboard-subtab" data-subtab="archived"><i class="fa-solid fa-box-archive"></i> アーカイブ</button>
         </div>
         <div id="reqboard-request-content" class="reqboard-content"></div>
       </div>
 
-      <!-- 逶ｮ螳臥ｮｱ繧ｳ繝ｳ繝・Φ繝・-->
+      <!-- 目安箱コンテンツ -->
       <div id="reqboard-suggestion-area" hidden>
         <div id="reqboard-suggestion-content" class="reqboard-content"></div>
       </div>
@@ -1987,291 +1987,291 @@
     </div>
   </div>
 
-  <!-- 繧ｹ繝・・繧ｿ繧ｹ螟画峩繝｢繝ｼ繝繝ｫ -->
+  <!-- ステータス変更モーダル -->
   <div class="modal-overlay" id="req-status-modal">
     <div class="modal-glass" style="max-width:400px;width:90%">
-      <h3 class="modal-title"><i class="fa-solid fa-pen-to-square"></i> 繧ｹ繝・・繧ｿ繧ｹ螟画峩</h3>
+      <h3 class="modal-title"><i class="fa-solid fa-pen-to-square"></i> ステータス変更</h3>
       <div class="form-group">
-        <label class="form-label">譁ｰ縺励＞繧ｹ繝・・繧ｿ繧ｹ</label>
+        <label class="form-label">新しいステータス</label>
         <div class="req-status-select-group" id="req-status-select-group"></div>
       </div>
       <div class="form-group">
-        <label class="form-label">繧ｳ繝｡繝ｳ繝茨ｼ井ｻｻ諢擾ｼ・/label>
-        <textarea id="req-status-note" class="form-input" rows="3" placeholder="蜊碑ｭｰ蜀・ｮｹ繝ｻ豎ｺ螳壻ｺ矩・↑縺ｩ"></textarea>
+        <label class="form-label">コメント（任意）</label>
+        <textarea id="req-status-note" class="form-input" rows="3" placeholder="協議内容・決定事項など"></textarea>
       </div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="req-status-cancel">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
-        <button class="btn-modal-primary" id="req-status-ok">螟画峩縺吶ｋ</button>
+        <button class="btn-modal-secondary" id="req-status-cancel">キャンセル</button>
+        <button class="btn-modal-primary" id="req-status-ok">変更する</button>
       </div>
     </div>
   </div>
 
-  <!-- 萓晞ｼ繧ｿ繧ｹ繧ｯ蛹悶Δ繝ｼ繝繝ｫ -->
+  <!-- 依頼タスク化モーダル -->
   <div class="modal-overlay" id="req-taskify-modal">
     <div class="modal-glass" style="max-width:460px;width:min(460px,94vw);">
-      <h3 class="modal-title"><i class="fa-solid fa-list-check"></i> 萓晞ｼ繧偵ち繧ｹ繧ｯ蛹・/h3>
+      <h3 class="modal-title"><i class="fa-solid fa-list-check"></i> 依頼をタスク化</h3>
       <div id="req-taskify-summary" class="req-taskify-summary"></div>
       <div class="form-group">
-        <label class="form-label">諡・ｽ楢・<span class="req-required">*</span></label>
+        <label class="form-label">担当者 <span class="req-required">*</span></label>
         <div class="task-assignee-row">
-          <span class="task-assignee-display" id="req-taskify-assignee-display">譛ｪ驕ｸ謚・/span>
+          <span class="task-assignee-display" id="req-taskify-assignee-display">未選択</span>
           <button type="button" class="task-pick-btn" id="req-taskify-pick-user">
-            <i class="material-symbols-rounded" aria-hidden="true">person_add</i> 驕ｸ謚・
+            <i class="material-symbols-rounded" aria-hidden="true">person_add</i> 選択
           </button>
         </div>
       </div>
       <div class="form-group form-group-inline">
         <input type="date" id="req-taskify-due" class="date-icon-only">
-        <label class="form-label" for="req-taskify-due">譛滄剞蜈･蜉幢ｼ育怐逡･蜿ｯ・・/label>
+        <label class="form-label" for="req-taskify-due">期限入力（省略可）</label>
       </div>
       <div class="form-group">
-        <label class="form-label">陬懆ｶｳ繧ｳ繝｡繝ｳ繝茨ｼ井ｻｻ諢擾ｼ・/label>
-        <textarea id="req-taskify-note" class="form-input" rows="3" placeholder="蠑輔″邯吶℃縺溘＞豕ｨ諢冗せ縺後≠繧後・蜈･蜉・></textarea>
+        <label class="form-label">補足コメント（任意）</label>
+        <textarea id="req-taskify-note" class="form-input" rows="3" placeholder="引き継ぎたい注意点があれば入力"></textarea>
       </div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="req-taskify-cancel">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
-        <button class="btn-modal-primary" id="req-taskify-confirm">繧ｿ繧ｹ繧ｯ蛹悶☆繧・/button>
+        <button class="btn-modal-secondary" id="req-taskify-cancel">キャンセル</button>
+        <button class="btn-modal-primary" id="req-taskify-confirm">タスク化する</button>
       </div>
     </div>
   </div>
 
-  <!-- 逶ｮ螳臥ｮｱ霑比ｿ｡繝｢繝ｼ繝繝ｫ -->
+  <!-- 目安箱返信モーダル -->
   <div class="modal-overlay" id="sugg-reply-modal">
     <div class="modal-glass" style="max-width:420px;width:90%">
-      <h3 class="modal-title"><i class="fa-solid fa-reply"></i> 霑比ｿ｡繧帝√ｋ</h3>
+      <h3 class="modal-title"><i class="fa-solid fa-reply"></i> 返信を送る</h3>
       <div class="form-group">
-        <label class="form-label">霑比ｿ｡蜀・ｮｹ</label>
-        <textarea id="sugg-reply-text" class="form-input" rows="4" placeholder="謚慕ｨｿ閠・∈縺ｮ霑比ｿ｡繝ｻ蝗樒ｭ斐ｒ蜈･蜉・.."></textarea>
+        <label class="form-label">返信内容</label>
+        <textarea id="sugg-reply-text" class="form-input" rows="4" placeholder="投稿者への返信・回答を入力..."></textarea>
       </div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="sugg-reply-cancel">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
-        <button class="btn-modal-primary" id="sugg-reply-ok">騾∽ｿ｡縺吶ｋ</button>
+        <button class="btn-modal-secondary" id="sugg-reply-cancel">キャンセル</button>
+        <button class="btn-modal-primary" id="sugg-reply-ok">送信する</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 繧ｿ繧ｹ繧ｯ諡・ｽ楢・ヴ繝・き繝ｼ繝｢繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== タスク担当者ピッカーモーダル ==================== -->
   <div class="modal-overlay" id="task-user-picker-modal">
     <div class="modal-glass">
-      <h3 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">person_add</i> 諡・ｽ楢・ｒ驕ｸ謚・/h3>
-      <input type="text" id="task-user-search" class="form-input" placeholder="蜷榊燕縺ｧ讀懃ｴ｢..." autocomplete="off" style="margin-bottom:10px">
+      <h3 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">person_add</i> 担当者を選択</h3>
+      <input type="text" id="task-user-search" class="form-input" placeholder="名前で検索..." autocomplete="off" style="margin-bottom:10px">
       <div id="task-user-list" class="new-dm-user-list"></div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="task-user-picker-cancel">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
+        <button class="btn-modal-secondary" id="task-user-picker-cancel">キャンセル</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 繧ｿ繧ｹ繧ｯ邱ｨ髮・Δ繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== タスク編集モーダル ==================== -->
   <div class="modal-overlay" id="task-edit-modal">
     <div class="modal-glass" style="max-width:460px;width:min(460px,94vw);">
-      <h3 class="modal-title"><i class="fa-solid fa-pen"></i> 繧ｿ繧ｹ繧ｯ繧堤ｷｨ髮・/h3>
+      <h3 class="modal-title"><i class="fa-solid fa-pen"></i> タスクを編集</h3>
       <div class="form-group">
-        <label class="form-label">繧ｿ繧ｹ繧ｯ蜷・<span class="required-mark">*</span></label>
-        <input type="text" id="task-edit-title" class="form-input" placeholder="繧ｿ繧ｹ繧ｯ蜷・ maxlength="60" autocomplete="off">
+        <label class="form-label">タスク名 <span class="required-mark">*</span></label>
+        <input type="text" id="task-edit-title" class="form-input" placeholder="タスク名" maxlength="60" autocomplete="off">
       </div>
       <div class="form-group">
-        <label class="form-label">迚ｩ莉ｶNo・井ｻｻ諢擾ｼ・/label>
-        <input type="text" id="task-edit-project-key" class="form-input" placeholder="迚ｩ莉ｶNo・育樟蝣ｴ繧ｳ繝ｼ繝会ｼ・ maxlength="80" autocomplete="off">
+        <label class="form-label">物件No（任意）</label>
+        <input type="text" id="task-edit-project-key" class="form-input" placeholder="物件No（現場コード）" maxlength="80" autocomplete="off">
       </div>
       <div class="form-group">
-        <label class="form-label">隧ｳ邏ｰ・育怐逡･蜿ｯ・・/label>
-        <textarea id="task-edit-desc" class="form-input" rows="3" placeholder="隧ｳ縺励＞隱ｬ譏弱ｄ豕ｨ諢冗せ..."></textarea>
+        <label class="form-label">詳細（省略可）</label>
+        <textarea id="task-edit-desc" class="form-input" rows="3" placeholder="詳しい説明や注意点..."></textarea>
       </div>
       <div class="form-group form-group-inline">
         <input type="date" id="task-edit-due" class="date-icon-only">
-        <label class="form-label" for="task-edit-due">譛滄剞・育怐逡･蜿ｯ・・/label>
+        <label class="form-label" for="task-edit-due">期限（省略可）</label>
       </div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="task-edit-cancel-btn">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
-        <button class="btn-modal-primary" id="task-edit-save-btn">菫晏ｭ倥☆繧・/button>
+        <button class="btn-modal-secondary" id="task-edit-cancel-btn">キャンセル</button>
+        <button class="btn-modal-primary" id="task-edit-save-btn">保存する</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 繧ｿ繧ｹ繧ｯ蜈ｱ譛峨ヴ繝・き繝ｼ繝｢繝ｼ繝繝ｫ ==================== -->
+  <!-- ==================== タスク共有ピッカーモーダル ==================== -->
   <div class="modal-overlay" id="task-share-picker-modal">
     <div class="modal-glass" style="max-width:400px;width:min(400px,94vw);">
-      <h3 class="modal-title"><i class="fa-solid fa-share-nodes"></i> 蜈ｱ譛峨☆繧狗嶌謇九ｒ驕ｸ謚・/h3>
-      <input type="text" id="task-share-search" class="form-input" placeholder="蜷榊燕縺ｧ讀懃ｴ｢..." autocomplete="off" style="margin-bottom:8px">
+      <h3 class="modal-title"><i class="fa-solid fa-share-nodes"></i> 共有する相手を選択</h3>
+      <input type="text" id="task-share-search" class="form-input" placeholder="名前で検索..." autocomplete="off" style="margin-bottom:8px">
       <div id="task-share-user-list" class="task-share-user-list"></div>
       <div id="task-share-already" class="task-share-already"></div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="task-share-cancel-btn">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
-        <button class="btn-modal-primary" id="task-share-confirm-btn">蜈ｱ譛峨☆繧・/button>
+        <button class="btn-modal-secondary" id="task-share-cancel-btn">キャンセル</button>
+        <button class="btn-modal-primary" id="task-share-confirm-btn">共有する</button>
       </div>
     </div>
   </div>
 
-  <!-- 蜑企勁遒ｺ隱阪Δ繝ｼ繝繝ｫ -->
+  <!-- 削除確認モーダル -->
   <div class="modal-overlay" id="delete-confirm-modal">
     <div class="modal-glass delete-confirm-dialog">
       <div class="delete-confirm-icon">
         <i class="fa-solid fa-triangle-exclamation"></i>
       </div>
-      <p class="delete-confirm-message" id="delete-confirm-message">蜑企勁縺励∪縺吶°・・/p>
+      <p class="delete-confirm-message" id="delete-confirm-message">削除しますか？</p>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="delete-confirm-cancel">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
+        <button class="btn-modal-secondary" id="delete-confirm-cancel">キャンセル</button>
         <button class="btn-danger" id="delete-confirm-ok" disabled>
-          蜑企勁 (<span id="delete-confirm-count">2</span>)
+          削除 (<span id="delete-confirm-count">2</span>)
         </button>
       </div>
     </div>
   </div>
 
-  <!-- 繧ｫ繝ｼ繝蛾撼陦ｨ遉ｺ遒ｺ隱阪Δ繝ｼ繝繝ｫ -->
+  <!-- カード非表示確認モーダル -->
   <div class="modal-overlay" id="hide-card-confirm-modal">
     <div class="modal-glass hide-card-confirm-dialog">
       <div class="hide-card-confirm-icon">
         <i class="fa-solid fa-eye-slash"></i>
       </div>
-      <p class="hide-card-confirm-title">縺薙・繧ｫ繝ｼ繝峨ｒ髱櫁｡ｨ遉ｺ縺ｫ縺励∪縺吶°・・/p>
-      <p class="hide-card-confirm-name" id="hide-card-confirm-name">繧ｫ繝ｼ繝牙錐</p>
+      <p class="hide-card-confirm-title">このカードを非表示にしますか？</p>
+      <p class="hide-card-confirm-name" id="hide-card-confirm-name">カード名</p>
       <div class="hide-card-confirm-steps">
-        <p class="hide-card-confirm-steps-label"><i class="fa-solid fa-rotate-left"></i> 蜈・↓謌ｻ縺呎焔鬆・ｼ・/p>
+        <p class="hide-card-confirm-steps-label"><i class="fa-solid fa-rotate-left"></i> 元に戻す手順：</p>
         <ol class="hide-card-confirm-steps-list">
-          <li>蜿ｳ荳翫・ <strong>笞・險ｭ螳・/strong> 繝懊ち繝ｳ繧帝幕縺・/li>
-          <li>縲・strong>髱櫁｡ｨ遉ｺ繧ｫ繝ｼ繝臥ｮ｡逅・/strong>縲阪そ繧ｯ繧ｷ繝ｧ繝ｳ繧堤｢ｺ隱阪☆繧・/li>
-          <li>繧ｫ繝ｼ繝牙錐縺ｮ讓ｪ縺ｮ <strong>蜀崎｡ｨ遉ｺ</strong> 繝懊ち繝ｳ繧呈款縺・/li>
+          <li>右上の <strong>⚙ 設定</strong> ボタンを開く</li>
+          <li>「<strong>非表示カード管理</strong>」セクションを確認する</li>
+          <li>カード名の横の <strong>再表示</strong> ボタンを押す</li>
         </ol>
       </div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="hide-card-confirm-cancel">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
+        <button class="btn-modal-secondary" id="hide-card-confirm-cancel">キャンセル</button>
         <button class="btn-modal-primary" id="hide-card-confirm-ok">
-          <i class="fa-solid fa-eye-slash"></i> 髱櫁｡ｨ遉ｺ縺ｫ縺吶ｋ
+          <i class="fa-solid fa-eye-slash"></i> 非表示にする
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ===== 驪ｼ譚千匱豕ｨ繝｢繝ｼ繝繝ｫ ===== -->
+  <!-- ===== 鋼材発注モーダル ===== -->
   <div class="modal-overlay" id="ord-modal">
     <div class="modal-glass ord-modal-inner">
       <div class="modal-header">
-        <h2 class="modal-title"><i class="fa-solid fa-boxes-stacked"></i> 驪ｼ譚千匱豕ｨ</h2>
+        <h2 class="modal-title"><i class="fa-solid fa-boxes-stacked"></i> 鋼材発注</h2>
         <div style="display:flex;gap:6px;align-items:center;">
-          <button class="btn-modal-secondary ord-admin-open-btn" id="ord-open-admin-btn" title="逋ｺ豕ｨ蜈医・驪ｼ譚舌・GAS險ｭ螳・><i class="material-symbols-rounded" aria-hidden="true">settings</i> 險ｭ螳・/button>
-          <button class="modal-close" id="ord-modal-close" title="髢峨§繧・><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
+          <button class="btn-modal-secondary ord-admin-open-btn" id="ord-open-admin-btn" title="発注先・鋼材・GAS設定"><i class="material-symbols-rounded" aria-hidden="true">settings</i> 設定</button>
+          <button class="modal-close" id="ord-modal-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
         </div>
       </div>
 
-      <!-- 逋ｺ豕ｨ蛹ｺ蛻・ヨ繧ｰ繝ｫ -->
+      <!-- 発注区分トグル -->
       <div class="ord-type-toggle">
         <button class="ord-type-btn active" id="ord-type-factory" data-type="factory">
-          <i class="fa-solid fa-warehouse"></i> 蟾･蝣ｴ蝨ｨ蠎ｫ
+          <i class="fa-solid fa-warehouse"></i> 工場在庫
         </button>
         <button class="ord-type-btn" id="ord-type-site" data-type="site">
-          <i class="fa-solid fa-helmet-safety"></i> 迴ｾ蝣ｴ蜷咲匱豕ｨ
+          <i class="fa-solid fa-helmet-safety"></i> 現場名発注
         </button>
       </div>
 
-      <!-- 迴ｾ蝣ｴ蜷搾ｼ育樟蝣ｴ蜷咲匱豕ｨ縺ｮ縺ｿ陦ｨ遉ｺ・・-->
+      <!-- 現場名（現場名発注のみ表示） -->
       <div class="form-group" id="ord-site-name-group" hidden>
-        <label class="form-label" for="ord-site-name">迴ｾ蝣ｴ蜷・<span class="required-mark">*</span></label>
-        <input type="text" id="ord-site-name" class="form-input" placeholder="萓具ｼ壹・・・繝ｳ繧ｷ繝ｧ繝ｳ譁ｰ遽牙ｷ･莠・ maxlength="60" autocomplete="off">
+        <label class="form-label" for="ord-site-name">現場名 <span class="required-mark">*</span></label>
+        <input type="text" id="ord-site-name" class="form-input" placeholder="例：〇〇マンション新築工事" maxlength="60" autocomplete="off">
       </div>
 
       <div class="form-group ord-project-key-group">
-        <label class="form-label" for="ord-project-key">迚ｩ莉ｶNo・井ｻｻ諢擾ｼ・/label>
-        <input type="text" id="ord-project-key" class="form-input" placeholder="迚ｩ莉ｶNo・育樟蝣ｴ繧ｳ繝ｼ繝会ｼ・萓具ｼ・1065" maxlength="80" autocomplete="off">
+        <label class="form-label" for="ord-project-key">物件No（任意）</label>
+        <input type="text" id="ord-project-key" class="form-input" placeholder="物件No（現場コード） 例：61065" maxlength="80" autocomplete="off">
       </div>
 
-      <!-- 逋ｺ豕ｨ蜈医・繝ｫ繝繧ｦ繝ｳ -->
+      <!-- 発注先プルダウン -->
       <div class="ord-supplier-info">
-        <div class="ord-supplier-label">逋ｺ豕ｨ蜈・/div>
+        <div class="ord-supplier-label">発注先</div>
         <select id="ord-supplier-select" class="form-input ord-supplier-select"></select>
       </div>
 
-      <!-- 驪ｼ譚舌メ繧ｧ繝・け繝ｪ繧ｹ繝・-->
+      <!-- 鋼材チェックリスト -->
       <div class="form-group">
         <div class="ord-item-list-header">
-          <label class="form-label">逋ｺ豕ｨ蜩∫岼</label>
+          <label class="form-label">発注品目</label>
           <div class="ord-material-tabs" id="ord-material-tabs">
-            <button class="ord-material-tab active" data-type="all">縺吶∋縺ｦ</button>
-            <button class="ord-material-tab" data-type="steel">繧ｹ繝√・繝ｫ</button>
-            <button class="ord-material-tab" data-type="stainless">繧ｹ繝・Φ繝ｬ繧ｹ</button>
+            <button class="ord-material-tab active" data-type="all">すべて</button>
+            <button class="ord-material-tab" data-type="steel">スチール</button>
+            <button class="ord-material-tab" data-type="stainless">ステンレス</button>
           </div>
         </div>
-        <!-- 讀懃ｴ｢繝舌・ -->
+        <!-- 検索バー -->
         <div class="ord-search-bar-wrap">
           <i class="fa-solid fa-magnifying-glass ord-search-icon"></i>
-          <input type="text" id="ord-search-input" class="form-input ord-search-input" placeholder="蜩∫ｨｮ繝ｻ繧ｵ繧､繧ｺ縺ｧ讀懃ｴ｢・井ｾ具ｼ壹い繝ｳ繧ｰ繝ｫ縲・5ﾃ・5・・ autocomplete="off">
+          <input type="text" id="ord-search-input" class="form-input ord-search-input" placeholder="品種・サイズで検索（例：アングル、25×25）" autocomplete="off">
           <button class="ord-search-clear" id="ord-search-clear" hidden><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
         </div>
-        <!-- 繧ｫ繝・ざ繝ｪ邨槭ｊ霎ｼ縺ｿ・医ラ繝ｭ繝・・繝繧ｦ繝ｳ・・-->
+        <!-- カテゴリ絞り込み（ドロップダウン） -->
         <select id="ord-cat-select" class="form-input ord-cat-select"></select>
-        <!-- 驕ｸ謚樔ｸｭ繧ｵ繝槭Μ繝ｼ -->
+        <!-- 選択中サマリー -->
         <div id="ord-selected-summary" class="ord-selected-summary" hidden></div>
-        <!-- 驕ｸ謚樊ｸ医∩縺ｮ縺ｿ陦ｨ遉ｺ -->
+        <!-- 選択済みのみ表示 -->
         <div class="ord-filter-row">
           <label class="ord-selected-toggle">
             <input type="checkbox" id="ord-show-selected">
-            <span>驕ｸ謚樊ｸ医∩縺ｮ縺ｿ陦ｨ遉ｺ</span>
+            <span>選択済みのみ表示</span>
           </label>
         </div>
         <div id="ord-item-list" class="ord-item-list"></div>
         <button class="ord-add-custom-btn" id="ord-add-custom-btn">
-          <i class="fa-solid fa-plus"></i> 縺薙・逋ｺ豕ｨ縺ｫ蜩∫岼繧定ｿｽ蜉
+          <i class="fa-solid fa-plus"></i> この発注に品目を追加
         </button>
       </div>
 
-      <!-- 蛯呵・-->
+      <!-- 備考 -->
       <div class="form-group">
-        <label class="form-label" for="ord-note">蛯呵・ｼ育怐逡･蜿ｯ・・/label>
-        <textarea id="ord-note" class="form-input ord-note-textarea" placeholder="迚ｹ險倅ｺ矩・′縺ゅｌ縺ｰ蜈･蜉帙＠縺ｦ縺上□縺輔＞" rows="3"></textarea>
+        <label class="form-label" for="ord-note">備考（省略可）</label>
+        <textarea id="ord-note" class="form-input ord-note-textarea" placeholder="特記事項があれば入力してください" rows="3"></textarea>
       </div>
 
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="ord-btn-cancel">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
-        <button class="btn-modal-secondary" id="ord-btn-history"><i class="fa-solid fa-clock-rotate-left"></i> 螻･豁ｴ</button>
-        <button class="btn-modal-secondary" id="ord-btn-print"><i class="fa-solid fa-print"></i> 蜊ｰ蛻ｷ/PDF</button>
-        <button class="btn-modal-primary" id="ord-btn-email"><i class="fa-solid fa-eye"></i> 繝励Ξ繝薙Η繝ｼ繝ｻ騾∽ｿ｡</button>
+        <button class="btn-modal-secondary" id="ord-btn-cancel">キャンセル</button>
+        <button class="btn-modal-secondary" id="ord-btn-history"><i class="fa-solid fa-clock-rotate-left"></i> 履歴</button>
+        <button class="btn-modal-secondary" id="ord-btn-print"><i class="fa-solid fa-print"></i> 印刷/PDF</button>
+        <button class="btn-modal-primary" id="ord-btn-email"><i class="fa-solid fa-eye"></i> プレビュー・送信</button>
       </div>
     </div>
   </div>
 
-  <!-- ===== 繝｡繝ｼ繝ｫ繝励Ξ繝薙Η繝ｼ繝｢繝ｼ繝繝ｫ ===== -->
+  <!-- ===== メールプレビューモーダル ===== -->
   <div class="modal-overlay" id="ord-preview-modal">
     <div class="modal-glass ord-modal-inner ord-preview-inner">
       <div class="modal-header">
-        <h2 class="modal-title"><i class="fa-solid fa-envelope-open-text"></i> 繝｡繝ｼ繝ｫ騾∽ｿ｡繝励Ξ繝薙Η繝ｼ</h2>
-        <button class="modal-close" id="ord-preview-close" title="髢峨§繧・><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
+        <h2 class="modal-title"><i class="fa-solid fa-envelope-open-text"></i> メール送信プレビュー</h2>
+        <button class="modal-close" id="ord-preview-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
       <div class="ord-preview-subject-row">
-        <span class="ord-preview-label">莉ｶ蜷・/span>
+        <span class="ord-preview-label">件名</span>
         <span class="ord-preview-subject" id="ord-preview-subject"></span>
       </div>
       <div class="ord-preview-to-row">
-        <span class="ord-preview-label">螳帛・</span>
+        <span class="ord-preview-label">宛先</span>
         <span class="ord-preview-to" id="ord-preview-to"></span>
       </div>
       <pre class="ord-preview-body" id="ord-preview-body"></pre>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="ord-preview-back"><i class="fa-solid fa-arrow-left"></i> 謌ｻ繧・/button>
-        <button class="btn-modal-primary" id="ord-preview-send"><i class="fa-solid fa-paper-plane"></i> 縺薙・蜀・ｮｹ縺ｧ騾∽ｿ｡</button>
+        <button class="btn-modal-secondary" id="ord-preview-back"><i class="fa-solid fa-arrow-left"></i> 戻る</button>
+        <button class="btn-modal-primary" id="ord-preview-send"><i class="fa-solid fa-paper-plane"></i> この内容で送信</button>
       </div>
     </div>
   </div>
 
-  <!-- ===== 逋ｺ豕ｨ螻･豁ｴ繝｢繝ｼ繝繝ｫ ===== -->
+  <!-- ===== 発注履歴モーダル ===== -->
   <div class="modal-overlay" id="ord-history-modal">
     <div class="modal-glass ord-modal-inner">
       <div class="modal-header">
-        <h2 class="modal-title"><i class="fa-solid fa-clock-rotate-left"></i> 逋ｺ豕ｨ螻･豁ｴ</h2>
-        <button class="modal-close" id="ord-history-close" title="髢峨§繧・><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
+        <h2 class="modal-title"><i class="fa-solid fa-clock-rotate-left"></i> 発注履歴</h2>
+        <button class="modal-close" id="ord-history-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
 
-      <!-- 譛滄俣繝翫ン繧ｲ繝ｼ繧ｷ繝ｧ繝ｳ -->
+      <!-- 期間ナビゲーション -->
       <div class="ord-period-nav">
         <button class="btn-modal-secondary ord-period-btn" id="ord-period-prev"><i class="fa-solid fa-chevron-left"></i></button>
-        <span class="ord-period-label" id="ord-period-label">隱ｭ縺ｿ霎ｼ縺ｿ荳ｭ...</span>
+        <span class="ord-period-label" id="ord-period-label">読み込み中...</span>
         <button class="btn-modal-secondary ord-period-btn" id="ord-period-next"><i class="fa-solid fa-chevron-right"></i></button>
       </div>
 
       <div class="ord-history-filter-row">
         <div class="ord-history-filter-input-wrap">
           <i class="fa-solid fa-magnifying-glass ord-history-filter-icon"></i>
-          <input type="text" id="ord-history-project-filter" class="form-input ord-history-filter-input" placeholder="迚ｩ莉ｶNo縺ｧ邨槭ｊ霎ｼ縺ｿ" autocomplete="off">
+          <input type="text" id="ord-history-project-filter" class="form-input ord-history-filter-input" placeholder="物件Noで絞り込み" autocomplete="off">
           <button type="button" class="ord-history-filter-clear" id="ord-history-project-filter-clear" hidden><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
         </div>
         <div class="ord-history-filter-count" id="ord-history-project-filter-count">-</div>
@@ -2280,111 +2280,111 @@
       <div id="ord-history-list" class="ord-history-list"></div>
 
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="ord-history-cancel">髢峨§繧・/button>
+        <button class="btn-modal-secondary" id="ord-history-cancel">閉じる</button>
       </div>
     </div>
   </div>
 
-  <!-- ===== 逋ｺ豕ｨ隧ｳ邏ｰ繝｢繝ｼ繝繝ｫ ===== -->
+  <!-- ===== 発注詳細モーダル ===== -->
   <div class="modal-overlay" id="ord-detail-modal">
     <div class="modal-glass ord-modal-inner ord-detail-inner">
       <div class="modal-header">
-        <h2 class="modal-title"><i class="fa-solid fa-file-lines"></i> 逋ｺ豕ｨ隧ｳ邏ｰ</h2>
-        <button class="modal-close" id="ord-detail-close" title="髢峨§繧・><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
+        <h2 class="modal-title"><i class="fa-solid fa-file-lines"></i> 発注詳細</h2>
+        <button class="modal-close" id="ord-detail-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
       <div id="ord-detail-content" class="ord-detail-content"></div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="ord-detail-close2">髢峨§繧・/button>
-        <button class="btn-modal-danger" id="ord-detail-delete-btn"><i class="fa-solid fa-trash"></i> 螻･豁ｴ繧貞炎髯､</button>
-        <button class="btn-modal-secondary" id="ord-detail-restore-btn" hidden><i class="fa-solid fa-rotate-left"></i> 蜈・↓謌ｻ縺・/button>
-        <button class="btn-modal-primary" id="ord-detail-print-btn"><i class="fa-solid fa-print"></i> 蜊ｰ蛻ｷ/PDF</button>
+        <button class="btn-modal-secondary" id="ord-detail-close2">閉じる</button>
+        <button class="btn-modal-danger" id="ord-detail-delete-btn"><i class="fa-solid fa-trash"></i> 履歴を削除</button>
+        <button class="btn-modal-secondary" id="ord-detail-restore-btn" hidden><i class="fa-solid fa-rotate-left"></i> 元に戻す</button>
+        <button class="btn-modal-primary" id="ord-detail-print-btn"><i class="fa-solid fa-print"></i> 印刷/PDF</button>
       </div>
     </div>
   </div>
 
-  <!-- ===== 逋ｺ豕ｨ邂｡逅・Δ繝ｼ繝繝ｫ・育ｮ｡逅・・畑・・===== -->
+  <!-- ===== 発注管理モーダル（管理者用） ===== -->
   <div class="modal-overlay" id="ord-admin-modal">
     <div class="modal-glass ord-modal-inner">
       <div class="modal-header">
-        <h2 class="modal-title"><i class="fa-solid fa-screwdriver-wrench"></i> 逋ｺ豕ｨ邂｡逅・/h2>
-        <button class="modal-close" id="ord-admin-close" title="髢峨§繧・><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
+        <h2 class="modal-title"><i class="fa-solid fa-screwdriver-wrench"></i> 発注管理</h2>
+        <button class="modal-close" id="ord-admin-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
 
-      <!-- 邂｡逅・ヱ繝阪Ν -->
+      <!-- 管理パネル -->
       <div id="ord-admin-panel-area">
-        <!-- 繧ｿ繝・-->
+        <!-- タブ -->
         <div class="ord-admin-tabs">
-          <button class="ord-admin-tab active" id="ord-admin-tab-items">驪ｼ譚舌・繧ｹ繧ｿ</button>
-          <button class="ord-admin-tab" id="ord-admin-tab-suppliers">逋ｺ豕ｨ蜈・/button>
-          <button class="ord-admin-tab" id="ord-admin-tab-gas">GAS險ｭ螳・/button>
+          <button class="ord-admin-tab active" id="ord-admin-tab-items">鋼材マスタ</button>
+          <button class="ord-admin-tab" id="ord-admin-tab-suppliers">発注先</button>
+          <button class="ord-admin-tab" id="ord-admin-tab-gas">GAS設定</button>
         </div>
 
-        <!-- 驪ｼ譚舌・繧ｹ繧ｿ -->
+        <!-- 鋼材マスタ -->
         <div id="ord-admin-panel-items" class="ord-admin-panel">
           <div id="ord-admin-items-list" class="ord-admin-list"></div>
           <div class="ord-admin-add-form">
-            <h4 class="ord-admin-add-title">譁ｰ隕剰ｿｽ蜉</h4>
+            <h4 class="ord-admin-add-title">新規追加</h4>
             <div class="ord-admin-form-row">
-              <input type="text" id="ord-item-add-category" class="form-input" placeholder="蜩∫ｨｮ (萓・ 蟷ｳ驪ｼ, 繧｢繝ｳ繧ｰ繝ｫ)" style="min-width:120px">
-              <input type="text" id="ord-item-add-spec" class="form-input" placeholder="繧ｵ繧､繧ｺ (萓・ 6ﾃ・0)">
+              <input type="text" id="ord-item-add-category" class="form-input" placeholder="品種 (例: 平鋼, アングル)" style="min-width:120px">
+              <input type="text" id="ord-item-add-spec" class="form-input" placeholder="サイズ (例: 6×30)">
               <select id="ord-item-add-material" class="form-input" style="min-width:110px">
-                <option value="steel">繧ｹ繝√・繝ｫ</option>
-                <option value="stainless">繧ｹ繝・Φ繝ｬ繧ｹ</option>
+                <option value="steel">スチール</option>
+                <option value="stainless">ステンレス</option>
               </select>
-              <input type="text" id="ord-item-add-lengths" class="form-input" placeholder="螳壼ｰｺ (萓・ 5.5m,6m)" style="min-width:130px">
+              <input type="text" id="ord-item-add-lengths" class="form-input" placeholder="定尺 (例: 5.5m,6m)" style="min-width:130px">
               <select id="ord-item-add-type" class="form-input" style="min-width:100px">
-                <option value="both">蟾･蝣ｴ繝ｻ迴ｾ蝣ｴ</option>
-                <option value="factory">蟾･蝣ｴ蝨ｨ蠎ｫ</option>
-                <option value="site">迴ｾ蝣ｴ蜷咲匱豕ｨ</option>
+                <option value="both">工場・現場</option>
+                <option value="factory">工場在庫</option>
+                <option value="site">現場名発注</option>
               </select>
-              <button class="btn-modal-primary" id="ord-item-add-btn">霑ｽ蜉</button>
+              <button class="btn-modal-primary" id="ord-item-add-btn">追加</button>
             </div>
           </div>
         </div>
 
-        <!-- 逋ｺ豕ｨ蜈・-->
+        <!-- 発注先 -->
         <div id="ord-admin-panel-suppliers" class="ord-admin-panel" hidden>
           <div id="ord-admin-suppliers-list" class="ord-admin-list"></div>
           <div class="ord-admin-add-form">
-            <h4 class="ord-admin-add-title">譁ｰ隕剰ｿｽ蜉</h4>
+            <h4 class="ord-admin-add-title">新規追加</h4>
             <div class="ord-admin-form-row">
-              <input type="text" id="ord-supp-add-name"  class="form-input" placeholder="莨夂､ｾ蜷・>
-              <input type="email" id="ord-supp-add-email" class="form-input" placeholder="繝｡繝ｼ繝ｫ繧｢繝峨Ξ繧ｹ">
+              <input type="text" id="ord-supp-add-name"  class="form-input" placeholder="会社名">
+              <input type="email" id="ord-supp-add-email" class="form-input" placeholder="メールアドレス">
               <input type="text" id="ord-supp-add-tel"   class="form-input" placeholder="TEL">
-              <input type="text" id="ord-supp-add-addr"  class="form-input" placeholder="菴乗園">
-              <button class="btn-modal-primary" id="ord-supp-add-btn">霑ｽ蜉</button>
+              <input type="text" id="ord-supp-add-addr"  class="form-input" placeholder="住所">
+              <button class="btn-modal-primary" id="ord-supp-add-btn">追加</button>
             </div>
           </div>
         </div>
 
-        <!-- GAS險ｭ螳・-->
+        <!-- GAS設定 -->
         <div id="ord-admin-panel-gas" class="ord-admin-panel" hidden>
-          <p class="ord-gas-desc">GAS Web繧｢繝励Μ縺ｮURL繧貞・蜉帙＠縺ｦ縺上□縺輔＞縲ゅ％縺ｮURL縺ｫPOST繝ｪ繧ｯ繧ｨ繧ｹ繝医〒繝｡繝ｼ繝ｫ縺碁∽ｿ｡縺輔ｌ縺ｾ縺吶・/p>
+          <p class="ord-gas-desc">GAS WebアプリのURLを入力してください。このURLにPOSTリクエストでメールが送信されます。</p>
           <div class="form-group">
-            <label class="form-label" for="ord-gas-url-input">GAS Web繧｢繝励Μ URL</label>
+            <label class="form-label" for="ord-gas-url-input">GAS Webアプリ URL</label>
             <input type="url" id="ord-gas-url-input" class="form-input" placeholder="https://script.google.com/macros/s/...">
           </div>
           <div class="modal-actions">
-            <button class="btn-modal-primary" id="ord-gas-save-btn">菫晏ｭ・/button>
+            <button class="btn-modal-primary" id="ord-gas-save-btn">保存</button>
           </div>
         </div>
 
         <div class="modal-actions ord-admin-footer">
-          <button class="btn-modal-secondary" id="ord-admin-cancel-footer" onclick="document.getElementById('ord-admin-modal').classList.remove('visible')">髢峨§繧・/button>
+          <button class="btn-modal-secondary" id="ord-admin-cancel-footer" onclick="document.getElementById('ord-admin-modal').classList.remove('visible')">閉じる</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ===== 蜊ｰ蛻ｷ繧ｨ繝ｪ繧｢・育判髱｢荳翫・髱櫁｡ｨ遉ｺ繝ｻ蜊ｰ蛻ｷ譎ゅ・縺ｿ陦ｨ遉ｺ・・===== -->
+  <!-- ===== 印刷エリア（画面上は非表示・印刷時のみ表示） ===== -->
   <div id="ord-print-area" hidden></div>
 
-  <!-- ==================== 迚ｩ莉ｶNo縺ｾ縺ｨ繧・==================== -->
+  <!-- ==================== 物件Noまとめ ==================== -->
   <div class="modal-overlay" id="prop-summary-modal">
     <div class="modal-glass prop-summary-inner">
       <div class="modal-header prop-summary-header">
-        <h2 class="modal-title"><i class="fa-solid fa-magnifying-glass-chart"></i> 迚ｩ莉ｶNo縺ｾ縺ｨ繧・/h2>
-        <button class="modal-close" id="prop-summary-close" title="髢峨§繧・><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
+        <h2 class="modal-title"><i class="fa-solid fa-magnifying-glass-chart"></i> 物件Noまとめ</h2>
+        <button class="modal-close" id="prop-summary-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
       <div class="prop-summary-search-row">
         <div class="prop-summary-search-input-wrap">
@@ -2393,27 +2393,27 @@
             type="text"
             id="prop-summary-search-input"
             class="form-input prop-summary-search-input"
-            placeholder="萓・ 61065 / 蜊玲ｱ陲・C蝨ｰ蛹ｺSD"
+            placeholder="例: 61065 / 南池袋2C地区SD"
             autocomplete="off"
           >
           <button
             type="button"
             class="prop-summary-search-clear"
             id="prop-summary-search-clear"
-            title="讀懃ｴ｢繧偵け繝ｪ繧｢"
+            title="検索をクリア"
             hidden
           ><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
         </div>
         <button class="btn-modal-primary prop-summary-search-btn" id="prop-summary-search-btn">
-          <i class="fa-solid fa-magnifying-glass"></i> 讀懃ｴ｢
+          <i class="fa-solid fa-magnifying-glass"></i> 検索
         </button>
       </div>
       <div id="prop-summary-candidates" class="prop-summary-candidates" hidden></div>
-      <div class="prop-summary-help">迚ｩ莉ｶNo縺ｾ縺溘・迴ｾ蝣ｴ蜷阪〒縲・Κ鄂ｲ髢謎ｾ晞ｼ繝ｻ繧ｿ繧ｹ繧ｯ繝ｻ驪ｼ譚千匱豕ｨ繝ｻ菴懈･ｭ險倬鹸繧偵∪縺ｨ繧√※遒ｺ隱阪〒縺阪∪縺吶・/div>
+      <div class="prop-summary-help">物件Noまたは現場名で、部署間依頼・タスク・鋼材発注・作業記録をまとめて確認できます。</div>
       <div id="prop-summary-content" class="prop-summary-content">
         <div class="prop-summary-empty">
           <i class="fa-solid fa-magnifying-glass-chart"></i>
-          <p>迚ｩ莉ｶNo縺ｾ縺溘・迴ｾ蝣ｴ蜷阪ｒ蜈･繧後ｋ縺ｨ縲∽ｾ晞ｼ繝ｻ繧ｿ繧ｹ繧ｯ繝ｻ驪ｼ譚千匱豕ｨ繝ｻ菴懈･ｭ險倬鹸繧偵∪縺ｨ繧√※遒ｺ隱阪〒縺阪∪縺吶・/p>
+          <p>物件Noまたは現場名を入れると、依頼・タスク・鋼材発注・作業記録をまとめて確認できます。</p>
         </div>
       </div>
     </div>
@@ -2422,24 +2422,24 @@
   <div class="modal-overlay" id="rd-modal">
     <div class="modal-glass rd-modal-inner">
       <div class="modal-header rd-modal-header">
-        <h2 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">gauge</i> 霆｢騾∬ｨｺ譁ｭ</h2>
-        <button class="modal-close" id="rd-close" title="髢峨§繧・><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
+        <h2 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">gauge</i> 転送診断</h2>
+        <button class="modal-close" id="rd-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
       </div>
       <div class="rd-note">
-          Supabase 縺ｮ隲区ｱょ､縺昴・繧ゅ・縺ｧ縺ｯ縺ｪ縺上∝叙蠕励ョ繝ｼ繧ｿ繧・JSON 蛹悶＠縺溘→縺阪・謗ｨ螳夊ｻ｢騾・㍼繝吶・繧ｹ縺ｮ讎らｮ励〒縺吶ゅ←縺薙′驥阪＞縺九・GB/譛医↓蟇ｾ縺励※縺ｩ縺ｮ縺上ｉ縺・°縲・0莠ｺ蛻ｩ逕ｨ縺縺ｨ縺ｩ縺・ｦ九∴繧九°繧貞愛譁ｭ縺吶ｋ縺溘ａ縺ｮ逕ｻ髱｢縺ｧ縺吶・
+          Supabase の請求値そのものではなく、取得データを JSON 化したときの推定転送量ベースの概算です。どこが重いか、5GB/月に対してどのくらいか、30人利用だとどう見えるかを判断するための画面です。
       </div>
       <div id="rd-summary"></div>
       <div class="rd-section">
-        <div class="rd-section-title">驥阪＞讖溯・繝ｩ繝ｳ繧ｭ繝ｳ繧ｰ</div>
+        <div class="rd-section-title">重い機能ランキング</div>
         <div id="rd-source-list" class="rd-source-list"></div>
       </div>
       <div class="rd-section">
-        <div class="rd-section-title">譛霑代・霆｢騾√う繝吶Φ繝・/div>
+        <div class="rd-section-title">最近の転送イベント</div>
         <div id="rd-event-list" class="rd-event-list"></div>
       </div>
       <div class="modal-actions">
-        <button class="btn-modal-secondary" id="rd-reset-btn"><i class="fa-solid fa-rotate-left"></i> 險ｺ譁ｭ繧偵Μ繧ｻ繝・ヨ</button>
-        <button class="btn-modal-primary" id="rd-close2">髢峨§繧・/button>
+        <button class="btn-modal-secondary" id="rd-reset-btn"><i class="fa-solid fa-rotate-left"></i> 診断をリセット</button>
+        <button class="btn-modal-primary" id="rd-close2">閉じる</button>
       </div>
     </div>
   </div>

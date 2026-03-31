@@ -1,5 +1,11 @@
 // ========== 鋼材発注 (order.js) ==========
 import {
+  db, doc, getDoc, setDoc, addDoc, getDocs, updateDoc, deleteDoc,
+  collection, query, where, orderBy,
+  serverTimestamp
+} from './config.js';
+import {
+  isSupabaseSharedCoreEnabled,
   fetchPortalConfigFromSupabase,
   savePortalConfigToSupabase,
   fetchOrderSuppliersFromSupabase,
@@ -7,7 +13,6 @@ import {
   createOrderInSupabase,
   fetchOrdersFromSupabase,
   updateOrderInSupabase,
-  deleteOrderInSupabase,
   createOrderSupplierInSupabase,
   updateOrderSupplierInSupabase,
   upsertOrderItemInSupabase,
@@ -15,8 +20,6 @@ import {
 } from './supabase.js';
 import { state } from './state.js';
 import { esc, normalizeProjectKey } from './utils.js';
-
-const isSupabaseSharedCoreEnabled = () => true;
 
 // ===== 内部状態 =====
 let _suppliers = [];   // order_suppliers
@@ -341,7 +344,7 @@ const CATALOG_SEED_V4 = [
   { itemCategory: '磨き丸鋼',       spec: 'φ8',        materialType: 'steel', availableLengths: ['4m'],   sortOrder: 2007, defaultQty: 30 },
 ];
 
-// ===== Supabase 初期データ投入 =====
+// ===== Firestore 初期データ投入 =====
 async function seedInitialData() {
   try {
     // 発注先の初期化
@@ -530,6 +533,11 @@ async function loadMasters() {
 // ===== 初期化 =====
 export async function initOrder(d) {
   // d は deps（将来の拡張用）
+  if (!isSupabaseSharedCoreEnabled()) {
+    // Firestore モード: シードロジック実行
+    await seedInitialData();
+    await cleanupFactoryDuplicates();
+  }
   await loadMasters();
   bindOrderEvents();
 }
@@ -630,7 +638,6 @@ function getOrderItemsSummary(order) {
 }
 
 function buildStoredOrderData(data, { emailSent = false } = {}) {
-  const nowIso = new Date().toISOString();
   return {
     supplierId: data.supplierId,
     supplierName: data.supplierName,
@@ -641,9 +648,9 @@ function buildStoredOrderData(data, { emailSent = false } = {}) {
     items: data.items,
     orderedBy: data.orderedBy,
     note: data.note,
-    orderedAt: nowIso,
+    orderedAt: serverTimestamp(),
     emailSent,
-    emailSentAt: emailSent ? nowIso : null,
+    emailSentAt: emailSent ? serverTimestamp() : null,
     deletedAt: null,
     deletedBy: null
   };
@@ -1283,29 +1290,6 @@ function printDraftOrder() {
 // ===== 履歴モーダル =====
 // 1年以上古い履歴と、30日を過ぎた削除済み履歴を自動削除（バックグラウンド実行）
 async function purgeOldOrders() {
-  if (isSupabaseSharedCoreEnabled()) {
-    const orderCutoff = new Date();
-    orderCutoff.setFullYear(orderCutoff.getFullYear() - 1);
-    const deletedCutoff = new Date();
-    deletedCutoff.setDate(deletedCutoff.getDate() - 30);
-    try {
-      const allOrders = await fetchOrdersFromSupabase(
-        state.isAdmin ? null : state.currentUsername,
-        { includeDeleted: true }
-      );
-      const old = allOrders.filter(order => {
-        const orderedAt = toDateValue(order.orderedAt);
-        const deletedAt = toDateValue(order.deletedAt);
-        if (deletedAt) return deletedAt < deletedCutoff;
-        return orderedAt ? orderedAt < orderCutoff : false;
-      });
-      await Promise.all(old.map(order => deleteOrderInSupabase(order.id)));
-      if (old.length > 0) console.log(`order: ${old.length}莉ｶ縺ｮ譛滄剞蛻・ｌ螻･豁ｴ繧貞炎髯､縺励∪縺励◆`);
-    } catch (err) {
-      console.warn('order: purgeOldOrders error', err);
-    }
-    return;
-  }
   if (isSupabaseSharedCoreEnabled()) return; // Supabaseモードでは自動パージ未実装
   try {
     const orderCutoff = new Date();
