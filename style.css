@@ -18946,7 +18946,11 @@ body {
 }
 
 @media (max-width: 768px) {
-  :root { --app-header-h: 56px; }
+  :root {
+    --app-header-h: 56px;
+    --app-bottom-nav-h: 62px;
+    --app-sidebar-mobile-gap: 8px;
+  }
 
   .app-brand-name { display: none; }
   .app-user-info { display: none; }
@@ -18957,12 +18961,21 @@ body {
     position: fixed;
     top: var(--app-header-h);
     left: 0;
-    height: calc(100vh - var(--app-header-h));
+    bottom: calc(var(--app-bottom-nav-h) + var(--app-sidebar-mobile-gap) + env(safe-area-inset-bottom, 0px));
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: calc(100dvh - var(--app-header-h) - var(--app-bottom-nav-h) - var(--app-sidebar-mobile-gap) - env(safe-area-inset-bottom, 0px));
     width: var(--app-sidebar-w) !important;
     transform: translateX(-100%);
     z-index: 200;
     box-shadow: var(--app-shadow-float);
     transition: transform var(--app-sidebar-transition);
+  }
+  .app-sidebar-inner {
+    padding-bottom: 10px;
+  }
+  .app-sidebar-footer {
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   }
   .app-layout.sidebar-open .app-sidebar {
     transform: translateX(0);
@@ -19273,6 +19286,27 @@ body {
   /* flex コンテナ内でサイドバーが自身の高さに縮まないよう強制 */
   align-self: stretch !important;
   min-height: 100% !important;
+}
+
+/* モバイルは bottom nav 分を差し引いた drawer 高さを優先 */
+@media (max-width: 768px) {
+  .app-sidebar {
+    top: var(--app-header-h) !important;
+    bottom: calc(var(--app-bottom-nav-h, 62px) + var(--app-sidebar-mobile-gap, 8px) + env(safe-area-inset-bottom, 0px)) !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: calc(100dvh - var(--app-header-h) - var(--app-bottom-nav-h, 62px) - var(--app-sidebar-mobile-gap, 8px) - env(safe-area-inset-bottom, 0px)) !important;
+    align-self: auto !important;
+  }
+
+  .app-sidebar-inner {
+    height: 100%;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-sidebar-footer {
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* ===================================================
@@ -20057,6 +20091,24 @@ body {
 
 .home-workspace-stage--flat .home-workspace-stage-body {
   margin-top: 16px;
+}
+
+/* Keep MySpace readable: scroll the workspace shell, not a tiny inner pane. */
+.app-main.home-compact .home-workspace-shell {
+  overflow-y: auto;
+  scrollbar-gutter: stable both-edges;
+}
+
+.app-main.home-compact .home-workspace-stage--flat {
+  flex: 0 0 auto;
+  min-height: max-content;
+}
+
+.app-main.home-compact .home-workspace-stage--flat .home-workspace-stage-body {
+  flex: 0 0 auto;
+  min-height: max-content;
+  overflow: visible;
+  padding-bottom: 12px;
 }
 
 /* ===== home-myspace: quick help / glossary (home-workspace.js) ===== */
