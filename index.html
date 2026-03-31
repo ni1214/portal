@@ -63,7 +63,7 @@
         <div class="app-search-wrap">
           <i class="material-symbols-rounded app-search-icon">search</i>
           <input type="text" id="search-input" class="app-search-input"
-                 placeholder="リソース・タスク・通知を検索..." autocomplete="off">
+                 placeholder="リソース・タスク・お知らせを検索..." autocomplete="off">
           <button class="app-search-clear" id="app-search-clear" title="クリア" hidden>
             <i class="material-symbols-rounded">close</i>
           </button>
@@ -469,7 +469,7 @@
             <i class="fa-brands fa-google-drive ft-how-icon" style="color:#34a853"></i>
             <div class="ft-how-content">
               <div class="ft-how-header">
-                <span><b>Drive共有</b> — DriveフォルダのURLをお互いに通知</span>
+              <span><b>Drive共有</b> — DriveフォルダのURLをお互いに共有</span>
                 <button class="ft-how-toggle" id="ft-drive-desc-toggle" title="説明を折りたたむ">
                   <i class="fa-solid fa-chevron-up"></i>
                 </button>
@@ -515,7 +515,7 @@
   <div class="modal-overlay" id="ft-drive-send-modal">
     <div class="modal-glass">
       <h3 class="modal-title"><i class="fa-brands fa-google-drive" style="color:#34a853"></i> Driveリンクを共有する</h3>
-      <p class="modal-desc">自分のGoogleドライブフォルダURLを相手に通知します。相手はそこにファイルを入れることができます。</p>
+      <p class="modal-desc">自分のGoogleドライブフォルダURLを相手に共有します。相手はそこにファイルを入れることができます。</p>
       <div class="form-group" style="margin-bottom:10px">
         <label class="form-label">送信先を検索</label>
         <input type="text" id="ft-drive-user-search" class="form-input" placeholder="名前で検索..." autocomplete="off" style="margin-bottom:8px">
@@ -578,19 +578,19 @@
       <!-- タブ切り替え -->
       <div class="chat-sidebar-tabs">
         <button class="chat-sidebar-tab active" id="chat-tab-dm" data-tab="dm">
-          <i class="fa-solid fa-user"></i> ダイレクト
+          <i class="fa-solid fa-user"></i> 個別チャット
         </button>
         <button class="chat-sidebar-tab" id="chat-tab-group" data-tab="group">
           <i class="material-symbols-rounded" aria-hidden="true">groups</i> グループ
         </button>
       </div>
 
-      <!-- DM パネル -->
+      <!-- 個別チャットパネル -->
       <div class="chat-sidebar-panel" id="chat-panel-dm">
         <div class="chat-sidebar-panel-header">
-          <span>ダイレクトメッセージ</span>
-          <button class="chat-sidebar-add-btn" id="btn-new-dm" title="新しいDM">
-            <i class="fa-solid fa-plus"></i> 新規DM
+          <span>個別チャット</span>
+          <button class="chat-sidebar-add-btn" id="btn-new-dm" title="新しいチャット">
+            <i class="fa-solid fa-plus"></i> 新規チャット
           </button>
         </div>
         <div id="dm-room-list" class="chat-room-list"></div>
@@ -651,10 +651,10 @@
     </div>
   </div>
 
-  <!-- ==================== 新規DMモーダル ==================== -->
+  <!-- ==================== 個別チャットモーダル ==================== -->
   <div class="modal-overlay" id="new-dm-modal">
     <div class="modal-glass">
-      <h3 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">person_add</i> ダイレクトメッセージ</h3>
+      <h3 class="modal-title"><i class="material-symbols-rounded" aria-hidden="true">person_add</i> 個別チャット</h3>
       <p class="modal-desc">話しかけたいメンバーを選んでください</p>
       <input type="text" id="new-dm-search" class="form-input" placeholder="名前で検索..." autocomplete="off" style="margin-bottom:10px">
       <div id="new-dm-user-list" class="new-dm-user-list"></div>

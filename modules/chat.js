@@ -1,4 +1,4 @@
-// ========== チャット（DM + グループ）モジュール ==========
+// ========== チャット（個別チャット + グループ）モジュール ==========
 import { state, CHAT_MSG_MAX } from './state.js';
 import { getUserAvatarColor } from './auth.js';
 import { esc } from './utils.js';
@@ -154,7 +154,7 @@ export function startChatListeners(username) {
     poll();
     state._dmRoomsUnsubscribe = setInterval(poll, 10000);
   }
-    recordListenerStart('chat.dm-rooms', 'DM一覧', `dm_rooms:${username}`);
+  recordListenerStart('chat.dm-rooms', '個別チャット一覧', `dm_rooms:${username}`);
 
     recordListenerStart('chat.group-rooms', 'グループ一覧', `chat_rooms:${username}`);
 }
@@ -313,7 +313,7 @@ function _renderRoomList(type) {
 
   if (!filtered.length) {
     listEl.innerHTML = `<div class="chat-room-empty">${type === 'dm'
-      ? '上の「＋ 新規DM」ボタンから<br>話しかけてみましょう'
+      ? '上の「＋ 新規チャット」ボタンから<br>話しかけてみましょう'
       : '上の「＋ グループ作成」ボタンから<br>グループを作りましょう'
     }</div>`;
     return;
@@ -338,7 +338,7 @@ function _renderRoomList(type) {
     const initial = name.charAt(0).toUpperCase();
     const unreadHtml = unread > 0 ? `<span class="chat-room-unread">${unread}</span>` : '';
     const deleteBtn = type === 'dm'
-      ? `<button class="chat-room-delete-btn" data-room-id="${room.id}" title="DMを削除">🗑</button>`
+      ? `<button class="chat-room-delete-btn" data-room-id="${room.id}" title="個別チャットを削除">🗑</button>`
       : '';
     return `
       <div class="chat-room-item${isActive ? ' active' : ''}" data-room-id="${room.id}" data-room-type="${type}">
@@ -564,7 +564,7 @@ export function scrollChatToBottom() {
   if (c) c.scrollTop = c.scrollHeight;
 }
 
-// ===== DM作成モーダル =====
+// ===== 個別チャット作成モーダル =====
 export async function openNewDmModal() {
   if (!state.currentUsername) { showToast('チャットするにはユーザーネームを設定してください。', 'warning'); return; }
   const modal = document.getElementById('new-dm-modal');
@@ -578,7 +578,7 @@ export async function openNewDmModal() {
 
 export async function deleteDmRoom(roomId) {
   if (!state.currentUsername || !roomId) return;
-  if (!await showConfirm('このDMを削除しますか？（自分の一覧からのみ消えます）', { danger: true })) return;
+  if (!await showConfirm('このチャットを削除しますか？（自分の一覧からのみ消えます）', { danger: true })) return;
   try {
     if (true) {
       const room = state.dmRooms.find(r => r.id === roomId);
@@ -603,7 +603,7 @@ export async function deleteDmRoom(roomId) {
     if (state.chatPanelOpen) renderChatSidebar();
     updateChatBadge();
   } catch (e) {
-    console.error('DM削除失敗:', e);
+    console.error('個別チャット削除失敗:', e);
     showToast('削除に失敗しました', 'error');
   }
 }
@@ -721,7 +721,7 @@ export async function createGroupRoom() {
   } catch (err) { console.error('グループ作成エラー:', err); showToast('作成に失敗しました。', 'error'); }
 }
 
-// ===== ユーザーピッカー（DM/グループ共通）=====
+// ===== ユーザーピッカー（個別チャット/グループ共通）=====
 export async function loadUsersForChatPicker(listElId, searchElId, onSelect, excludeSelf) {
   const listEl = document.getElementById(listElId);
   if (!listEl) return;

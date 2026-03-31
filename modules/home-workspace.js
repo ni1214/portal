@@ -162,9 +162,9 @@ function buildOverviewTitle() {
 
 function buildOverviewSubtitle() {
   if (!state.currentUsername) {
-    return 'ユーザー名を設定すると、あなたのタスクや通知が表示されます。';
+    return 'ユーザー名を設定すると、あなたのタスクやチャット・お知らせが表示されます。';
   }
-  return 'サイドバーのボタンで各画面が開きます。まずは上の通知を確認してください。';
+  return 'サイドバーのボタンで各画面が開きます。まずは上のチャット・お知らせを確認してください。';
 }
 
 
@@ -254,14 +254,14 @@ function buildNoticeOverview() {
   const stats = buildNoticeStats();
   return {
     kicker: '自分向け',
-    title: '通知',
+    title: 'チャット・お知らせ',
     value: `${stats.totalCount}件`,
     meta: stats.pendingAckCount > 0
       ? `確認待ち ${stats.pendingAckCount}件 / 未読 ${stats.unreadCount}件`
-      : (stats.unreadCount > 0 ? `未読 ${stats.unreadCount}件` : '通知はありません'),
+      : (stats.unreadCount > 0 ? `未読 ${stats.unreadCount}件` : 'お知らせはありません'),
     tone: stats.pendingAckCount > 0 ? 'notice' : (stats.unreadCount > 0 ? 'task' : 'settings'),
     items: stats.items,
-    emptyText: '通知はまだありません',
+    emptyText: 'お知らせはまだありません',
   };
 }
 
@@ -326,7 +326,7 @@ function buildHomeNotificationOverview() {
 
   return {
     kicker: '自分向け',
-    title: '通知',
+    title: 'お知らせ',
     value: `${totalCount}件`,
     meta: metaParts.length > 0 ? metaParts.join(' / ') : 'チャット / お知らせはありません',
     tone: noticeStats.pendingAckCount > 0 ? 'notice' : (hasChatUnread ? 'request' : (noticeStats.unreadCount > 0 ? 'task' : 'settings')),

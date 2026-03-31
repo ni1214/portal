@@ -3562,10 +3562,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
   });
 
-  // ===== チャチE��冁E��ョートカチE�� =====
+  // ===== チャットショートカット =====
   document.getElementById('chat-launch-task')?.addEventListener('click', openTaskModal);
   document.getElementById('chat-launch-ft')?.addEventListener('click', () => {
-    // DMの場合�E相手を自動選択してFT送信モーダルを開ぁE
+    // 個別チャットの場合は相手を自動選択してFT送信モーダルを開く
     if (state.currentRoomType === 'dm' && state.currentRoomId) {
       const partner = state.currentRoomId.split('_').find(u => u !== state.currentUsername);
       if (partner) {
@@ -3646,7 +3646,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // ===== 新規DM/グルーチE=====
+  // ===== 個別チャット/グループ =====
   document.getElementById('btn-new-dm')?.addEventListener('click', openNewDmModal);
   document.getElementById('new-dm-cancel')?.addEventListener('click', () => {
     document.getElementById('new-dm-modal').classList.remove('visible');

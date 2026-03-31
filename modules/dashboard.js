@@ -382,7 +382,7 @@ function buildNoticeCard() {
     .sort((a, b) => compareTimestamp(b.createdAt, a.createdAt));
 
   return {
-    title: pendingAck.length > 0 ? '確認待ちのお知らせ' : '未読の通知',
+    title: pendingAck.length > 0 ? '確認待ちのお知らせ' : '未読のお知らせ',
     value: `${pendingAck.length > 0 ? pendingAck.length : urgentUnread.length || unread.length}件`,
     meta: pendingAck.length > 0
       ? `要確認 ${pendingAck.length}件 / 未読 ${unread.length}件`
@@ -448,10 +448,10 @@ function buildFocusCard(todayKey) {
   switch (departmentKey) {
     case 'sales':
       if (requestReplies.length > 0) addCandidate(0, `返答待ち依頼 ${requestReplies.length}件`, '他部署へ出した依頼の返答待ちです', DASH_TARGETS.REQUEST_SENT);
-      if (pendingAck.length > 0) addCandidate(1, `確認待ち通知 ${pendingAck.length}件`, '重要なお知らせがあります', DASH_TARGETS.NOTICE);
+      if (pendingAck.length > 0) addCandidate(1, `確認待ちのお知らせ ${pendingAck.length}件`, '重要なお知らせがあります', DASH_TARGETS.NOTICE);
       break;
     case 'design':
-      if (pendingAck.length > 0) addCandidate(0, `確認待ち通知 ${pendingAck.length}件`, '設計関連のお知らせを確認してください', DASH_TARGETS.NOTICE);
+      if (pendingAck.length > 0) addCandidate(0, `確認待ちのお知らせ ${pendingAck.length}件`, '設計関連のお知らせを確認してください', DASH_TARGETS.NOTICE);
       if (openRequests.length > 0) addCandidate(1, `未対応依頼 ${openRequests.length}件`, '部門間依頼の確認が必要です', DASH_TARGETS.REQUEST_RECEIVED);
       break;
     case 'production':
@@ -459,11 +459,11 @@ function buildFocusCard(todayKey) {
     case 'construction':
       if (attendanceInfo.summary) addCandidate(attendanceInfo.priority, attendanceInfo.summary, attendanceInfo.meta, DASH_TARGETS.ATTENDANCE);
       if (openRequests.length > 0) addCandidate(1, `自部署待ち依頼 ${openRequests.length}件`, '部門間依頼の確認が必要です', DASH_TARGETS.REQUEST_RECEIVED);
-      if (pendingAck.length > 0) addCandidate(1, `確認待ち通知 ${pendingAck.length}件`, '重要なお知らせがあります', DASH_TARGETS.NOTICE);
+      if (pendingAck.length > 0) addCandidate(1, `確認待ちのお知らせ ${pendingAck.length}件`, '重要なお知らせがあります', DASH_TARGETS.NOTICE);
       break;
     default:
       if (openRequests.length > 0) addCandidate(0, `自部署待ち依頼 ${openRequests.length}件`, '部門間依頼の確認が必要です', DASH_TARGETS.REQUEST_RECEIVED);
-      if (pendingAck.length > 0) addCandidate(1, `確認待ち通知 ${pendingAck.length}件`, '重要なお知らせがあります', DASH_TARGETS.NOTICE);
+      if (pendingAck.length > 0) addCandidate(1, `確認待ちのお知らせ ${pendingAck.length}件`, '重要なお知らせがあります', DASH_TARGETS.NOTICE);
       break;
   }
 

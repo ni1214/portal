@@ -571,7 +571,7 @@ function renderPropertySummary() {
     ? `<div class="prop-summary-context"><span class="prop-summary-context-label">検索時刻</span><strong>${esc(formatTimestampLike(results.searchedAt))}</strong></div>`
     : '';
   const fallbackNote = results.attendanceFallbackUsed
-    ? `<div class="prop-summary-fallback"><i class="fa-solid fa-clock-rotate-left"></i> 作業記録は旧データ補完のため直近${ATTENDANCE_FALLBACK_MONTHS}か月分の現場コードも確認しました。</div>`
+    ? `<div class="prop-summary-fallback"><i class="fa-solid fa-clock-rotate-left"></i> 作業記録は旧データ補完のため直近${ATTENDANCE_FALLBACK_MONTHS}か月分の物件No（現場コード）も確認しました。</div>`
     : '';
 
   container.innerHTML = `

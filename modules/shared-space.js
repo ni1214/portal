@@ -545,7 +545,7 @@ function getNoticeSummary() {
   const visible = Array.isArray(state.visibleNotices) ? state.visibleNotices : [];
   const items = visible.slice(0, 3).map(notice => ({
     title: notice.title || 'お知らせ',
-    meta: notice.priority === 'urgent' ? '重要通知' : '共有通知',
+    meta: notice.priority === 'urgent' ? '重要なお知らせ' : 'お知らせ',
     date: formatCompactDate(notice.createdAt),
   }));
 
@@ -568,8 +568,8 @@ function getNoticeSummary() {
       ? '重要なお知らせの確認が必要です。'
       : (unreadCount > 0 ? 'まだ読んでいないお知らせがあります。' : '大きな確認待ちはありません。'),
     items: items.length > 0 ? items : [{
-      title: '共有通知を確認',
-      meta: '未読の共有トピックはありません',
+      title: 'お知らせを確認',
+      meta: '未読のお知らせはありません',
       date: 'Portal',
     }],
   };
