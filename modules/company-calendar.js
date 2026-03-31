@@ -6,6 +6,7 @@ import {
   fetchPublicAttendanceFromSupabase,
   writePublicAttendanceToSupabase,
   removePublicAttendanceFromSupabase,
+  isSupabaseSharedCoreEnabled,
 } from './supabase.js';
 import { esc } from './utils.js';
 import { verifyPIN } from './auth.js';
@@ -126,6 +127,7 @@ export async function writePublicAttendance(dateStr, username, type) {
     } else {
       await setDoc(publicAttRef(ym), { [day]: { [username]: type } }, { merge: true });
     }
+    syncPublicAttendanceCache(dateStr, username, type);
   } catch (err) { console.warn('公開出席書込みエラー:', err); }
 }
 
@@ -139,6 +141,7 @@ export async function removePublicAttendance(dateStr, username) {
     } else {
       await updateDoc(publicAttRef(ym), { [`${day}.${username}`]: deleteField() });
     }
+    syncPublicAttendanceCache(dateStr, username, null);
   } catch (_) {}
 }
 
@@ -155,6 +158,30 @@ export async function fetchPublicAttendance(ym) {
     console.warn('公開出席取得エラー:', err);
     state.publicAttendance[ym] = {};
   }
+}
+
+function syncPublicAttendanceCache(dateStr, username, type) {
+  if (!dateStr || !username) return;
+  const ym = dateStr.slice(0, 7);
+  const day = dateStr.slice(8, 10);
+  const month = state.publicAttendance[ym] && typeof state.publicAttendance[ym] === 'object'
+    ? { ...state.publicAttendance[ym] }
+    : {};
+  const dayEntry = month[day] && typeof month[day] === 'object' ? { ...month[day] } : {};
+
+  if (type) {
+    dayEntry[username] = type;
+  } else {
+    delete dayEntry[username];
+  }
+
+  if (Object.keys(dayEntry).length > 0) {
+    month[day] = dayEntry;
+  } else {
+    delete month[day];
+  }
+
+  state.publicAttendance[ym] = month;
 }
 
 // ===== 日付情報の判定ユーティリティ =====

@@ -123,6 +123,7 @@ export function unsubscribeTodayAttendance() {
 export async function saveAttendance(dateStr, data) {
   if (!state.currentUsername) return;
   const yearMonth = dateStr.slice(0, 7);
+  const todayStr = getTodayDateStr();
   if (isSupabaseSharedCoreEnabled()) {
     try {
       const map = data.workSiteHours;
@@ -145,10 +146,13 @@ export async function saveAttendance(dateStr, data) {
       }
       deps.markWorkSummaryStale?.();
       state.attendanceData[dateStr] = { ...data, yearMonth };
-      syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
+      if (dateStr === todayStr) {
+        syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
+      }
       renderCalendar();
       updateCalendarSummary();
       refreshTodayDashboard();
+      void fetchFiscalYearPaidLeave();
       return true;
     } catch (err) {
       console.error('勤怠保存エラー:', err);
@@ -181,10 +185,13 @@ export async function saveAttendance(dateStr, data) {
     }
     deps.markWorkSummaryStale?.();
     state.attendanceData[dateStr] = { ...data, yearMonth };
-    syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
+    if (dateStr === todayStr) {
+      syncTodayAttendanceState(dateStr, buildAttendanceStateForStore(dateStr, data));
+    }
     renderCalendar();
     updateCalendarSummary();
     refreshTodayDashboard();
+    void fetchFiscalYearPaidLeave();
     return true;
   } catch (err) {
     console.error('勤怠保存エラー:', err);
@@ -195,24 +202,26 @@ export async function saveAttendance(dateStr, data) {
 
 export async function deleteAttendance(dateStr) {
   if (!state.currentUsername) return;
+  const todayStr = getTodayDateStr();
   if (isSupabaseSharedCoreEnabled()) {
     try {
       await deleteAttendanceEntryInSupabase(state.currentUsername, dateStr);
       delete state.attendanceData[dateStr];
-      if (dateStr === getTodayDateStr()) {
+      if (dateStr === todayStr) {
         syncTodayAttendanceState(dateStr, null);
       }
       await deps.removePublicAttendance?.(dateStr, state.currentUsername);
       deps.markWorkSummaryStale?.();
       renderCalendar();
       refreshTodayDashboard();
+      void fetchFiscalYearPaidLeave();
     } catch (err) { console.error('勤怠削除エラー:', err); }
     return;
   }
   try {
     await deleteDoc(attendancePath(state.currentUsername, dateStr));
     delete state.attendanceData[dateStr];
-    if (dateStr === getTodayDateStr()) {
+    if (dateStr === todayStr) {
       syncTodayAttendanceState(dateStr, null);
     }
     // 公開出席からも削除
@@ -220,6 +229,7 @@ export async function deleteAttendance(dateStr) {
     deps.markWorkSummaryStale?.();
     renderCalendar();
     refreshTodayDashboard();
+    void fetchFiscalYearPaidLeave();
   } catch (err) { console.error('勤怠削除エラー:', err); }
 }
 

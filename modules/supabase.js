@@ -1640,15 +1640,30 @@ export async function fetchCompanyCalSettingsFromSupabase() {
 }
 
 export async function saveCompanyCalSettingsToSupabase(data) {
-  const id = data.id || 'default';
+  const current = (state.companyCalConfig && typeof state.companyCalConfig === 'object')
+    ? state.companyCalConfig
+    : (await fetchCompanyCalSettingsFromSupabase().catch(() => null)) || {};
+  const id = data.id || current.id || 'default';
+  const workSaturdays = Object.prototype.hasOwnProperty.call(data, 'workSaturdays')
+    ? (Array.isArray(data.workSaturdays) ? [...data.workSaturdays] : [])
+    : (Array.isArray(current.workSaturdays) ? [...current.workSaturdays] : []);
+  const plannedLeaveSaturdays = Object.prototype.hasOwnProperty.call(data, 'plannedLeaveSaturdays')
+    ? (Array.isArray(data.plannedLeaveSaturdays) ? [...data.plannedLeaveSaturdays] : [])
+    : (Array.isArray(current.plannedLeaveSaturdays) ? [...current.plannedLeaveSaturdays] : []);
+  const holidayRanges = Object.prototype.hasOwnProperty.call(data, 'holidayRanges')
+    ? (Array.isArray(data.holidayRanges) ? [...data.holidayRanges] : [])
+    : (Array.isArray(current.holidayRanges) ? [...current.holidayRanges] : []);
+  const events = Object.prototype.hasOwnProperty.call(data, 'events')
+    ? (Array.isArray(data.events) ? [...data.events] : [])
+    : (Array.isArray(current.events) ? [...current.events] : []);
   await requestSupabase('company_calendar_settings', {
     method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
     body: {
       id,
-      work_saturdays: Array.isArray(data.workSaturdays) ? data.workSaturdays : [],
-      planned_leave_saturdays: Array.isArray(data.plannedLeaveSaturdays) ? data.plannedLeaveSaturdays : [],
-      holiday_ranges: Array.isArray(data.holidayRanges) ? data.holidayRanges : [],
-      events: Array.isArray(data.events) ? data.events : [],
+      work_saturdays: workSaturdays,
+      planned_leave_saturdays: plannedLeaveSaturdays,
+      holiday_ranges: holidayRanges,
+      events,
     },
   });
 }
