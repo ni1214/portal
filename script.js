@@ -1111,14 +1111,15 @@ async function ensureSharedCardsLoaded(force = false) {
   renderSharedLinksBrowser();
 
   _sharedCardsLoadPromise = (async () => {
+    let loadedSuccessfully = false;
     try {
       const cards = await fetchSharedCardsFromSupabase();
       state.allCards = sortCards(cards);
+      loadedSuccessfully = true;
     } catch (err) {
       console.error('Supabase shared card load error:', err);
-      state.allCards = [];
     }
-    state.sharedCardsLoaded = true;
+    state.sharedCardsLoaded = loadedSuccessfully;
     rerenderCards();
     renderSharedHome();
     return state.allCards;
@@ -1630,11 +1631,11 @@ function buildLinkCard(card, isFav = false, gradient = '') {
     toggleFavorite(card.id);
   });
 
+  a.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    showContextMenu(e, card);
+  });
   if (!isFav) {
-    a.addEventListener('contextmenu', e => {
-      e.preventDefault();
-      showContextMenu(e, card);
-    });
     setupDraggable(a, card);
   }
   return a;
