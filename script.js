@@ -1419,7 +1419,8 @@ function _seedDefaultCollapse() {
 }
 
 
-function buildSection(cat, cards) {
+function buildSection(cat, cards, options = {}) {
+  const searchMode = !!options.searchMode;
   const section = document.createElement('section');
   const gradient = getCategoryGradient(cat);
   const sectionId = cat.isPrivate ? `priv:${cat.docId}` : cat.id;
@@ -1455,9 +1456,11 @@ function buildSection(cat, cards) {
     });
     const grid = section.querySelector('.external-grid');
     grid.appendChild(buildSolarIconWrap());
-    const rootExternalCards = cards.filter(c => !c.parentId && c.url !== 'solar:open');
-    rootExternalCards.forEach(c => grid.appendChild(buildExternalCard(c, cards)));
-    if (state.isEditMode) {
+    const externalCards = searchMode
+      ? cards.filter(c => c.url !== 'solar:open')
+      : cards.filter(c => !c.parentId && c.url !== 'solar:open');
+    externalCards.forEach(c => grid.appendChild(buildExternalCard(c, cards)));
+    if (state.isEditMode && !searchMode) {
       const addWrap = document.createElement('div');
       addWrap.className = 'ext-icon-wrap';
       const addBtn = document.createElement('button');
@@ -1493,9 +1496,9 @@ function buildSection(cat, cards) {
       <div class="card-grid"></div>
     `;
     const grid = section.querySelector('.card-grid');
-    const privRootCards = cards.filter(c => !c.parentId);
-    privRootCards.forEach(c => grid.appendChild(buildCardNode(c, cards, privGradient, true)));
-    grid.appendChild(buildAddButton(null, true, cat.docId));
+    const privCards = searchMode ? cards : cards.filter(c => !c.parentId);
+    privCards.forEach(c => grid.appendChild(buildCardNode(c, cards, privGradient, true)));
+    if (state.isEditMode && !searchMode) grid.appendChild(buildAddButton(null, true, cat.docId));
     section.querySelector('.btn-edit-category').addEventListener('click', () => openPrivateSectionModal(cat));
     section.querySelector('.category-header').addEventListener('click', e => {
       if (e.target.closest('button') || e.target.closest('a')) return;
@@ -1534,9 +1537,9 @@ function buildSection(cat, cards) {
       <div class="card-grid"></div>
     `;
     const grid = section.querySelector('.card-grid');
-    const rootCards = cards.filter(c => !c.parentId);
-    rootCards.forEach(c => grid.appendChild(buildCardNode(c, cards, gradient, false)));
-    if (state.isEditMode) grid.appendChild(buildAddButton(cat.id));
+    const sectionCards = searchMode ? cards : cards.filter(c => !c.parentId);
+    sectionCards.forEach(c => grid.appendChild(buildCardNode(c, cards, gradient, false)));
+    if (state.isEditMode && !searchMode) grid.appendChild(buildAddButton(cat.id));
 
     section.querySelector('.category-header').addEventListener('click', e => {
       if (e.target.closest('button') || e.target.closest('a')) return;
