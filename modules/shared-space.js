@@ -25,6 +25,9 @@ export function initSharedSpace(d = {}) {
 export function renderSharedHome() {
   const host = document.getElementById('shared-home-panel');
   if (!host) return;
+  host.hidden = true;
+  host.innerHTML = '';
+  return;
 
   const noticeSummary = getNoticeSummary();
   const requestSummary = getRequestSummary();

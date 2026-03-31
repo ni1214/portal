@@ -69,6 +69,10 @@ export function renderTodayDashboard() {
     favoriteCount,
   });
 
+  section.hidden = true;
+  section.innerHTML = '';
+  return;
+
   section.hidden = false;
   section.innerHTML = `
     <div class="portal-rail-shell home-m3-workspace home-m3-workspace--personal">
@@ -366,17 +370,6 @@ function renderHomeHero(host, {
           </button>
         </div>
       </div>
-
-      <button
-        type="button"
-        class="home-m3-search-launch"
-        data-dash-target="${esc(DASH_TARGETS.SEARCH)}"
-        aria-label="${esc(getDashboardActionLabel(DASH_TARGETS.SEARCH))}"
-      >
-        <span class="material-symbols-rounded" aria-hidden="true">search</span>
-        <span class="home-m3-search-launch__copy">リソース・タスク・お知らせを検索</span>
-        <span class="home-m3-search-launch__meta">丸みのある検索バーで絞り込み</span>
-      </button>
 
       <div class="home-m3-chip-row">
         ${chips.map(chip => `<span class="home-m3-chip">${esc(chip)}</span>`).join('')}
