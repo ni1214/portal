@@ -18534,6 +18534,18 @@ body {
   font-size: 1rem;
 }
 
+.app-sidebar-icon > i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25em;
+  height: 1.25em;
+  min-width: 1.25em;
+  line-height: 1;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
 .app-sidebar-label {
   white-space: nowrap;
   overflow: hidden;

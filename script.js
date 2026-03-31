@@ -2414,16 +2414,24 @@ function applyFavoritesOnlyMode() {
     btn.classList.add('active');
     btn.title = 'すべて表示';
     // サイドバー構造に対応！Eidebar-item-icon / sidebar-item-label�E�E
-    const iconEl = btn.querySelector('.sidebar-item-icon i') || btn.querySelector('i');
+    const iconEl = btn.querySelector('.app-sidebar-icon i') || btn.querySelector('i');
     const labelEl = btn.querySelector('.sidebar-item-label') || btn.querySelector('.btn-fav-label');
-    if (iconEl) { iconEl.className = 'fa-solid fa-star'; }
+    if (iconEl) {
+      iconEl.className = 'material-symbols-rounded';
+      iconEl.textContent = 'star';
+      iconEl.style.fontVariationSettings = "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24";
+    }
     if (labelEl) { labelEl.textContent = 'すべて表示'; }
   } else {
     btn.classList.remove('active');
     btn.title = '?????????????????????';
-    const iconEl = btn.querySelector('.sidebar-item-icon i') || btn.querySelector('i');
+    const iconEl = btn.querySelector('.app-sidebar-icon i') || btn.querySelector('i');
     const labelEl = btn.querySelector('.sidebar-item-label') || btn.querySelector('.btn-fav-label');
-    if (iconEl) { iconEl.className = 'fa-regular fa-star'; }
+    if (iconEl) {
+      iconEl.className = 'material-symbols-rounded';
+      iconEl.textContent = 'star';
+      iconEl.style.fontVariationSettings = "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24";
+    }
     if (labelEl) { labelEl.textContent = 'お気に入り�Eみ'; }
   }
   renderFavorites();
