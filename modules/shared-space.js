@@ -353,6 +353,39 @@ export function closeSharedLinksModal() {
   modal.classList.remove('visible');
 }
 
+function collectSharedLinkSearchCards(cards, queryText) {
+  if (!queryText) return cards;
+
+  const normalizedQuery = normalizeSearch(queryText);
+  if (!normalizedQuery) return cards;
+
+  const cardsById = new Map(cards.map(card => [card.id, card]));
+  const matchingRootIds = new Set();
+
+  cards.forEach(card => {
+    if (!normalizeSearch(card.label).includes(normalizedQuery)) return;
+    let current = card;
+    while (current?.parentId) {
+      const parent = cardsById.get(current.parentId);
+      if (!parent) break;
+      current = parent;
+    }
+    if (current?.id) matchingRootIds.add(current.id);
+  });
+
+  if (!matchingRootIds.size) return [];
+
+  return cards.filter(card => {
+    let current = card;
+    while (current?.parentId) {
+      const parent = cardsById.get(current.parentId);
+      if (!parent) break;
+      current = parent;
+    }
+    return !!current && matchingRootIds.has(current.id);
+  });
+}
+
 export function renderSharedLinksBrowser() {
   const body = document.getElementById('shared-links-browser-body');
   const chips = document.getElementById('shared-links-chip-list');
@@ -405,9 +438,8 @@ export function renderSharedLinksBrowser() {
 
   publicCategories.forEach(cat => {
     if (categoryFilter !== 'all' && categoryFilter !== cat.id) return;
-    const catCards = cards
-      .filter(card => card.category === cat.id)
-      .filter(card => !queryText || normalizeSearch(card.label).includes(queryText))
+    const categoryCards = cards.filter(card => card.category === cat.id);
+    const catCards = collectSharedLinkSearchCards(categoryCards, queryText)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
     if (queryText && catCards.length === 0) return;

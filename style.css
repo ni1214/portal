@@ -3489,6 +3489,12 @@ html.font-xl { font-size: 21px; }
   font-size: 0.85rem;
 }
 
+.ext-icon-wrap .ext-card-children-badge {
+  bottom: 24px;
+  right: 6px;
+  z-index: 3;
+}
+
 /* 郢晄亢繝｣郢晏干縺・ｹ昴・繝ｻ隴幢ｽｬ闖ｴ繝ｻ*/
 .card-child-popup {
   position: absolute;

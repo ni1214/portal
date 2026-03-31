@@ -883,6 +883,7 @@ async function addPrivateCard(data) {
   const id = await createPrivateCardInSupabase(state.currentUsername, newData);
   state.privateCards.push({ id, isPrivate: true, ...newData });
   renderAllSections();
+  restoreChildPopupAfterMutation(data.parentId);
 }
 
 async function savePrivateCard(cardId, data) {
@@ -1181,6 +1182,7 @@ async function addCard(data) {
   await createSharedCardInSupabase(supabaseData);
   state.allCards = sortCards([...state.allCards, supabaseData]);
   rerenderCards();
+  restoreChildPopupAfterMutation(data.parentId);
 }
 
 async function deleteCard(docId) {
@@ -1452,7 +1454,8 @@ function buildSection(cat, cards) {
     });
     const grid = section.querySelector('.external-grid');
     grid.appendChild(buildSolarIconWrap());
-    cards.filter(c => c.url !== 'solar:open').forEach(c => grid.appendChild(buildExternalCard(c)));
+    const rootExternalCards = cards.filter(c => !c.parentId && c.url !== 'solar:open');
+    rootExternalCards.forEach(c => grid.appendChild(buildExternalCard(c, cards)));
     if (state.isEditMode) {
       const addWrap = document.createElement('div');
       addWrap.className = 'ext-icon-wrap';
@@ -1654,7 +1657,7 @@ function buildSolarIconWrap() {
   return wrap;
 }
 
-function buildExternalCard(card) {
+function buildExternalCard(card, allCatCards = []) {
   const wrap = document.createElement('div');
   wrap.className = 'ext-icon-wrap';
   wrap.dataset.docId = card.id;
@@ -1678,7 +1681,33 @@ function buildExternalCard(card) {
   wrap.appendChild(a);
 
   // 非表示ボタン�E��Eバ�E時表示�E�E
+  const children = Array.isArray(allCatCards)
+    ? allCatCards.filter(c => c.parentId === card.id)
+    : [];
+  if (children.length > 0) {
+    wrap.classList.add('ext-icon-has-children');
+
+    const badge = document.createElement('button');
+    badge.type = 'button';
+    badge.className = 'card-children-badge ext-card-children-badge';
+    badge.innerHTML = `<i class="fa-solid fa-layer-group"></i><span>${children.length}</span>`;
+    badge.title = `${children.length}件の子カードを表示`;
+    badge.setAttribute('aria-label', `${children.length}件の子カードを表示`);
+    badge.setAttribute('aria-haspopup', 'dialog');
+    badge.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (state.activeChildPopup && state.activeChildPopup.dataset.parentId === card.id) {
+        closeChildPopup();
+        return;
+      }
+      openChildPopup(card, children, allCatCards, '', false, a);
+    });
+    wrap.appendChild(badge);
+  }
+
   const hideBtn = document.createElement('button');
+  hideBtn.type = 'button';
   hideBtn.className = 'btn-hide-ext-card';
   hideBtn.title = 'こ�Eアイコンを非表示にする';
   hideBtn.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
@@ -1718,6 +1747,7 @@ function buildEditOverlay(card) {
 
 function buildAddButton(categoryId, isPrivate = false, privateSectionDocId = null, parentId = null) {
   const btn = document.createElement('button');
+  btn.type = 'button';
   btn.className = 'btn-add-card';
   btn.innerHTML = '<i class="fa-solid fa-plus"></i><span>カードを追加</span>';
   btn.addEventListener('click', () => openCardModal(null, categoryId, isPrivate, privateSectionDocId, parentId));
@@ -1735,9 +1765,12 @@ function buildCardNode(card, allCatCards, gradient, isPrivate) {
   a.classList.add('card-has-children');
 
   const badge = document.createElement('button');
+  badge.type = 'button';
   badge.className = 'card-children-badge';
   badge.innerHTML = `<i class="fa-solid fa-layer-group"></i><span>${children.length}</span>`;
   badge.title = `${children.length}件の子カードを表示`;
+  badge.setAttribute('aria-label', `${children.length}件の子カードを表示`);
+  badge.setAttribute('aria-haspopup', 'dialog');
   badge.addEventListener('click', e => {
     e.preventDefault();
     e.stopPropagation();
@@ -1770,7 +1803,7 @@ function openChildPopup(parentCard, children, allCatCards, gradient, isPrivate, 
       <span class="card-child-popup__icon">${iconHtml}</span>
       <span>${esc(parentCard.label)}</span>
     </div>
-    <button class="card-child-popup__close" title="閉じる"><i class="fa-solid fa-xmark"></i></button>
+    <button type="button" class="card-child-popup__close" title="閉じる" aria-label="閉じる"><i class="fa-solid fa-xmark"></i></button>
   `;
   popup.appendChild(header);
 
@@ -1849,6 +1882,34 @@ function closeChildPopup() {
     setTimeout(() => el.remove(), 180);
   }
   document.removeEventListener('click', closeChildPopupOnOutside);
+}
+
+function restoreChildPopupAfterMutation(parentId) {
+  if (!parentId) return;
+
+  const parentCard = state.allCards.find(c => c.id === parentId)
+    || state.privateCards.find(c => c.id === parentId);
+  if (!parentCard) return;
+
+  const isPrivate = !!parentCard.isPrivate;
+  const pool = isPrivate
+    ? [...state.privateCards]
+        .filter(c => c.sectionId === parentCard.sectionId)
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+    : [...state.allCards]
+        .filter(c => c.category === parentCard.category)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+  const visiblePool = pool.filter(c => !state.hiddenCards.includes(c.id));
+  const children = visiblePool.filter(c => c.parentId === parentId);
+  if (!children.length) return;
+
+  const escapedId = window.CSS && typeof window.CSS.escape === 'function'
+    ? window.CSS.escape(parentId)
+    : parentId.replace(/"/g, '\\"');
+  const anchorEl = document.querySelector(`[data-doc-id="${escapedId}"]`);
+  if (!anchorEl) return;
+
+  openChildPopup(parentCard, children, visiblePool, _getCardGradient(parentCard), isPrivate, anchorEl);
 }
 
 
@@ -2350,13 +2411,13 @@ function showContextMenu(e, card) {
   menu.style.left = x + 'px';
   menu.style.top = y + 'px';
   const hideItemHtml = !card.isPrivate
-    ? `<button class="ctx-item ctx-hide"><i class="fa-solid fa-eye-slash"></i> 非表示にする</button>`
+    ? `<button type="button" class="ctx-item ctx-hide"><i class="fa-solid fa-eye-slash"></i> 非表示にする</button>`
     : '';
   menu.innerHTML = `
-    <button class="ctx-item ctx-edit"><i class="fa-solid fa-pen"></i> 編雁E/button>
-    <button class="ctx-item ctx-add-child"><i class="fa-solid fa-sitemap"></i> 子カードを追加</button>
+    <button type="button" class="ctx-item ctx-edit"><i class="fa-solid fa-pen"></i> 編集</button>
+    <button type="button" class="ctx-item ctx-add-child"><i class="fa-solid fa-sitemap"></i> 子カードを追加</button>
     ${hideItemHtml}
-    <button class="ctx-item ctx-delete"><i class="fa-solid fa-trash"></i> 削除</button>
+    <button type="button" class="ctx-item ctx-delete"><i class="fa-solid fa-trash"></i> 削除</button>
   `;
   menu.querySelector('.ctx-edit').addEventListener('click', e => {
     e.stopPropagation();
