@@ -127,7 +127,7 @@ async function _refreshCompanyCalIfSupabase() {
 async function _saveCompanyCalSettings(patch) {
   try {
     if (isSupabaseSharedCoreEnabled()) {
-      await saveCompanyCalSettingsToSupabase(patch);
+      await saveCompanyCalSettingsToSupabase({ id: state.companyCalConfig?.id || 'default', ...patch });
       const refreshed = await _refreshCompanyCalIfSupabase();
       if (!refreshed) {
         _applyCompanyCalConfig({ ...(state.companyCalConfig || {}), ...patch });

@@ -1551,14 +1551,34 @@ export async function fetchCompanyCalSettingsFromSupabase() {
 
 export async function saveCompanyCalSettingsToSupabase(data) {
   const id = data.id || 'default';
+  const payload = {};
+  if ('workSaturdays' in data) payload.work_saturdays = Array.isArray(data.workSaturdays) ? data.workSaturdays : [];
+  if ('plannedLeaveSaturdays' in data) payload.planned_leave_saturdays = Array.isArray(data.plannedLeaveSaturdays) ? data.plannedLeaveSaturdays : [];
+  if ('holidayRanges' in data) payload.holiday_ranges = Array.isArray(data.holidayRanges) ? data.holidayRanges : [];
+  if ('events' in data) payload.events = Array.isArray(data.events) ? data.events : [];
+  if (Object.keys(payload).length === 0) return;
+
+  const existing = await requestSupabase(
+    `company_calendar_settings?id=eq.${encodeURIComponent(id)}&select=id&limit=1`
+  );
+  if (Array.isArray(existing) && existing.length > 0) {
+    await requestSupabase(`company_calendar_settings?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: payload,
+    });
+    return;
+  }
+
   await requestSupabase('company_calendar_settings', {
     method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
     body: {
       id,
-      work_saturdays: Array.isArray(data.workSaturdays) ? data.workSaturdays : [],
-      planned_leave_saturdays: Array.isArray(data.plannedLeaveSaturdays) ? data.plannedLeaveSaturdays : [],
-      holiday_ranges: Array.isArray(data.holidayRanges) ? data.holidayRanges : [],
-      events: Array.isArray(data.events) ? data.events : [],
+      work_saturdays: [],
+      planned_leave_saturdays: [],
+      holiday_ranges: [],
+      events: [],
+      ...payload,
     },
   });
 }
