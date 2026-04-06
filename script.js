@@ -2019,6 +2019,7 @@ function getFavorites() {
 function setFavorites(ids) {
   state.personalFavorites = [...ids];
   savePreferencesToFirestore();
+  renderTodayDashboard();
 }
 
 function toggleFavorite(docId) {

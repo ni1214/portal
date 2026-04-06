@@ -366,7 +366,20 @@ function collectSharedLinkSearchCards(cards, queryText) {
   if (!queryText) return cards;
   const normalizedQuery = normalizeSearch(queryText);
   if (!normalizedQuery) return cards;
-  return cards.filter(card => normalizeSearch(card.label).includes(normalizedQuery));
+  const cardMap = new Map(cards.map(card => [card.id, card]));
+  const includedIds = new Set();
+
+  cards.forEach(card => {
+    if (!normalizeSearch(card.label).includes(normalizedQuery)) return;
+    let current = card;
+    while (current) {
+      if (includedIds.has(current.id)) break;
+      includedIds.add(current.id);
+      current = current.parentId ? cardMap.get(current.parentId) : null;
+    }
+  });
+
+  return cards.filter(card => includedIds.has(card.id));
 }
 
 export function renderSharedLinksBrowser() {
