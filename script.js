@@ -483,11 +483,6 @@ initTodayDashboard({
     openServicePicker();
   },
   openFavorites: () => {
-    const section = document.getElementById('favorites-section');
-    if (section && !section.hidden) {
-      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
     if (!state.favoritesOnlyMode) {
       state.favoritesOnlyMode = true;
       savePreferencesToFirestore();
