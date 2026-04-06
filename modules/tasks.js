@@ -1102,7 +1102,15 @@ export function _renderNewTaskForm(container) {
         </div>
         <div class="form-group">
           <label class="form-label" for="new-task-due">期限入力（省略可）</label>
-          <input type="date" id="new-task-due" class="form-input task-date-input">
+          <button type="button" class="task-date-picker" id="new-task-due-trigger" aria-label="カレンダーから期限を選択">
+            <span class="material-symbols-rounded task-date-picker__icon" aria-hidden="true">calendar_month</span>
+            <span class="task-date-picker__copy">
+              <span class="task-date-picker__label">カレンダー</span>
+              <span class="task-date-picker__value" id="new-task-due-display">アイコンを押して選択</span>
+            </span>
+            <span class="material-symbols-rounded task-date-picker__chevron" aria-hidden="true">arrow_drop_down</span>
+          </button>
+          <input type="date" id="new-task-due" class="task-date-native" tabindex="-1" aria-hidden="true">
         </div>
         <div class="form-group">
           <label class="form-label">詳細（省略可）</label>
@@ -1116,6 +1124,38 @@ export function _renderNewTaskForm(container) {
 
   document.getElementById('task-pick-user').addEventListener('click', openTaskUserPicker);
   document.getElementById('new-task-submit').addEventListener('click', submitNewTask);
+  const dueInput = document.getElementById('new-task-due');
+  const dueTrigger = document.getElementById('new-task-due-trigger');
+  const dueDisplay = document.getElementById('new-task-due-display');
+  const formatDueDate = value => {
+    if (!value) return 'アイコンを押して選択';
+    const [year, month, day] = value.split('-');
+    if (!year || !month || !day) return value;
+    return `${year}/${month}/${day}`;
+  };
+  const syncDueDisplay = () => {
+    if (!dueDisplay || !dueInput) return;
+    const hasValue = !!dueInput.value;
+    dueDisplay.textContent = formatDueDate(dueInput.value);
+    dueTrigger?.classList.toggle('has-value', hasValue);
+  };
+  const openDuePicker = () => {
+    if (!dueInput) return;
+    if (typeof dueInput.showPicker === 'function') {
+      dueInput.showPicker();
+      return;
+    }
+    dueInput.focus();
+    dueInput.click();
+  };
+  dueInput?.addEventListener('change', syncDueDisplay);
+  dueTrigger?.addEventListener('click', openDuePicker);
+  dueTrigger?.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    openDuePicker();
+  });
+  syncDueDisplay();
 }
 
 export async function openTaskUserPicker() {
