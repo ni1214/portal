@@ -1914,7 +1914,7 @@
 
   <!-- ==================== タスク管理モーダル ==================== -->
   <div class="modal-overlay" id="task-modal">
-    <div class="task-modal-inner">
+    <div class="task-modal-inner" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
 
       <div class="task-modal-header">
         <span><i class="fa-solid fa-list-check"></i> タスク管理</span>
@@ -1922,6 +1922,7 @@
           <i class="material-symbols-rounded" aria-hidden="true">close</i>
         </button>
       </div>
+      <div class="task-modal-metrics" id="task-modal-metrics" aria-live="polite"></div>
 
       <div class="task-tabs">
         <button class="task-tab active" data-tab="received">
@@ -1941,6 +1942,7 @@
         </button>
       </div>
 
+      <div id="task-tab-context" class="task-tab-context" aria-live="polite"></div>
       <div id="task-tab-content" class="task-tab-content"></div>
 
     </div>

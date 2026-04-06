@@ -28,11 +28,44 @@ import { showToast, showConfirm } from './notify.js';
 export const deps = {};
 
 const ACTIVE_TASK_STATUSES = ['pending', 'accepted'];
+const TASK_TAB_META = Object.freeze({
+  received: {
+    label: '受信',
+    title: '受け取ったタスク',
+    description: '着手待ちと進行中の受信タスクを優先順に確認できます。',
+    icon: 'move_to_inbox',
+  },
+  sent: {
+    label: '依頼',
+    title: '依頼したタスク',
+    description: '依頼先の進捗と完了報告をまとめて追えます。',
+    icon: 'outbox',
+  },
+  shared: {
+    label: '共有',
+    title: '共有されたタスク',
+    description: '共有依頼への承諾と対応状況をこの場で返せます。',
+    icon: 'groups',
+  },
+  new: {
+    label: '新規作成',
+    title: '新しいタスクを追加',
+    description: '担当・期限・物件Noをまとめて入力して、そのまま依頼します。',
+    icon: 'edit_square',
+  },
+});
 
 let liveReceivedTasks = [];
 let liveSentTasks = [];
 let liveSentDoneNotifyTasks = [];
 let liveSharedTasks = [];
+
+function getTaskListForTab(tab) {
+  if (tab === 'received') return state.receivedTasks || [];
+  if (tab === 'sent') return state.sentTasks || [];
+  if (tab === 'shared') return state.sharedTasks || [];
+  return [];
+}
 
 function buildTaskPayload({
   title,
@@ -292,6 +325,61 @@ function _bindTaskProjectFilterEvents() {
     };
     clearBtn.addEventListener('click', clearBtn._taskFilterClearHandler);
   }
+}
+
+function _taskWorkspaceShellHtml({ tone = 'default', kicker, title, description, stats = [], body = '' }) {
+  return `
+    <div class="task-workspace task-workspace--${esc(tone)}">
+      <section class="task-workspace-hero">
+        <div class="task-workspace-copy">
+          <p class="task-workspace-kicker">${esc(kicker)}</p>
+          <h3 class="task-workspace-title">${esc(title)}</h3>
+          <p class="task-workspace-desc">${esc(description)}</p>
+        </div>
+        <div class="task-workspace-stats">
+          ${stats.map(stat => `
+            <article class="task-workspace-stat task-workspace-stat--${esc(stat.tone || 'default')}">
+              <div class="task-workspace-stat-top">
+                <span class="material-symbols-rounded" aria-hidden="true">${esc(stat.icon || 'overview')}</span>
+                <span class="task-workspace-stat-label">${esc(stat.label)}</span>
+              </div>
+              <strong class="task-workspace-stat-value">${esc(stat.value)}</strong>
+              <p class="task-workspace-stat-meta">${esc(stat.meta || '')}</p>
+            </article>
+          `).join('')}
+        </div>
+      </section>
+      <section class="task-workspace-surface">
+        ${body}
+      </section>
+    </div>
+  `;
+}
+
+function _taskEmptyStateHtml(icon, title, description) {
+  return `
+    <div class="task-empty task-empty--md3">
+      <div class="task-empty-icon-wrap">
+        <span class="material-symbols-rounded" aria-hidden="true">${esc(icon)}</span>
+      </div>
+      <div class="task-empty-copy">
+        <strong>${esc(title)}</strong>
+        <p>${esc(description)}</p>
+      </div>
+    </div>
+  `;
+}
+
+function _taskUniqueProjectCount(tasks) {
+  return new Set((tasks || []).map(task => normalizeProjectKey(task.projectKey || '')).filter(Boolean)).size;
+}
+
+function _taskStatusCount(tasks, status) {
+  return (tasks || []).filter(task => task.status === status).length;
+}
+
+function _taskDueCount(tasks) {
+  return (tasks || []).filter(task => !!task.dueDate).length;
 }
 
 function _taskProjectKeyHtml(task) {
@@ -600,11 +688,151 @@ export function updateTaskBadge() {
   deps.renderTodayDashboard?.();
 }
 
+function ensureTaskModalScaffold() {
+  const modalInner = document.querySelector('#task-modal .task-modal-inner');
+  const header = document.querySelector('#task-modal .task-modal-header');
+  const legacyCopy = header?.querySelector('.task-modal-header-copy');
+  const headerTitle = header?.querySelector(':scope > span');
+  const closeButton = header?.querySelector('.task-modal-close');
+  const existingHeading = document.querySelector('#task-modal .task-modal-heading');
+
+  if (legacyCopy) legacyCopy.remove();
+  if (!existingHeading && header && !document.getElementById('task-modal-title-text')) {
+    const heading = document.createElement('div');
+    heading.className = 'task-modal-heading';
+    heading.innerHTML = `
+      <p class="task-modal-kicker">Task Workspace</p>
+      <div class="task-modal-title-row">
+        <span class="material-symbols-rounded task-modal-title-icon" aria-hidden="true">task_alt</span>
+        <div class="task-modal-title-copy">
+          <h2 class="task-modal-title-text" id="task-modal-title-text">タスク管理</h2>
+          <p class="task-modal-subtitle" id="task-modal-subtitle">受信・依頼・共有・新規作成を一つのワークスペースで切り替えます。</p>
+        </div>
+      </div>
+    `;
+    if (headerTitle) {
+      headerTitle.replaceWith(heading);
+    } else if (closeButton) {
+      header.insertBefore(heading, closeButton);
+    } else {
+      header.prepend(heading);
+    }
+  }
+
+  if (modalInner) {
+    modalInner.setAttribute('aria-labelledby', 'task-modal-title-text');
+  }
+
+  const tabList = document.querySelector('#task-modal .task-tabs');
+  if (tabList) {
+    tabList.setAttribute('role', 'tablist');
+    tabList.setAttribute('aria-label', 'タスク管理タブ');
+  }
+
+  document.querySelectorAll('#task-modal .task-tab').forEach(button => {
+    if (button.dataset.enhanced === '1') return;
+    const tab = button.dataset.tab || 'received';
+    const meta = TASK_TAB_META[tab] || TASK_TAB_META.received;
+    const badge = button.querySelector('.task-tab-badge');
+    button.innerHTML = `
+      <span class="material-symbols-rounded task-tab-icon" aria-hidden="true">${meta.icon}</span>
+      <span class="task-tab-label">${esc(meta.label)}</span>
+    `;
+    if (badge) button.appendChild(badge);
+    button.dataset.enhanced = '1';
+    button.type = 'button';
+    button.id = `task-tab-button-${tab}`;
+    button.setAttribute('aria-controls', 'task-tab-content');
+    button.setAttribute('role', 'tab');
+    button.setAttribute('aria-selected', button.classList.contains('active') ? 'true' : 'false');
+    button.setAttribute('tabindex', button.classList.contains('active') ? '0' : '-1');
+  });
+}
+
+function renderTaskModalChrome() {
+  ensureTaskModalScaffold();
+
+  const activeTab = state.activeTaskTab || 'received';
+  const activeMeta = TASK_TAB_META[activeTab] || TASK_TAB_META.received;
+  const titleEl = document.getElementById('task-modal-title-text');
+  const subtitleEl = document.getElementById('task-modal-subtitle');
+  const metricsEl = document.getElementById('task-modal-metrics');
+  const contextEl = document.getElementById('task-tab-context');
+  const total = getTaskListForTab(activeTab).length;
+  const filtered = activeTab === 'new' ? 0 : _filterTasksByProjectKey(getTaskListForTab(activeTab)).length;
+  const pendingReceived = (state.receivedTasks || []).filter(task => task.status === 'pending').length;
+  const acceptedReceived = (state.receivedTasks || []).filter(task => task.status === 'accepted').length;
+  const doneToAck = (state.sentTasks || []).filter(task => task.status === 'done' && !task.notifiedDone).length;
+  const sharedPending = (state.sharedTasks || []).filter(task => (task.sharedResponses?.[state.currentUsername] || 'pending') === 'pending').length;
+
+  if (titleEl) titleEl.textContent = 'タスク管理';
+  if (subtitleEl) subtitleEl.textContent = activeMeta.description;
+
+  if (metricsEl) {
+    const metricItems = [
+      { tab: 'received', label: '受信', icon: TASK_TAB_META.received.icon, value: `${(state.receivedTasks || []).length}件`, note: pendingReceived > 0 ? `着手待ち ${pendingReceived}` : `進行中 ${acceptedReceived}` },
+      { tab: 'sent', label: '依頼', icon: TASK_TAB_META.sent.icon, value: `${(state.sentTasks || []).length}件`, note: doneToAck > 0 ? `完了報告 ${doneToAck}` : '進捗を確認' },
+      { tab: 'shared', label: '共有', icon: TASK_TAB_META.shared.icon, value: `${(state.sharedTasks || []).length}件`, note: sharedPending > 0 ? `未返信 ${sharedPending}` : '承諾待ちなし' },
+      { tab: 'new', label: '新規', icon: TASK_TAB_META.new.icon, value: '作成', note: '新しい依頼を追加' },
+    ];
+    metricsEl.innerHTML = metricItems.map(item => `
+      <button
+        type="button"
+        class="task-modal-metric${item.tab === activeTab ? ' active' : ''}"
+        data-task-metric-tab="${item.tab}"
+        aria-pressed="${item.tab === activeTab ? 'true' : 'false'}"
+      >
+        <span class="material-symbols-rounded task-modal-metric__icon" aria-hidden="true">${item.icon}</span>
+        <span class="task-modal-metric__copy">
+          <span class="task-modal-metric__label">${esc(item.label)}</span>
+          <strong class="task-modal-metric__value">${esc(item.value)}</strong>
+          <span class="task-modal-metric__note">${esc(item.note)}</span>
+        </span>
+      </button>
+    `).join('');
+    metricsEl.querySelectorAll('[data-task-metric-tab]').forEach(button => {
+      button.addEventListener('click', () => switchTaskTab(button.dataset.taskMetricTab || 'received'));
+    });
+  }
+
+  if (contextEl) {
+    const chips = [];
+    if (activeTab !== 'new') {
+      chips.push(`${total}件`);
+      if (state.taskProjectKeyFilter) chips.push(`物件No: ${state.taskProjectKeyFilter}`);
+      if (filtered !== total) chips.push(`表示 ${filtered}件`);
+    } else {
+      chips.push('担当・期限・物件No');
+      chips.push('最短入力');
+    }
+    contextEl.innerHTML = `
+      <div class="task-tab-context__surface">
+        <div class="task-tab-context__copy">
+          <span class="task-tab-context__eyebrow">
+            <span class="material-symbols-rounded" aria-hidden="true">${activeMeta.icon}</span>
+            ${esc(activeMeta.label)}
+          </span>
+          <strong class="task-tab-context__title">${esc(activeMeta.title)}</strong>
+          <p class="task-tab-context__desc">${esc(activeMeta.description)}</p>
+        </div>
+        <div class="task-tab-context__chips">
+          ${chips.map(chip => `<span class="task-tab-context__chip">${esc(chip)}</span>`).join('')}
+        </div>
+      </div>
+    `;
+  }
+}
+
 export function openTaskModal() {
+  const activeTab = TASK_TAB_META[state.activeTaskTab] ? state.activeTaskTab : 'received';
   state.taskModalOpen = true;
   document.getElementById('task-modal').classList.add('visible');
-  switchTaskTab(state.activeTaskTab);
+  document.querySelector('.task-modal-inner')?.setAttribute('data-task-active-tab', activeTab);
+  switchTaskTab(activeTab);
   _ensureTaskHistoryForActiveTab();
+  requestAnimationFrame(() => {
+    document.querySelector(`.task-tab[data-tab="${state.activeTaskTab}"]`)?.focus();
+  });
 }
 
 export function closeTaskModal() {
@@ -613,15 +841,32 @@ export function closeTaskModal() {
 }
 
 export function switchTaskTab(tab) {
-  state.activeTaskTab = tab;
-  document.querySelectorAll('.task-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  const nextTab = TASK_TAB_META[tab] ? tab : 'received';
+  state.activeTaskTab = nextTab;
+  document.querySelector('.task-modal-inner')?.setAttribute('data-task-active-tab', nextTab);
+  document.querySelectorAll('.task-tab').forEach(b => {
+    const isActive = b.dataset.tab === nextTab;
+    b.classList.toggle('active', isActive);
+    b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    b.setAttribute('tabindex', isActive ? '0' : '-1');
+  });
   renderTaskTabContent();
+  const content = document.getElementById('task-tab-content');
+  if (content) content.scrollTop = 0;
   _ensureTaskHistoryForActiveTab();
 }
 
 export function renderTaskTabContent() {
   const content = document.getElementById('task-tab-content');
   if (!content) return;
+  renderTaskModalChrome();
+  content.dataset.taskView = state.activeTaskTab;
+  content.setAttribute('role', 'tabpanel');
+  content.setAttribute('tabindex', '0');
+  const activeButton = document.querySelector(`.task-tab[data-tab="${state.activeTaskTab}"]`);
+  if (activeButton?.id) {
+    content.setAttribute('aria-labelledby', activeButton.id);
+  }
   if (!state.currentUsername) {
     content.innerHTML = '<div class="task-empty"><i class="fa-solid fa-user-slash"></i><p>ユーザーネームを設定してください</p></div>';
     return;
@@ -829,33 +1074,47 @@ export function _renderSharedTasks(container) {
 export function _renderNewTaskForm(container) {
   state.newTaskAssignee = '';
   container.innerHTML = `
-    <div class="task-new-form">
-      <div class="form-group">
-        <label class="form-label">担当者 <span class="required-mark">*</span></label>
-        <div class="task-assignee-row">
-          <span class="task-assignee-display" id="new-task-assignee-display">未選択</span>
-          <button class="task-pick-btn" id="task-pick-user"><i class="fa-solid fa-user-plus"></i> 選択</button>
+    <div class="task-composer-shell">
+      <div class="task-composer-hero">
+        <div class="task-composer-hero__copy">
+          <p class="task-composer-kicker">Quick Create</p>
+          <h4 class="task-composer-title">次に動いてほしいことを、迷わず依頼</h4>
+          <p class="task-composer-desc">担当者・期限・物件Noを整理して、共有しやすい形でそのまま送信できます。</p>
+        </div>
+        <div class="task-composer-tips">
+          <span class="task-composer-tip"><span class="material-symbols-rounded" aria-hidden="true">person</span> 担当者を選択</span>
+          <span class="task-composer-tip"><span class="material-symbols-rounded" aria-hidden="true">schedule</span> 期限は任意</span>
+          <span class="task-composer-tip"><span class="material-symbols-rounded" aria-hidden="true">apartment</span> 物件Noで横断管理</span>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">タスク名 <span class="required-mark">*</span></label>
-        <input type="text" id="new-task-title" class="form-input" placeholder="例：〇〇の資料作成" maxlength="60" autocomplete="off">
+      <div class="task-new-form">
+        <div class="form-group">
+          <label class="form-label">担当者 <span class="required-mark">*</span></label>
+          <div class="task-assignee-row">
+            <span class="task-assignee-display" id="new-task-assignee-display">未選択</span>
+            <button class="task-pick-btn" id="task-pick-user"><i class="fa-solid fa-user-plus"></i> 選択</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">タスク名 <span class="required-mark">*</span></label>
+          <input type="text" id="new-task-title" class="form-input" placeholder="例：〇〇の資料作成" maxlength="60" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label">物件No（任意）</label>
+          <input type="text" id="new-task-project-key" class="form-input" placeholder="物件No（現場コード） 例：61065" maxlength="80" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label">詳細（省略可）</label>
+          <textarea id="new-task-desc" class="form-input" rows="3" placeholder="詳しい説明や注意点..."></textarea>
+        </div>
+        <div class="form-group form-group-inline">
+          <input type="date" id="new-task-due" class="date-icon-only">
+          <label class="form-label" for="new-task-due">期限入力（省略可）</label>
+        </div>
+        <button class="btn-modal-primary" id="new-task-submit" style="width:100%;margin-top:4px">
+          <i class="fa-solid fa-paper-plane"></i> タスクを依頼する
+        </button>
       </div>
-      <div class="form-group">
-        <label class="form-label">物件No（任意）</label>
-        <input type="text" id="new-task-project-key" class="form-input" placeholder="物件No（現場コード） 例：61065" maxlength="80" autocomplete="off">
-      </div>
-      <div class="form-group">
-        <label class="form-label">詳細（省略可）</label>
-        <textarea id="new-task-desc" class="form-input" rows="3" placeholder="詳しい説明や注意点..."></textarea>
-      </div>
-      <div class="form-group form-group-inline">
-        <input type="date" id="new-task-due" class="date-icon-only">
-        <label class="form-label" for="new-task-due">期限入力（省略可）</label>
-      </div>
-      <button class="btn-modal-primary" id="new-task-submit" style="width:100%;margin-top:4px">
-        <i class="fa-solid fa-paper-plane"></i> タスクを依頼する
-      </button>
     </div>`;
 
   document.getElementById('task-pick-user').addEventListener('click', openTaskUserPicker);

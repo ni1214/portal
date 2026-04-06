@@ -3660,6 +3660,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ===== タスク =====
   document.getElementById('btn-task').addEventListener('click', openTaskModal);
   document.getElementById('task-modal-close').addEventListener('click', closeTaskModal);
+  document.getElementById('task-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeTaskModal();
+  });
   document.querySelectorAll('.task-tab').forEach(btn => {
     btn.addEventListener('click', () => switchTaskTab(btn.dataset.tab));
   });
@@ -3685,6 +3688,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('task-share-search').addEventListener('input', e => {
     filterShareUserList(e.target.value);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('task-share-picker-modal')?.classList.contains('visible')) {
+      closeTaskSharePicker();
+      return;
+    }
+    if (document.getElementById('task-edit-modal')?.classList.contains('visible')) {
+      closeTaskEditModal();
+      return;
+    }
+    if (document.getElementById('task-user-picker-modal')?.classList.contains('visible')) {
+      document.getElementById('task-user-picker-modal').classList.remove('visible');
+      return;
+    }
+    if (document.getElementById('task-modal')?.classList.contains('visible')) {
+      closeTaskModal();
+    }
   });
 
   // ===== ベル通知ボタン（お知らせ追加モーダルを開く） =====
