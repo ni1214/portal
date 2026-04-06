@@ -366,20 +366,7 @@ function collectSharedLinkSearchCards(cards, queryText) {
   if (!queryText) return cards;
   const normalizedQuery = normalizeSearch(queryText);
   if (!normalizedQuery) return cards;
-  const cardMap = new Map(cards.map(card => [card.id, card]));
-  const includedIds = new Set();
-
-  cards.forEach(card => {
-    if (!normalizeSearch(card.label).includes(normalizedQuery)) return;
-    let current = card;
-    while (current) {
-      if (includedIds.has(current.id)) break;
-      includedIds.add(current.id);
-      current = current.parentId ? cardMap.get(current.parentId) : null;
-    }
-  });
-
-  return cards.filter(card => includedIds.has(card.id));
+  return cards.filter(card => normalizeSearch(card.label).includes(normalizedQuery));
 }
 
 export function renderSharedLinksBrowser() {
@@ -442,6 +429,7 @@ export function renderSharedLinksBrowser() {
     const section = deps.buildSection?.(cat, catCards, {
       searchMode: !!queryText,
       queryText,
+      allCategoryCards: categoryCards,
     });
     if (section) sections.push(section);
   });
