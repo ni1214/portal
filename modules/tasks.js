@@ -59,6 +59,15 @@ let liveReceivedTasks = [];
 let liveSentTasks = [];
 let liveSentDoneNotifyTasks = [];
 let liveSharedTasks = [];
+const TASK_SUPABASE_IDLE_REFRESH_MS = 60000;
+const TASK_SUPABASE_MODAL_REFRESH_MS = 20000;
+let taskSupabaseRefreshTimer = null;
+let taskSupabaseRefreshPromise = null;
+let taskSupabaseRefreshPromiseKey = '';
+let taskSupabaseRefreshVersion = 0;
+let taskSupabaseRefreshUsername = '';
+let taskSupabaseFocusHandler = null;
+let taskSupabaseVisibilityHandler = null;
 
 function getTaskListForTab(tab) {
   if (tab === 'received') return state.receivedTasks || [];
@@ -435,11 +444,120 @@ function _syncAllTaskLists() {
   _syncSharedTasks();
 }
 
+function _refreshTaskUi({ renderIfOpen = true } = {}) {
+  _syncAllTaskLists();
+  updateTaskBadge();
+  deps.renderTodoSection?.();
+  if (renderIfOpen && state.taskModalOpen) renderTaskTabContent();
+}
+
+function _getTaskSupabaseRefreshDelay() {
+  return state.taskModalOpen ? TASK_SUPABASE_MODAL_REFRESH_MS : TASK_SUPABASE_IDLE_REFRESH_MS;
+}
+
+function _clearTaskSupabaseRefreshTimer() {
+  if (!taskSupabaseRefreshTimer) return;
+  clearTimeout(taskSupabaseRefreshTimer);
+  taskSupabaseRefreshTimer = null;
+}
+
+function _stopTaskSupabaseAutoRefresh() {
+  _clearTaskSupabaseRefreshTimer();
+  if (taskSupabaseFocusHandler) {
+    window.removeEventListener('focus', taskSupabaseFocusHandler);
+    taskSupabaseFocusHandler = null;
+  }
+  if (taskSupabaseVisibilityHandler) {
+    document.removeEventListener('visibilitychange', taskSupabaseVisibilityHandler);
+    taskSupabaseVisibilityHandler = null;
+  }
+  taskSupabaseRefreshUsername = '';
+  taskSupabaseRefreshPromise = null;
+  taskSupabaseRefreshPromiseKey = '';
+  taskSupabaseRefreshVersion += 1;
+}
+
+function _scheduleTaskSupabaseRefresh(username, delay = _getTaskSupabaseRefreshDelay()) {
+  if (!isSupabaseSharedCoreEnabled() || !username) return;
+  _clearTaskSupabaseRefreshTimer();
+  taskSupabaseRefreshTimer = setTimeout(() => {
+    taskSupabaseRefreshTimer = null;
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      _scheduleTaskSupabaseRefresh(username);
+      return;
+    }
+    void refreshSupabaseTaskLiveData(username).catch(() => {});
+  }, delay);
+}
+
+function _bindTaskSupabaseAutoRefresh(username) {
+  if (!isSupabaseSharedCoreEnabled() || !username) return;
+  taskSupabaseRefreshUsername = username;
+  if (!taskSupabaseFocusHandler) {
+    taskSupabaseFocusHandler = () => {
+      if (!taskSupabaseRefreshUsername) return;
+      void refreshSupabaseTaskLiveData(taskSupabaseRefreshUsername).catch(() => {});
+    };
+    window.addEventListener('focus', taskSupabaseFocusHandler);
+  }
+  if (!taskSupabaseVisibilityHandler) {
+    taskSupabaseVisibilityHandler = () => {
+      if (document.visibilityState !== 'visible' || !taskSupabaseRefreshUsername) return;
+      void refreshSupabaseTaskLiveData(taskSupabaseRefreshUsername).catch(() => {});
+    };
+    document.addEventListener('visibilitychange', taskSupabaseVisibilityHandler);
+  }
+  _scheduleTaskSupabaseRefresh(username);
+}
+
+async function refreshSupabaseTaskLiveData(username = state.currentUsername, { renderIfOpen = true } = {}) {
+  if (!isSupabaseSharedCoreEnabled() || !username) return null;
+  const refreshVersion = taskSupabaseRefreshVersion;
+  const refreshKey = `${username}:${refreshVersion}`;
+  if (taskSupabaseRefreshPromise && taskSupabaseRefreshPromiseKey === refreshKey) {
+    return taskSupabaseRefreshPromise;
+  }
+
+  taskSupabaseRefreshUsername = username;
+  const refreshPromise = Promise.all([
+    fetchReceivedTasksFromSupabase(username),
+    fetchSentTasksFromSupabase(username),
+    fetchSentDoneNotifyTasksFromSupabase(username),
+    fetchSharedTasksFromSupabase(username),
+  ]).then(([received, sent, sentDone, shared]) => {
+    if (refreshVersion !== taskSupabaseRefreshVersion || username !== state.currentUsername) return null;
+    liveReceivedTasks = received;
+    liveSentTasks = sent;
+    liveSentDoneNotifyTasks = sentDone;
+    liveSharedTasks = shared;
+    _refreshTaskUi({ renderIfOpen });
+    return { received, sent, sentDone, shared };
+  }).catch(err => {
+    if (refreshVersion === taskSupabaseRefreshVersion) {
+      console.error('Supabase タスク同期エラー:', err);
+    }
+    throw err;
+  }).finally(() => {
+    if (taskSupabaseRefreshPromise === refreshPromise) {
+      taskSupabaseRefreshPromise = null;
+      taskSupabaseRefreshPromiseKey = '';
+    }
+    if (refreshVersion === taskSupabaseRefreshVersion && username === taskSupabaseRefreshUsername) {
+      _scheduleTaskSupabaseRefresh(username);
+    }
+  });
+
+  taskSupabaseRefreshPromise = refreshPromise;
+  taskSupabaseRefreshPromiseKey = refreshKey;
+  return refreshPromise;
+}
+
 function _resetTaskHistoryState() {
   if (state._receivedTasksUnsub) { state._receivedTasksUnsub(); state._receivedTasksUnsub = null; }
   if (state._sentTasksUnsub) { state._sentTasksUnsub(); state._sentTasksUnsub = null; }
   if (state._sentTaskDoneNotifyUnsub) { state._sentTaskDoneNotifyUnsub(); state._sentTaskDoneNotifyUnsub = null; }
   if (state._sharedTasksUnsub) { state._sharedTasksUnsub(); state._sharedTasksUnsub = null; }
+  _stopTaskSupabaseAutoRefresh();
   liveReceivedTasks = [];
   liveSentTasks = [];
   liveSentDoneNotifyTasks = [];
@@ -459,7 +577,7 @@ function _resetTaskHistoryState() {
     sent: false,
     shared: false,
   };
-  _syncAllTaskLists();
+  _refreshTaskUi({ renderIfOpen: false });
 }
 
 function _upsertTaskHistory(tab, task) {
@@ -475,7 +593,7 @@ function _upsertTaskHistory(tab, task) {
     ...state.taskHistoryCache,
     [tab]: shouldStayInHistory ? _sortTasks([...withoutCurrent, task]) : withoutCurrent,
   };
-  _syncAllTaskLists();
+  _refreshTaskUi();
 }
 
 function _removeTaskFromAllCaches(taskId) {
@@ -489,7 +607,7 @@ function _removeTaskFromAllCaches(taskId) {
     sent: state.taskHistoryCache.sent.filter(task => task.id !== taskId),
     shared: state.taskHistoryCache.shared.filter(task => task.id !== taskId),
   };
-  _syncAllTaskLists();
+  _refreshTaskUi();
 }
 
 async function _loadTaskHistory(tab, force = false) {
@@ -574,23 +692,8 @@ export function startTaskListeners(username) {
   _resetTaskHistoryState();
 
   if (isSupabaseSharedCoreEnabled()) {
-    Promise.all([
-      fetchReceivedTasksFromSupabase(username),
-      fetchSentTasksFromSupabase(username),
-      fetchSentDoneNotifyTasksFromSupabase(username),
-      fetchSharedTasksFromSupabase(username),
-    ]).then(([received, sent, sentDone, shared]) => {
-      liveReceivedTasks = received;
-      liveSentTasks = sent;
-      liveSentDoneNotifyTasks = sentDone;
-      liveSharedTasks = shared;
-      _syncReceivedTasks();
-      _syncSentTasks();
-      _syncSharedTasks();
-      updateTaskBadge();
-      deps.renderTodoSection?.();
-      if (state.taskModalOpen) renderTaskTabContent();
-    }).catch(err => console.error('Supabase タスク初期取得エラー:', err));
+    _bindTaskSupabaseAutoRefresh(username);
+    void refreshSupabaseTaskLiveData(username).catch(() => {});
     return;
   }
 
@@ -837,6 +940,10 @@ export function openTaskModal() {
   state.taskModalOpen = true;
   document.getElementById('task-modal').classList.add('visible');
   document.querySelector('.task-modal-inner')?.setAttribute('data-task-active-tab', activeTab);
+  if (isSupabaseSharedCoreEnabled()) {
+    _scheduleTaskSupabaseRefresh(state.currentUsername, TASK_SUPABASE_MODAL_REFRESH_MS);
+    void refreshSupabaseTaskLiveData(state.currentUsername).catch(() => {});
+  }
   switchTaskTab(activeTab);
   _ensureTaskHistoryForActiveTab();
   requestAnimationFrame(() => {
@@ -847,6 +954,9 @@ export function openTaskModal() {
 export function closeTaskModal() {
   state.taskModalOpen = false;
   document.getElementById('task-modal').classList.remove('visible');
+  if (isSupabaseSharedCoreEnabled()) {
+    _scheduleTaskSupabaseRefresh(state.currentUsername);
+  }
 }
 
 export function switchTaskTab(tab) {
@@ -1190,16 +1300,10 @@ export async function submitNewTask() {
       projectKey,
       sourceType: 'manual',
     });
-    // Supabase モードは onSnapshot がないため liveSentTasks を手動更新
     if (isSupabaseSharedCoreEnabled()) {
-      const refreshed = await fetchSentTasksFromSupabase(state.currentUsername);
-      liveSentTasks = refreshed;
-      // 履歴キャッシュをリセットして次回タブ切替時に再取得させる
-      state.taskHistoryLoaded = { ...state.taskHistoryLoaded, sent: false };
-      state.taskHistoryCache  = { ...state.taskHistoryCache,  sent: [] };
-      _syncSentTasks();
+      await refreshSupabaseTaskLiveData(state.currentUsername, { renderIfOpen: false });
     }
-    // フォームをリセット
+    showToast('タスクを送信しました', 'success');
     state.newTaskAssignee = '';
     const titleEl = document.getElementById('new-task-title');
     const projectKeyEl = document.getElementById('new-task-project-key');
@@ -1237,6 +1341,9 @@ export async function acceptTask(taskId) {
       linkedTaskStatus: 'accepted',
       linkedTaskClosedAt: null,
     });
+    if (isSupabaseSharedCoreEnabled()) {
+      await refreshSupabaseTaskLiveData(state.currentUsername);
+    }
   } catch (err) { console.error('タスク承諾エラー:', err); }
 }
 
@@ -1266,6 +1373,9 @@ export async function completeTask(taskId) {
       linkedTaskStatus: 'done',
       linkedTaskClosedAt: serverTimestamp(),
     });
+    if (isSupabaseSharedCoreEnabled()) {
+      await refreshSupabaseTaskLiveData(state.currentUsername);
+    }
   } catch (err) { console.error('タスク完了エラー:', err); }
 }
 
@@ -1282,6 +1392,9 @@ export async function acknowledgeTask(taskId) {
         ...current,
         notifiedDone: true,
       });
+    }
+    if (isSupabaseSharedCoreEnabled()) {
+      await refreshSupabaseTaskLiveData(state.currentUsername);
     }
   } catch (err) { console.error('タスク確認エラー:', err); }
 }
@@ -1369,6 +1482,9 @@ export async function submitTaskEdit() {
       });
     }
     closeTaskEditModal();
+    if (isSupabaseSharedCoreEnabled()) {
+      await refreshSupabaseTaskLiveData(state.currentUsername);
+    }
   } catch (err) {
     console.error('タスク編集エラー:', err);
     showToast('保存に失敗しました: ' + err.message, 'error');
@@ -1508,6 +1624,9 @@ export async function submitTaskShare() {
       });
     }
     closeTaskSharePicker();
+    if (isSupabaseSharedCoreEnabled()) {
+      await refreshSupabaseTaskLiveData(state.currentUsername);
+    }
   } catch (err) {
     console.error('タスク共有エラー:', err);
     showToast('共有に失敗しました: ' + err.message, 'error');
@@ -1536,6 +1655,9 @@ export async function acceptSharedTask(taskId) {
         },
       });
     }
+    if (isSupabaseSharedCoreEnabled()) {
+      await refreshSupabaseTaskLiveData(state.currentUsername);
+    }
   } catch (err) { console.error('共有タスク承諾エラー:', err); }
 }
 
@@ -1558,6 +1680,9 @@ export async function declineSharedTask(taskId) {
           [state.currentUsername]: 'declined',
         },
       });
+    }
+    if (isSupabaseSharedCoreEnabled()) {
+      await refreshSupabaseTaskLiveData(state.currentUsername);
     }
   } catch (err) { console.error('共有タスク拒否エラー:', err); }
 }
