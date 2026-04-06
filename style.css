@@ -21926,7 +21926,7 @@ body:has(#home-dashboard) #home-dashboard .home-m3-overview-card__meta {
 
 #task-modal .task-new-form .form-group:first-child,
 #task-modal .task-new-form .form-group:nth-child(2),
-#task-modal .task-new-form .form-group:nth-child(4),
+#task-modal .task-new-form .form-group:nth-child(5),
 #task-modal #new-task-submit {
   grid-column: 1 / -1;
 }
@@ -22396,81 +22396,7 @@ body:has(#home-dashboard) #home-dashboard .home-m3-overview-card__meta {
 #task-modal .task-composer-shell {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-#task-modal .task-composer-hero {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 20px 22px;
-  border: 1px solid color-mix(in srgb, var(--accent-blue) 12%, var(--border-glass));
-  border-radius: 28px;
-  background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-blue) 10%, transparent), transparent 42%),
-    linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 94%, transparent), color-mix(in srgb, var(--bg-secondary) 92%, transparent));
-  box-shadow: 0 14px 32px color-mix(in srgb, var(--shadow-ink-soft) 66%, transparent);
-}
-
-#task-modal .task-composer-hero__copy {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
-#task-modal .task-composer-kicker {
-  margin: 0;
-  color: color-mix(in srgb, var(--accent-blue) 72%, var(--text-secondary));
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-#task-modal .task-composer-title {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 1.06rem;
-  font-weight: 700;
-  line-height: 1.35;
-}
-
-#task-modal .task-composer-desc {
-  margin: 0;
-  max-width: 48ch;
-  color: var(--text-muted);
-  font-size: 0.84rem;
-  line-height: 1.7;
-}
-
-#task-modal .task-composer-tips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-end;
-  max-width: 360px;
-}
-
-#task-modal .task-composer-tip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--bg-secondary) 82%, var(--bg-card));
-  border: 1px solid color-mix(in srgb, var(--accent-blue) 12%, var(--border-glass));
-  color: var(--text-secondary);
-  font-size: 0.78rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-#task-modal .task-composer-tip .material-symbols-rounded {
-  font-size: 18px;
-  color: color-mix(in srgb, var(--accent-blue) 72%, var(--text-secondary));
+  gap: 0;
 }
 
 #task-modal .task-new-form .form-label {
@@ -22491,7 +22417,7 @@ body:has(#home-dashboard) #home-dashboard .home-m3-overview-card__meta {
 }
 
 #task-modal .task-new-form textarea.form-input {
-  min-height: 132px;
+  min-height: 168px;
   padding-top: 14px;
   resize: vertical;
 }
@@ -22509,6 +22435,10 @@ body:has(#home-dashboard) #home-dashboard .home-m3-overview-card__meta {
 
 #task-modal .task-assignee-display {
   font-weight: 600;
+}
+
+#task-modal .task-date-input {
+  color-scheme: light;
 }
 
 #task-modal #new-task-submit {
@@ -22541,13 +22471,11 @@ body:has(#home-dashboard) #home-dashboard .home-m3-overview-card__meta {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  #task-modal .task-tab-context__surface,
-  #task-modal .task-composer-hero {
+  #task-modal .task-tab-context__surface {
     flex-direction: column;
   }
 
-  #task-modal .task-tab-context__chips,
-  #task-modal .task-composer-tips {
+  #task-modal .task-tab-context__chips {
     justify-content: flex-start;
     max-width: none;
   }
@@ -22630,15 +22558,9 @@ body:has(#home-dashboard) #home-dashboard .home-m3-overview-card__meta {
     padding: 0 14px 14px;
   }
 
-  #task-modal .task-tab-context__surface,
-  #task-modal .task-composer-hero {
+  #task-modal .task-tab-context__surface {
     padding: 16px;
     border-radius: 24px;
-  }
-
-  #task-modal .task-composer-tip {
-    width: 100%;
-    justify-content: flex-start;
   }
 
   #task-modal .task-new-form .form-group {

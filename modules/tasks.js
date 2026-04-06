@@ -769,57 +769,66 @@ function renderTaskModalChrome() {
   if (subtitleEl) subtitleEl.textContent = activeMeta.description;
 
   if (metricsEl) {
-    const metricItems = [
-      { tab: 'received', label: '受信', icon: TASK_TAB_META.received.icon, value: `${(state.receivedTasks || []).length}件`, note: pendingReceived > 0 ? `着手待ち ${pendingReceived}` : `進行中 ${acceptedReceived}` },
-      { tab: 'sent', label: '依頼', icon: TASK_TAB_META.sent.icon, value: `${(state.sentTasks || []).length}件`, note: doneToAck > 0 ? `完了報告 ${doneToAck}` : '進捗を確認' },
-      { tab: 'shared', label: '共有', icon: TASK_TAB_META.shared.icon, value: `${(state.sharedTasks || []).length}件`, note: sharedPending > 0 ? `未返信 ${sharedPending}` : '承諾待ちなし' },
-      { tab: 'new', label: '新規', icon: TASK_TAB_META.new.icon, value: '作成', note: '新しい依頼を追加' },
-    ];
-    metricsEl.innerHTML = metricItems.map(item => `
-      <button
-        type="button"
-        class="task-modal-metric${item.tab === activeTab ? ' active' : ''}"
-        data-task-metric-tab="${item.tab}"
-        aria-pressed="${item.tab === activeTab ? 'true' : 'false'}"
-      >
-        <span class="material-symbols-rounded task-modal-metric__icon" aria-hidden="true">${item.icon}</span>
-        <span class="task-modal-metric__copy">
-          <span class="task-modal-metric__label">${esc(item.label)}</span>
-          <strong class="task-modal-metric__value">${esc(item.value)}</strong>
-          <span class="task-modal-metric__note">${esc(item.note)}</span>
-        </span>
-      </button>
-    `).join('');
-    metricsEl.querySelectorAll('[data-task-metric-tab]').forEach(button => {
-      button.addEventListener('click', () => switchTaskTab(button.dataset.taskMetricTab || 'received'));
-    });
+    const shouldShowMetrics = activeTab !== 'new';
+    metricsEl.hidden = !shouldShowMetrics;
+    if (shouldShowMetrics) {
+      const metricItems = [
+        { tab: 'received', label: '受信', icon: TASK_TAB_META.received.icon, value: `${(state.receivedTasks || []).length}件`, note: pendingReceived > 0 ? `着手待ち ${pendingReceived}` : `進行中 ${acceptedReceived}` },
+        { tab: 'sent', label: '依頼', icon: TASK_TAB_META.sent.icon, value: `${(state.sentTasks || []).length}件`, note: doneToAck > 0 ? `完了報告 ${doneToAck}` : '進捗を確認' },
+        { tab: 'shared', label: '共有', icon: TASK_TAB_META.shared.icon, value: `${(state.sharedTasks || []).length}件`, note: sharedPending > 0 ? `未返信 ${sharedPending}` : '承諾待ちなし' },
+        { tab: 'new', label: '新規', icon: TASK_TAB_META.new.icon, value: '作成', note: '新しい依頼を追加' },
+      ];
+      metricsEl.innerHTML = metricItems.map(item => `
+        <button
+          type="button"
+          class="task-modal-metric${item.tab === activeTab ? ' active' : ''}"
+          data-task-metric-tab="${item.tab}"
+          aria-pressed="${item.tab === activeTab ? 'true' : 'false'}"
+        >
+          <span class="material-symbols-rounded task-modal-metric__icon" aria-hidden="true">${item.icon}</span>
+          <span class="task-modal-metric__copy">
+            <span class="task-modal-metric__label">${esc(item.label)}</span>
+            <strong class="task-modal-metric__value">${esc(item.value)}</strong>
+            <span class="task-modal-metric__note">${esc(item.note)}</span>
+          </span>
+        </button>
+      `).join('');
+      metricsEl.querySelectorAll('[data-task-metric-tab]').forEach(button => {
+        button.addEventListener('click', () => switchTaskTab(button.dataset.taskMetricTab || 'received'));
+      });
+    } else {
+      metricsEl.innerHTML = '';
+    }
   }
 
   if (contextEl) {
+    const shouldShowContext = activeTab !== 'new';
+    contextEl.hidden = !shouldShowContext;
     const chips = [];
-    if (activeTab !== 'new') {
+    if (shouldShowContext) {
       chips.push(`${total}件`);
       if (state.taskProjectKeyFilter) chips.push(`物件No: ${state.taskProjectKeyFilter}`);
       if (filtered !== total) chips.push(`表示 ${filtered}件`);
-    } else {
-      chips.push('担当・期限・物件No');
-      chips.push('最短入力');
     }
-    contextEl.innerHTML = `
-      <div class="task-tab-context__surface">
-        <div class="task-tab-context__copy">
-          <span class="task-tab-context__eyebrow">
-            <span class="material-symbols-rounded" aria-hidden="true">${activeMeta.icon}</span>
-            ${esc(activeMeta.label)}
-          </span>
-          <strong class="task-tab-context__title">${esc(activeMeta.title)}</strong>
-          <p class="task-tab-context__desc">${esc(activeMeta.description)}</p>
+    if (shouldShowContext) {
+      contextEl.innerHTML = `
+        <div class="task-tab-context__surface">
+          <div class="task-tab-context__copy">
+            <span class="task-tab-context__eyebrow">
+              <span class="material-symbols-rounded" aria-hidden="true">${activeMeta.icon}</span>
+              ${esc(activeMeta.label)}
+            </span>
+            <strong class="task-tab-context__title">${esc(activeMeta.title)}</strong>
+            <p class="task-tab-context__desc">${esc(activeMeta.description)}</p>
+          </div>
+          <div class="task-tab-context__chips">
+            ${chips.map(chip => `<span class="task-tab-context__chip">${esc(chip)}</span>`).join('')}
+          </div>
         </div>
-        <div class="task-tab-context__chips">
-          ${chips.map(chip => `<span class="task-tab-context__chip">${esc(chip)}</span>`).join('')}
-        </div>
-      </div>
-    `;
+      `;
+    } else {
+      contextEl.innerHTML = '';
+    }
   }
 }
 
@@ -1075,18 +1084,6 @@ export function _renderNewTaskForm(container) {
   state.newTaskAssignee = '';
   container.innerHTML = `
     <div class="task-composer-shell">
-      <div class="task-composer-hero">
-        <div class="task-composer-hero__copy">
-          <p class="task-composer-kicker">Quick Create</p>
-          <h4 class="task-composer-title">次に動いてほしいことを、迷わず依頼</h4>
-          <p class="task-composer-desc">担当者・期限・物件Noを整理して、共有しやすい形でそのまま送信できます。</p>
-        </div>
-        <div class="task-composer-tips">
-          <span class="task-composer-tip"><span class="material-symbols-rounded" aria-hidden="true">person</span> 担当者を選択</span>
-          <span class="task-composer-tip"><span class="material-symbols-rounded" aria-hidden="true">schedule</span> 期限は任意</span>
-          <span class="task-composer-tip"><span class="material-symbols-rounded" aria-hidden="true">apartment</span> 物件Noで横断管理</span>
-        </div>
-      </div>
       <div class="task-new-form">
         <div class="form-group">
           <label class="form-label">担当者 <span class="required-mark">*</span></label>
@@ -1104,12 +1101,12 @@ export function _renderNewTaskForm(container) {
           <input type="text" id="new-task-project-key" class="form-input" placeholder="物件No（現場コード） 例：61065" maxlength="80" autocomplete="off">
         </div>
         <div class="form-group">
+          <label class="form-label" for="new-task-due">期限入力（省略可）</label>
+          <input type="date" id="new-task-due" class="form-input task-date-input">
+        </div>
+        <div class="form-group">
           <label class="form-label">詳細（省略可）</label>
           <textarea id="new-task-desc" class="form-input" rows="3" placeholder="詳しい説明や注意点..."></textarea>
-        </div>
-        <div class="form-group form-group-inline">
-          <input type="date" id="new-task-due" class="date-icon-only">
-          <label class="form-label" for="new-task-due">期限入力（省略可）</label>
         </div>
         <button class="btn-modal-primary" id="new-task-submit" style="width:100%;margin-top:4px">
           <i class="fa-solid fa-paper-plane"></i> タスクを依頼する
