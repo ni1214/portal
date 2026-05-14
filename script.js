@@ -14,6 +14,7 @@ import {
 import { state } from './modules/state.js';
 
 import { esc, escHtml, _fmtTs, getUserAvatarColor, formatFileSize, getFileIcon, confirmDelete } from './modules/utils.js';
+import { getBrandIconHtmlForCard, shouldPreferBrandIcon } from './modules/brand-icons.js';
 
 // ===== Feature modules =====
 import {
@@ -1761,6 +1762,20 @@ function buildSection(cat, cards, options = {}) {
   return section;
 }
 
+function renderCardIconHtml(card, fallbackIcon = 'fa-solid fa-link', iconStyle = '') {
+  if (shouldPreferBrandIcon(card)) {
+    const brandIcon = getBrandIconHtmlForCard(card);
+    if (brandIcon) return brandIcon;
+  }
+
+  if (card.icon && card.icon.startsWith('svg:')) {
+    return SVG_ICONS[card.icon] || '';
+  }
+
+  const styleAttr = iconStyle ? ` style="${iconStyle}"` : '';
+  return `<i class="${card.icon || fallbackIcon}"${styleAttr}></i>`;
+}
+
 function buildLinkCard(card, isFav = false, gradient = '') {
   const a = document.createElement('a');
   if (card.url === 'solar:open') {
@@ -1777,9 +1792,7 @@ function buildLinkCard(card, isFav = false, gradient = '') {
   a.className = 'link-card' + (hasNoUrl ? ' link-card--no-url' : '');
   a.dataset.docId = card.id;
 
-  const iconHtml = card.icon && card.icon.startsWith('svg:')
-    ? (SVG_ICONS[card.icon] || '')
-    : `<i class="${card.icon || 'fa-solid fa-link'}"></i>`;
+  const iconHtml = renderCardIconHtml(card, 'fa-solid fa-link');
 
   const favs = getFavorites();
   const isFavorited = favs.includes(card.id);
@@ -1798,7 +1811,7 @@ function buildLinkCard(card, isFav = false, gradient = '') {
   if (gradient) {
     const iconEl = a.querySelector('.card-icon');
     if (iconEl) {
-      if (!card.icon?.startsWith('svg:')) {
+      if (!shouldPreferBrandIcon(card) && !card.icon?.startsWith('svg:')) {
         iconEl.style.background = gradient;
         iconEl.style.webkitBackgroundClip = 'text';
         iconEl.style.webkitTextFillColor = 'transparent';
@@ -1856,9 +1869,7 @@ function buildExternalCard(card) {
     a.rel = 'noopener noreferrer';
   }
 
-  const iconHtml = card.icon?.startsWith('svg:')
-    ? (SVG_ICONS[card.icon] || `<i class="fa-solid fa-globe" style="font-size:2rem;color:var(--accent-cyan)"></i>`)
-    : `<i class="${card.icon || 'fa-solid fa-link'}" style="font-size:2rem;color:var(--accent-cyan)"></i>`;
+  const iconHtml = renderCardIconHtml(card, 'fa-solid fa-link', 'font-size:2rem;color:var(--accent-cyan)');
 
   a.innerHTML = `<div class="ext-icon-img">${iconHtml}</div><span class="ext-icon-label">${esc(card.label)}</span>`;
   wrap.appendChild(a);
@@ -1945,9 +1956,7 @@ function openChildPopup(parentCard, children, allCatCards, gradient, isPrivate, 
   popup.className = 'card-child-popup';
   popup.dataset.parentId = parentCard.id;
 
-  const iconHtml = parentCard.icon && parentCard.icon.startsWith('svg:')
-    ? (SVG_ICONS[parentCard.icon] || '')
-    : `<i class="${parentCard.icon || 'fa-solid fa-star'}"></i>`;
+  const iconHtml = renderCardIconHtml(parentCard, 'fa-solid fa-star');
 
   const header = document.createElement('div');
   header.className = 'card-child-popup__header';

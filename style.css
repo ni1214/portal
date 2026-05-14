@@ -1055,6 +1055,17 @@ body::after {
   transition: transform var(--transition-base);
 }
 
+.card-icon .brand-icon-img {
+  width: 38px;
+  height: 38px;
+  display: block;
+  object-fit: contain;
+  border-radius: 9px;
+  background: var(--surface-solid);
+  padding: 4px;
+  box-shadow: 0 1px 4px var(--shadow-ink-soft);
+}
+
 .category-1 .card-icon {
   color: var(--accent-blue);
 }
@@ -22015,6 +22026,18 @@ body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link {
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link__icon {
   width: 38px;
   height: 38px;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link__icon .brand-icon-img,
+.home-m3-favorite-link__icon .brand-icon-img {
+  width: 30px;
+  height: 30px;
+  display: block;
+  object-fit: contain;
+  border-radius: 7px;
+  background: var(--surface-solid);
+  padding: 3px;
+  box-shadow: 0 1px 4px var(--shadow-ink-soft);
 }
 
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-more {

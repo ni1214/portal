@@ -1,5 +1,6 @@
 import { state, TASK_STATUS_LABEL, USER_ROLE_LABELS } from './state.js';
 import { esc } from './utils.js';
+import { getBrandIconHtmlForCard } from './brand-icons.js';
 
 let deps = {};
 
@@ -660,7 +661,7 @@ function renderHomeSimpleFavoriteLinks(links, isProfileReady) {
       aria-label="${esc(`${link.label}を開く`)}"
     >
       <span class="home-simple-favorite-link__icon">
-        <span class="material-symbols-rounded" aria-hidden="true">${esc(link.symbol)}</span>
+        ${link.brandIconHtml || `<span class="material-symbols-rounded" aria-hidden="true">${esc(link.symbol)}</span>`}
       </span>
       <span class="home-simple-favorite-link__body">
         <strong>${esc(link.label)}</strong>
@@ -759,7 +760,7 @@ function renderFavoriteLinkButtons(links, isProfileReady) {
       aria-label="${esc(`${link.label}を開く`)}"
     >
       <span class="home-m3-favorite-link__icon">
-        <span class="material-symbols-rounded" aria-hidden="true">${esc(link.symbol)}</span>
+        ${link.brandIconHtml || `<span class="material-symbols-rounded" aria-hidden="true">${esc(link.symbol)}</span>`}
       </span>
       <span class="home-m3-favorite-link__body">
         <strong class="home-m3-favorite-link__label">${esc(link.label)}</strong>
@@ -790,6 +791,7 @@ function getFavoriteSharedLinks() {
       id: card.id,
       label: card.label || '共有リンク',
       meta: buildFavoriteLinkMeta(card, publicCategoriesById),
+      brandIconHtml: getBrandIconHtmlForCard(card),
       symbol: card.url === 'solar:open' ? 'wb_sunny' : 'link',
       arrow: card.url === 'solar:open' ? 'arrow_forward' : 'open_in_new',
     }));
