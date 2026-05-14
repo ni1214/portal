@@ -499,6 +499,9 @@ initTodayDashboard({
       });
     });
   },
+  openFavoriteLink: cardId => {
+    openFavoriteLinkFromHome(cardId);
+  },
   openInviteCode: async () => {
     try {
       await loadInviteCodeConfig();
@@ -960,7 +963,7 @@ async function addPrivateCard(data) {
     const ref = await addDoc(collection(db, 'users', state.currentUsername, 'private_cards'), { ...newData, updatedAt: serverTimestamp() });
     state.privateCards.push({ id: ref.id, isPrivate: true, ...newData });
   }
-  renderAllSections();
+  scheduleCardRerender();
 }
 
 async function savePrivateCard(cardId, data) {
@@ -972,7 +975,7 @@ async function savePrivateCard(cardId, data) {
   }
   const idx = state.privateCards.findIndex(c => c.id === cardId);
   if (idx !== -1) state.privateCards[idx] = { ...state.privateCards[idx], ...data };
-  renderAllSections();
+  scheduleCardRerender();
 }
 
 async function deletePrivateCard(cardId) {
@@ -983,7 +986,7 @@ async function deletePrivateCard(cardId) {
     await deleteDoc(doc(db, 'users', state.currentUsername, 'private_cards', cardId));
   }
   state.privateCards = state.privateCards.filter(c => c.id !== cardId);
-  renderAllSections();
+  scheduleCardRerender();
 }
 
 
@@ -1190,11 +1193,20 @@ function sortCards(cards = []) {
 }
 
 let _sharedCardsLoadPromise = null;
+let _cardRerenderTimer = null;
 
 function rerenderCards() {
   renderAllSections();
   renderFavorites();
   renderSharedLinksBrowser();
+}
+
+function scheduleCardRerender() {
+  if (_cardRerenderTimer) return;
+  _cardRerenderTimer = setTimeout(() => {
+    _cardRerenderTimer = null;
+    rerenderCards();
+  }, 0);
 }
 
 async function reloadSharedCoreData() {
@@ -1301,7 +1313,7 @@ async function saveCard(docId, data) {
   if (idx !== -1) {
     state.allCards[idx] = { ...state.allCards[idx], ...data };
     state.allCards = sortCards(state.allCards);
-    rerenderCards();
+    scheduleCardRerender();
   }
 }
 
@@ -1328,7 +1340,7 @@ async function addCard(data) {
     const ref = await addDoc(collection(db, 'cards'), newData);
     state.allCards = sortCards([...state.allCards, { id: ref.id, ...newData }]);
   }
-  rerenderCards();
+  scheduleCardRerender();
 }
 
 async function deleteCard(docId) {
@@ -1338,7 +1350,7 @@ async function deleteCard(docId) {
     await deleteDoc(doc(db, 'cards', docId));
   }
   state.allCards = state.allCards.filter(c => c.id !== docId);
-  rerenderCards();
+  scheduleCardRerender();
 }
 
 
@@ -2027,6 +2039,37 @@ function closeChildPopup() {
 
 
 // ========== お気に入り ==========
+function openFavoriteLinkFromHome(cardId) {
+  if (!cardId) return;
+
+  const cardPool = [...(state.allCards || []), ...(state.privateCards || [])];
+  const card = cardPool.find(item => item.id === cardId);
+  if (!card) {
+    showToast('リンクが見つかりませんでした');
+    return;
+  }
+
+  if (card.url === 'solar:open') {
+    openWeatherPanel('solar');
+    return;
+  }
+
+  const href = `${card.url || ''}`.trim();
+  if (!href || href === '#') {
+    showToast('このリンクはURLが未設定です');
+    return;
+  }
+
+  const anchor = document.createElement('a');
+  anchor.href = href;
+  anchor.target = '_blank';
+  anchor.rel = 'noopener noreferrer';
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
 function getFavorites() {
   return [...state.personalFavorites];
 }
@@ -3749,7 +3792,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await addPrivateSection({ label, icon, colorIndex: state.privateSectionColorIndex, order: state.privateCategories.length });
       }
       closePrivateSectionModal();
-      renderAllSections();
+      scheduleCardRerender();
     } catch (err) {
       console.error('マイカテゴリ保存エラー:', err);
       showToast('保存に失敗しました。', 'error');
@@ -3767,7 +3810,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await Promise.all(sectionCards.map(c => deletePrivateCard(c.id)));
       await deletePrivateSection(state.editingPrivateSectionId);
       closePrivateSectionModal();
-      renderAllSections();
+      scheduleCardRerender();
     }
   });
 
@@ -3853,7 +3896,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeCardModal();
     } catch (err) {
       console.error('保存エラー:', err);
-      showToast('保存に失敗しました。もう一度お試しください。', 'error');
+      const isTimeout = err?.name === 'AbortError' || /timed out/i.test(err?.message || '');
+      showToast(
+        isTimeout
+          ? '保存がタイムアウトしました。通信状況を確認して、もう一度お試しください。'
+          : '保存に失敗しました。もう一度お試しください。',
+        'error'
+      );
     } finally {
       btn.disabled = false;
       btn.textContent = '保存';
@@ -3958,7 +4007,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await addCategoryToFirestore({ id: newId, label, icon, colorIndex: state.selectedColorIndex, order: maxOrder, isExternal: false });
       }
       closeCategoryModal();
-      renderAllSections();
+      scheduleCardRerender();
     } catch (err) {
       console.error('カテゴリ保存エラー:', err);
       showToast('保存に失敗しました。', 'error');
@@ -3979,7 +4028,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (await confirmDelete(`「${cat?.label}」を削除しますか？`)) {
       await deleteCategoryFromFirestore(state.editingCategoryId);
       closeCategoryModal();
-      renderAllSections();
+      scheduleCardRerender();
     }
   });
 

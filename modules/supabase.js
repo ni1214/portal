@@ -3,6 +3,7 @@ import { recordTransferFetch } from './read-diagnostics.js';
 
 const BACKEND_SUPABASE = 'supabase';
 const SUPABASE_STORAGE_KEY = 'portal-supabase-v2';
+const SUPABASE_REQUEST_TIMEOUT_MS = 30000;
 
 // デフォルト資格情報 — 新規デバイス・新規ユーザーでも即座に Supabase を使う
 const DEFAULT_SUPABASE_URL = 'https://ydcxgxzeavumvubrqmlq.supabase.co';
@@ -92,30 +93,50 @@ async function requestSupabase(path, {
   diagKey = '',
   diagLabel = '',
   diagScope = '',
+  timeoutMs = null,
 } = {}) {
   if (!state.supabaseConfigured) {
     throw new Error('Supabase 設定がまだ完了していません。');
   }
 
-  const response = await fetch(`${getRestBaseUrl()}/${path}`, {
-    method,
-    headers: getApiHeaders({ includeJson: body != null, prefer }),
-    body: body == null ? undefined : JSON.stringify(body),
-  });
+  const effectiveTimeoutMs = Number.isFinite(timeoutMs)
+    ? timeoutMs
+    : (method === 'GET' ? 60000 : SUPABASE_REQUEST_TIMEOUT_MS);
+  const hasTimeout = Number.isFinite(effectiveTimeoutMs) && effectiveTimeoutMs > 0;
+  const controller = hasTimeout ? new AbortController() : null;
+  const timeoutHandle = hasTimeout
+    ? setTimeout(() => controller?.abort(), effectiveTimeoutMs)
+    : null;
 
-  const text = await response.text();
-  if (!response.ok) {
-    throw new Error(`Supabase ${method} 失敗 (${response.status}): ${summarizeError(text)}`);
+  try {
+    const response = await fetch(`${getRestBaseUrl()}/${path}`, {
+      method,
+      headers: getApiHeaders({ includeJson: body != null, prefer }),
+      body: body == null ? undefined : JSON.stringify(body),
+      signal: controller?.signal,
+    });
+
+    const text = await response.text();
+    if (!response.ok) {
+      throw new Error(`Supabase ${method} 失敗 (${response.status}): ${summarizeError(text)}`);
+    }
+
+    if (!text) return null;
+
+    const data = JSON.parse(text);
+    if (diagKey) {
+      const itemCount = Array.isArray(data) ? data.length : (data ? 1 : 0);
+      recordTransferFetch(diagKey, diagLabel, diagScope, itemCount, data);
+    }
+    return data;
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      throw new Error(`Supabase ${method} request timed out after ${effectiveTimeoutMs}ms: ${path}`);
+    }
+    throw err;
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
   }
-
-  if (!text) return null;
-
-  const data = JSON.parse(text);
-  if (diagKey) {
-    const itemCount = Array.isArray(data) ? data.length : (data ? 1 : 0);
-    recordTransferFetch(diagKey, diagLabel, diagScope, itemCount, data);
-  }
-  return data;
 }
 
 function mapCategoryRow(row = {}) {

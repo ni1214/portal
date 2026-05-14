@@ -297,6 +297,11 @@ function renderHomeHero(host, {
   const publicLinkCount = Array.isArray(state.allCategories)
     ? state.allCategories.filter(category => !category?.isPrivate).length
     : 0;
+  const favoriteLinks = getFavoriteSharedLinks();
+  const favoriteCountLabel = state.currentUsername ? `${favoriteCount}件` : '設定してください';
+  const favoriteActionTarget = state.currentUsername
+    ? (favoriteCount > 0 ? DASH_TARGETS.FAVORITES : DASH_TARGETS.SHARED_LINKS)
+    : DASH_TARGETS.PROFILE;
   const primaryTarget = state.currentUsername ? (focusCard.target || DASH_TARGETS.PROFILE) : DASH_TARGETS.PROFILE;
   const primaryLabel = state.currentUsername ? '今日の優先事項へ' : 'プロフィールを設定';
   const summaryCopy = state.currentUsername
@@ -341,6 +346,142 @@ function renderHomeHero(host, {
       meta: state.currentUsername ? 'よく使う導線をまとめて開けます' : '個人設定後に保存されます',
     },
   ];
+  const quickActions = [
+    {
+      target: state.currentUsername ? DASH_TARGETS.TASK_RECEIVED : DASH_TARGETS.PROFILE,
+      tone: taskCard.tone || 'clear',
+      symbol: 'task_alt',
+      label: 'タスク',
+      value: state.currentUsername ? taskCard.value : '設定',
+      meta: state.currentUsername ? (taskCard.meta || '受信タスク') : 'プロフィール',
+    },
+    {
+      target: state.currentUsername ? DASH_TARGETS.ATTENDANCE : DASH_TARGETS.PROFILE,
+      tone: attendanceCard.tone || 'clear',
+      symbol: 'calendar_month',
+      label: '勤怠',
+      value: buildAttendanceValueLabel(attendanceCard, Boolean(state.currentUsername)),
+      meta: attendanceCard.meta || '今日の勤怠',
+    },
+    {
+      target: DASH_TARGETS.NOTICE,
+      tone: noticeCard.tone || 'clear',
+      symbol: 'notifications',
+      label: 'お知らせ',
+      value: noticeCard.value || '0件',
+      meta: noticeCard.meta || '未読なし',
+    },
+    {
+      target: DASH_TARGETS.SHARED_LINKS,
+      tone: 'clear',
+      symbol: 'grid_view',
+      label: '共有リンク',
+      value: `${publicLinkCount}カテゴリ`,
+      meta: 'リンク集',
+    },
+    {
+      target: favoriteActionTarget,
+      tone: favoriteLinks.length > 0 ? 'active' : 'idle',
+      symbol: 'star',
+      label: 'お気に入り',
+      value: favoriteCountLabel,
+      meta: favoriteLinks.length > 0 ? 'すぐ開く' : '未登録',
+    },
+    {
+      target: DASH_TARGETS.PROFILE,
+      tone: state.currentUsername ? 'clear' : 'active',
+      symbol: 'person',
+      label: 'プロフィール',
+      value: profile.department || (state.currentUsername ? '共通' : '未設定'),
+      meta: profile.roleLabel || 'ユーザー設定',
+    },
+  ];
+  const favoritePreview = favoriteLinks.slice(0, DASH_LIST_LIMIT);
+  const favoriteOverflowCount = Math.max(0, favoriteLinks.length - favoritePreview.length);
+
+  host.innerHTML = `
+    <section class="home-simple-shell" aria-label="ホーム">
+      <header class="home-simple-header">
+        <div class="home-simple-heading">
+          <p class="home-simple-kicker">HOME</p>
+          <h1 class="home-simple-title">${esc(state.currentUsername ? `${username} さん` : 'ホーム')}</h1>
+        </div>
+        <div class="home-simple-chip-row">
+          ${chips.map(chip => `<span class="home-simple-chip">${esc(chip)}</span>`).join('')}
+        </div>
+      </header>
+
+      <div class="home-simple-main">
+        <button
+          type="button"
+          class="home-simple-focus home-simple-focus--${esc(focusCard.tone || 'idle')}"
+          data-dash-target="${esc(primaryTarget)}"
+        >
+          <span class="home-simple-focus__icon">
+            <span class="material-symbols-rounded" aria-hidden="true">flag</span>
+          </span>
+          <span class="home-simple-focus__body">
+            <span class="home-simple-label">${esc(focusCard.title || '今日の確認')}</span>
+            <strong class="home-simple-focus__value">${esc(state.currentUsername ? (focusCard.value || '確認') : 'プロフィール設定')}</strong>
+            <span class="home-simple-meta">${esc(state.currentUsername ? (focusCard.meta || '最初に見る内容') : '個人スペースを有効にします')}</span>
+            ${renderHomeSimpleList(focusCard.items, focusCard.emptyText)}
+          </span>
+          <span class="material-symbols-rounded home-simple-arrow" aria-hidden="true">arrow_forward</span>
+        </button>
+
+        <div class="home-simple-actions" aria-label="主要メニュー">
+          ${quickActions.map(action => `
+            <button
+              type="button"
+              class="home-simple-action home-simple-action--${esc(action.tone || 'clear')}"
+              data-dash-target="${esc(action.target)}"
+            >
+              <span class="home-simple-action__icon">
+                <span class="material-symbols-rounded" aria-hidden="true">${esc(action.symbol)}</span>
+              </span>
+              <span class="home-simple-action__body">
+                <span class="home-simple-action__label">${esc(action.label)}</span>
+                <strong class="home-simple-action__value">${esc(action.value)}</strong>
+                <span class="home-simple-action__meta">${esc(action.meta)}</span>
+              </span>
+            </button>
+          `).join('')}
+        </div>
+
+        <section class="home-simple-favorites" aria-label="お気に入り共有リンク">
+          <div class="home-simple-section-head">
+            <div>
+              <p class="home-simple-section-kicker">SHORTCUTS</p>
+              <h2 class="home-simple-section-title">お気に入り共有リンク</h2>
+            </div>
+            <button
+              type="button"
+              class="home-simple-text-action"
+              data-dash-target="${esc(favoriteActionTarget)}"
+            >
+              <span>${esc(state.currentUsername ? (favoriteCount > 0 ? '一覧' : '共有リンク') : '設定')}</span>
+              <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
+            </button>
+          </div>
+
+          <div class="home-simple-favorite-grid${favoritePreview.length === 0 ? ' home-simple-favorite-grid--empty' : ''}">
+            ${renderHomeSimpleFavoriteLinks(favoritePreview, Boolean(state.currentUsername))}
+            ${favoriteOverflowCount > 0 ? `
+              <button
+                type="button"
+                class="home-simple-favorite-more"
+                data-dash-target="${esc(DASH_TARGETS.FAVORITES)}"
+              >
+                <span>他 ${esc(String(favoriteOverflowCount))} 件</span>
+                <span class="material-symbols-rounded" aria-hidden="true">more_horiz</span>
+              </button>
+            ` : ''}
+          </div>
+        </section>
+      </div>
+    </section>
+  `;
+  return;
 
   host.innerHTML = `
     <section class="home-m3-hero">
@@ -415,6 +556,17 @@ function renderHomeHero(host, {
       </div>
     </section>
   `;
+
+  const overviewCards = host.querySelectorAll('.home-m3-overview-card:not(.home-m3-overview-card--wide)');
+  const favoriteCard = overviewCards[overviewCards.length - 1];
+  if (favoriteCard) {
+    favoriteCard.replaceWith(buildFavoriteOverviewCard({
+      favoriteLinks,
+      favoriteCountLabel,
+      favoriteActionTarget,
+      isProfileReady: Boolean(state.currentUsername),
+    }));
+  }
   return;
 
   host.innerHTML = `
@@ -474,6 +626,51 @@ function renderHomeHero(host, {
   `;
 }
 
+function renderHomeSimpleList(items, emptyText) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return `<span class="home-simple-list home-simple-list--empty">${esc(emptyText || '表示できる項目はありません')}</span>`;
+  }
+
+  return `
+    <span class="home-simple-list">
+      ${items.slice(0, DASH_LIST_LIMIT).map(item => `
+        <span class="home-simple-list__item">
+          <strong>${esc(item.title || '名称未設定')}</strong>
+          ${item.meta ? `<span>${esc(item.meta)}</span>` : ''}
+        </span>
+      `).join('')}
+    </span>
+  `;
+}
+
+function renderHomeSimpleFavoriteLinks(links, isProfileReady) {
+  if (!isProfileReady) {
+    return '<div class="home-simple-empty">プロフィール未設定</div>';
+  }
+
+  if (!Array.isArray(links) || links.length === 0) {
+    return '<div class="home-simple-empty">お気に入り未登録</div>';
+  }
+
+  return links.map(link => `
+    <button
+      type="button"
+      class="home-simple-favorite-link"
+      data-favorite-card-id="${esc(link.id)}"
+      aria-label="${esc(`${link.label}を開く`)}"
+    >
+      <span class="home-simple-favorite-link__icon">
+        <span class="material-symbols-rounded" aria-hidden="true">${esc(link.symbol)}</span>
+      </span>
+      <span class="home-simple-favorite-link__body">
+        <strong>${esc(link.label)}</strong>
+        <span>${esc(link.meta)}</span>
+      </span>
+      <span class="material-symbols-rounded home-simple-arrow" aria-hidden="true">${esc(link.arrow)}</span>
+    </button>
+  `).join('');
+}
+
 function renderPersonalList(items, emptyText) {
   if (!Array.isArray(items) || items.length === 0) {
     return `<div class="portal-personal-empty">${esc(emptyText || '表示できる項目はありません')}</div>`;
@@ -498,6 +695,122 @@ function renderPersonalChips(chips) {
   `;
 }
 
+function buildFavoriteOverviewCard({
+  favoriteLinks,
+  favoriteCountLabel,
+  favoriteActionTarget,
+  isProfileReady,
+}) {
+  const card = document.createElement('section');
+  card.className = `home-m3-overview-card home-m3-overview-card--${favoriteLinks.length > 0 ? 'active' : 'idle'} home-m3-overview-card--favorite`;
+
+  const actionLabel = isProfileReady
+    ? (favoriteLinks.length > 0 ? '一覧を見る' : '共有リンクを見る')
+    : 'プロフィール設定';
+  const actionMeta = isProfileReady
+    ? 'よく使う共有リンクをホームから直接開けます'
+    : 'ユーザー名を設定するとお気に入りを表示できます';
+  const previewLinks = favoriteLinks.slice(0, DASH_LIST_LIMIT);
+  const overflowCount = Math.max(0, favoriteLinks.length - previewLinks.length);
+
+  card.innerHTML = `
+    <div class="home-m3-overview-card__head">
+      <span class="home-m3-overview-card__icon">
+        <span class="material-symbols-rounded" aria-hidden="true">star</span>
+      </span>
+      <div>
+        <span class="home-m3-overview-card__label">お気に入り</span>
+        <strong class="home-m3-overview-card__value">${esc(favoriteCountLabel)}</strong>
+      </div>
+    </div>
+    <p class="home-m3-overview-card__meta">${esc(actionMeta)}</p>
+    <div class="home-m3-favorite-links${previewLinks.length === 0 ? ' home-m3-favorite-links--empty' : ''}">
+      ${renderFavoriteLinkButtons(previewLinks, isProfileReady)}
+      ${overflowCount > 0 ? `
+        <div class="home-m3-pill-row home-m3-pill-row--compact">
+          <span class="home-m3-pill home-m3-pill--soft">他 ${esc(String(overflowCount))} 件</span>
+        </div>
+      ` : ''}
+    </div>
+    <button
+      type="button"
+      class="home-m3-inline-action home-m3-inline-action--compact home-m3-favorite-links__action"
+      data-dash-target="${esc(favoriteActionTarget)}"
+    >${esc(actionLabel)}</button>
+  `;
+
+  return card;
+}
+
+function renderFavoriteLinkButtons(links, isProfileReady) {
+  if (!isProfileReady) {
+    return '<div class="home-m3-empty">ホームのお気に入り表示はログイン後に有効になります。</div>';
+  }
+
+  if (!Array.isArray(links) || links.length === 0) {
+    return '<div class="home-m3-empty">共有リンクで星を付けると、ここから直接開けます。</div>';
+  }
+
+  return links.map(link => `
+    <button
+      type="button"
+      class="home-m3-favorite-link"
+      data-favorite-card-id="${esc(link.id)}"
+      aria-label="${esc(`${link.label}を開く`)}"
+    >
+      <span class="home-m3-favorite-link__icon">
+        <span class="material-symbols-rounded" aria-hidden="true">${esc(link.symbol)}</span>
+      </span>
+      <span class="home-m3-favorite-link__body">
+        <strong class="home-m3-favorite-link__label">${esc(link.label)}</strong>
+        <span class="home-m3-favorite-link__meta">${esc(link.meta)}</span>
+      </span>
+      <span class="material-symbols-rounded home-m3-favorite-link__arrow" aria-hidden="true">${esc(link.arrow)}</span>
+    </button>
+  `).join('');
+}
+
+function getFavoriteSharedLinks() {
+  const favoriteIds = Array.isArray(state.personalFavorites) ? state.personalFavorites : [];
+  if (!favoriteIds.length) return [];
+
+  const publicCardsById = new Map(
+    (Array.isArray(state.allCards) ? state.allCards : []).map(card => [card.id, card])
+  );
+  const publicCategoriesById = new Map(
+    (Array.isArray(state.allCategories) ? state.allCategories : [])
+      .filter(category => !category?.isPrivate)
+      .map(category => [category.id || category.docId, category.label || '共有リンク'])
+  );
+
+  return favoriteIds
+    .map(id => publicCardsById.get(id))
+    .filter(Boolean)
+    .map(card => ({
+      id: card.id,
+      label: card.label || '共有リンク',
+      meta: buildFavoriteLinkMeta(card, publicCategoriesById),
+      symbol: card.url === 'solar:open' ? 'wb_sunny' : 'link',
+      arrow: card.url === 'solar:open' ? 'arrow_forward' : 'open_in_new',
+    }));
+}
+
+function buildFavoriteLinkMeta(card, publicCategoriesById) {
+  const categoryLabel = publicCategoriesById.get(card.category) || '共有リンク';
+  if (card.url === 'solar:open') return `${categoryLabel} / 天気パネル`;
+
+  const rawUrl = `${card.url || ''}`.trim();
+  if (!rawUrl || rawUrl === '#') return `${categoryLabel} / URL未設定`;
+
+  try {
+    const parsed = new URL(rawUrl, window.location.href);
+    const host = parsed.host || parsed.pathname || '共有リンク';
+    return `${categoryLabel} / ${host}`;
+  } catch (_) {
+    return categoryLabel;
+  }
+}
+
 function buildPersonalMeta(profile) {
   if (!state.currentUsername) {
     return 'プロフィールを設定すると個人スペースが使えます';
@@ -519,6 +832,12 @@ function bindDashboardEvents(section) {
   section.dataset.dashBound = 'true';
 
   section.addEventListener('click', event => {
+    const favoriteLink = event.target.closest('[data-favorite-card-id]');
+    if (favoriteLink && section.contains(favoriteLink)) {
+      event.preventDefault();
+      void deps.openFavoriteLink?.(favoriteLink.dataset.favoriteCardId || '');
+      return;
+    }
     const card = event.target.closest('[data-dash-target]');
     if (!card || !section.contains(card)) return;
     void openDashboardTarget(card.dataset.dashTarget || '');

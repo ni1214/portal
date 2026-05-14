@@ -30,6 +30,6 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': mime[ext] || 'text/plain; charset=utf-8' });
     res.end(data);
   });
-}).listen(8080, () => {
-  console.log(`Server running on port 8080 from ${root}`);
+}).listen(process.env.PORT || 8080, () => {
+  console.log(`Server running on port ${process.env.PORT || 8080} from ${root}`);
 });
