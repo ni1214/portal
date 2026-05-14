@@ -6,6 +6,7 @@ let deps = {};
 
 const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 const DASH_LIST_LIMIT = 3;
+const DASH_FAVORITE_LIMIT = 6;
 const ATTENDANCE_TYPE_LABELS = {
   normal: '通常',
   有給: '有給',
@@ -397,7 +398,7 @@ function renderHomeHero(host, {
       meta: profile.roleLabel || 'ユーザー設定',
     },
   ];
-  const favoritePreview = favoriteLinks.slice(0, DASH_LIST_LIMIT);
+  const favoritePreview = favoriteLinks.slice(0, DASH_FAVORITE_LIMIT);
   const favoriteOverflowCount = Math.max(0, favoriteLinks.length - favoritePreview.length);
 
   host.innerHTML = `
@@ -473,8 +474,8 @@ function renderHomeHero(host, {
                 class="home-simple-favorite-more"
                 data-dash-target="${esc(DASH_TARGETS.FAVORITES)}"
               >
+                <span class="home-simple-favorite-more__icon material-symbols-rounded" aria-hidden="true">more_horiz</span>
                 <span>他 ${esc(String(favoriteOverflowCount))} 件</span>
-                <span class="material-symbols-rounded" aria-hidden="true">more_horiz</span>
               </button>
             ` : ''}
           </div>
@@ -659,15 +660,14 @@ function renderHomeSimpleFavoriteLinks(links, isProfileReady) {
       class="home-simple-favorite-link"
       data-favorite-card-id="${esc(link.id)}"
       aria-label="${esc(`${link.label}を開く`)}"
+      title="${esc(link.meta || link.label)}"
     >
       <span class="home-simple-favorite-link__icon">
         ${link.brandIconHtml || `<span class="material-symbols-rounded" aria-hidden="true">${esc(link.symbol)}</span>`}
       </span>
       <span class="home-simple-favorite-link__body">
         <strong>${esc(link.label)}</strong>
-        <span>${esc(link.meta)}</span>
       </span>
-      <span class="material-symbols-rounded home-simple-arrow" aria-hidden="true">${esc(link.arrow)}</span>
     </button>
   `).join('');
 }

@@ -22004,8 +22004,9 @@ body:has(#home-dashboard) #home-dashboard .home-simple-text-action {
 
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 82px));
+  justify-content: start;
+  gap: 14px 12px;
   min-width: 0;
 }
 
@@ -22014,21 +22015,85 @@ body:has(#home-dashboard) #home-dashboard .home-simple-favorite-grid--empty {
 }
 
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) 20px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  min-height: 72px;
-  padding: 11px;
-  text-align: left;
+  justify-content: flex-start;
+  gap: 7px;
+  min-height: 86px;
+  padding: 5px 4px;
+  text-align: center;
+  border-color: transparent;
+  background: transparent;
 }
 
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link__icon {
-  width: 38px;
-  height: 38px;
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  font-size: 1.55rem;
+  box-shadow: 0 1px 5px var(--shadow-ink-soft);
 }
 
-body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link__icon .brand-icon-img,
+body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link__icon .brand-icon-img {
+  width: 42px;
+  height: 42px;
+  display: block;
+  object-fit: contain;
+  border-radius: 10px;
+  background: var(--surface-solid);
+  padding: 4px;
+  box-shadow: 0 1px 4px var(--shadow-ink-soft);
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link__body {
+  align-items: center;
+  gap: 0;
+  width: 100%;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link__body strong {
+  display: block;
+  width: 100%;
+  color: var(--portal-home-title);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-favorite-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 86px;
+  padding: 5px 4px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--portal-home-title);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-favorite-more__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--portal-home-line) 42%, transparent);
+  color: var(--portal-home-copy);
+  font-size: 1.55rem;
+  box-shadow: 0 1px 5px var(--shadow-ink-soft);
+}
+
 .home-m3-favorite-link__icon .brand-icon-img {
   width: 30px;
   height: 30px;
@@ -22038,17 +22103,6 @@ body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link__icon .bran
   background: var(--surface-solid);
   padding: 3px;
   box-shadow: 0 1px 4px var(--shadow-ink-soft);
-}
-
-body:has(#home-dashboard) #home-dashboard .home-simple-favorite-more {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 72px;
-  padding: 12px;
-  color: var(--portal-home-title);
-  font-weight: 800;
 }
 
 body:has(#home-dashboard) #home-dashboard .home-simple-empty {
@@ -22151,13 +22205,19 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
   }
 
   body:has(#home-dashboard) #home-dashboard .home-simple-favorite-grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    justify-content: stretch;
+    gap: 12px 8px;
   }
 }
 
 @media (max-width: 360px) {
   body:has(#home-dashboard) #home-dashboard .home-simple-actions {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  body:has(#home-dashboard) #home-dashboard .home-simple-favorite-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
