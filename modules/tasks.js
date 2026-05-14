@@ -31,26 +31,26 @@ const ACTIVE_TASK_STATUSES = ['pending', 'accepted'];
 const TASK_TAB_META = Object.freeze({
   received: {
     label: '受信',
-    title: '受け取ったタスク',
-    description: '着手待ちと進行中の受信タスクを優先順に確認できます。',
+    title: '自分が判断するタスク',
+    description: 'まず承諾待ち、次に進行中を確認します。',
     icon: 'move_to_inbox',
   },
   sent: {
     label: '依頼',
-    title: '依頼したタスク',
-    description: '依頼先の進捗と完了報告をまとめて追えます。',
+    title: '相手の進み具合を見る',
+    description: '完了確認、承諾待ち、進行中だけを追います。',
     icon: 'outbox',
   },
   shared: {
     label: '共有',
-    title: '共有されたタスク',
-    description: '共有依頼への承諾と対応状況をこの場で返せます。',
+    title: '共有依頼に返事する',
+    description: '受け取るか断るかを判断します。',
     icon: 'groups',
   },
   new: {
-    label: '新規作成',
-    title: '新しいタスクを追加',
-    description: '担当・期限・物件Noをまとめて入力して、そのまま依頼します。',
+    label: '新規',
+    title: '新しいタスクを依頼',
+    description: '担当者とタスク名だけ先に決めれば作成できます。',
     icon: 'edit_square',
   },
 });
@@ -379,25 +379,124 @@ function _taskEmptyStateHtml(icon, title, description) {
   `;
 }
 
-function _taskUniqueProjectCount(tasks) {
-  return new Set((tasks || []).map(task => normalizeProjectKey(task.projectKey || '')).filter(Boolean)).size;
+function _todayTaskDateKey() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
-function _taskStatusCount(tasks, status) {
-  return (tasks || []).filter(task => task.status === status).length;
+function _taskDueTone(task) {
+  if (!task?.dueDate || task.status === 'done') return 'none';
+  const today = _todayTaskDateKey();
+  if (task.dueDate < today) return 'overdue';
+  if (task.dueDate === today) return 'today';
+  return 'upcoming';
 }
 
-function _taskDueCount(tasks) {
-  return (tasks || []).filter(task => !!task.dueDate).length;
+function _taskDueHtml(task) {
+  if (!task?.dueDate) return '<span class="task-due task-due--none"><i class="fa-regular fa-calendar"></i> 期限なし</span>';
+  const tone = _taskDueTone(task);
+  const label = tone === 'overdue' ? '期限超過' : tone === 'today' ? '今日まで' : '期限';
+  return `<span class="task-due task-due--${tone}"><i class="fa-regular fa-calendar"></i> ${label}: ${esc(task.dueDate)}</span>`;
 }
 
-function _taskProjectKeyHtml(task) {
+function _taskDecision(task, view) {
+  if (view === 'received') {
+    if (task.status === 'pending') return { tone: 'warning', icon: 'rule', text: '承諾するか判断' };
+    if (task.status === 'accepted') return { tone: 'info', icon: 'flag', text: '完了したら報告' };
+    return { tone: 'success', icon: 'check_circle', text: '完了済み' };
+  }
+  if (view === 'sent') {
+    if (task.status === 'done' && !task.notifiedDone) return { tone: 'warning', icon: 'priority_high', text: '完了内容を確認' };
+    if (task.status === 'pending') return { tone: 'muted', icon: 'hourglass_top', text: '相手の承諾待ち' };
+    if (task.status === 'accepted') return { tone: 'info', icon: 'sync', text: '進行中を見守る' };
+    return { tone: 'success', icon: 'task_alt', text: '確認済み' };
+  }
+  const response = task.sharedResponses?.[state.currentUsername] || 'pending';
+  if (response === 'pending') return { tone: 'warning', icon: 'how_to_reg', text: '受け取るか返事' };
+  if (response === 'accepted') return { tone: 'success', icon: 'check_circle', text: '受取済み' };
+  return { tone: 'muted', icon: 'block', text: '辞退済み' };
+}
+
+function _taskDecisionRank(task, view) {
+  const dueTone = _taskDueTone(task);
+  const dueRank = dueTone === 'overdue' ? 0 : dueTone === 'today' ? 1 : task?.dueDate ? 2 : 3;
+  let actionRank = 4;
+  if (view === 'received') {
+    actionRank = task.status === 'pending' ? 0 : task.status === 'accepted' ? 1 : 3;
+  } else if (view === 'sent') {
+    actionRank = task.status === 'done' && !task.notifiedDone ? 0 : task.status === 'pending' ? 1 : task.status === 'accepted' ? 2 : 3;
+  } else if (view === 'shared') {
+    const response = task.sharedResponses?.[state.currentUsername] || 'pending';
+    actionRank = response === 'pending' ? 0 : response === 'accepted' ? 2 : 3;
+  }
+  return actionRank * 10 + dueRank;
+}
+
+function _sortTasksForDecision(list, view) {
+  return [...list].sort((a, b) => {
+    const rankDiff = _taskDecisionRank(a, view) - _taskDecisionRank(b, view);
+    if (rankDiff !== 0) return rankDiff;
+    if (a.dueDate && b.dueDate && a.dueDate !== b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+    if (a.dueDate && !b.dueDate) return -1;
+    if (!a.dueDate && b.dueDate) return 1;
+    return (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0);
+  });
+}
+
+function _taskProjectKeyChipHtml(task) {
   if (!task.projectKey) return '';
+  return `<span class="task-project-key-chip"><span>物件No</span>${esc(task.projectKey)}</span>`;
+}
+
+function _taskDetailsHtml(task) {
+  if (!task.description) return '';
   return `
-    <div class="task-project-key">
-      <span class="task-project-key-label">物件No</span>
-      <span class="task-project-key-chip">${esc(task.projectKey)}</span>
-    </div>
+    <details class="task-item-details">
+      <summary>詳細を見る</summary>
+      <p>${esc(task.description)}</p>
+    </details>
+  `;
+}
+
+function _taskItemHtml(task, {
+  view,
+  partnerLabel,
+  partnerName,
+  partnerIcon,
+  actions = '',
+  extra = '',
+  className = '',
+}) {
+  const status = TASK_STATUS_LABEL[task.status] || TASK_STATUS_LABEL.pending;
+  const decision = _taskDecision(task, view);
+  const actionHtml = actions ? `<div class="task-item-actions">${actions}</div>` : '';
+  return `
+    <article class="task-item task-item--${esc(task.status || 'pending')} ${esc(className)}">
+      <div class="task-item-main">
+        <div class="task-item-topline">
+          <span class="task-status-badge ${status.cls}">${status.text}</span>
+          <span class="task-next-chip task-next-chip--${decision.tone}">
+            <span class="material-symbols-rounded" aria-hidden="true">${decision.icon}</span>
+            ${esc(decision.text)}
+          </span>
+        </div>
+        <div class="task-item-title-row">
+          <h3 class="task-item-title">${esc(task.title)}</h3>
+          ${_taskDueHtml(task)}
+        </div>
+        <div class="task-item-facts">
+          <span class="task-partner"><i class="${esc(partnerIcon)}"></i> ${esc(partnerLabel)}: ${esc(partnerName || '')}</span>
+          ${_taskProjectKeyChipHtml(task)}
+        </div>
+        ${_taskDetailsHtml(task)}
+        ${extra}
+      </div>
+      ${actionHtml}
+      ${_taskCommentSectionHtml(task.id)}
+    </article>
   `;
 }
 
@@ -867,6 +966,16 @@ function renderTaskModalChrome() {
   const acceptedReceived = (state.receivedTasks || []).filter(task => task.status === 'accepted').length;
   const doneToAck = (state.sentTasks || []).filter(task => task.status === 'done' && !task.notifiedDone).length;
   const sharedPending = (state.sharedTasks || []).filter(task => (task.sharedResponses?.[state.currentUsername] || 'pending') === 'pending').length;
+  const allVisibleTasks = [
+    ...(state.receivedTasks || []),
+    ...(state.sentTasks || []),
+    ...(state.sharedTasks || []),
+  ];
+  const urgentDueCount = allVisibleTasks.filter(task => {
+    const tone = _taskDueTone(task);
+    return tone === 'overdue' || tone === 'today';
+  }).length;
+  const needsActionCount = pendingReceived + doneToAck + sharedPending;
 
   if (titleEl) titleEl.textContent = 'タスク管理';
   if (subtitleEl) subtitleEl.textContent = activeMeta.description;
@@ -876,17 +985,17 @@ function renderTaskModalChrome() {
     metricsEl.hidden = !shouldShowMetrics;
     if (shouldShowMetrics) {
       const metricItems = [
-        { tab: 'received', label: '受信', icon: TASK_TAB_META.received.icon, value: `${(state.receivedTasks || []).length}件`, note: pendingReceived > 0 ? `着手待ち ${pendingReceived}` : `進行中 ${acceptedReceived}` },
-        { tab: 'sent', label: '依頼', icon: TASK_TAB_META.sent.icon, value: `${(state.sentTasks || []).length}件`, note: doneToAck > 0 ? `完了報告 ${doneToAck}` : '進捗を確認' },
-        { tab: 'shared', label: '共有', icon: TASK_TAB_META.shared.icon, value: `${(state.sharedTasks || []).length}件`, note: sharedPending > 0 ? `未返信 ${sharedPending}` : '承諾待ちなし' },
-        { tab: 'new', label: '新規', icon: TASK_TAB_META.new.icon, value: '作成', note: '新しい依頼を追加' },
+        { tab: pendingReceived > 0 ? 'received' : doneToAck > 0 ? 'sent' : sharedPending > 0 ? 'shared' : activeTab, label: '要判断', icon: 'priority_high', value: `${needsActionCount}件`, note: needsActionCount > 0 ? 'まずここを処理' : '今すぐ判断なし' },
+        { tab: 'received', label: '自分の進行中', icon: 'flag', value: `${acceptedReceived}件`, note: acceptedReceived > 0 ? '完了時に報告' : '進行中なし' },
+        { tab: urgentDueCount > 0 ? activeTab : 'received', label: '期限注意', icon: 'event_busy', value: `${urgentDueCount}件`, note: urgentDueCount > 0 ? '今日まで/超過' : '期限注意なし' },
+        { tab: 'new', label: '新規依頼', icon: TASK_TAB_META.new.icon, value: '作成', note: '担当者へ送る' },
       ];
       metricsEl.innerHTML = metricItems.map(item => `
         <button
           type="button"
-          class="task-modal-metric${item.tab === activeTab ? ' active' : ''}"
+          class="task-modal-metric"
           data-task-metric-tab="${item.tab}"
-          aria-pressed="${item.tab === activeTab ? 'true' : 'false'}"
+          aria-pressed="false"
         >
           <span class="material-symbols-rounded task-modal-metric__icon" aria-hidden="true">${item.icon}</span>
           <span class="task-modal-metric__copy">
@@ -922,7 +1031,6 @@ function renderTaskModalChrome() {
               ${esc(activeMeta.label)}
             </span>
             <strong class="task-tab-context__title">${esc(activeMeta.title)}</strong>
-            <p class="task-tab-context__desc">${esc(activeMeta.description)}</p>
           </div>
           <div class="task-tab-context__chips">
             ${chips.map(chip => `<span class="task-tab-context__chip">${esc(chip)}</span>`).join('')}
@@ -1014,9 +1122,7 @@ export function _renderReceivedTasks(container) {
     _bindTaskProjectFilterEvents();
     return;
   }
-  container.innerHTML = _taskFilterBarHtml(state.receivedTasks.length, filtered.length) + filtered.map(t => {
-    const s = TASK_STATUS_LABEL[t.status] || TASK_STATUS_LABEL.pending;
-    const due = t.dueDate ? `<span class="task-due"><i class="fa-regular fa-calendar"></i> ${esc(t.dueDate)}</span>` : '';
+  container.innerHTML = _taskFilterBarHtml(state.receivedTasks.length, filtered.length) + _sortTasksForDecision(filtered, 'received').map(t => {
     let actions = '';
     if (t.status === 'pending') {
       actions = `<button class="task-action-btn task-action-accept" data-id="${t.id}"><i class="fa-solid fa-check"></i> 承諾する</button>`;
@@ -1026,19 +1132,13 @@ export function _renderReceivedTasks(container) {
       actions = `<span class="task-done-stamp"><i class="fa-solid fa-circle-check"></i> 完了済み</span>
         <button class="task-action-btn task-action-delete" data-id="${t.id}" title="削除"><i class="fa-solid fa-trash"></i> 削除</button>`;
     }
-    return `
-      <div class="task-item task-item--${t.status}">
-        <div class="task-item-meta">
-          <span class="task-status-badge ${s.cls}">${s.text}</span>
-          <span class="task-partner"><i class="fa-solid fa-arrow-right-to-bracket"></i> 依頼: ${esc(t.assignedBy)}</span>
-          ${due}
-        </div>
-        <div class="task-item-title">${esc(t.title)}</div>
-        ${_taskProjectKeyHtml(t)}
-        ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
-        <div class="task-item-actions">${actions}</div>
-        ${_taskCommentSectionHtml(t.id)}
-      </div>`;
+    return _taskItemHtml(t, {
+      view: 'received',
+      partnerLabel: '依頼',
+      partnerName: t.assignedBy,
+      partnerIcon: 'fa-solid fa-arrow-right-to-bracket',
+      actions,
+    });
   }).join('');
 
   _bindTaskProjectFilterEvents();
@@ -1069,9 +1169,7 @@ export function _renderSentTasks(container) {
     _bindTaskProjectFilterEvents();
     return;
   }
-  container.innerHTML = _taskFilterBarHtml(state.sentTasks.length, filtered.length) + filtered.map(t => {
-    const s = TASK_STATUS_LABEL[t.status] || TASK_STATUS_LABEL.pending;
-    const due = t.dueDate ? `<span class="task-due"><i class="fa-regular fa-calendar"></i> ${esc(t.dueDate)}</span>` : '';
+  container.innerHTML = _taskFilterBarHtml(state.sentTasks.length, filtered.length) + _sortTasksForDecision(filtered, 'sent').map(t => {
     const isNewDone = t.status === 'done' && !t.notifiedDone;
 
     // 編集・共有ボタン（完了前のみ）
@@ -1104,20 +1202,15 @@ export function _renderSentTasks(container) {
         }).join('')}</div>`
       : '';
 
-    return `
-      <div class="task-item task-item--${t.status}${isNewDone ? ' task-item--alert' : ''}">
-        <div class="task-item-meta">
-          <span class="task-status-badge ${s.cls}">${s.text}</span>
-          <span class="task-partner"><i class="fa-solid fa-arrow-right-from-bracket"></i> 担当: ${esc(t.assignedTo)}</span>
-          ${due}
-        </div>
-        <div class="task-item-title">${esc(t.title)}</div>
-        ${_taskProjectKeyHtml(t)}
-        ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
-        ${sharedBadges}
-        ${(editBtn || shareBtn || statusActions) ? `<div class="task-item-actions">${editBtn}${shareBtn}${statusActions}</div>` : ''}
-        ${_taskCommentSectionHtml(t.id)}
-      </div>`;
+    return _taskItemHtml(t, {
+      view: 'sent',
+      partnerLabel: '担当',
+      partnerName: t.assignedTo,
+      partnerIcon: 'fa-solid fa-arrow-right-from-bracket',
+      actions: `${editBtn}${shareBtn}${statusActions}`,
+      extra: sharedBadges,
+      className: isNewDone ? 'task-item--alert' : '',
+    });
   }).join('');
 
   _bindTaskProjectFilterEvents();
@@ -1152,9 +1245,7 @@ export function _renderSharedTasks(container) {
     _bindTaskProjectFilterEvents();
     return;
   }
-  container.innerHTML = _taskFilterBarHtml(state.sharedTasks.length, filtered.length) + filtered.map(t => {
-    const s   = TASK_STATUS_LABEL[t.status] || TASK_STATUS_LABEL.pending;
-    const due = t.dueDate ? `<span class="task-due"><i class="fa-regular fa-calendar"></i> ${esc(t.dueDate)}</span>` : '';
+  container.innerHTML = _taskFilterBarHtml(state.sharedTasks.length, filtered.length) + _sortTasksForDecision(filtered, 'shared').map(t => {
     const resp = t.sharedResponses?.[state.currentUsername] || 'pending';
 
     let actions = '';
@@ -1167,19 +1258,14 @@ export function _renderSharedTasks(container) {
       actions = `<span class="task-shared-response-label ${labelCls}">${labelText}</span>`;
     }
 
-    return `
-      <div class="task-item task-item--${t.status} task-item--shared">
-        <div class="task-item-meta">
-          <span class="task-status-badge ${s.cls}">${s.text}</span>
-          <span class="task-partner"><i class="fa-solid fa-arrow-right-to-bracket"></i> 依頼: ${esc(t.assignedBy)}</span>
-          ${due}
-        </div>
-        <div class="task-item-title">${esc(t.title)}</div>
-        ${_taskProjectKeyHtml(t)}
-        ${t.description ? `<div class="task-item-desc">${esc(t.description)}</div>` : ''}
-        <div class="task-item-actions">${actions}</div>
-        ${_taskCommentSectionHtml(t.id)}
-      </div>`;
+    return _taskItemHtml(t, {
+      view: 'shared',
+      partnerLabel: '依頼',
+      partnerName: t.assignedBy,
+      partnerIcon: 'fa-solid fa-arrow-right-to-bracket',
+      actions,
+      className: 'task-item--shared',
+    });
   }).join('');
 
   _bindTaskProjectFilterEvents();

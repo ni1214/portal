@@ -23346,3 +23346,443 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== tasks.js simple decision view ===== */
+#task-modal .task-modal-inner {
+  width: min(1040px, calc(100vw - 32px));
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--bg-secondary) 96%, var(--bg-card));
+}
+
+#task-modal .task-modal-header {
+  padding: 22px 24px 14px;
+}
+
+#task-modal .task-modal-heading {
+  gap: 10px;
+}
+
+#task-modal .task-modal-kicker {
+  letter-spacing: 0.08em;
+}
+
+#task-modal .task-modal-title-row {
+  align-items: center;
+}
+
+#task-modal .task-modal-title-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+}
+
+#task-modal .task-modal-title-text {
+  font-size: 1.32rem;
+  letter-spacing: 0;
+}
+
+#task-modal .task-modal-subtitle {
+  max-width: 48ch;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+#task-modal .task-modal-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 0 24px 12px;
+}
+
+#task-modal .task-modal-metric {
+  min-height: 72px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+#task-modal .task-modal-metric__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 20px;
+}
+
+#task-modal .task-modal-metric__label {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#task-modal .task-modal-metric__value {
+  font-size: 1rem;
+}
+
+#task-modal .task-tabs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 24px 12px;
+}
+
+#task-modal .task-tab {
+  min-height: 52px;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+#task-modal .task-tab-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  font-size: 18px;
+}
+
+#task-modal .task-tab-label {
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+#task-modal .task-tab-context {
+  padding: 0 24px 10px;
+}
+
+#task-modal .task-tab-context__surface {
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+#task-modal .task-tab-context__copy {
+  gap: 4px;
+}
+
+#task-modal .task-tab-context__eyebrow {
+  display: none;
+}
+
+#task-modal .task-tab-context__title {
+  font-size: 0.95rem;
+}
+
+#task-modal .task-tab-context__chip {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 0.74rem;
+}
+
+#task-modal .task-tab-content {
+  padding: 0 24px 24px;
+}
+
+#task-modal .task-project-filter-row {
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+#task-modal .task-project-filter-input {
+  min-height: 42px;
+  border-radius: 12px;
+}
+
+#task-modal .task-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px 16px;
+  align-items: start;
+  margin-bottom: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  box-shadow: none;
+}
+
+#task-modal .task-item:hover {
+  box-shadow: none;
+}
+
+#task-modal .task-item-main {
+  min-width: 0;
+}
+
+#task-modal .task-item-topline,
+#task-modal .task-item-title-row,
+#task-modal .task-item-facts {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+#task-modal .task-item-topline {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+#task-modal .task-item-title-row {
+  gap: 12px;
+  justify-content: space-between;
+}
+
+#task-modal .task-item-title {
+  min-width: 0;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: 0;
+}
+
+#task-modal .task-item-facts {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+#task-modal .task-status-badge,
+#task-modal .task-next-chip,
+#task-modal .task-partner,
+#task-modal .task-due,
+#task-modal .task-project-key-chip {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+#task-modal .task-next-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--bg-secondary) 84%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--border-glass) 82%, transparent);
+}
+
+#task-modal .task-next-chip .material-symbols-rounded {
+  font-size: 17px;
+}
+
+#task-modal .task-next-chip--warning {
+  color: var(--state-warning);
+  background: color-mix(in srgb, var(--state-warning) 14%, var(--bg-card));
+}
+
+#task-modal .task-next-chip--info {
+  color: var(--state-info);
+  background: color-mix(in srgb, var(--state-info) 12%, var(--bg-card));
+}
+
+#task-modal .task-next-chip--success {
+  color: var(--state-success-ok);
+  background: color-mix(in srgb, var(--state-success-ok) 12%, var(--bg-card));
+}
+
+#task-modal .task-next-chip--muted {
+  color: var(--text-muted);
+}
+
+#task-modal .task-due {
+  flex: 0 0 auto;
+  margin-left: 0;
+}
+
+#task-modal .task-due--none {
+  display: none;
+}
+
+#task-modal .task-due--overdue {
+  color: var(--state-danger);
+  background: rgba(var(--state-danger-rgb), 0.12);
+}
+
+#task-modal .task-due--today {
+  color: var(--state-warning);
+  background: rgba(var(--state-warning-rgb), 0.14);
+}
+
+#task-modal .task-project-key-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--bg-secondary) 84%, var(--bg-card));
+}
+
+#task-modal .task-project-key-chip span {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+#task-modal .task-item-details {
+  margin-top: 10px;
+}
+
+#task-modal .task-item-details summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+#task-modal .task-item-details p {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+
+#task-modal .task-shared-with-list {
+  margin-top: 10px;
+}
+
+#task-modal .task-item-actions {
+  justify-content: flex-end;
+  margin-top: 0;
+}
+
+#task-modal .task-action-btn,
+#task-modal .task-pick-btn,
+#task-modal #new-task-submit {
+  min-height: 36px;
+  padding: 0 13px;
+  border-radius: 12px;
+}
+
+#task-modal .tc-wrapper {
+  grid-column: 1 / -1;
+  margin-top: 0;
+  padding-top: 12px;
+}
+
+#task-modal .task-new-form {
+  gap: 12px;
+  padding-top: 0;
+}
+
+#task-modal .task-new-form .form-group {
+  padding: 14px;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+#task-modal .task-new-form .form-input,
+#task-modal .task-new-form .date-icon-only,
+#task-modal .task-assignee-display {
+  min-height: 46px;
+  border-radius: 12px;
+}
+
+#task-modal .task-date-picker {
+  min-height: 58px;
+  border-radius: 14px;
+}
+
+#task-modal .task-date-picker__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+#task-modal .task-new-form textarea.form-input {
+  min-height: 112px;
+}
+
+@media (max-width: 760px) {
+  #task-modal .task-modal-inner {
+    width: min(100vw, calc(100vw - 4px));
+    border-radius: 22px 22px 0 0;
+  }
+
+  #task-modal .task-modal-header {
+    padding: 16px 16px 10px;
+  }
+
+  #task-modal .task-modal-title-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+
+  #task-modal .task-modal-subtitle {
+    font-size: 0.8rem;
+  }
+
+  #task-modal .task-modal-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+    padding: 0 14px 10px;
+  }
+
+  #task-modal .task-modal-metric {
+    min-width: 0;
+    min-height: 82px;
+  }
+
+  #task-modal .task-tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 0 14px 10px;
+  }
+
+  #task-modal .task-tab {
+    min-height: 58px;
+    flex-direction: column;
+    gap: 4px;
+    justify-content: center;
+    padding: 8px;
+  }
+
+  #task-modal .task-tab-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  #task-modal .task-tab-label {
+    display: block;
+    max-width: 100%;
+    font-size: 0.72rem;
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  #task-modal .task-tab-context,
+  #task-modal .task-tab-content {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  #task-modal .task-tab-context__surface {
+    gap: 10px;
+  }
+
+  #task-modal .task-item {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 13px;
+  }
+
+  #task-modal .task-item-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #task-modal .task-item-actions {
+    justify-content: stretch;
+  }
+
+  #task-modal .task-action-btn,
+  #task-modal .task-pick-btn,
+  #task-modal #new-task-submit {
+    width: 100%;
+    justify-content: center;
+  }
+}
