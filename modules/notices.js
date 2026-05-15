@@ -34,11 +34,7 @@ function getNoticeTargetScope(notice) {
 }
 
 function isNoticeVisibleForCurrentUser(notice) {
-  if (!notice) return false;
-  if (getNoticeTargetScope(notice) === 'all') return true;
-  const department = state.userEmailProfile?.department?.trim() || '';
-  if (!department) return false;
-  return normalizeTargetDepartments(notice.targetDepartments).includes(department);
+  return !!notice;
 }
 
 function getVisibleNoticesFromList(notices = state.allNotices) {
@@ -74,6 +70,15 @@ function getPendingAcknowledgementNotices(notices = state.visibleNotices) {
 
 function getVisibleUnreadCount() {
   return (state.visibleNotices || []).filter(n => !state.readNoticeIds.has(n.id)).length;
+}
+
+function formatNoticeDate(notice) {
+  const raw = notice?.createdAt;
+  const date = raw
+    ? (raw.toDate ? raw.toDate() : new Date((raw.seconds || 0) * 1000))
+    : null;
+  if (!date || Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' });
 }
 
 function getVisibleUnreadNoticeCount() {
@@ -120,6 +125,123 @@ function buildAcknowledgementHtml(notice) {
       ${confirmedBy}
     </div>
   `;
+}
+
+function buildNoticeComposerHtml() {
+  if (!state.isEditMode) return '';
+  return `
+    <form class="notice-composer" id="notice-composer">
+      <div class="notice-composer-head">
+        <div>
+          <div class="notice-composer-kicker">Post</div>
+          <h3 class="notice-composer-title">全社員へ周知する</h3>
+        </div>
+        <span class="notice-composer-scope"><i class="fa-solid fa-building"></i> 全社員</span>
+      </div>
+      <input type="text" id="notice-quick-title" class="notice-composer-input" placeholder="件名: 社内行事・予定変更・共有事項" maxlength="80" autocomplete="off">
+      <textarea id="notice-quick-body" class="notice-composer-textarea" rows="3" placeholder="本文: 日時、対象、対応してほしいことを短く入力"></textarea>
+      <div class="notice-composer-actions">
+        <select id="notice-quick-priority" class="notice-composer-select" aria-label="お知らせ種別">
+          <option value="normal">通常</option>
+          <option value="urgent">重要</option>
+        </select>
+        <label class="notice-composer-check" for="notice-quick-ack">
+          <input type="checkbox" id="notice-quick-ack">
+          <span>確認必須</span>
+        </label>
+        <button type="submit" class="notice-composer-submit" id="notice-quick-submit">
+          <i class="fa-solid fa-paper-plane"></i> 投稿
+        </button>
+      </div>
+    </form>
+  `;
+}
+
+function buildNoticeEmptyHtml() {
+  return `
+    <div class="notice-empty-state">
+      <i class="fa-solid fa-bullhorn"></i>
+      <strong>まだお知らせはありません</strong>
+      <span>社内行事や全社員への共有事項を投稿できます。</span>
+    </div>
+  `;
+}
+
+function bindNoticeComposer(board) {
+  const form = board.querySelector('#notice-composer');
+  if (!form) return;
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const titleEl = board.querySelector('#notice-quick-title');
+    const bodyEl = board.querySelector('#notice-quick-body');
+    const priorityEl = board.querySelector('#notice-quick-priority');
+    const ackEl = board.querySelector('#notice-quick-ack');
+    const submitBtn = board.querySelector('#notice-quick-submit');
+    const title = titleEl?.value.trim() || '';
+    const body = bodyEl?.value.trim() || '';
+    if (!title) {
+      titleEl?.focus();
+      return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner"></span>';
+    try {
+      state.editingNoticeId = null;
+      await saveNotice({
+        title,
+        body,
+        priority: priorityEl?.value || 'normal',
+        requireAcknowledgement: !!ackEl?.checked,
+        targetScope: 'all',
+        targetDepartments: [],
+        createdBy: state.currentUsername || '',
+      });
+      if (titleEl) titleEl.value = '';
+      if (bodyEl) bodyEl.value = '';
+      if (priorityEl) priorityEl.value = 'normal';
+      if (ackEl) ackEl.checked = false;
+      showToast('全社員向けのお知らせを投稿しました。', 'success');
+    } catch (err) {
+      console.error('お知らせ投稿エラー:', err);
+      showToast('お知らせを投稿できませんでした。時間をおいて再度お試しください。', 'error');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 投稿';
+    }
+  });
+}
+
+let noticeCenterReturnParent = null;
+
+function ensureNoticeCenterModal() {
+  let modal = document.getElementById('notice-center-modal');
+  if (modal) return modal;
+
+  modal = document.createElement('div');
+  modal.id = 'notice-center-modal';
+  modal.className = 'notice-center-modal';
+  modal.innerHTML = `
+    <div class="notice-center-backdrop" data-notice-center-close></div>
+    <section class="notice-center-panel" role="dialog" aria-modal="true" aria-labelledby="notice-center-title">
+      <div class="notice-center-header">
+        <div>
+          <p class="notice-center-kicker">Notice</p>
+          <h2 id="notice-center-title">お知らせセンター</h2>
+        </div>
+        <button type="button" class="notice-center-close" data-notice-center-close aria-label="閉じる">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="notice-center-body" id="notice-center-body"></div>
+    </section>
+  `;
+  modal.addEventListener('click', event => {
+    if (event.target.closest('[data-notice-center-close]')) {
+      closeNoticeCenter();
+    }
+  });
+  document.body.appendChild(modal);
+  return modal;
 }
 
 function renderNoticeTargetDepartments(selectedDepartments = []) {
@@ -413,51 +535,57 @@ export function renderNotices(notices) {
     return;
   }
 
-  const addBtn = state.isEditMode
-    ? `<button class="btn-add-notice"><i class="fa-solid fa-plus"></i> お知らせを追加</button>`
-    : '';
-
   const unreadCount = getVisibleUnreadCount();
   const unreadNoticeCount = getVisibleUnreadNoticeCount();
   const pendingAckCount = getPendingAcknowledgementNotices(visibleNotices).length;
   const readAllBtn = (state.currentUsername && unreadCount > 0)
-    ? `<button class="btn-read-all" id="btn-read-all"><i class="fa-solid fa-check-double"></i> 全て既読</button>`
+    ? `<button class="btn-read-all" id="btn-read-all"><i class="fa-solid fa-check-double"></i> すべて既読</button>`
     : '';
 
   board.innerHTML = `
-    <div class="notice-header">
-      <i class="fa-solid fa-bullhorn"></i>
-      <span>お知らせ</span>
-      ${pendingAckCount > 0 ? `<span class="notice-unread-label notice-unread-label--ack">${pendingAckCount}件 確認待ち</span>` : ''}
-      ${unreadNoticeCount > 0 ? `<span class="notice-unread-label">${unreadNoticeCount}件 未読</span>` : ''}
-      ${readAllBtn}
-      ${addBtn}
+    <div class="notice-board-header">
+      <div class="notice-board-title-block">
+        <span class="notice-board-icon"><i class="fa-solid fa-bullhorn"></i></span>
+        <div>
+          <h2 class="notice-board-title">全社員へ共有</h2>
+          <p class="notice-board-copy">社内行事・予定変更・全員に周知したいことを共有します。</p>
+        </div>
+      </div>
+      <div class="notice-board-actions">
+        ${pendingAckCount > 0 ? `<span class="notice-unread-label notice-unread-label--ack">${pendingAckCount}件 確認待ち</span>` : ''}
+        ${unreadNoticeCount > 0 ? `<span class="notice-unread-label">${unreadNoticeCount}件 未読</span>` : ''}
+        ${readAllBtn}
+      </div>
     </div>
+    ${buildNoticeComposerHtml()}
     <div class="notice-list" id="notice-list"></div>
   `;
 
   if (state.currentUsername && unreadCount > 0) {
     board.querySelector('#btn-read-all')?.addEventListener('click', markAllNoticesRead);
   }
-
-  if (state.isEditMode) {
-    board.querySelector('.btn-add-notice').addEventListener('click', () => openNoticeModal(null));
-  }
+  bindNoticeComposer(board);
 
   const list = board.querySelector('#notice-list');
   setupNoticeReactionLoader();
+
+  if (!visibleNotices.length) {
+    list.innerHTML = buildNoticeEmptyHtml();
+    return;
+  }
+
   visibleNotices.forEach(n => {
     const isUnread = state.currentUsername && !state.readNoticeIds.has(n.id);
     const item = document.createElement('div');
     item.className = `notice-item${n.priority === 'urgent' ? ' urgent' : ''}${isUnread ? ' notice-unread' : ''}`;
-    const _nDate = n.createdAt ? (n.createdAt.toDate ? n.createdAt.toDate() : new Date(n.createdAt.seconds * 1000)) : null;
-    const dateStr = _nDate ? _nDate.toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' }) : '';
+    const dateStr = formatNoticeDate(n);
     const newBadge = isUnread ? `<span class="notice-new-badge">NEW</span>` : '';
     const editBtns = state.isEditMode
-      ? `<button class="btn-notice-edit" data-id="${n.id}"><i class="fa-solid fa-pen"></i></button>`
+      ? `<button class="btn-notice-edit" data-id="${n.id}" aria-label="お知らせを編集"><i class="fa-solid fa-pen"></i></button>`
       : '';
     const iconClass = n.priority === 'urgent' ? 'fa-triangle-exclamation' : 'fa-bullhorn';
     const iconMod = n.priority === 'urgent' ? 'urgent' : 'normal';
+    const badgeText = n.priority === 'urgent' ? '重要' : '周知';
     item.innerHTML = `
       <div class="notice-card-icon notice-card-icon--${iconMod}">
         <i class="fa-solid ${iconClass}"></i>
@@ -465,59 +593,105 @@ export function renderNotices(notices) {
       <div class="notice-card-body">
         <div class="notice-item-header">
           ${newBadge}
-          <span class="notice-badge ${n.priority === 'urgent' ? 'badge-urgent' : 'badge-normal'}">${n.priority === 'urgent' ? '重要' : 'お知らせ'}</span>
+          <span class="notice-badge ${n.priority === 'urgent' ? 'badge-urgent' : 'badge-normal'}">${badgeText}</span>
           <span class="notice-date">${dateStr}</span>
           ${editBtns}
         </div>
         <div class="notice-title">${esc(n.title || '')}</div>
         ${n.body ? `<div class="notice-body">${esc(n.body)}</div>` : ''}
-        <div class="notice-targets">${buildAudienceBadgeHtml(n)}</div>
+        <div class="notice-targets"><span class="notice-target-chip notice-target-chip--all">全社員</span></div>
         ${buildAcknowledgementHtml(n)}
         ${buildReactionBar(n.id)}
       </div>
     `;
     if (state.isEditMode) {
-      item.querySelector('.btn-notice-edit').addEventListener('click', () => openNoticeModal(n));
+      item.querySelector('.btn-notice-edit')?.addEventListener('click', () => openNoticeModal(n));
     }
     list.appendChild(item);
   });
 
-  // リアクションボタン（イベントデリゲーション）
   list.addEventListener('click', async e => {
     const ackBtn = e.target.closest('[data-notice-ack]');
     if (ackBtn) {
-      if (!state.currentUsername) { showToast('確認するにはユーザーネームを設定してください', 'warning'); return; }
+      const id = ackBtn.dataset.noticeAck;
       ackBtn.disabled = true;
       try {
-        await acknowledgeNotice(ackBtn.dataset.noticeAck);
-      } finally {
+        await acknowledgeNotice(id);
+      } catch (err) {
+        console.error('お知らせ確認エラー:', err);
+        showToast('確認状態を保存できませんでした。', 'error');
         ackBtn.disabled = false;
       }
       return;
     }
+
     const btn = e.target.closest('.reaction-btn');
-    if (!btn) return;
-    if (!state.currentUsername) { showToast('リアクションするにはユーザーネームを設定してください', 'warning'); return; }
+    if (!btn || btn.disabled) return;
+    if (!state.currentUsername) {
+      showToast('リアクションするにはユーザーネームを設定してください。', 'warning');
+      return;
+    }
+    const { noticeId, emoji } = btn.dataset;
+    if (!noticeId || !emoji) return;
+
     btn.disabled = true;
+    const bar = btn.closest('.notice-reactions');
+    bar?.classList.add('loading');
     try {
       await ensureNoticeReactionsLoaded();
-      await toggleReaction(btn.dataset.noticeId, btn.dataset.emoji);
+      await toggleReaction(noticeId, emoji);
+    } catch (err) {
+      console.error('リアクション保存エラー:', err);
+      showToast('リアクションを保存できませんでした。', 'error');
     } finally {
+      bar?.classList.remove('loading');
       btn.disabled = false;
     }
   });
 }
 
+export function openNoticeCenter() {
+  const board = document.getElementById('notice-board');
+  if (!board) return;
+
+  const modal = ensureNoticeCenterModal();
+  const body = modal.querySelector('#notice-center-body');
+  if (!body) return;
+
+  if (!noticeCenterReturnParent && board.parentElement !== body) {
+    noticeCenterReturnParent = board.parentElement;
+  }
+
+  body.appendChild(board);
+  refreshNoticeVisibility();
+  modal.classList.add('visible');
+  document.body.classList.add('notice-center-open');
+  window.setTimeout(() => {
+    board.querySelector('#notice-quick-title')?.focus();
+  }, 80);
+}
+
+export function closeNoticeCenter() {
+  const modal = document.getElementById('notice-center-modal');
+  const board = document.getElementById('notice-board');
+  if (board && noticeCenterReturnParent && board.parentElement !== noticeCenterReturnParent) {
+    noticeCenterReturnParent.appendChild(board);
+  }
+  modal?.classList.remove('visible');
+  document.body.classList.remove('notice-center-open');
+}
+
 export function openNoticeModal(notice) {
   state.editingNoticeId = notice ? notice.id : null;
-  const targetDepartments = normalizeTargetDepartments(notice?.targetDepartments);
-  const targetScope = getNoticeTargetScope(notice);
+  const targetDepartments = [];
+  const targetScope = 'all';
   document.getElementById('notice-modal-title').textContent = notice ? 'お知らせを編集' : 'お知らせを追加';
   document.getElementById('notice-priority').value = notice?.priority || 'normal';
   document.getElementById('notice-require-ack').checked = !!notice?.requireAcknowledgement;
   document.getElementById('notice-target-scope').value = targetScope;
   renderNoticeTargetDepartments(targetDepartments);
   handleNoticeTargetScopeChange();
+  document.getElementById('notice-target-scope')?.closest('.form-group')?.setAttribute('hidden', '');
   document.getElementById('notice-title').value = notice?.title || '';
   document.getElementById('notice-body').value = notice?.body || '';
   document.getElementById('notice-delete').style.display = notice ? 'inline-flex' : 'none';

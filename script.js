@@ -78,7 +78,7 @@ import {
   deps as noticeDeps,
   loadReadNotices, markAllNoticesRead, updateNoticeBadge, setupNoticeObserver,
   subscribeNotices, saveNotice as moduleSaveNotice, addNotice as moduleAddNotice, deleteNotice as moduleDeleteNotice,
-  renderNotices, openNoticeModal, closeNoticeModal, refreshNoticeVisibility, handleNoticeTargetScopeChange
+  renderNotices, openNoticeModal, closeNoticeModal, openNoticeCenter, refreshNoticeVisibility, handleNoticeTargetScopeChange
 } from './modules/notices.js';
 
 import {
@@ -356,40 +356,8 @@ function buildTodayDateKey() {
   return `${year}-${month}-${day}`;
 }
 
-let dashboardNoticeFocusTimer = null;
-
 function focusNoticeBoardFromDashboard() {
-  const board = document.getElementById('notice-board');
-  if (!board) return;
-
-  const headerOffset = window.innerWidth <= 768 ? 76 : 92;
-  const targetTop = Math.max(0, window.scrollY + board.getBoundingClientRect().top - headerOffset);
-  window.scrollTo({ top: targetTop, behavior: 'smooth' });
-
-  if (!board.hasAttribute('tabindex')) {
-    board.setAttribute('tabindex', '-1');
-  }
-
-  const prevOutline = board.style.outline;
-  const prevOutlineOffset = board.style.outlineOffset;
-  const prevBoxShadow = board.style.boxShadow;
-  const prevTransition = board.style.transition;
-
-  board.focus({ preventScroll: true });
-  board.style.transition = [prevTransition, 'outline-color 180ms ease', 'box-shadow 180ms ease']
-    .filter(Boolean)
-    .join(', ');
-  board.style.outline = '2px solid var(--accent-blue)';
-  board.style.outlineOffset = '6px';
-  board.style.boxShadow = '0 0 0 8px rgba(var(--state-primary-rgb), 0.14)';
-
-  clearTimeout(dashboardNoticeFocusTimer);
-  dashboardNoticeFocusTimer = window.setTimeout(() => {
-    board.style.outline = prevOutline;
-    board.style.outlineOffset = prevOutlineOffset;
-    board.style.boxShadow = prevBoxShadow;
-    board.style.transition = prevTransition;
-  }, 1800);
+  openNoticeCenter();
 }
 
 function focusWeatherWidget() {
@@ -3253,6 +3221,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 公開リンクは必要な時だけ読み込む。共有ホームは軽い状態で先に描画する。
   state.allCards = [];
   renderAllSections();
+  refreshNoticeVisibility();
   initSearch();
   renderFavorites();
 
@@ -4204,16 +4173,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const body  = document.getElementById('notice-body').value.trim();
     const priority = document.getElementById('notice-priority').value;
     const requireAcknowledgement = document.getElementById('notice-require-ack').checked;
-    const targetScope = document.getElementById('notice-target-scope').value;
-    const targetDepartments = Array.from(document.querySelectorAll('.notice-target-checkbox:checked'))
-      .map(input => input.value.trim())
-      .filter(Boolean);
+    const targetScope = 'all';
+    const targetDepartments = [];
     if (!title) { document.getElementById('notice-title').focus(); return; }
-    if (targetScope === 'departments' && targetDepartments.length === 0) {
-      showToast('配信先部署を1つ以上選んでください。', 'warning');
-      document.querySelector('.notice-target-checkbox')?.focus();
-      return;
-    }
 
     const btn = document.getElementById('notice-save');
     btn.disabled = true;
