@@ -24369,3 +24369,190 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
 .app-layout.sidebar-collapsed .app-sidebar-primary-tool {
   justify-content: center;
 }
+
+/* ===== Portal Site Share Modal ===== */
+.portal-share-glass {
+  width: min(560px, 92vw);
+  padding: 0;
+  overflow: hidden;
+}
+
+.portal-share-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 22px 16px;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.portal-share-kicker {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.portal-share-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.12rem;
+  font-weight: 800;
+}
+
+.portal-share-title i {
+  color: var(--accent-blue);
+}
+
+.portal-share-desc {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.portal-share-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border-glass);
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.portal-share-close:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.portal-share-body {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 18px;
+  padding: 22px;
+}
+
+.portal-share-qr-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.portal-share-qr-card img {
+  width: 100%;
+  max-width: 188px;
+  height: auto;
+  display: block;
+}
+
+.portal-share-link-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.portal-share-url-label {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.portal-share-url-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.portal-share-url {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.portal-share-copy-btn,
+.portal-share-gmail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  border: none;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.portal-share-copy-btn {
+  padding: 0 14px;
+  background: var(--accent-blue);
+  color: #fff;
+}
+
+.portal-share-gmail-btn {
+  width: 100%;
+  background: rgba(var(--state-success-rgb), 0.16);
+  color: var(--state-success-soft);
+  border: 1px solid rgba(var(--state-success-rgb), 0.35);
+}
+
+[data-theme="light"] .portal-share-gmail-btn {
+  color: var(--state-success-strong);
+}
+
+.portal-share-copy-btn:hover,
+.portal-share-gmail-btn:hover {
+  filter: brightness(1.08);
+}
+
+@media (max-width: 640px) {
+  .portal-share-glass {
+    width: min(94vw, 420px);
+  }
+
+  .portal-share-header {
+    padding: 18px 18px 14px;
+  }
+
+  .portal-share-body {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 18px;
+  }
+
+  .portal-share-qr-card {
+    width: min(100%, 240px);
+    justify-self: center;
+  }
+
+  .portal-share-url-row {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-share-copy-btn,
+  .portal-share-gmail-btn {
+    width: 100%;
+  }
+}

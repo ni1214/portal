@@ -75,7 +75,7 @@
 
       <!-- 右：アクションボタン + ユーザー -->
       <div class="app-header-right">
-        <button class="app-header-btn" id="header-site-share-btn" title="サイトをGmailで共有" aria-label="サイトをGmailで共有">
+        <button class="app-header-btn" id="header-site-share-btn" title="サイトを共有" aria-label="サイトを共有">
           <i class="material-symbols-rounded">ios_share</i>
         </button>
         <button class="app-header-btn" id="header-help-btn" title="使い方ガイド">
@@ -416,6 +416,46 @@
 
       <div class="shared-links-chip-list" id="shared-links-chip-list"></div>
       <div class="shared-links-browser-body" id="shared-links-browser-body"></div>
+    </div>
+  </div>
+
+  <!-- ==================== サイト共有モーダル ==================== -->
+  <div class="modal-overlay" id="portal-share-modal">
+    <div class="modal-glass portal-share-glass" role="dialog" aria-modal="true" aria-labelledby="portal-share-title">
+      <div class="portal-share-header">
+        <div>
+          <div class="portal-share-kicker">Share Portal</div>
+          <h3 class="portal-share-title" id="portal-share-title">
+            <i class="material-symbols-rounded" aria-hidden="true">ios_share</i>
+            サイトを共有
+          </h3>
+          <p class="portal-share-desc">QRコードを読み取るか、URLをコピーしてください。</p>
+        </div>
+        <button type="button" class="portal-share-close" id="portal-share-close" title="閉じる">
+          <i class="material-symbols-rounded" aria-hidden="true">close</i>
+        </button>
+      </div>
+
+      <div class="portal-share-body">
+        <div class="portal-share-qr-card">
+          <img id="portal-share-qr-img" src="assets/portal-share-qr.png" width="320" height="320" alt="社内ポータルのQRコード">
+        </div>
+
+        <div class="portal-share-link-card">
+          <label class="portal-share-url-label" for="portal-share-url">共有URL</label>
+          <div class="portal-share-url-row">
+            <input id="portal-share-url" class="portal-share-url" type="text" value="https://ni1214.github.io/portal/" readonly>
+            <button type="button" class="portal-share-copy-btn" id="portal-share-copy-btn">
+              <i class="material-symbols-rounded" aria-hidden="true">content_copy</i>
+              コピー
+            </button>
+          </div>
+          <button type="button" class="portal-share-gmail-btn" id="portal-share-gmail-btn">
+            <i class="material-symbols-rounded" aria-hidden="true">mail</i>
+            Gmailで送る
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

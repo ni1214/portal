@@ -504,6 +504,36 @@ function promptUsernameFor(featureLabel) {
   if (hint) hint.hidden = false;
 }
 
+function openPortalShareModal() {
+  const modal = document.getElementById('portal-share-modal');
+  const urlInput = document.getElementById('portal-share-url');
+  if (!modal) return;
+  if (urlInput) urlInput.value = PORTAL_SHARE_URL;
+  modal.classList.add('visible');
+  window.setTimeout(() => document.getElementById('portal-share-copy-btn')?.focus(), 80);
+}
+
+function closePortalShareModal() {
+  document.getElementById('portal-share-modal')?.classList.remove('visible');
+}
+
+async function copyPortalShareUrl() {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(PORTAL_SHARE_URL);
+    } else {
+      const input = document.getElementById('portal-share-url');
+      input?.select();
+      document.execCommand('copy');
+    }
+    showToast('共有URLをコピーしました。', 'success');
+  } catch (err) {
+    console.error('portal share copy error:', err);
+    showToast('コピーできませんでした。URLを選択してコピーしてください。', 'error');
+    document.getElementById('portal-share-url')?.select();
+  }
+}
+
 function openPortalShareInGmail() {
   const gmailUrl = new URL('https://mail.google.com/mail/');
   gmailUrl.searchParams.set('view', 'cm');
@@ -3256,7 +3286,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('header-notice-btn').addEventListener('click', () => {
     focusNoticeBoardFromDashboard();
   });
-  document.getElementById('header-site-share-btn')?.addEventListener('click', openPortalShareInGmail);
+  document.getElementById('header-site-share-btn')?.addEventListener('click', openPortalShareModal);
+  document.getElementById('portal-share-close')?.addEventListener('click', closePortalShareModal);
+  document.getElementById('portal-share-copy-btn')?.addEventListener('click', copyPortalShareUrl);
+  document.getElementById('portal-share-gmail-btn')?.addEventListener('click', openPortalShareInGmail);
+  document.getElementById('portal-share-modal')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closePortalShareModal();
+  });
   document.getElementById('header-home-btn').addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
@@ -3293,6 +3329,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.setTimeout(closeSidebarNav, 0);
   });
   document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('portal-share-modal')?.classList.contains('visible')) {
+      closePortalShareModal();
+      return;
+    }
     if (e.key === 'Escape' && document.getElementById('app-layout')?.classList.contains('sidebar-open')) {
       closeSidebarNav();
     }
