@@ -231,6 +231,15 @@ if (initialSupabaseConfig) {
 }
 import { showToast, showConfirm } from './modules/notify.js';
 
+const PORTAL_SHARE_URL = 'https://ni1214.github.io/portal/';
+const PORTAL_SHARE_SUBJECT = '社内ポータルの共有';
+const PORTAL_SHARE_BODY = [
+  '社内ポータルはこちらです。',
+  PORTAL_SHARE_URL,
+  '',
+  '初回アクセス時は招待コードを入力してください。'
+].join('\n');
+
 
 // ========== 依存注入 ==========
 // 各モジュールが必要とするクロスモジュール関数を注入
@@ -436,6 +445,25 @@ function promptUsernameFor(featureLabel) {
   showUsernameError(`${featureLabel}を使うにはユーザーネームを設定してください。`);
   const hint = document.getElementById('area-personal-hint-floating');
   if (hint) hint.hidden = false;
+}
+
+function openPortalShareInGmail() {
+  const gmailUrl = new URL('https://mail.google.com/mail/');
+  gmailUrl.searchParams.set('view', 'cm');
+  gmailUrl.searchParams.set('fs', '1');
+  gmailUrl.searchParams.set('su', PORTAL_SHARE_SUBJECT);
+  gmailUrl.searchParams.set('body', PORTAL_SHARE_BODY);
+
+  navigator.clipboard?.writeText(PORTAL_SHARE_URL).catch(() => {});
+
+  const opened = window.open(gmailUrl.toString(), '_blank');
+  if (opened) opened.opener = null;
+  if (!opened) {
+    window.location.href = `mailto:?subject=${encodeURIComponent(PORTAL_SHARE_SUBJECT)}&body=${encodeURIComponent(PORTAL_SHARE_BODY)}`;
+    showToast('メール作成画面を開きました。', 'info');
+    return;
+  }
+  showToast('Gmailの作成画面を開きました。宛先を入れて送信してください。', 'success');
 }
 
 initTodayDashboard({
@@ -3093,6 +3121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('header-notice-btn').addEventListener('click', () => {
     focusNoticeBoardFromDashboard();
   });
+  document.getElementById('header-site-share-btn')?.addEventListener('click', openPortalShareInGmail);
   document.getElementById('header-home-btn').addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
