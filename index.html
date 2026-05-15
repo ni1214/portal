@@ -692,6 +692,21 @@
             <i class="fa-solid fa-plus"></i> グループ作成
           </button>
         </div>
+        <div class="chat-inline-group-form" id="chat-inline-group-form">
+          <label class="chat-inline-picker-label" for="chat-inline-group-name">グループ名</label>
+          <input type="text" id="chat-inline-group-name" class="chat-inline-group-name" placeholder="例：朝会メンバー" maxlength="30" autocomplete="off">
+          <label class="chat-inline-picker-label" for="chat-inline-group-member-search">メンバーを選ぶ</label>
+          <div class="chat-inline-search-wrap">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input type="text" id="chat-inline-group-member-search" class="chat-inline-user-search" placeholder="名前で検索" autocomplete="off">
+          </div>
+          <div id="chat-inline-group-member-list" class="new-dm-user-list chat-inline-user-list"></div>
+          <div id="chat-inline-group-selected" class="new-group-selected chat-inline-group-selected"></div>
+          <button type="button" class="chat-inline-group-create-btn" id="chat-inline-group-create">
+            <i class="material-symbols-rounded" aria-hidden="true">groups</i>
+            グループを作成
+          </button>
+        </div>
         <div id="group-room-list" class="chat-room-list"></div>
       </div>
     </div>

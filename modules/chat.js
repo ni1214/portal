@@ -197,6 +197,7 @@ export function initChatResize() {
 // ===== チャットパネル開閉 =====
 let chatReadTimesLoadedFor = '';
 let inlineDmPickerReadyFor = '';
+let inlineGroupPickerReadyFor = '';
 
 function ensureChatReadState() {
   if (chatReadTimesLoadedFor === state.currentUsername) return;
@@ -400,6 +401,9 @@ export function switchChatSidebarTab(tab) {
   document.getElementById('chat-tab-group').classList.toggle('active', tab === 'group');
   document.getElementById('chat-panel-dm').hidden = (tab !== 'dm');
   document.getElementById('chat-panel-group').hidden = (tab !== 'group');
+  if (tab === 'group') {
+    void prepareInlineGroupCreator();
+  }
 }
 
 // ===== サイドバー描画 =====
@@ -424,6 +428,28 @@ export async function prepareInlineDmPicker({ focus = false, activate = false } 
   if (focus) {
     search.focus();
     search.select();
+  }
+}
+
+export async function prepareInlineGroupCreator({ focus = false } = {}) {
+  if (!state.currentUsername) return;
+  const nameInput = document.getElementById('chat-inline-group-name');
+  const search = document.getElementById('chat-inline-group-member-search');
+  const list = document.getElementById('chat-inline-group-member-list');
+  if (!nameInput || !search || !list) return;
+  if (inlineGroupPickerReadyFor !== state.currentUsername || !list.children.length) {
+    inlineGroupPickerReadyFor = state.currentUsername;
+    await loadUsersForChatPicker('chat-inline-group-member-list', 'chat-inline-group-member-search', name => {
+      if (!_newGroupSelected.includes(name)) {
+        _newGroupSelected.push(name);
+        renderNewGroupSelected('chat-inline-group-selected');
+      }
+    }, true);
+  }
+  renderNewGroupSelected('chat-inline-group-selected');
+  if (focus) {
+    nameInput.focus();
+    nameInput.select();
   }
 }
 
@@ -811,20 +837,17 @@ let _newGroupSelected = [];
 export async function openNewGroupModal() {
   if (!state.currentUsername) { showToast('チャットするにはユーザーネームを設定してください。', 'warning'); return; }
   _newGroupSelected = [];
-  document.getElementById('new-group-name').value = '';
-  document.getElementById('new-group-member-search').value = '';
-  renderNewGroupSelected();
-  document.getElementById('new-group-modal').classList.add('visible');
-  await loadUsersForChatPicker('new-group-member-list', 'new-group-member-search', (name) => {
-    if (!_newGroupSelected.includes(name)) {
-      _newGroupSelected.push(name);
-      renderNewGroupSelected();
-    }
-  }, false);
+  switchChatSidebarTab('group');
+  const nameInput = document.getElementById('chat-inline-group-name');
+  const search = document.getElementById('chat-inline-group-member-search');
+  if (nameInput) nameInput.value = '';
+  if (search) search.value = '';
+  renderNewGroupSelected('chat-inline-group-selected');
+  await prepareInlineGroupCreator({ focus: true });
 }
 
-export function renderNewGroupSelected() {
-  const el = document.getElementById('new-group-selected');
+export function renderNewGroupSelected(targetId = 'new-group-selected') {
+  const el = document.getElementById(targetId);
   if (!el) return;
   if (!_newGroupSelected.length) {
     el.innerHTML = '<span class="group-no-member">まだ選択されていません</span>';
@@ -836,32 +859,66 @@ export function renderNewGroupSelected() {
   el.querySelectorAll('.group-chip-rm').forEach(btn => {
     btn.addEventListener('click', () => {
       _newGroupSelected = _newGroupSelected.filter(m => m !== btn.dataset.name);
-      renderNewGroupSelected();
+      renderNewGroupSelected(targetId);
     });
   });
 }
 
 export async function createGroupRoom() {
-  const name = document.getElementById('new-group-name').value.trim();
-  if (!name) { document.getElementById('new-group-name').focus(); return; }
+  const isInline = !document.getElementById('new-group-modal')?.classList.contains('visible');
+  const nameEl = document.getElementById(isInline ? 'chat-inline-group-name' : 'new-group-name');
+  const selectedId = isInline ? 'chat-inline-group-selected' : 'new-group-selected';
+  const name = nameEl?.value.trim() || '';
+  if (!name) { nameEl?.focus(); return; }
   if (!_newGroupSelected.length) { showToast('メンバーを1人以上選んでください。', 'warning'); return; }
   const members = [...new Set([state.currentUsername, ..._newGroupSelected])];
   try {
     let roomId;
+    let roomForLocalState = null;
     if (true) {
       roomId = await createGroupRoomInSupabase({
         name,
         members,
         createdBy: state.currentUsername,
       });
+      roomForLocalState = {
+        id: roomId,
+        type: 'group',
+        name,
+        members,
+        createdBy: state.currentUsername,
+        lastMessage: '',
+        lastAt: null,
+        lastSender: '',
+      };
     } else {
       const roomRef = await addDoc(collection(db, 'chat_rooms'), {
         name, members, createdBy: state.currentUsername,
         createdAt: serverTimestamp(), lastMessage: '', lastAt: null, lastSender: ''
       });
       roomId = roomRef.id;
+      roomForLocalState = {
+        id: roomId,
+        type: 'group',
+        name,
+        members,
+        createdBy: state.currentUsername,
+        lastMessage: '',
+        lastAt: null,
+        lastSender: '',
+      };
     }
-    document.getElementById('new-group-modal').classList.remove('visible');
+    if (roomForLocalState && !state.groupRooms.some(r => r.id === roomId)) {
+      state.groupRooms = [roomForLocalState, ...state.groupRooms];
+    }
+    document.getElementById('new-group-modal')?.classList.remove('visible');
+    if (isInline) {
+      if (nameEl) nameEl.value = '';
+      const search = document.getElementById('chat-inline-group-member-search');
+      if (search) search.value = '';
+      _newGroupSelected = [];
+      renderNewGroupSelected(selectedId);
+    }
     if (!state.chatPanelOpen) {
       await openChatPanel();
     }

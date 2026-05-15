@@ -3861,6 +3861,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('new-dm-modal').classList.remove('visible');
   });
   document.getElementById('btn-new-group').addEventListener('click', openNewGroupModal);
+  document.getElementById('chat-inline-group-create')?.addEventListener('click', createGroupRoom);
+  document.getElementById('chat-inline-group-name')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') createGroupRoom();
+  });
   document.getElementById('new-group-cancel').addEventListener('click', () => {
     document.getElementById('new-group-modal').classList.remove('visible');
   });
