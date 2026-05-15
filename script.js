@@ -458,6 +458,7 @@ function configureSidebarNavigation() {
     'btn-task',
     'btn-calendar',
     'btn-notice-bell',
+    'chat-fab',
     'btn-shared-links',
     'ft-fab',
   ];
@@ -491,7 +492,7 @@ function configureSidebarNavigation() {
     anchor = item;
   });
 
-  ['chat-fab', 'btn-favorites-only', 'btn-my-category', 'btn-read-diagnostics', 'home-invite-btn'].forEach(id => {
+  ['btn-favorites-only', 'btn-my-category', 'btn-read-diagnostics', 'home-invite-btn'].forEach(id => {
     const item = get(id);
     if (item) item.hidden = true;
   });
