@@ -464,9 +464,27 @@
               </div>
             </div>
           </div>
-          <button class="btn-ft-new" id="ft-new-btn">
-            <i class="fa-solid fa-paper-plane"></i> 社内P2Pで送る
-          </button>
+          <div class="ft-p2p-send-card">
+            <div class="ft-p2p-send-row">
+              <label class="ft-p2p-send-label" for="ft-inline-user-search">
+                <span>1</span> 送信先
+              </label>
+              <input type="text" id="ft-inline-user-search" class="ft-p2p-user-search" placeholder="名前で検索" autocomplete="off">
+            </div>
+            <div id="ft-inline-user-list" class="new-dm-user-list ft-p2p-user-list"></div>
+            <label class="ft-p2p-send-label" for="ft-inline-file-input">
+              <span>2</span> ファイル
+            </label>
+            <div class="ft-file-drop ft-p2p-file-drop" id="ft-inline-file-drop">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+              <span>クリックまたはドロップ</span>
+              <input type="file" id="ft-inline-file-input" style="position:absolute;inset:0;opacity:0;cursor:pointer">
+            </div>
+            <div id="ft-inline-selected-file" class="ft-selected-file" hidden></div>
+            <button class="btn-ft-new" id="ft-new-btn" disabled>
+              <i class="fa-solid fa-paper-plane"></i> 送信先とファイルを選んでください
+            </button>
+          </div>
           <div class="ft-section-title" id="ft-incoming-title" hidden>受信待ち</div>
           <div id="ft-incoming-list"></div>
           <div class="ft-section-title" id="ft-outgoing-title" hidden>送信中・完了</div>

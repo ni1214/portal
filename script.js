@@ -65,6 +65,7 @@ import {
   openDriveShare, dismissDriveShare,
   openDriveSendModal, selectDriveSendTarget, closeDriveSendModal, confirmDriveSend,
   initDriveLinkWidget,
+  initInlineP2pSend, openInlineP2pSend,
   openFtSendModal, closeFtSendModal, confirmFtSend,
   initiateFileTransfer, acceptFtTransfer, rejectFtTransfer,
   updateChatFtButton,
@@ -3533,8 +3534,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (state.currentRoomType === 'dm' && state.currentRoomId) {
       const partner = state.currentRoomId.split('_').find(u => u !== state.currentUsername);
       if (partner) {
-        openFileTransferPanel();
-        openFtSendModal(partner);
+        openInlineP2pSend(partner);
         return;
       }
     }
@@ -3556,11 +3556,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== ファイル転送 =====
   initFileTransferPanelFrame();
+  initInlineP2pSend();
   document.getElementById('ft-fab').addEventListener('click', () => {
     state._ftPanelOpen ? closeFileTransferPanel() : openFileTransferPanel();
   });
   document.getElementById('ft-panel-close').addEventListener('click', closeFileTransferPanel);
-  document.getElementById('ft-new-btn').addEventListener('click', openFtSendModal);
   document.getElementById('ft-cancel-btn').addEventListener('click', closeFtSendModal);
   document.getElementById('ft-confirm-btn').addEventListener('click', confirmFtSend);
 

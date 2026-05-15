@@ -30,6 +30,7 @@ import {
 export const deps = {};
 
 let driveMetaLoadedFor = '';
+let inlineP2pPickerReadyFor = '';
 const FT_PANEL_LAYOUT_KEY = 'portal-ft-panel-layout-v1';
 const FT_PANEL_MIN_WIDTH = 320;
 const FT_PANEL_MIN_HEIGHT = 360;
@@ -102,6 +103,58 @@ function clearFtPanelLayout(panel) {
   panel.style.height = '';
   panel.style.right = '';
   panel.style.bottom = '';
+}
+
+function updateInlineP2pSendState() {
+  const btn = document.getElementById('ft-new-btn');
+  if (!btn) return;
+  const hasUser = !!state._ftSelectedUser;
+  const hasFile = !!state._ftSelectedFile;
+  btn.disabled = !(hasUser && hasFile);
+  if (hasUser && hasFile) {
+    btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> ${esc(state._ftSelectedUser)} に送る`;
+  } else if (hasUser) {
+    btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> ファイルを選んでください';
+  } else if (hasFile) {
+    btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> 送信先を選んでください';
+  } else {
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 送信先とファイルを選んでください';
+  }
+}
+
+function setInlineP2pFile(file) {
+  if (!file) return;
+  state._ftSelectedFile = file;
+  const selectedEl = document.getElementById('ft-inline-selected-file');
+  if (selectedEl) {
+    selectedEl.innerHTML = `<i class="fa-solid ${getFileIcon(file.type)}"></i> ${esc(file.name)} <span>(${formatFileSize(file.size)})</span>`;
+    selectedEl.hidden = false;
+  }
+  updateInlineP2pSendState();
+}
+
+function selectInlineP2pUser(name) {
+  state._ftSelectedUser = name;
+  const search = document.getElementById('ft-inline-user-search');
+  const list = document.getElementById('ft-inline-user-list');
+  if (search) search.value = name;
+  if (list) {
+    list.querySelectorAll('.new-dm-user-item').forEach(el => {
+      el.classList.toggle('selected', el.dataset.name === name);
+    });
+  }
+  updateInlineP2pSendState();
+}
+
+async function ensureInlineP2pPicker(prefillUser = null) {
+  if (!state.currentUsername) return;
+  const key = state.currentUsername;
+  if (inlineP2pPickerReadyFor !== key) {
+    inlineP2pPickerReadyFor = key;
+    await deps.loadUsersForChatPicker?.('ft-inline-user-list', 'ft-inline-user-search', selectInlineP2pUser, true);
+  }
+  if (prefillUser) selectInlineP2pUser(prefillUser);
+  updateInlineP2pSendState();
 }
 
 async function ensureDriveMetaReady(username) {
@@ -243,6 +296,7 @@ export function openFileTransferPanel() {
   startDriveListeners(state.currentUsername);
   renderFtPanel();
   renderDrivePanel();
+  void ensureInlineP2pPicker();
   void ensureDriveMetaReady(state.currentUsername)
     .then(() => {
       renderFtPanel();
@@ -950,6 +1004,7 @@ export function initDriveLinkWidget() {
 
 export async function openFtSendModal(prefillUser = null) {
   if (!state.currentUsername) { showToast('ユーザーネームを設定してください', 'warning'); return; }
+  if (typeof prefillUser !== 'string') prefillUser = null;
   state._ftSelectedUser = null;
   state._ftSelectedFile = null;
   document.getElementById('ft-user-search').value = '';
@@ -976,6 +1031,7 @@ export function closeFtSendModal() {
   document.getElementById('ft-send-modal').classList.remove('visible');
   state._ftSelectedUser = null;
   state._ftSelectedFile = null;
+  updateInlineP2pSendState();
 }
 
 export async function confirmFtSend() {
@@ -983,6 +1039,63 @@ export async function confirmFtSend() {
   const file      = state._ftSelectedFile;
   const recipient = state._ftSelectedUser;
   closeFtSendModal();
+  await initiateFileTransfer(file, recipient);
+}
+
+export function initInlineP2pSend() {
+  const dropZone = document.getElementById('ft-inline-file-drop');
+  const fileInput = document.getElementById('ft-inline-file-input');
+  const sendBtn = document.getElementById('ft-new-btn');
+
+  fileInput?.addEventListener('change', event => {
+    const file = event.target.files?.[0];
+    if (file) setInlineP2pFile(file);
+  });
+
+  if (dropZone) {
+    dropZone.addEventListener('dragover', event => {
+      event.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', event => {
+      event.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = event.dataTransfer?.files?.[0];
+      if (file) setInlineP2pFile(file);
+    });
+  }
+
+  sendBtn?.addEventListener('click', async () => {
+    if (sendBtn.disabled) return;
+    await confirmInlineP2pSend();
+  });
+}
+
+export async function openInlineP2pSend(prefillUser = null) {
+  openFileTransferPanel();
+  switchFtTab('p2p');
+  await ensureInlineP2pPicker(prefillUser);
+  document.getElementById('ft-inline-file-drop')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+export async function confirmInlineP2pSend() {
+  if (!state._ftSelectedUser) {
+    showToast('送信先を選んでください。', 'warning');
+    return;
+  }
+  if (!state._ftSelectedFile) {
+    showToast('ファイルを選んでください。', 'warning');
+    return;
+  }
+  const file = state._ftSelectedFile;
+  const recipient = state._ftSelectedUser;
+  state._ftSelectedFile = null;
+  const selectedEl = document.getElementById('ft-inline-selected-file');
+  const fileInput = document.getElementById('ft-inline-file-input');
+  if (selectedEl) selectedEl.hidden = true;
+  if (fileInput) fileInput.value = '';
+  updateInlineP2pSendState();
   await initiateFileTransfer(file, recipient);
 }
 
