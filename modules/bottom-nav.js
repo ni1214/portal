@@ -1,95 +1,65 @@
 /**
- * bottom-nav.js
- * スマホ用ボトムナビ・その他ドロワーのイベント管理
- * （個人ドロワーは廃止 → その他ドロワーに統合済み）
+ * Mobile bottom navigation and the More drawer.
  */
 
 export function initBottomNav() {
-  // ボトムナビ各ボタン
-  const bnavHome   = document.getElementById('bnav-home');
-  const bnavTask   = document.getElementById('bnav-task');
-  const bnavChat   = document.getElementById('bnav-chat');
+  const bnavHome = document.getElementById('bnav-home');
+  const bnavTask = document.getElementById('bnav-task');
+  const bnavShared = document.getElementById('bnav-shared') || document.getElementById('bnav-chat');
   const bnavNotice = document.getElementById('bnav-notice');
-  const bnavMore   = document.getElementById('bnav-more');
+  const bnavMore = document.getElementById('bnav-more');
 
-  // ドロワー
-  const moreDrawer         = document.getElementById('more-drawer');
+  const moreDrawer = document.getElementById('more-drawer');
   const moreDrawerBackdrop = document.getElementById('more-drawer-backdrop');
-  const moreDrawerClose    = document.getElementById('more-drawer-close');
+  const moreDrawerClose = document.getElementById('more-drawer-close');
 
-  // ボトムナビが存在しない場合はスキップ
   if (!bnavHome) return;
 
-  // ---- ホーム ----
+  normalizeBottomNav(bnavShared, bnavNotice, bnavTask);
+  configureMoreDrawerItems();
+
   bnavHome.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setActive(bnavHome);
   });
 
-  // ---- タスク ----
   if (bnavTask) {
     bnavTask.addEventListener('click', () => {
-      const taskBtn = document.getElementById('btn-task');
-      if (taskBtn) taskBtn.click();
+      document.getElementById('btn-task')?.click();
       setActive(bnavTask);
     });
   }
 
-  // ---- チャット ----
-  bnavChat.addEventListener('click', (event) => {
-    // Mobile: bnav-chat の click が document まで bubble すると、
-    // 「パネル外クリックで閉じる」判定に拾われて開いた直後に閉じることがある。
-    // ここで止めてから chat-fab の click を発火させる。
-    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
-    const chatFab = document.getElementById('chat-fab');
-    if (chatFab) chatFab.click();
-    setActive(bnavChat);
-  });
-
-  // ---- お知らせ（スクロール表示） ----
-  bnavNotice.addEventListener('click', () => {
-    closeMoreDrawer();
-    // お知らせボードにスムーズスクロール
-    const noticeBoard = document.getElementById('notice-board');
-    if (noticeBoard) {
-      noticeBoard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    setActive(bnavNotice);
-    // アクティブ表示は一時的（スクロール後に解除）
-    setTimeout(() => clearActive(bnavNotice), 1500);
-  });
-
-  // ---- その他 ----
-  bnavMore.addEventListener('click', () => {
-    if (moreDrawer) {
-      moreDrawer.hidden = false;
-      document.body.style.overflow = 'hidden';
-    }
-    setActive(bnavMore);
-  });
-
-  // ---- その他ドロワー 閉じる ----
-  if (moreDrawerClose) {
-    moreDrawerClose.addEventListener('click', closeMoreDrawer);
-  }
-  if (moreDrawerBackdrop) {
-    moreDrawerBackdrop.addEventListener('click', closeMoreDrawer);
+  if (bnavShared) {
+    bnavShared.addEventListener('click', event => {
+      event?.stopPropagation?.();
+      document.getElementById('btn-shared-links')?.click();
+      setActive(bnavShared);
+    });
   }
 
-  // ---- その他ドロワーのアイテムクリック ----
+  if (bnavMore) {
+    bnavMore.addEventListener('click', () => {
+      if (moreDrawer) {
+        moreDrawer.hidden = false;
+        document.body.style.overflow = 'hidden';
+      }
+      setActive(bnavMore);
+    });
+  }
+
+  moreDrawerClose?.addEventListener('click', closeMoreDrawer);
+  moreDrawerBackdrop?.addEventListener('click', closeMoreDrawer);
+
   document.querySelectorAll('.more-drawer-item[data-target]').forEach(item => {
     item.addEventListener('click', () => {
-      const targetId = item.dataset.target;
-      const target = document.getElementById(targetId);
-      if (target) {
-        closeMoreDrawer();
-        // 少し遅延してから発火（ドロワーが閉じてから）
-        setTimeout(() => target.click(), 50);
-      }
+      const target = document.getElementById(item.dataset.target);
+      if (!target) return;
+      closeMoreDrawer();
+      setTimeout(() => target.click(), 50);
     });
   });
 
-  // ---- バッジ同期（チャット・お知らせ・タスク） ----
   syncBadges();
 
   function closeMoreDrawer() {
@@ -97,87 +67,111 @@ export function initBottomNav() {
       moreDrawer.hidden = true;
       document.body.style.overflow = '';
     }
-    clearActive(bnavMore);
+    if (bnavMore) clearActive(bnavMore);
   }
 
   function setActive(btn) {
+    if (!btn) return;
     document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }
 
   function clearActive(btn) {
-    btn.classList.remove('active');
+    btn?.classList.remove('active');
   }
 }
 
-/**
- * バッジ数値をボトムナビ・ドロワーに同期する
- * ヘッダー/サイドバー側のバッジを監視してボトムナビに反映
- */
+function normalizeBottomNav(bnavShared, bnavNotice, bnavTask) {
+  if (bnavShared) {
+    bnavShared.id = 'bnav-shared';
+    bnavShared.setAttribute('aria-label', '共有を開く');
+    bnavShared.innerHTML = `
+      <i class="fa-solid fa-share-nodes"></i>
+      <span>共有</span>
+    `;
+    bnavTask?.after(bnavShared);
+  }
+
+  if (bnavNotice) {
+    bnavNotice.hidden = true;
+  }
+}
+
+function configureMoreDrawerItems() {
+  const grid = document.querySelector('#more-drawer .more-drawer-grid');
+  if (!grid || grid.dataset.drawerConfigured === 'true') return;
+  grid.dataset.drawerConfigured = 'true';
+
+  const favoritesItem = grid.querySelector('.more-drawer-item[data-target="btn-favorites-only"]');
+  if (favoritesItem) favoritesItem.hidden = true;
+
+  const firstItem = grid.querySelector('.more-drawer-item');
+  ensureDrawerItem(grid, {
+    target: 'chat-fab',
+    icon: 'chat',
+    label: 'チャット',
+    badgeId: 'mdr-chat-badge',
+    before: firstItem?.nextElementSibling || firstItem,
+  });
+  ensureDrawerItem(grid, {
+    target: 'btn-notice-bell',
+    icon: 'notifications',
+    label: 'お知らせ',
+    badgeId: 'mdr-notice-badge',
+    before: grid.querySelector('.more-drawer-item[data-target="btn-calendar"]'),
+  });
+}
+
+function ensureDrawerItem(grid, { target, icon, label, badgeId, before }) {
+  if (grid.querySelector(`.more-drawer-item[data-target="${target}"]`)) return;
+  const button = document.createElement('button');
+  button.className = 'more-drawer-item';
+  button.dataset.target = target;
+  button.innerHTML = `
+    <span class="mdr-icon-wrap">
+      <i class="material-icons-round">${icon}</i>
+      ${badgeId ? `<span id="${badgeId}" class="mdr-badge" hidden></span>` : ''}
+    </span>
+    <span>${label}</span>
+  `;
+  grid.insertBefore(button, before || null);
+}
+
 function syncBadges() {
-  // チャットバッジ同期
-  const chatBadgeSrc  = document.getElementById('chat-unread-badge');
-  const bnavChatBadge = document.getElementById('bnav-chat-badge');
-  if (chatBadgeSrc && bnavChatBadge) {
-    const syncChat = () => {
-      bnavChatBadge.hidden = chatBadgeSrc.hidden;
-      bnavChatBadge.textContent = chatBadgeSrc.textContent;
-    };
-    syncChat();
-    new MutationObserver(syncChat).observe(chatBadgeSrc, { attributes: true, childList: true, characterData: true, subtree: true });
-  }
+  syncBadge('chat-unread-badge', 'mdr-chat-badge');
+  syncBadge('notice-unread-badge', 'mdr-notice-badge');
+  syncBadge('task-badge', 'bnav-task-badge');
+  syncBadge('task-badge', 'mdr-task-badge');
+  syncBadge('req-badge', 'mdr-req-badge');
+  syncLockItem();
+}
 
-  // お知らせバッジ同期
-  const noticeBadgeSrc  = document.getElementById('notice-unread-badge');
-  const bnavNoticeBadge = document.getElementById('bnav-notice-badge');
-  if (noticeBadgeSrc && bnavNoticeBadge) {
-    const syncNotice = () => {
-      bnavNoticeBadge.hidden = noticeBadgeSrc.hidden;
-      bnavNoticeBadge.textContent = noticeBadgeSrc.textContent;
-    };
-    syncNotice();
-    new MutationObserver(syncNotice).observe(noticeBadgeSrc, { attributes: true, childList: true, characterData: true, subtree: true });
-  }
+function syncBadge(sourceId, targetId) {
+  const source = document.getElementById(sourceId);
+  const target = document.getElementById(targetId);
+  if (!source || !target) return;
 
-  // タスクバッジ同期（ボトムナビ + ドロワー内）
-  const taskBadgeSrc  = document.getElementById('task-badge');
-  const bnavTaskBadge = document.getElementById('bnav-task-badge');
-  const mdrTaskBadge  = document.getElementById('mdr-task-badge');
-  if (taskBadgeSrc) {
-    const syncTask = () => {
-      if (bnavTaskBadge) {
-        bnavTaskBadge.hidden = taskBadgeSrc.hidden;
-        bnavTaskBadge.textContent = taskBadgeSrc.textContent;
-      }
-      if (mdrTaskBadge) {
-        mdrTaskBadge.hidden = taskBadgeSrc.hidden;
-        mdrTaskBadge.textContent = taskBadgeSrc.textContent;
-      }
-    };
-    syncTask();
-    new MutationObserver(syncTask).observe(taskBadgeSrc, { attributes: true, childList: true, characterData: true, subtree: true });
-  }
+  const apply = () => {
+    target.hidden = source.hidden;
+    target.textContent = source.textContent;
+  };
+  apply();
+  new MutationObserver(apply).observe(source, {
+    attributes: true,
+    childList: true,
+    characterData: true,
+    subtree: true,
+  });
+}
 
-  // 部門間依頼バッジ同期（ドロワー内）
-  const reqBadgeSrc = document.getElementById('req-badge');
-  const mdrReqBadge = document.getElementById('mdr-req-badge');
-  if (reqBadgeSrc && mdrReqBadge) {
-    const syncReq = () => {
-      mdrReqBadge.hidden = reqBadgeSrc.hidden;
-      mdrReqBadge.textContent = reqBadgeSrc.textContent;
-    };
-    syncReq();
-    new MutationObserver(syncReq).observe(reqBadgeSrc, { attributes: true, childList: true, characterData: true, subtree: true });
-  }
-
-  // ロックボタン表示状態の同期（スマホその他ドロワーの「ロック」）
-  const lockBtnSrc  = document.getElementById('btn-lock-header');
+function syncLockItem() {
+  const lockBtnSrc = document.getElementById('btn-lock-header');
   const mdrLockItem = document.querySelector('.mdr-lock-item');
-  if (lockBtnSrc && mdrLockItem) {
-    const syncLock = () => {
-      mdrLockItem.hidden = lockBtnSrc.hidden;
-    };
-    syncLock();
-    new MutationObserver(syncLock).observe(lockBtnSrc, { attributes: true });
-  }
+  if (!lockBtnSrc || !mdrLockItem) return;
+
+  const apply = () => {
+    mdrLockItem.hidden = lockBtnSrc.hidden;
+  };
+  apply();
+  new MutationObserver(apply).observe(lockBtnSrc, { attributes: true });
 }

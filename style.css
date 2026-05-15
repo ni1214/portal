@@ -24337,3 +24337,35 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
     min-height: 38px;
   }
 }
+
+/* ===== Sidebar and Mobile Navigation Cleanup ===== */
+.app-sidebar-item[hidden],
+.app-sidebar-util[hidden],
+.app-sidebar-invite[hidden],
+.bottom-nav-item[hidden],
+.more-drawer-item[hidden],
+.bnav-badge[hidden],
+.mdr-badge[hidden] {
+  display: none !important;
+}
+
+.app-sidebar-section-label {
+  padding: 10px 12px 5px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.app-sidebar-primary-tool .app-sidebar-icon {
+  color: var(--state-success);
+}
+
+.app-layout.sidebar-collapsed .app-sidebar-section-label {
+  display: none;
+}
+
+.app-layout.sidebar-collapsed .app-sidebar-primary-tool {
+  justify-content: center;
+}

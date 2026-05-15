@@ -440,6 +440,63 @@ function toggleSidebarNav() {
   layout.classList.toggle('sidebar-collapsed');
 }
 
+function configureSidebarNavigation() {
+  const nav = document.querySelector('.app-sidebar-nav');
+  if (!nav || nav.dataset.navigationConfigured === 'true') return;
+  nav.dataset.navigationConfigured = 'true';
+
+  let divider = nav.querySelector('.app-sidebar-divider');
+  if (!divider) {
+    divider = document.createElement('div');
+    divider.className = 'app-sidebar-divider';
+    nav.appendChild(divider);
+  }
+
+  const get = id => document.getElementById(id);
+  const primaryIds = [
+    'sidebar-home-btn',
+    'btn-task',
+    'btn-calendar',
+    'btn-notice-bell',
+    'btn-shared-links',
+    'ft-fab',
+  ];
+
+  primaryIds.forEach(id => {
+    const item = get(id);
+    if (!item) return;
+    item.hidden = false;
+    if (id === 'ft-fab') {
+      item.classList.remove('app-sidebar-util');
+      item.classList.add('app-sidebar-item', 'app-sidebar-primary-tool');
+    }
+    nav.insertBefore(item, divider);
+  });
+
+  let businessLabel = nav.querySelector('[data-sidebar-section="business"]');
+  if (!businessLabel) {
+    businessLabel = document.createElement('div');
+    businessLabel.className = 'app-sidebar-section-label';
+    businessLabel.dataset.sidebarSection = 'business';
+    businessLabel.textContent = '業務ツール';
+  }
+  divider.after(businessLabel);
+
+  let anchor = businessLabel;
+  ['btn-reqboard', 'btn-order-launch', 'btn-property-summary', 'btn-email-assist'].forEach(id => {
+    const item = get(id);
+    if (!item) return;
+    item.hidden = false;
+    anchor.after(item);
+    anchor = item;
+  });
+
+  ['chat-fab', 'btn-favorites-only', 'btn-my-category', 'btn-read-diagnostics', 'home-invite-btn'].forEach(id => {
+    const item = get(id);
+    if (item) item.hidden = true;
+  });
+}
+
 function promptUsernameFor(featureLabel) {
   showUsernameModal(false);
   showUsernameError(`${featureLabel}を使うにはユーザーネームを設定してください。`);
@@ -3160,6 +3217,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 常に編集モード
   document.body.classList.add('edit-mode');
+  configureSidebarNavigation();
 
   // 公開リンクは必要な時だけ読み込む。共有ホームは軽い状態で先に描画する。
   state.allCards = [];
