@@ -23796,10 +23796,15 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
   background: var(--bg-card);
   box-shadow: 0 20px 60px var(--shadow-ink-strong);
   resize: none;
+  contain: layout paint;
+  will-change: transform;
 }
 
 .ft-panel.ft-panel-adjusting {
   transition: none;
+  will-change: transform, width, height;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .ft-panel-header {
@@ -23807,6 +23812,7 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
   cursor: grab;
   gap: 12px;
   background: linear-gradient(180deg, rgba(var(--accent-blue-rgb-legacy), 0.08), transparent);
+  touch-action: none;
 }
 
 .ft-panel-header:active {
@@ -23873,6 +23879,7 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
   z-index: 4;
   opacity: 0.45;
   transition: opacity 0.15s;
+  touch-action: none;
 }
 
 .ft-panel-resize:hover {
@@ -23937,13 +23944,23 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
 }
 
 .ft-how-body {
-  max-height: 96px;
+  max-height: 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .ft-how-merit,
 .ft-how-demerit,
 .ft-how-best {
   display: inline-block;
+  line-height: 1.45;
+}
+
+.ft-how-note {
+  display: inline-block;
+  color: var(--text-muted);
+  font-size: 0.74rem;
   line-height: 1.45;
 }
 

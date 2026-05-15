@@ -273,6 +273,30 @@ export function initFileTransferPanelFrame() {
   let startX = 0;
   let startY = 0;
   let startFrame = null;
+  let activePointerId = null;
+  let activePointerTarget = null;
+  let latestEvent = null;
+  let rafId = 0;
+
+  const applyResizeFrame = (frame) => {
+    if (!panel || !isFtDesktopLayout()) return;
+    const next = clampFtPanelLayout(frame);
+    panel.dataset.ftManualLayout = '1';
+    panel.style.width = `${next.width}px`;
+    panel.style.height = `${next.height}px`;
+  };
+
+  const flushMove = () => {
+    rafId = 0;
+    if (!mode || !startFrame || !latestEvent) return;
+    const dx = latestEvent.clientX - startX;
+    const dy = latestEvent.clientY - startY;
+    if (mode === 'move') {
+      panel.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+      return;
+    }
+    applyResizeFrame({ ...startFrame, width: startFrame.width + dx, height: startFrame.height + dy });
+  };
 
   const start = (nextMode, event) => {
     if (!isFtDesktopLayout()) return;
@@ -282,27 +306,49 @@ export function initFileTransferPanelFrame() {
     startX = event.clientX;
     startY = event.clientY;
     startFrame = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    activePointerId = event.pointerId;
+    activePointerTarget = event.currentTarget;
+    latestEvent = event;
     panel.classList.add('ft-panel-adjusting');
+    panel.style.left = `${rect.left}px`;
+    panel.style.top = `${rect.top}px`;
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
     document.body.style.userSelect = 'none';
     document.body.style.cursor = nextMode === 'move' ? 'grabbing' : 'nwse-resize';
+    activePointerTarget.setPointerCapture?.(event.pointerId);
     event.preventDefault();
   };
 
   const move = (event) => {
-    if (!mode || !startFrame) return;
-    const dx = event.clientX - startX;
-    const dy = event.clientY - startY;
-    const next = mode === 'move'
-      ? { ...startFrame, left: startFrame.left + dx, top: startFrame.top + dy }
-      : { ...startFrame, width: startFrame.width + dx, height: startFrame.height + dy };
-    applyFtPanelLayout(panel, next);
+    if (!mode || !startFrame || event.pointerId !== activePointerId) return;
+    latestEvent = event;
+    if (!rafId) rafId = requestAnimationFrame(flushMove);
   };
 
-  const end = () => {
+  const end = (event) => {
     if (!mode) return;
-    saveFtPanelLayout(panel);
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      flushMove();
+    }
+    if (mode === 'move' && startFrame && latestEvent) {
+      const dx = latestEvent.clientX - startX;
+      const dy = latestEvent.clientY - startY;
+      applyFtPanelLayout(panel, { ...startFrame, left: startFrame.left + dx, top: startFrame.top + dy });
+      panel.style.transform = '';
+    } else {
+      saveFtPanelLayout(panel);
+    }
+    try {
+      if (activePointerId != null) activePointerTarget?.releasePointerCapture?.(activePointerId);
+    } catch (_) {}
     mode = null;
     startFrame = null;
+    activePointerId = null;
+    activePointerTarget = null;
+    latestEvent = null;
+    rafId = 0;
     panel.classList.remove('ft-panel-adjusting');
     document.body.style.userSelect = '';
     document.body.style.cursor = '';
