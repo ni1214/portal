@@ -29,33 +29,104 @@ import {
 // 他モジュールへの依存（循環参照回避）
 export const deps = {};
 
+const CHAT_PANEL_LAYOUT_KEY = 'portal-chat-panel-layout-v1';
+const CHAT_PANEL_MIN_WIDTH = 460;
+const CHAT_PANEL_MIN_HEIGHT = 340;
+
 // ===== ルームID生成 =====
 export function getDmRoomId(a, b) {
   return [a, b].sort().join('_');
 }
 
 // ===== チャットパネルのリサイズ =====
+function isChatDesktopLayout() {
+  return window.matchMedia('(min-width: 769px)').matches;
+}
+
+function readChatPanelLayout() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CHAT_PANEL_LAYOUT_KEY) || 'null');
+    if (!saved || typeof saved !== 'object') return null;
+    return {
+      left: Number(saved.left),
+      top: Number(saved.top),
+      width: Number(saved.width),
+      height: Number(saved.height),
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function clampChatPanelLayout(frame) {
+  const margin = 8;
+  const maxWidth = Math.max(CHAT_PANEL_MIN_WIDTH, window.innerWidth - margin * 2);
+  const maxHeight = Math.max(CHAT_PANEL_MIN_HEIGHT, window.innerHeight - margin * 2);
+  const width = Math.min(Math.max(frame.width || 620, CHAT_PANEL_MIN_WIDTH), maxWidth);
+  const height = Math.min(Math.max(frame.height || 520, CHAT_PANEL_MIN_HEIGHT), maxHeight);
+  return {
+    width,
+    height,
+    left: Math.min(Math.max(frame.left || margin, margin), window.innerWidth - width - margin),
+    top: Math.min(Math.max(frame.top || margin, margin), window.innerHeight - height - margin),
+  };
+}
+
+function applyChatPanelLayout(panel, frame) {
+  if (!panel || !isChatDesktopLayout()) return;
+  const next = clampChatPanelLayout(frame);
+  panel.dataset.chatManualLayout = '1';
+  panel.style.left = `${next.left}px`;
+  panel.style.top = `${next.top}px`;
+  panel.style.width = `${next.width}px`;
+  panel.style.height = `${next.height}px`;
+  panel.style.right = 'auto';
+  panel.style.bottom = 'auto';
+}
+
+function saveChatPanelLayout(panel) {
+  if (!panel || !isChatDesktopLayout()) return;
+  const rect = panel.getBoundingClientRect();
+  localStorage.setItem(CHAT_PANEL_LAYOUT_KEY, JSON.stringify({
+    left: Math.round(rect.left),
+    top: Math.round(rect.top),
+    width: Math.round(rect.width),
+    height: Math.round(rect.height),
+  }));
+}
+
 export function initChatResize() {
   const panel = document.getElementById('chat-panel');
   const handle = document.getElementById('chat-resize-handle');
   if (!handle || !panel) return;
+  const header = panel.querySelector('.chat-sidebar-header');
+  const saved = readChatPanelLayout();
+  if (saved) applyChatPanelLayout(panel, saved);
 
   let resizing = false, startX, startY, startW, startH;
+  let moving = false, startMoveX, startMoveY, startFrame;
 
   const onStart = (cx, cy) => {
+    if (!isChatDesktopLayout()) return;
     resizing = true;
     startX = cx; startY = cy;
     startW = panel.offsetWidth; startH = panel.offsetHeight;
     document.body.style.cursor = 'sw-resize';
     document.body.style.userSelect = 'none';
+    panel.classList.add('chat-panel-adjusting');
   };
   const onMove = (cx, cy) => {
     if (!resizing) return;
     // 左下ハンドル: 幅は左に伸びる、高さは下に伸びる
-    const newW = Math.max(460, Math.min(window.innerWidth  - 40, startW + (startX - cx)));
-    const newH = Math.max(340, Math.min(window.innerHeight - 100, startH + (cy - startY)));
-    panel.style.width  = newW + 'px';
-    panel.style.height = newH + 'px';
+    const rect = panel.getBoundingClientRect();
+    const newW = Math.max(CHAT_PANEL_MIN_WIDTH, Math.min(window.innerWidth - 40, startW + (startX - cx)));
+    const newH = Math.max(CHAT_PANEL_MIN_HEIGHT, Math.min(window.innerHeight - 100, startH + (cy - startY)));
+    applyChatPanelLayout(panel, {
+      left: rect.right - newW,
+      top: rect.top,
+      width: newW,
+      height: newH,
+    });
     // ft-panel がチャット横配置中なら追従させる
     const ftPanel = document.getElementById('ft-panel');
     if (ftPanel && ftPanel.style.left && !ftPanel.dataset.ftManualLayout) {
@@ -76,6 +147,8 @@ export function initChatResize() {
     resizing = false;
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
+    panel.classList.remove('chat-panel-adjusting');
+    saveChatPanelLayout(panel);
   };
 
   handle.addEventListener('mousedown', e => { e.preventDefault(); onStart(e.clientX, e.clientY); });
@@ -85,10 +158,45 @@ export function initChatResize() {
   handle.addEventListener('touchstart', e => { e.preventDefault(); onStart(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
   document.addEventListener('touchmove', e => { if (resizing) { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
   document.addEventListener('touchend', onEnd);
+
+  const startMove = event => {
+    if (!isChatDesktopLayout() || event.target.closest('button, input, textarea, select, a')) return;
+    const rect = panel.getBoundingClientRect();
+    moving = true;
+    startMoveX = event.clientX;
+    startMoveY = event.clientY;
+    startFrame = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    panel.classList.add('chat-panel-adjusting');
+    document.body.style.cursor = 'grabbing';
+    document.body.style.userSelect = 'none';
+    event.preventDefault();
+    header?.setPointerCapture?.(event.pointerId);
+  };
+  const movePanel = event => {
+    if (!moving || !startFrame) return;
+    applyChatPanelLayout(panel, {
+      ...startFrame,
+      left: startFrame.left + (event.clientX - startMoveX),
+      top: startFrame.top + (event.clientY - startMoveY),
+    });
+  };
+  const endMove = () => {
+    if (!moving) return;
+    moving = false;
+    startFrame = null;
+    panel.classList.remove('chat-panel-adjusting');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    saveChatPanelLayout(panel);
+  };
+  header?.addEventListener('pointerdown', startMove);
+  document.addEventListener('pointermove', movePanel);
+  document.addEventListener('pointerup', endMove);
 }
 
 // ===== チャットパネル開閉 =====
 let chatReadTimesLoadedFor = '';
+let inlineDmPickerReadyFor = '';
 
 function ensureChatReadState() {
   if (chatReadTimesLoadedFor === state.currentUsername) return;
@@ -110,10 +218,13 @@ async function ensureChatReady() {
 export async function openChatPanel() {
   state.chatPanelOpen = true;
   const panel = document.getElementById('chat-panel');
+  const saved = readChatPanelLayout();
+  if (saved) applyChatPanelLayout(panel, saved);
   panel.removeAttribute('hidden');
   setTimeout(() => panel.classList.add('open'), 10);
   renderChatSidebar();
   await ensureChatReady();
+  await prepareInlineDmPicker();
   renderChatSidebar();
 }
 
@@ -295,6 +406,25 @@ export function switchChatSidebarTab(tab) {
 export function renderChatSidebar() {
   _renderRoomList('dm');
   _renderRoomList('group');
+}
+
+export async function prepareInlineDmPicker({ focus = false, activate = false } = {}) {
+  if (!state.currentUsername) return;
+  const search = document.getElementById('chat-inline-user-search');
+  const list = document.getElementById('chat-inline-user-list');
+  if (!search || !list) return;
+  if (activate) switchChatSidebarTab('dm');
+  if (inlineDmPickerReadyFor !== state.currentUsername || !list.children.length) {
+    inlineDmPickerReadyFor = state.currentUsername;
+    await loadUsersForChatPicker('chat-inline-user-list', 'chat-inline-user-search', async name => {
+      search.value = '';
+      await openOrCreateDm(name);
+    }, true);
+  }
+  if (focus) {
+    search.focus();
+    search.select();
+  }
 }
 
 function _renderRoomList(type) {
@@ -567,13 +697,8 @@ export function scrollChatToBottom() {
 // ===== 個別チャット作成モーダル =====
 export async function openNewDmModal() {
   if (!state.currentUsername) { showToast('チャットするにはユーザーネームを設定してください。', 'warning'); return; }
-  const modal = document.getElementById('new-dm-modal');
-  modal.classList.add('visible');
-  document.getElementById('new-dm-search').value = '';
-  await loadUsersForChatPicker('new-dm-user-list', 'new-dm-search', async (name) => {
-    modal.classList.remove('visible');
-    await openOrCreateDm(name);
-  }, true);
+  if (!state.chatPanelOpen) await openChatPanel();
+  await prepareInlineDmPicker({ focus: true, activate: true });
 }
 
 export async function deleteDmRoom(roomId) {
@@ -616,6 +741,7 @@ export async function openOrCreateDm(targetUser) {
     r.members.includes(targetUser)
   );
   let roomId;
+  let roomForLocalState = existingRoom || null;
   if (existingRoom) {
     roomId = existingRoom.id;
   } else {
@@ -630,10 +756,20 @@ export async function openOrCreateDm(targetUser) {
           lastAt: null,
           lastSender: '',
         });
+        roomForLocalState = {
+          id: roomId,
+          type: 'dm',
+          members: [state.currentUsername, targetUser].sort(),
+          createdBy: state.currentUsername,
+          lastMessage: '',
+          lastAt: null,
+          lastSender: '',
+        };
       } else {
         // どちらかが削除していた場合は再追加
         const members = [...new Set([...existing.members, state.currentUsername, targetUser])];
         await ensureDmMembersInSupabase(roomId, members);
+        roomForLocalState = { ...existing, id: existing.id || roomId, type: 'dm', members };
       }
     } else {
       const roomRef = doc(db, 'dm_rooms', roomId);
@@ -649,7 +785,19 @@ export async function openOrCreateDm(targetUser) {
       } else {
         await updateDoc(roomRef, { members: arrayUnion(state.currentUsername, targetUser) });
       }
+      roomForLocalState = {
+        id: roomId,
+        type: 'dm',
+        members: [state.currentUsername, targetUser].sort(),
+        createdBy: state.currentUsername,
+        lastMessage: '',
+        lastAt: null,
+        lastSender: '',
+      };
     }
+  }
+  if (roomForLocalState && !state.dmRooms.some(r => r.id === roomId)) {
+    state.dmRooms = [roomForLocalState, ...state.dmRooms];
   }
   if (!state.chatPanelOpen) {
     await openChatPanel();

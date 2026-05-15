@@ -673,6 +673,14 @@
             <i class="fa-solid fa-plus"></i> 新規チャット
           </button>
         </div>
+        <div class="chat-inline-picker" id="chat-inline-picker">
+          <label class="chat-inline-picker-label" for="chat-inline-user-search">相手を選ぶ</label>
+          <div class="chat-inline-search-wrap">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input type="text" id="chat-inline-user-search" class="chat-inline-user-search" placeholder="名前で検索" autocomplete="off">
+          </div>
+          <div id="chat-inline-user-list" class="new-dm-user-list chat-inline-user-list"></div>
+        </div>
         <div id="dm-room-list" class="chat-room-list"></div>
       </div>
 
@@ -716,8 +724,8 @@
             <button class="chat-action-btn" id="chat-launch-task" title="タスク管理を開く">
               <i class="fa-solid fa-list-check"></i> タスク割振
             </button>
-            <button class="chat-action-btn" id="chat-launch-ft" title="ファイル転送を開く">
-              <i class="fa-solid fa-file-arrow-up"></i> ファイル転送
+            <button class="chat-action-btn" id="chat-launch-ft" title="画像・PDF・ファイルを送る">
+              <i class="fa-solid fa-file-arrow-up"></i> 画像/PDF送信
             </button>
           </div>
           <div class="chat-input-row" id="chat-input-row">

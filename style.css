@@ -4894,8 +4894,13 @@ html.font-xl { font-size: 21px; }
   font-weight: 600;
   color: var(--text-primary);
   flex-shrink: 0;
+  cursor: grab;
+  touch-action: none;
 }
 .chat-sidebar-header i { color: var(--state-info); margin-right: 5px; }
+.chat-panel-adjusting .chat-sidebar-header {
+  cursor: grabbing;
+}
 .chat-panel-close {
   background: none;
   border: none;
@@ -4977,6 +4982,54 @@ html.font-xl { font-size: 21px; }
 }
 [data-theme="light"] .chat-sidebar-add-btn:hover {
   background: rgba(9,105,218,0.07);
+}
+.chat-inline-picker {
+  padding: 8px 10px 9px;
+  border-bottom: 1px solid var(--border-glass);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex-shrink: 0;
+}
+.chat-inline-picker-label {
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.chat-inline-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  background: var(--bg-glass);
+  color: var(--text-muted);
+}
+.chat-inline-user-search {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.78rem;
+}
+.chat-inline-user-search::placeholder {
+  color: var(--text-muted);
+}
+.chat-inline-user-list {
+  max-height: 116px;
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  background: var(--bg-card);
+}
+.chat-inline-user-list .new-dm-user-item {
+  min-height: 34px;
+  padding: 6px 9px;
 }
 .chat-room-list {
   flex: 1;
@@ -5591,6 +5644,8 @@ html.font-xl { font-size: 21px; }
     background: var(--bg-card);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
+    cursor: default;
+    touch-action: auto;
   }
   .chat-panel-close {
     width: 38px;
@@ -5604,6 +5659,12 @@ html.font-xl { font-size: 21px; }
     flex-shrink: 0;
   }
   .chat-sidebar-tabs { flex-shrink: 0 !important; }
+  .chat-inline-picker {
+    padding: 8px 10px;
+  }
+  .chat-inline-user-list {
+    max-height: 92px;
+  }
   .chat-resize-handle { display: none !important; }
   .chat-room-close { display: inline-flex; }
 
