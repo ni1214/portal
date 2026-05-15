@@ -641,7 +641,7 @@ function renderHomeSimpleFavoriteLinks(links, isProfileReady) {
   return links.map(link => `
     <button
       type="button"
-      class="home-simple-favorite-link"
+      class="home-simple-favorite-link${link.type === 'category' ? ' home-simple-favorite-link--category' : ''}"
       ${link.type === 'category'
         ? `data-favorite-category-id="${esc(link.categoryId)}"`
         : `data-favorite-card-id="${esc(link.id)}"`}
@@ -649,7 +649,9 @@ function renderHomeSimpleFavoriteLinks(links, isProfileReady) {
       title="${esc(link.meta || link.label)}"
     >
       <span class="home-simple-favorite-link__icon">
-        ${link.brandIconHtml || `<span class="material-symbols-rounded" aria-hidden="true">${esc(link.symbol)}</span>`}
+        ${link.type === 'category'
+          ? `<span class="material-symbols-rounded home-simple-category-icon__folder" aria-hidden="true">folder</span><span class="material-symbols-rounded home-simple-category-icon__star" aria-hidden="true">star</span>`
+          : (link.brandIconHtml || `<span class="material-symbols-rounded" aria-hidden="true">${esc(link.symbol)}</span>`)}
       </span>
       <span class="home-simple-favorite-link__body">
         <strong>${esc(link.label)}</strong>
@@ -800,7 +802,7 @@ function getFavoriteSharedLinks() {
           categoryId,
           label: publicCategoriesById.get(categoryId) || '共有リンク',
           meta: 'お気に入り 0件',
-          symbol: 'folder_star',
+          symbol: 'folder',
           count: 0,
         });
       }
