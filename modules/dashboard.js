@@ -6,7 +6,6 @@ let deps = {};
 
 const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 const DASH_LIST_LIMIT = 3;
-const DASH_FAVORITE_LIMIT = 6;
 const ATTENDANCE_TYPE_LABELS = {
   normal: '通常',
   有給: '有給',
@@ -301,9 +300,7 @@ function renderHomeHero(host, {
     : 0;
   const favoriteLinks = getFavoriteSharedLinks();
   const favoriteCountLabel = state.currentUsername ? `${favoriteCount}件` : '設定してください';
-  const favoriteActionTarget = state.currentUsername
-    ? (favoriteCount > 0 ? DASH_TARGETS.FAVORITES : DASH_TARGETS.SHARED_LINKS)
-    : DASH_TARGETS.PROFILE;
+  const favoriteActionTarget = state.currentUsername ? DASH_TARGETS.SHARED_LINKS : DASH_TARGETS.PROFILE;
   const primaryTarget = state.currentUsername ? (focusCard.target || DASH_TARGETS.PROFILE) : DASH_TARGETS.PROFILE;
   const primaryLabel = state.currentUsername ? '今日の優先事項へ' : 'プロフィールを設定';
   const summaryCopy = state.currentUsername
@@ -398,9 +395,6 @@ function renderHomeHero(host, {
       meta: profile.roleLabel || 'ユーザー設定',
     },
   ];
-  const favoritePreview = favoriteLinks.slice(0, DASH_FAVORITE_LIMIT);
-  const favoriteOverflowCount = Math.max(0, favoriteLinks.length - favoritePreview.length);
-
   host.innerHTML = `
     <section class="home-simple-shell" aria-label="ホーム">
       <header class="home-simple-header">
@@ -466,18 +460,8 @@ function renderHomeHero(host, {
             </button>
           </div>
 
-          <div class="home-simple-favorite-grid${favoritePreview.length === 0 ? ' home-simple-favorite-grid--empty' : ''}">
-            ${renderHomeSimpleFavoriteLinks(favoritePreview, Boolean(state.currentUsername))}
-            ${favoriteOverflowCount > 0 ? `
-              <button
-                type="button"
-                class="home-simple-favorite-more"
-                data-dash-target="${esc(DASH_TARGETS.FAVORITES)}"
-              >
-                <span class="home-simple-favorite-more__icon material-symbols-rounded" aria-hidden="true">more_horiz</span>
-                <span>他 ${esc(String(favoriteOverflowCount))} 件</span>
-              </button>
-            ` : ''}
+          <div class="home-simple-favorite-grid${favoriteLinks.length === 0 ? ' home-simple-favorite-grid--empty' : ''}">
+            ${renderHomeSimpleFavoriteLinks(favoriteLinks, Boolean(state.currentUsername))}
           </div>
         </section>
       </div>
@@ -658,7 +642,9 @@ function renderHomeSimpleFavoriteLinks(links, isProfileReady) {
     <button
       type="button"
       class="home-simple-favorite-link"
-      data-favorite-card-id="${esc(link.id)}"
+      ${link.type === 'category'
+        ? `data-favorite-category-id="${esc(link.categoryId)}"`
+        : `data-favorite-card-id="${esc(link.id)}"`}
       aria-label="${esc(`${link.label}を開く`)}"
       title="${esc(link.meta || link.label)}"
     >
@@ -667,6 +653,7 @@ function renderHomeSimpleFavoriteLinks(links, isProfileReady) {
       </span>
       <span class="home-simple-favorite-link__body">
         <strong>${esc(link.label)}</strong>
+        ${link.type === 'category' ? `<span>${esc(link.meta || '')}</span>` : ''}
       </span>
     </button>
   `).join('');
@@ -778,23 +765,51 @@ function getFavoriteSharedLinks() {
   const publicCardsById = new Map(
     (Array.isArray(state.allCards) ? state.allCards : []).map(card => [card.id, card])
   );
+  const publicCategories = Array.isArray(state.allCategories) ? state.allCategories : [];
   const publicCategoriesById = new Map(
-    (Array.isArray(state.allCategories) ? state.allCategories : [])
+    publicCategories
       .filter(category => !category?.isPrivate)
       .map(category => [category.id || category.docId, category.label || '共有リンク'])
   );
 
-  return favoriteIds
+  const externalLinks = [];
+  const categoryGroups = new Map();
+
+  favoriteIds
     .map(id => publicCardsById.get(id))
     .filter(Boolean)
-    .map(card => ({
-      id: card.id,
-      label: card.label || '共有リンク',
-      meta: buildFavoriteLinkMeta(card, publicCategoriesById),
-      brandIconHtml: getBrandIconHtmlForCard(card),
-      symbol: card.url === 'solar:open' ? 'wb_sunny' : 'link',
-      arrow: card.url === 'solar:open' ? 'arrow_forward' : 'open_in_new',
-    }));
+    .forEach(card => {
+      if (card.isExternalTool || card.category === 'external') {
+        externalLinks.push({
+          type: 'card',
+          id: card.id,
+          label: card.label || '共有リンク',
+          meta: buildFavoriteLinkMeta(card, publicCategoriesById),
+          brandIconHtml: getBrandIconHtmlForCard(card),
+          symbol: card.url === 'solar:open' ? 'wb_sunny' : 'link',
+          arrow: card.url === 'solar:open' ? 'arrow_forward' : 'open_in_new',
+        });
+        return;
+      }
+
+      const categoryId = card.category || 'uncategorized';
+      if (!categoryGroups.has(categoryId)) {
+        categoryGroups.set(categoryId, {
+          type: 'category',
+          id: `category:${categoryId}`,
+          categoryId,
+          label: publicCategoriesById.get(categoryId) || '共有リンク',
+          meta: 'お気に入り 0件',
+          symbol: 'folder_star',
+          count: 0,
+        });
+      }
+      const group = categoryGroups.get(categoryId);
+      group.count += 1;
+      group.meta = `お気に入り ${group.count}件`;
+    });
+
+  return [...externalLinks, ...categoryGroups.values()];
 }
 
 function buildFavoriteLinkMeta(card, publicCategoriesById) {
@@ -838,6 +853,12 @@ function bindDashboardEvents(section) {
     if (favoriteLink && section.contains(favoriteLink)) {
       event.preventDefault();
       void deps.openFavoriteLink?.(favoriteLink.dataset.favoriteCardId || '');
+      return;
+    }
+    const favoriteCategory = event.target.closest('[data-favorite-category-id]');
+    if (favoriteCategory && section.contains(favoriteCategory)) {
+      event.preventDefault();
+      void deps.openFavoriteCategory?.(favoriteCategory.dataset.favoriteCategoryId || '');
       return;
     }
     const card = event.target.closest('[data-dash-target]');

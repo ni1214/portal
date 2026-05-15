@@ -475,6 +475,7 @@ initTodayDashboard({
   },
   openSharedLinks: async () => {
     state.sharedLinksCategory = 'all';
+    state.sharedLinksFavoritesOnlyCategory = '';
     await openSharedLinksModal();
   },
   focusSearch: () => {
@@ -505,6 +506,12 @@ initTodayDashboard({
   },
   openFavoriteLink: cardId => {
     openFavoriteLinkFromHome(cardId);
+  },
+  openFavoriteCategory: async categoryId => {
+    state.sharedLinksCategory = categoryId || 'all';
+    state.sharedLinksFavoritesOnlyCategory = categoryId || '';
+    state.sharedLinksQuery = '';
+    await openSharedLinksModal();
   },
   openInviteCode: async () => {
     try {
@@ -3091,6 +3098,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('header-shared-btn').addEventListener('click', () => {
     state.sharedLinksCategory = 'all';
+    state.sharedLinksFavoritesOnlyCategory = '';
     void openSharedLinksModal();
   });
   document.getElementById('header-dashboard-btn').addEventListener('click', () => {
@@ -3131,6 +3139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('btn-shared-links').addEventListener('click', () => {
     state.sharedLinksCategory = 'all';
+    state.sharedLinksFavoritesOnlyCategory = '';
     void openSharedLinksModal();
   });
   false && document.getElementById('btn-my-category').addEventListener('click', () => {

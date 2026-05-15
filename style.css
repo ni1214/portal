@@ -22125,6 +22125,19 @@ body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link__body stron
   white-space: nowrap;
 }
 
+body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link__body span {
+  display: block;
+  width: 100%;
+  color: var(--portal-home-copy);
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1.18;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-more {
   display: flex;
   flex-direction: column;

@@ -53,6 +53,7 @@ export const state = {
   sharedLinksModalOpen: false,
   sharedLinksQuery: '',
   sharedLinksCategory: 'all',
+  sharedLinksFavoritesOnlyCategory: '',
   allNotices: [],
   visibleNotices: [],
   _noticeUnsub: null,

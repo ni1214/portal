@@ -121,6 +121,7 @@ export function renderSharedHome() {
       const category = button.dataset.sharedHomeCategory || '';
       if (action === 'links') {
         state.sharedLinksCategory = category || 'all';
+        state.sharedLinksFavoritesOnlyCategory = '';
       }
       void handleSharedHomeAction(action);
     });
@@ -415,6 +416,8 @@ export function renderSharedLinksBrowser() {
 
   const queryText = normalizeSearch(state.sharedLinksQuery);
   const categoryFilter = state.sharedLinksCategory || 'all';
+  const favoriteOnlyCategory = state.sharedLinksFavoritesOnlyCategory || '';
+  const favoriteIds = new Set(Array.isArray(state.personalFavorites) ? state.personalFavorites : []);
   const publicCategories = getPublicCategories();
   const cards = Array.isArray(state.allCards) ? state.allCards : [];
   const sections = [];
@@ -422,19 +425,24 @@ export function renderSharedLinksBrowser() {
   publicCategories.forEach(cat => {
     if (categoryFilter !== 'all' && categoryFilter !== cat.id) return;
     const categoryCards = cards.filter(card => card.category === cat.id);
-    const catCards = collectSharedLinkSearchCards(categoryCards, queryText)
+    const sourceCards = favoriteOnlyCategory === cat.id
+      ? categoryCards.filter(card => favoriteIds.has(card.id))
+      : categoryCards;
+    const catCards = collectSharedLinkSearchCards(sourceCards, queryText)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
     if (queryText && catCards.length === 0) return;
     const section = deps.buildSection?.(cat, catCards, {
       searchMode: !!queryText,
       queryText,
-      allCategoryCards: categoryCards,
+      allCategoryCards: sourceCards,
     });
     if (section) sections.push(section);
   });
 
-  status.textContent = queryText
+  status.textContent = favoriteOnlyCategory
+    ? `${publicCategories.find(cat => cat.id === favoriteOnlyCategory)?.label || 'カテゴリ'} のお気に入り ${sections.length}カテゴリ`
+    : queryText
     ? `「${state.sharedLinksQuery.trim()}」 の検索結果 ${sections.length}カテゴリ`
     : `共有リンク ${cards.length}件 / ${publicCategories.length}カテゴリ`;
 
@@ -444,10 +452,19 @@ export function renderSharedLinksBrowser() {
       <div class="shared-links-empty-state">
         <div class="shared-links-empty-icon">${renderHomeIcon('search')}</div>
         <h3>見つかりませんでした</h3>
-        <p>検索条件を変えるか、カテゴリを切り替えて確認してください。</p>
+        <p>${favoriteOnlyCategory ? 'このカテゴリのお気に入りはありません。' : '検索条件を変えるか、カテゴリを切り替えて確認してください。'}</p>
       </div>
     `;
   } else {
+    if (favoriteOnlyCategory) {
+      const hint = document.createElement('div');
+      hint.className = 'shared-links-favorite-hint';
+      hint.innerHTML = `
+        <i class="material-symbols-rounded" aria-hidden="true">star</i>
+        <span>このカテゴリでお気に入り登録したリンクだけを表示しています。</span>
+      `;
+      body.appendChild(hint);
+    }
     if (categoryFilter === 'external' || sections.some(section => section.classList?.contains('external-tools'))) {
       const hint = document.createElement('div');
       hint.className = 'shared-links-favorite-hint';
@@ -530,6 +547,7 @@ function renderSharedLinkCategoryChips() {
   chips.querySelectorAll('[data-shared-link-cat]').forEach(button => {
     button.addEventListener('click', () => {
       state.sharedLinksCategory = button.dataset.sharedLinkCat || 'all';
+      state.sharedLinksFavoritesOnlyCategory = '';
       renderSharedLinksBrowser();
     });
   });
