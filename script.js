@@ -752,34 +752,44 @@ function renderTodoSection() {
 
 // ========== 個人設定保存（デバウンス付き） ==========
 let _prefSaveTimer = null;
-function savePreferencesToFirestore() {
+async function persistPreferencesForUser(targetUsername) {
+  if (!targetUsername || state.currentUsername !== targetUsername) return;
+  const theme    = localStorage.getItem('portal-theme')     || 'dark';
+  const fontSize = localStorage.getItem('portal-font-size') || 'font-md';
+  const prefs = {
+    theme,
+    fontSize,
+    favOnly:           state.favoritesOnlyMode,
+    favorites:         Array.isArray(state.personalFavorites) ? state.personalFavorites : [],
+    collapsedSections: state.collapsedSections,
+    collapseSeeded:    state._collapseSeeded,
+    hiddenCards:       state.hiddenCards,
+    missionBannerHidden: state.missionBannerHidden,
+  };
+  if (isSupabaseSharedCoreEnabled()) {
+    await saveUserPreferencesToSupabase(targetUsername, prefs);
+  } else {
+    await setDoc(
+      doc(db, 'users', targetUsername, 'data', 'preferences'),
+      { ...prefs, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  }
+}
+
+function savePreferencesToFirestore(options = {}) {
   const targetUsername = state.currentUsername;
   if (!targetUsername) return;
   clearTimeout(_prefSaveTimer);
+  if (options.immediate) {
+    void persistPreferencesForUser(targetUsername).catch(err => {
+      console.error('設定保存エラー:', err);
+    });
+    return;
+  }
   _prefSaveTimer = setTimeout(async () => {
-    if (state.currentUsername !== targetUsername) return;
     try {
-      const theme    = localStorage.getItem('portal-theme')     || 'dark';
-      const fontSize = localStorage.getItem('portal-font-size') || 'font-md';
-      const prefs = {
-        theme,
-        fontSize,
-        favOnly:           state.favoritesOnlyMode,
-        favorites:         state.personalFavorites,
-        collapsedSections: state.collapsedSections,
-        collapseSeeded:    state._collapseSeeded,
-        hiddenCards:       state.hiddenCards,
-        missionBannerHidden: state.missionBannerHidden,
-      };
-      if (isSupabaseSharedCoreEnabled()) {
-        await saveUserPreferencesToSupabase(targetUsername, prefs);
-      } else {
-        await setDoc(
-          doc(db, 'users', targetUsername, 'data', 'preferences'),
-          { ...prefs, updatedAt: serverTimestamp() },
-          { merge: true }
-        );
-      }
+      await persistPreferencesForUser(targetUsername);
     } catch (err) {
       console.error('設定保存エラー:', err);
     }
@@ -823,21 +833,20 @@ async function loadPersonalData(username, lockOnSwitch = false) {
 
       // preferences
       if (sbPrefs) {
-        state.personalFavorites   = sbPrefs.favorites;
-        state.favoritesOnlyMode   = sbPrefs.favOnly;
-        state._collapseSeeded     = sbPrefs.collapseSeeded;
-        state.collapsedSections   = sbPrefs.collapsedSections;
-        state.hiddenCards         = sbPrefs.hiddenCards;
-        state.missionBannerHidden = sbPrefs.missionBannerHidden;
+        state.personalFavorites   = Array.isArray(sbPrefs.favorites) ? sbPrefs.favorites : [];
+        state.favoritesOnlyMode   = !!sbPrefs.favOnly;
+        state._collapseSeeded     = sbPrefs.collapseSeeded === true;
+        state.collapsedSections   = Array.isArray(sbPrefs.collapsedSections) ? sbPrefs.collapsedSections : [];
+        state.hiddenCards         = Array.isArray(sbPrefs.hiddenCards) ? sbPrefs.hiddenCards : [];
+        state.missionBannerHidden = sbPrefs.missionBannerHidden !== false;
         if (sbPrefs.theme)    applyTheme(sbPrefs.theme, false);
         if (sbPrefs.fontSize) applyFontSize(sbPrefs.fontSize, false);
         if (sbPrefs.lastViewedSuggestionsAt) {
           state.lastViewedSuggestionsAt = sbPrefs.lastViewedSuggestionsAt;
         }
       } else {
-        const localFavs = (() => { try { return JSON.parse(localStorage.getItem('portal-favorites') || '[]'); } catch { return []; } })();
-        state.personalFavorites = localFavs;
-        state.favoritesOnlyMode = localStorage.getItem('portal-fav-only') === '1';
+        state.personalFavorites = [];
+        state.favoritesOnlyMode = false;
         savePreferencesToFirestore();
       }
 
@@ -873,12 +882,8 @@ async function loadPersonalData(username, lockOnSwitch = false) {
           state.lastViewedSuggestionsAt = p.lastViewedSuggestionsAt.seconds ?? Math.floor(p.lastViewedSuggestionsAt / 1000);
         }
       } else {
-        const localFavs = (() => {
-          try { return JSON.parse(localStorage.getItem('portal-favorites') || '[]'); } catch { return []; }
-        })();
-        const localFavOnly = localStorage.getItem('portal-fav-only') === '1';
-        state.personalFavorites = localFavs;
-        state.favoritesOnlyMode = localFavOnly;
+        state.personalFavorites = [];
+        state.favoritesOnlyMode = false;
         savePreferencesToFirestore();
       }
 
@@ -1799,7 +1804,8 @@ function buildLinkCard(card, isFav = false, gradient = '') {
 
   const favs = getFavorites();
   const isFavorited = favs.includes(card.id);
-  const starBtn = `<button class="btn-favorite${isFavorited ? ' active' : ''}" data-id="${card.id}" title="お気に入り"><i class="fa-${isFavorited ? 'solid' : 'regular'} fa-star"></i></button>`;
+  const favoriteLabel = isFavorited ? 'お気に入り解除' : 'お気に入りに追加';
+  const starBtn = `<button class="btn-favorite${isFavorited ? ' active' : ''}" data-id="${card.id}" title="${favoriteLabel}" aria-label="${favoriteLabel}"><i class="fa-${isFavorited ? 'solid' : 'regular'} fa-star"></i></button>`;
   const noUrlBadge = hasNoUrl
     ? `<span class="no-url-badge"><i class="fa-solid fa-triangle-exclamation"></i> URL未設定</span>`
     : '';
@@ -1876,6 +1882,21 @@ function buildExternalCard(card) {
 
   a.innerHTML = `<div class="ext-icon-img">${iconHtml}</div><span class="ext-icon-label">${esc(card.label)}</span>`;
   wrap.appendChild(a);
+
+  const favs = getFavorites();
+  const isFavorited = favs.includes(card.id);
+  const favBtn = document.createElement('button');
+  favBtn.className = `btn-favorite ext-favorite-btn${isFavorited ? ' active' : ''}`;
+  favBtn.dataset.id = card.id;
+  favBtn.title = isFavorited ? 'お気に入り解除' : 'お気に入りに追加';
+  favBtn.setAttribute('aria-label', favBtn.title);
+  favBtn.innerHTML = `<i class="fa-${isFavorited ? 'solid' : 'regular'} fa-star"></i>`;
+  favBtn.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavorite(card.id);
+  });
+  wrap.appendChild(favBtn);
 
   // 非表示ボタン（ホバー時表示）
   const hideBtn = document.createElement('button');
@@ -2083,26 +2104,35 @@ function openFavoriteLinkFromHome(cardId) {
 }
 
 function getFavorites() {
-  return [...state.personalFavorites];
+  return Array.isArray(state.personalFavorites) ? [...state.personalFavorites] : [];
 }
 
 function setFavorites(ids) {
-  state.personalFavorites = [...ids];
-  savePreferencesToFirestore();
+  state.personalFavorites = [...new Set((ids || []).filter(Boolean))];
+  savePreferencesToFirestore({ immediate: true });
   renderTodayDashboard();
 }
 
 function toggleFavorite(docId) {
+  if (!state.currentUsername) {
+    showToast('ユーザーネームを設定すると、自分専用のお気に入りとして保存できます。', 'warning');
+    showUsernameModal();
+    return;
+  }
   const favs = getFavorites();
   const idx = favs.indexOf(docId);
   if (idx === -1) favs.push(docId); else favs.splice(idx, 1);
   setFavorites(favs);
   renderFavorites();
+  renderSharedLinksBrowser();
   document.querySelectorAll(`.btn-favorite[data-id="${docId}"]`).forEach(b => {
     const active = favs.includes(docId);
     b.classList.toggle('active', active);
     b.innerHTML = `<i class="fa-${active ? 'solid' : 'regular'} fa-star"></i>`;
+    b.title = active ? 'お気に入り解除' : 'お気に入りに追加';
+    b.setAttribute('aria-label', active ? 'お気に入り解除' : 'お気に入りに追加');
   });
+  showToast(favs.includes(docId) ? 'お気に入りに追加しました。' : 'お気に入りを解除しました。', 'success');
 }
 
 function renderFavorites() {
@@ -2663,6 +2693,11 @@ function toggleFavoritesOnly() {
 
 // ========== セクションまとめてお気に入り ==========
 function toggleSectionFavorite(catId, isPrivate = false) {
+  if (!state.currentUsername) {
+    showToast('ユーザーネームを設定すると、自分専用のお気に入りとして保存できます。', 'warning');
+    showUsernameModal();
+    return;
+  }
   const catCards = isPrivate
     ? state.privateCards.filter(c => c.sectionId === catId)
     : state.allCards.filter(c => c.category === catId);
@@ -2682,6 +2717,8 @@ function toggleSectionFavorite(catId, isPrivate = false) {
       const active = newFavs.includes(card.id);
       b.classList.toggle('active', active);
       b.innerHTML = `<i class="fa-${active ? 'solid' : 'regular'} fa-star"></i>`;
+      b.title = active ? 'お気に入り解除' : 'お気に入りに追加';
+      b.setAttribute('aria-label', active ? 'お気に入り解除' : 'お気に入りに追加');
     });
   });
   const sectionEl = isPrivate
@@ -2696,6 +2733,7 @@ function toggleSectionFavorite(catId, isPrivate = false) {
       sBtn.innerHTML = `<i class="fa-${nowAllFaved ? 'solid' : 'regular'} fa-star"></i>`;
     }
   }
+  renderSharedLinksBrowser();
 }
 
 

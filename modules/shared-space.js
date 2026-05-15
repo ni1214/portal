@@ -448,6 +448,15 @@ export function renderSharedLinksBrowser() {
       </div>
     `;
   } else {
+    if (categoryFilter === 'external' || sections.some(section => section.classList?.contains('external-tools'))) {
+      const hint = document.createElement('div');
+      hint.className = 'shared-links-favorite-hint';
+      hint.innerHTML = `
+        <i class="material-symbols-rounded" aria-hidden="true">star</i>
+        <span>外部ツールはアイコン左上の星で、自分専用のお気に入りに保存できます。</span>
+      `;
+      body.appendChild(hint);
+    }
     sections.forEach(section => body.appendChild(section));
   }
 
