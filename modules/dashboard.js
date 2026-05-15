@@ -3,6 +3,9 @@ import { esc } from './utils.js';
 import { getBrandIconHtmlForCard } from './brand-icons.js';
 
 let deps = {};
+let favoriteDragKey = '';
+let favoriteDragDropPosition = 'before';
+let favoriteDragSuppressClick = false;
 
 const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 const DASH_LIST_LIMIT = 3;
@@ -642,6 +645,8 @@ function renderHomeSimpleFavoriteLinks(links, isProfileReady) {
     <button
       type="button"
       class="home-simple-favorite-link${link.type === 'category' ? ' home-simple-favorite-link--category' : ''}"
+      draggable="true"
+      data-favorite-sort-key="${esc(link.sortKey || '')}"
       ${link.type === 'category'
         ? `data-favorite-category-id="${esc(link.categoryId)}"`
         : `data-favorite-card-id="${esc(link.id)}"`}
@@ -774,7 +779,7 @@ function getFavoriteSharedLinks() {
       .map(category => [category.id || category.docId, category.label || '共有リンク'])
   );
 
-  const externalLinks = [];
+  const orderedLinks = [];
   const categoryGroups = new Map();
 
   favoriteIds
@@ -782,9 +787,10 @@ function getFavoriteSharedLinks() {
     .filter(Boolean)
     .forEach(card => {
       if (card.isExternalTool || card.category === 'external') {
-        externalLinks.push({
+        orderedLinks.push({
           type: 'card',
           id: card.id,
+          sortKey: `card:${card.id}`,
           label: card.label || '共有リンク',
           meta: buildFavoriteLinkMeta(card, publicCategoriesById),
           brandIconHtml: getBrandIconHtmlForCard(card),
@@ -796,22 +802,25 @@ function getFavoriteSharedLinks() {
 
       const categoryId = card.category || 'uncategorized';
       if (!categoryGroups.has(categoryId)) {
-        categoryGroups.set(categoryId, {
+        const group = {
           type: 'category',
           id: `category:${categoryId}`,
+          sortKey: `category:${categoryId}`,
           categoryId,
           label: publicCategoriesById.get(categoryId) || '共有リンク',
           meta: 'お気に入り 0件',
           symbol: 'folder',
           count: 0,
-        });
+        };
+        categoryGroups.set(categoryId, group);
+        orderedLinks.push(group);
       }
       const group = categoryGroups.get(categoryId);
       group.count += 1;
       group.meta = `お気に入り ${group.count}件`;
     });
 
-  return [...externalLinks, ...categoryGroups.values()];
+  return orderedLinks;
 }
 
 function buildFavoriteLinkMeta(card, publicCategoriesById) {
@@ -851,6 +860,11 @@ function bindDashboardEvents(section) {
   section.dataset.dashBound = 'true';
 
   section.addEventListener('click', event => {
+    if (favoriteDragSuppressClick && event.target.closest('[data-favorite-sort-key]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     const favoriteLink = event.target.closest('[data-favorite-card-id]');
     if (favoriteLink && section.contains(favoriteLink)) {
       event.preventDefault();
@@ -868,6 +882,52 @@ function bindDashboardEvents(section) {
     void openDashboardTarget(card.dataset.dashTarget || '');
   });
 
+  section.addEventListener('dragstart', event => {
+    const item = event.target.closest('[data-favorite-sort-key]');
+    if (!item || !section.contains(item)) return;
+    favoriteDragKey = item.dataset.favoriteSortKey || '';
+    if (!favoriteDragKey) return;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', favoriteDragKey);
+    item.classList.add('is-dragging');
+    item.closest('.home-simple-favorite-grid')?.classList.add('is-sorting');
+  });
+
+  section.addEventListener('dragover', event => {
+    const item = event.target.closest('[data-favorite-sort-key]');
+    if (!item || !section.contains(item)) return;
+    const targetKey = item.dataset.favoriteSortKey || '';
+    if (!favoriteDragKey || targetKey === favoriteDragKey) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    favoriteDragDropPosition = resolveFavoriteDropPosition(event, item);
+    clearFavoriteDropMarkers(section);
+    item.classList.add(favoriteDragDropPosition === 'after' ? 'is-drop-after' : 'is-drop-before');
+  });
+
+  section.addEventListener('dragleave', event => {
+    const item = event.target.closest('[data-favorite-sort-key]');
+    if (!item || !section.contains(item)) return;
+    if (item.contains(event.relatedTarget)) return;
+    item.classList.remove('is-drop-before', 'is-drop-after');
+  });
+
+  section.addEventListener('drop', event => {
+    const item = event.target.closest('[data-favorite-sort-key]');
+    if (!item || !section.contains(item)) return;
+    const sourceKey = favoriteDragKey || event.dataTransfer.getData('text/plain');
+    const targetKey = item.dataset.favoriteSortKey || '';
+    if (!sourceKey || !targetKey || sourceKey === targetKey) return;
+    event.preventDefault();
+    const nextOrder = buildFavoriteDropOrder(section, sourceKey, targetKey, favoriteDragDropPosition);
+    clearFavoriteDragState(section);
+    void deps.reorderFavoriteLinks?.(nextOrder);
+  });
+
+  section.addEventListener('dragend', () => {
+    clearFavoriteDragState(section);
+  });
+
   section.addEventListener('keydown', event => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     const card = event.target.closest('[data-dash-target]');
@@ -875,6 +935,50 @@ function bindDashboardEvents(section) {
     event.preventDefault();
     void openDashboardTarget(card.dataset.dashTarget || '');
   });
+}
+
+function resolveFavoriteDropPosition(event, item) {
+  const rect = item.getBoundingClientRect();
+  const centerY = rect.top + rect.height / 2;
+  const centerX = rect.left + rect.width / 2;
+  if (event.clientY > centerY + rect.height * 0.12) return 'after';
+  if (event.clientY < centerY - rect.height * 0.12) return 'before';
+  return event.clientX > centerX ? 'after' : 'before';
+}
+
+function buildFavoriteDropOrder(section, sourceKey, targetKey, position) {
+  const keys = [...section.querySelectorAll('[data-favorite-sort-key]')]
+    .map(item => item.dataset.favoriteSortKey || '')
+    .filter(Boolean);
+  const uniqueKeys = [...new Set(keys)];
+  const sourceIndex = uniqueKeys.indexOf(sourceKey);
+  const targetIndex = uniqueKeys.indexOf(targetKey);
+  if (sourceIndex === -1 || targetIndex === -1) return uniqueKeys;
+
+  uniqueKeys.splice(sourceIndex, 1);
+  const adjustedTargetIndex = uniqueKeys.indexOf(targetKey);
+  const insertIndex = adjustedTargetIndex + (position === 'after' ? 1 : 0);
+  uniqueKeys.splice(insertIndex, 0, sourceKey);
+  return uniqueKeys;
+}
+
+function clearFavoriteDropMarkers(section) {
+  section.querySelectorAll('.home-simple-favorite-link.is-drop-before, .home-simple-favorite-link.is-drop-after')
+    .forEach(item => item.classList.remove('is-drop-before', 'is-drop-after'));
+}
+
+function clearFavoriteDragState(section) {
+  if (favoriteDragKey) {
+    favoriteDragSuppressClick = true;
+    window.setTimeout(() => { favoriteDragSuppressClick = false; }, 120);
+  }
+  favoriteDragKey = '';
+  favoriteDragDropPosition = 'before';
+  section.querySelectorAll('.home-simple-favorite-link.is-dragging')
+    .forEach(item => item.classList.remove('is-dragging'));
+  clearFavoriteDropMarkers(section);
+  section.querySelectorAll('.home-simple-favorite-grid.is-sorting')
+    .forEach(grid => grid.classList.remove('is-sorting'));
 }
 
 async function openDashboardTarget(target) {

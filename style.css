@@ -22100,6 +22100,31 @@ body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link {
   text-align: center;
   border-color: transparent;
   background: transparent;
+  cursor: grab;
+  transition: background 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease, transform 0.16s ease;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link:active {
+  cursor: grabbing;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link.is-dragging {
+  opacity: 0.42;
+  transform: scale(0.96);
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link.is-drop-before,
+body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link.is-drop-after {
+  background: color-mix(in srgb, var(--portal-home-accent) 10%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--portal-home-accent) 56%, transparent);
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link.is-drop-before {
+  transform: translateX(-4px);
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link.is-drop-after {
+  transform: translateX(4px);
 }
 
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link__icon {

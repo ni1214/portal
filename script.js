@@ -541,6 +541,7 @@ initTodayDashboard({
     state.sharedLinksQuery = '';
     await openSharedLinksModal();
   },
+  reorderFavoriteLinks,
   openInviteCode: async () => {
     try {
       await loadInviteCodeConfig();
@@ -2146,6 +2147,82 @@ function setFavorites(ids) {
   state.personalFavorites = [...new Set((ids || []).filter(Boolean))];
   savePreferencesToFirestore({ immediate: true });
   renderTodayDashboard();
+}
+
+function getFavoriteDisplayBlocks() {
+  const favoriteIds = getFavorites();
+  const publicCardsById = new Map((state.allCards || []).map(card => [card.id, card]));
+  const blocks = new Map();
+  const displayKeys = [];
+  const displayedIds = new Set();
+
+  favoriteIds.forEach(id => {
+    const card = publicCardsById.get(id);
+    if (!card) return;
+
+    const key = (card.isExternalTool || card.category === 'external')
+      ? `card:${id}`
+      : `category:${card.category || 'uncategorized'}`;
+
+    if (!blocks.has(key)) {
+      blocks.set(key, { key, ids: [] });
+      displayKeys.push(key);
+    }
+    blocks.get(key).ids.push(id);
+    displayedIds.add(id);
+  });
+
+  return { blocks, displayKeys, displayedIds, favoriteIds };
+}
+
+function buildFavoriteIdsFromDisplayOrder(orderedKeys = []) {
+  const { blocks, displayKeys, displayedIds, favoriteIds } = getFavoriteDisplayBlocks();
+  const seenKeys = new Set();
+  const finalKeys = [];
+
+  orderedKeys.forEach(key => {
+    if (!blocks.has(key) || seenKeys.has(key)) return;
+    seenKeys.add(key);
+    finalKeys.push(key);
+  });
+  displayKeys.forEach(key => {
+    if (seenKeys.has(key)) return;
+    seenKeys.add(key);
+    finalKeys.push(key);
+  });
+
+  const visibleIds = finalKeys.flatMap(key => blocks.get(key)?.ids || []);
+  const hiddenOrUnknownIds = favoriteIds.filter(id => !displayedIds.has(id));
+  return [...visibleIds, ...hiddenOrUnknownIds];
+}
+
+function sameStringArray(a = [], b = []) {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+async function reorderFavoriteLinks(orderedKeys = []) {
+  if (!state.currentUsername || !Array.isArray(orderedKeys) || orderedKeys.length === 0) return;
+
+  const previousFavorites = getFavorites();
+  const nextFavorites = buildFavoriteIdsFromDisplayOrder(orderedKeys);
+  if (sameStringArray(previousFavorites, nextFavorites)) return;
+
+  state.personalFavorites = nextFavorites;
+  renderTodayDashboard();
+  renderFavorites();
+  renderSharedLinksBrowser();
+
+  try {
+    await persistPreferencesForUser(state.currentUsername);
+    showToast('お気に入りの並び順を保存しました。', 'success');
+  } catch (err) {
+    console.error('お気に入り順の保存に失敗しました:', err);
+    state.personalFavorites = previousFavorites;
+    renderTodayDashboard();
+    renderFavorites();
+    renderSharedLinksBrowser();
+    showToast('並び順の保存に失敗しました。もう一度お試しください。', 'error');
+  }
 }
 
 function toggleFavorite(docId) {
