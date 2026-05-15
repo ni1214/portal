@@ -512,10 +512,11 @@
           <!-- 自分のDriveリンク入力＆共有ウィジェット -->
           <div class="ft-my-link-widget">
             <div class="ft-my-link-label">
-              <i class="fa-solid fa-cloud"></i> 社外共有フォルダリンク
+              <span>1</span>
+              <i class="fa-solid fa-cloud"></i> 自分の受け取りフォルダ
             </div>
             <div class="ft-my-link-row">
-              <input type="url" id="ft-my-link-input" class="ft-my-link-input" placeholder="DriveフォルダURLを貼り付け…">
+              <input type="url" id="ft-my-link-input" class="ft-my-link-input" placeholder="相手に入れてもらうクラウドフォルダURL">
               <button class="ft-my-link-icon-btn" id="ft-my-link-copy" title="URLをコピー" hidden>
                 <i class="fa-solid fa-copy"></i>
               </button>
@@ -523,12 +524,19 @@
                 <i class="fa-solid fa-arrow-up-right-from-square"></i>
               </button>
             </div>
+            <div class="ft-cloud-note">ここに相手がファイルを入れます。URLは自動保存されます。</div>
+            <label class="ft-my-link-label ft-cloud-target-label" for="ft-drive-inline-user-search">
+              <span>2</span>
+              <i class="fa-solid fa-user-check"></i> 共有する相手
+            </label>
+            <input type="text" id="ft-drive-inline-user-search" class="ft-p2p-user-search" placeholder="名前で検索" autocomplete="off">
+            <div id="ft-drive-inline-user-list" class="new-dm-user-list ft-p2p-user-list ft-drive-user-list"></div>
             <button class="btn-ft-drive-share" id="ft-drive-send-btn" disabled>
-              <i class="fa-solid fa-share-nodes"></i> クラウドリンクを相手に送る
+              <i class="fa-solid fa-share-nodes"></i> フォルダリンクを共有する
             </button>
           </div>
           <!-- 登録済み連絡先（相手のフォルダを開く） -->
-          <div class="ft-section-title" id="ft-contacts-title" hidden>相手のフォルダを開く</div>
+          <div class="ft-section-title" id="ft-contacts-title" hidden>共有済みの相手フォルダ</div>
           <div id="ft-contacts-list"></div>
           <!-- 受信したリンク -->
           <div class="ft-section-title" id="ft-drive-incoming-title" hidden>受信したリンク</div>

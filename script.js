@@ -64,6 +64,7 @@ import {
   switchFtTab, renderDrivePanel,
   openDriveShare, dismissDriveShare,
   openDriveSendModal, selectDriveSendTarget, closeDriveSendModal, confirmDriveSend,
+  confirmInlineDriveShare,
   initDriveLinkWidget,
   initInlineP2pSend, openInlineP2pSend,
   openFtSendModal, closeFtSendModal, confirmFtSend,
@@ -3567,7 +3568,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ===== Drive シェア =====
   document.querySelectorAll('.ft-tab').forEach(btn =>
     btn.addEventListener('click', () => switchFtTab(btn.dataset.tab)));
-  document.getElementById('ft-drive-send-btn').addEventListener('click', openDriveSendModal);
+  document.getElementById('ft-drive-send-btn').addEventListener('click', confirmInlineDriveShare);
   document.getElementById('ft-drive-cancel-btn').addEventListener('click', closeDriveSendModal);
   document.getElementById('ft-drive-confirm-btn').addEventListener('click', confirmDriveSend);
   // インラインDriveリンクウィジェット初期化（loadPersonalData完了後に呼ばれる）

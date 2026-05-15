@@ -31,6 +31,7 @@ export const deps = {};
 
 let driveMetaLoadedFor = '';
 let inlineP2pPickerReadyFor = '';
+let inlineDrivePickerReadyFor = '';
 const FT_PANEL_LAYOUT_KEY = 'portal-ft-panel-layout-v1';
 const FT_PANEL_MIN_WIDTH = 320;
 const FT_PANEL_MIN_HEIGHT = 360;
@@ -155,6 +156,49 @@ async function ensureInlineP2pPicker(prefillUser = null) {
   }
   if (prefillUser) selectInlineP2pUser(prefillUser);
   updateInlineP2pSendState();
+}
+
+function updateInlineDriveShareState() {
+  const btn = document.getElementById('ft-drive-send-btn');
+  if (!btn) return;
+  const inputUrl = document.getElementById('ft-my-link-input')?.value.trim();
+  const url = inputUrl != null ? inputUrl : state._myDriveUrl;
+  const hasUrl = !!url && url.startsWith('http');
+  const hasUser = !!state._ftDriveSelectedUser;
+  btn.disabled = !(hasUrl && hasUser);
+  if (hasUrl && hasUser) {
+    btn.innerHTML = `<i class="fa-solid fa-share-nodes"></i> ${esc(state._ftDriveSelectedUser)} に共有する`;
+  } else if (hasUrl) {
+    btn.innerHTML = '<i class="fa-solid fa-user-check"></i> 共有する相手を選んでください';
+  } else if (hasUser) {
+    btn.innerHTML = '<i class="fa-solid fa-cloud"></i> 自分の受け取りフォルダを登録してください';
+  } else {
+    btn.innerHTML = '<i class="fa-solid fa-share-nodes"></i> フォルダリンクを共有する';
+  }
+}
+
+function selectInlineDriveUser(name) {
+  state._ftDriveSelectedUser = name;
+  const search = document.getElementById('ft-drive-inline-user-search');
+  const list = document.getElementById('ft-drive-inline-user-list');
+  if (search) search.value = name;
+  if (list) {
+    list.querySelectorAll('.new-dm-user-item').forEach(el => {
+      el.classList.toggle('selected', el.dataset.name === name);
+    });
+  }
+  updateInlineDriveShareState();
+}
+
+async function ensureInlineDrivePicker(prefillUser = null) {
+  if (!state.currentUsername) return;
+  const key = state.currentUsername;
+  if (inlineDrivePickerReadyFor !== key) {
+    inlineDrivePickerReadyFor = key;
+    await deps.loadUsersForChatPicker?.('ft-drive-inline-user-list', 'ft-drive-inline-user-search', selectInlineDriveUser, true);
+  }
+  if (prefillUser) selectInlineDriveUser(prefillUser);
+  updateInlineDriveShareState();
 }
 
 async function ensureDriveMetaReady(username) {
@@ -739,7 +783,10 @@ export function switchFtTab(tab) {
   document.querySelectorAll('.ft-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.getElementById('ft-p2p-area').hidden   = (tab !== 'p2p');
   document.getElementById('ft-drive-area').hidden = (tab !== 'drive');
-  if (tab === 'drive') renderDrivePanel();
+  if (tab === 'drive') {
+    renderDrivePanel();
+    void ensureInlineDrivePicker();
+  }
 }
 
 // --- Drive パネル描画 ---
@@ -763,7 +810,7 @@ export function renderDrivePanel() {
   const hasUrl = !!state._myDriveUrl;
   if (linkCopy)  linkCopy.hidden   = !hasUrl;
   if (linkOpen)  linkOpen.hidden   = !hasUrl;
-  if (shareBtn)  shareBtn.disabled = !hasUrl;
+  if (shareBtn)  updateInlineDriveShareState();
 
   // ===== 登録済み連絡先（相手のフォルダを開く） =====
   const contacts = Object.entries(state._driveContacts)
@@ -884,6 +931,7 @@ export async function openDriveSendModal(prefillUser = null) {
 // 送信先決定時の共通処理（ユーザー検索から呼ばれる）
 export function selectDriveSendTarget(name) {
   state._ftDriveSelectedUser = name;
+  selectInlineDriveUser(name);
   const formGroup  = document.getElementById('ft-drive-form-group');
   const confirmBtn = document.getElementById('ft-drive-confirm-btn');
   if (formGroup)  formGroup.hidden  = false;
@@ -896,6 +944,7 @@ export function selectDriveSendTarget(name) {
 export function closeDriveSendModal() {
   document.getElementById('ft-drive-send-modal').classList.remove('visible');
   state._ftDriveSelectedUser = null;
+  updateInlineDriveShareState();
 }
 
 export async function confirmDriveSend() {
@@ -937,6 +986,36 @@ export async function confirmDriveSend() {
   }
 }
 
+export async function confirmInlineDriveShare() {
+  const input = document.getElementById('ft-my-link-input');
+  const url = input?.value.trim() || state._myDriveUrl;
+  if (!url || !url.startsWith('http')) {
+    showToast('自分の受け取りフォルダURLを登録してください。', 'warning');
+    input?.focus();
+    return;
+  }
+  if (!state._ftDriveSelectedUser) {
+    showToast('共有する相手を選んでください。', 'warning');
+    document.getElementById('ft-drive-inline-user-search')?.focus();
+    return;
+  }
+  const btn = document.getElementById('ft-drive-send-btn');
+  const recipient = state._ftDriveSelectedUser;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 共有中...';
+  try {
+    if (url !== state._myDriveUrl) await saveMyDriveUrl(url);
+    await addDriveShareInSupabase(state.currentUsername, recipient, url, '');
+    showToast(`${recipient} にフォルダリンクを共有しました。`, 'success');
+    renderDrivePanel();
+  } catch (err) {
+    console.error('Drive送信エラー:', err);
+    showToast('共有に失敗しました', 'error');
+  } finally {
+    updateInlineDriveShareState();
+  }
+}
+
 // --- インラインDriveリンクウィジェット初期化 ---
 // Drive パネルが DOM に存在するようになってから一度だけ呼ぶ
 export function initDriveLinkWidget() {
@@ -951,7 +1030,7 @@ export function initDriveLinkWidget() {
   const hasUrl = !!state._myDriveUrl;
   if (copyBtn)  copyBtn.hidden   = !hasUrl;
   if (openBtn)  openBtn.hidden   = !hasUrl;
-  if (shareBtn) shareBtn.disabled = !hasUrl;
+  updateInlineDriveShareState();
 
   // URL入力 → 即時ボタン状態更新 → blur / Enter で自動保存
   let _saveTimer;
@@ -967,15 +1046,15 @@ export function initDriveLinkWidget() {
     await saveMyDriveUrl(url);
     if (copyBtn)  copyBtn.hidden   = !url;
     if (openBtn)  openBtn.hidden   = !url;
-    if (shareBtn) shareBtn.disabled = !url;
+    updateInlineDriveShareState();
   };
   input.addEventListener('input', () => {
     clearTimeout(_saveTimer);
     const v = input.value.trim();
-    if (shareBtn) shareBtn.disabled = !v;
     if (copyBtn)  copyBtn.hidden    = !v;
     if (openBtn)  openBtn.hidden    = !v;
     input.style.borderColor = '';
+    updateInlineDriveShareState();
     _saveTimer = setTimeout(doSave, 900);
   });
   input.addEventListener('blur',  doSave);

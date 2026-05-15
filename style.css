@@ -4617,6 +4617,32 @@ html.font-xl { font-size: 21px; }
   align-items: center;
   gap: 5px;
 }
+
+.ft-my-link-label span {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--brand-drive-green-rgb), 0.16);
+  color: var(--brand-drive-green);
+  font-size: 0.7rem;
+}
+
+.ft-cloud-target-label {
+  margin-top: 4px;
+}
+
+.ft-cloud-note {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.ft-drive-user-list {
+  max-height: 126px;
+}
 .ft-my-link-row {
   display: flex;
   align-items: center;
