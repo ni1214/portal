@@ -30,6 +30,79 @@ import {
 export const deps = {};
 
 let driveMetaLoadedFor = '';
+const FT_PANEL_LAYOUT_KEY = 'portal-ft-panel-layout-v1';
+const FT_PANEL_MIN_WIDTH = 320;
+const FT_PANEL_MIN_HEIGHT = 360;
+const FT_PANEL_DEFAULT_WIDTH = 420;
+const FT_PANEL_DEFAULT_HEIGHT = 560;
+
+function isFtDesktopLayout() {
+  return window.matchMedia('(min-width: 769px)').matches;
+}
+
+function readFtPanelLayout() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(FT_PANEL_LAYOUT_KEY) || 'null');
+    if (!saved || typeof saved !== 'object') return null;
+    return {
+      left: Number(saved.left),
+      top: Number(saved.top),
+      width: Number(saved.width),
+      height: Number(saved.height),
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function clampFtPanelLayout(frame) {
+  const margin = 8;
+  const maxWidth = Math.max(FT_PANEL_MIN_WIDTH, window.innerWidth - margin * 2);
+  const maxHeight = Math.max(FT_PANEL_MIN_HEIGHT, window.innerHeight - margin * 2);
+  const width = Math.min(Math.max(frame.width || FT_PANEL_DEFAULT_WIDTH, FT_PANEL_MIN_WIDTH), maxWidth);
+  const height = Math.min(Math.max(frame.height || FT_PANEL_DEFAULT_HEIGHT, FT_PANEL_MIN_HEIGHT), maxHeight);
+  return {
+    width,
+    height,
+    left: Math.min(Math.max(frame.left || margin, margin), window.innerWidth - width - margin),
+    top: Math.min(Math.max(frame.top || margin, margin), window.innerHeight - height - margin),
+  };
+}
+
+function applyFtPanelLayout(panel, frame) {
+  if (!panel || !isFtDesktopLayout()) return;
+  const next = clampFtPanelLayout(frame);
+  panel.dataset.ftManualLayout = '1';
+  panel.style.left = `${next.left}px`;
+  panel.style.top = `${next.top}px`;
+  panel.style.width = `${next.width}px`;
+  panel.style.height = `${next.height}px`;
+  panel.style.right = 'auto';
+  panel.style.bottom = 'auto';
+}
+
+function saveFtPanelLayout(panel) {
+  if (!panel || !isFtDesktopLayout()) return;
+  const rect = panel.getBoundingClientRect();
+  localStorage.setItem(FT_PANEL_LAYOUT_KEY, JSON.stringify({
+    left: Math.round(rect.left),
+    top: Math.round(rect.top),
+    width: Math.round(rect.width),
+    height: Math.round(rect.height),
+  }));
+}
+
+function clearFtPanelLayout(panel) {
+  localStorage.removeItem(FT_PANEL_LAYOUT_KEY);
+  if (!panel) return;
+  delete panel.dataset.ftManualLayout;
+  panel.style.left = '';
+  panel.style.top = '';
+  panel.style.width = '';
+  panel.style.height = '';
+  panel.style.right = '';
+  panel.style.bottom = '';
+}
 
 async function ensureDriveMetaReady(username) {
   if (!username) return;
@@ -124,12 +197,16 @@ export function openFileTransferPanel() {
   const panel = document.getElementById('ft-panel');
   panel.removeAttribute('hidden');
 
+  const savedLayout = readFtPanelLayout();
+  if (savedLayout) {
+    applyFtPanelLayout(panel, savedLayout);
+  } else {
   // チャットパネルが開いているときは左横に動的配置
   const chatPanel = document.getElementById('chat-panel');
   if (chatPanel && chatPanel.classList.contains('open')) {
     const chatRect = chatPanel.getBoundingClientRect();
     const gap = 8;
-    const panelWidth = 340;
+    const panelWidth = FT_PANEL_DEFAULT_WIDTH;
     const leftEdge = chatRect.left - gap - panelWidth;
     if (leftEdge >= 8) {
       // 左に十分なスペースがある → チャットパネルの左横に配置（top基準）
@@ -137,12 +214,16 @@ export function openFileTransferPanel() {
       panel.style.left   = leftEdge + 'px';
       panel.style.top    = chatRect.top + 'px';
       panel.style.bottom = '';
+      panel.style.width  = `${panelWidth}px`;
+      panel.style.height = `${FT_PANEL_DEFAULT_HEIGHT}px`;
     } else {
       // スペース不足時はチャットパネルの下に配置（フォールバック）
       panel.style.right  = 'auto';
       panel.style.left   = Math.max(8, chatRect.left) + 'px';
       panel.style.top    = (chatRect.bottom + gap) + 'px';
       panel.style.bottom = '';
+      panel.style.width  = `${panelWidth}px`;
+      panel.style.height = `${FT_PANEL_DEFAULT_HEIGHT}px`;
     }
   } else {
     // チャットパネルが閉じている場合はデフォルト位置（CSS）
@@ -150,6 +231,9 @@ export function openFileTransferPanel() {
     panel.style.right  = '';
     panel.style.top    = '';
     panel.style.bottom = '';
+    panel.style.width  = '';
+    panel.style.height = '';
+  }
   }
 
   setTimeout(() => panel.classList.add('open'), 10);
@@ -176,6 +260,69 @@ export function closeFileTransferPanel() {
   setTimeout(() => panel.setAttribute('hidden', ''), 200);
   stopFtListener();
   stopDriveListeners();
+}
+
+export function initFileTransferPanelFrame() {
+  const panel = document.getElementById('ft-panel');
+  const header = panel?.querySelector('.ft-panel-header');
+  const resizeHandle = document.getElementById('ft-panel-resize');
+  const resetBtn = document.getElementById('ft-panel-reset');
+  if (!panel || !header || !resizeHandle) return;
+
+  let mode = null;
+  let startX = 0;
+  let startY = 0;
+  let startFrame = null;
+
+  const start = (nextMode, event) => {
+    if (!isFtDesktopLayout()) return;
+    if (event.target.closest('button, input, textarea, select, a')) return;
+    const rect = panel.getBoundingClientRect();
+    mode = nextMode;
+    startX = event.clientX;
+    startY = event.clientY;
+    startFrame = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    panel.classList.add('ft-panel-adjusting');
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = nextMode === 'move' ? 'grabbing' : 'nwse-resize';
+    event.preventDefault();
+  };
+
+  const move = (event) => {
+    if (!mode || !startFrame) return;
+    const dx = event.clientX - startX;
+    const dy = event.clientY - startY;
+    const next = mode === 'move'
+      ? { ...startFrame, left: startFrame.left + dx, top: startFrame.top + dy }
+      : { ...startFrame, width: startFrame.width + dx, height: startFrame.height + dy };
+    applyFtPanelLayout(panel, next);
+  };
+
+  const end = () => {
+    if (!mode) return;
+    saveFtPanelLayout(panel);
+    mode = null;
+    startFrame = null;
+    panel.classList.remove('ft-panel-adjusting');
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  };
+
+  header.addEventListener('pointerdown', event => start('move', event));
+  resizeHandle.addEventListener('pointerdown', event => start('resize', event));
+  document.addEventListener('pointermove', move);
+  document.addEventListener('pointerup', end);
+  window.addEventListener('resize', () => {
+    if (!state._ftPanelOpen || !isFtDesktopLayout()) return;
+    const saved = readFtPanelLayout();
+    if (saved) {
+      applyFtPanelLayout(panel, saved);
+      saveFtPanelLayout(panel);
+    }
+  });
+  resetBtn?.addEventListener('click', () => {
+    clearFtPanelLayout(panel);
+  });
 }
 
 // ===== チャット内ファイル転送ボタンの状態更新 =====

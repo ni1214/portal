@@ -54,6 +54,7 @@ import {
 
 import {
   deps as ftDeps,
+  initFileTransferPanelFrame,
   openFileTransferPanel, closeFileTransferPanel,
   updateFtBadge, renderFtPanel,
   startFtListener, stopFtListener,
@@ -3554,6 +3555,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ===== ファイル転送 =====
+  initFileTransferPanelFrame();
   document.getElementById('ft-fab').addEventListener('click', () => {
     state._ftPanelOpen ? closeFileTransferPanel() : openFileTransferPanel();
   });

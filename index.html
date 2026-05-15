@@ -419,18 +419,26 @@
   <!-- ==================== ファイル転送パネル ==================== -->
   <div id="ft-panel" class="ft-panel" hidden>
     <div class="ft-panel-header">
-      <span><i class="fa-solid fa-file-arrow-up"></i> ファイル転送</span>
-      <button class="ft-panel-close" id="ft-panel-close" title="閉じる">
-        <i class="material-symbols-rounded" aria-hidden="true">close</i>
-      </button>
+      <div class="ft-panel-title">
+        <span><i class="fa-solid fa-file-arrow-up"></i> ファイル転送</span>
+        <small>社内P2P / 社外クラウド</small>
+      </div>
+      <div class="ft-panel-window-actions">
+        <button class="ft-panel-tool" id="ft-panel-reset" title="位置とサイズを戻す">
+          <i class="material-symbols-rounded" aria-hidden="true">restart_alt</i>
+        </button>
+        <button class="ft-panel-close" id="ft-panel-close" title="閉じる">
+          <i class="material-symbols-rounded" aria-hidden="true">close</i>
+        </button>
+      </div>
     </div>
     <!-- P2P / Drive タブ -->
     <div class="ft-tabs">
       <button class="ft-tab active" data-tab="p2p" id="ft-tab-p2p">
-        <i class="fa-solid fa-wifi"></i> P2P転送
+        <i class="fa-solid fa-wifi"></i> 社内P2P
       </button>
       <button class="ft-tab" data-tab="drive" id="ft-tab-drive">
-        <i class="fa-brands fa-google-drive"></i> Drive共有
+        <i class="fa-solid fa-cloud-arrow-up"></i> 社外クラウド
         <span class="ft-tab-badge" id="ft-drive-tab-badge" hidden></span>
       </button>
     </div>
@@ -445,20 +453,20 @@
             <i class="fa-solid fa-wifi ft-how-icon"></i>
             <div class="ft-how-content">
               <div class="ft-how-header">
-                <span><b>P2P転送</b> — ブラウザ同士で直接やり取り</span>
+                <span><b>社内P2P転送</b> — 相手がオンラインの時に直接渡す</span>
                 <button class="ft-how-toggle" id="ft-p2p-desc-toggle" title="説明を折りたたむ">
                   <i class="fa-solid fa-chevron-up"></i>
                 </button>
               </div>
               <div class="ft-how-body" id="ft-p2p-desc-body">
-                <span class="ft-how-merit">✅ サーバーを経由しない・比較的大きいファイルも可</span><br>
-                <span class="ft-how-demerit">⚠ 送受信者が同時オンライン・同一ネットワーク推奨</span><br>
-                <span class="ft-how-best">→ 今すぐ相手に直接渡したいときに向いています</span>
+                <span class="ft-how-merit">社内・近くの相手へ、サーバー保存なしで送信</span><br>
+                <span class="ft-how-demerit">送る人と受け取る人が同時にポータルを開いている必要があります</span><br>
+                <span class="ft-how-best">今すぐ相手へ渡すファイルに向いています</span>
               </div>
             </div>
           </div>
           <button class="btn-ft-new" id="ft-new-btn">
-            <i class="fa-solid fa-plus"></i> ファイルを送る
+            <i class="fa-solid fa-paper-plane"></i> 社内P2Pで送る
           </button>
           <div class="ft-section-title" id="ft-incoming-title" hidden>受信待ち</div>
           <div id="ft-incoming-list"></div>
@@ -470,25 +478,25 @@
         <div id="ft-drive-area" hidden>
           <!-- 説明（折りたたみ可） -->
           <div class="ft-how-it-works ft-how-drive" id="ft-drive-desc">
-            <i class="fa-brands fa-google-drive ft-how-icon" style="color:#34a853"></i>
+            <i class="fa-solid fa-cloud-arrow-up ft-how-icon"></i>
             <div class="ft-how-content">
               <div class="ft-how-header">
-              <span><b>Drive共有</b> — DriveフォルダのURLをお互いに共有</span>
+              <span><b>社外クラウド転送</b> — Driveフォルダで受け渡し</span>
                 <button class="ft-how-toggle" id="ft-drive-desc-toggle" title="説明を折りたたむ">
                   <i class="fa-solid fa-chevron-up"></i>
                 </button>
               </div>
               <div class="ft-how-body" id="ft-drive-desc-body">
-                <span class="ft-how-merit">✅ ネットワーク不問・サイズ制限なし・相手がオフラインでもOK</span><br>
-                <span class="ft-how-demerit">⚠ Driveフォルダを「リンクを知っている全員が編集可」に要設定</span><br>
-                <span class="ft-how-best">→ お互いのリンクを交換して相手のフォルダを直接開けます</span>
+                <span class="ft-how-merit">社外・別ネットワーク・相手がオフラインでも使いやすい方式</span><br>
+                <span class="ft-how-demerit">共有フォルダは必要な相手だけが編集できる設定にしてください</span><br>
+                <span class="ft-how-best">リンクを送って、相手にクラウドへ入れてもらう用途に向いています</span>
               </div>
             </div>
           </div>
           <!-- 自分のDriveリンク入力＆共有ウィジェット -->
           <div class="ft-my-link-widget">
             <div class="ft-my-link-label">
-              <i class="fa-solid fa-user"></i> 自分の共有フォルダリンク
+              <i class="fa-solid fa-cloud"></i> 社外共有フォルダリンク
             </div>
             <div class="ft-my-link-row">
               <input type="url" id="ft-my-link-input" class="ft-my-link-input" placeholder="DriveフォルダURLを貼り付け…">
@@ -500,7 +508,7 @@
               </button>
             </div>
             <button class="btn-ft-drive-share" id="ft-drive-send-btn" disabled>
-              <i class="fa-brands fa-google-drive"></i> Driveリンクを共有する
+              <i class="fa-solid fa-share-nodes"></i> クラウドリンクを相手に送る
             </button>
           </div>
           <!-- 登録済み連絡先（相手のフォルダを開く） -->
@@ -513,6 +521,7 @@
         </div>
       </div>
     </div>
+    <div class="ft-panel-resize" id="ft-panel-resize" title="ドラッグしてサイズを変更"></div>
   </div>
 
   <!-- ==================== Drive リンク共有モーダル ==================== -->

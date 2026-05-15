@@ -58,7 +58,7 @@ export function initChatResize() {
     panel.style.height = newH + 'px';
     // ft-panel がチャット横配置中なら追従させる
     const ftPanel = document.getElementById('ft-panel');
-    if (ftPanel && ftPanel.style.left) {
+    if (ftPanel && ftPanel.style.left && !ftPanel.dataset.ftManualLayout) {
       const chatRect = panel.getBoundingClientRect();
       const gap = 8;
       const ftWidth = 340;
@@ -124,7 +124,7 @@ export function closeChatPanel() {
   setTimeout(() => panel.setAttribute('hidden', ''), 280);
   // ft-panel がチャット横に配置されていた場合は位置リセット
   const ftPanel = document.getElementById('ft-panel');
-  if (ftPanel && (ftPanel.style.left || ftPanel.style.bottom)) {
+  if (ftPanel && !ftPanel.dataset.ftManualLayout && (ftPanel.style.left || ftPanel.style.bottom)) {
     ftPanel.style.left   = '';
     ftPanel.style.right  = '';
     ftPanel.style.bottom = '';

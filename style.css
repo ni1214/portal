@@ -10066,9 +10066,9 @@ html.font-xl { font-size: 21px; }
  ===========================*/
 @media (min-width: 769px) {
   .ft-panel {
-    left: calc(var(--sidebar-width) + 16px) !important;
-    right: auto !important;
-    bottom: 24px !important;
+    left: calc(var(--sidebar-width) + 16px);
+    right: auto;
+    bottom: 24px;
   }
 
   .settings-panel {
@@ -23784,5 +23784,281 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
   #task-modal #new-task-submit {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* ===== file-transfer.js: draggable transfer panel refresh ===== */
+.ft-panel {
+  width: min(420px, calc(100vw - 32px));
+  height: min(560px, calc(100dvh - 88px));
+  max-height: none;
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: 0 20px 60px var(--shadow-ink-strong);
+  resize: none;
+}
+
+.ft-panel.ft-panel-adjusting {
+  transition: none;
+}
+
+.ft-panel-header {
+  min-height: 58px;
+  cursor: grab;
+  gap: 12px;
+  background: linear-gradient(180deg, rgba(var(--accent-blue-rgb-legacy), 0.08), transparent);
+}
+
+.ft-panel-header:active {
+  cursor: grabbing;
+}
+
+.ft-panel-title {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ft-panel-title > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ft-panel-title small {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.ft-panel-window-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ft-panel-tool,
+.ft-panel-close {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  cursor: pointer;
+  color: var(--text-muted);
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 999px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.ft-panel-tool:hover,
+.ft-panel-close:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-glass-hover);
+  color: var(--text-primary);
+}
+
+.ft-panel-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 28px;
+  height: 28px;
+  cursor: nwse-resize;
+  z-index: 4;
+  opacity: 0.45;
+  transition: opacity 0.15s;
+}
+
+.ft-panel-resize:hover {
+  opacity: 1;
+}
+
+.ft-panel-resize::after {
+  content: '';
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  width: 11px;
+  height: 11px;
+  border-right: 2px solid var(--text-secondary);
+  border-bottom: 2px solid var(--text-secondary);
+  border-radius: 0 0 4px 0;
+}
+
+.ft-tabs {
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-glass);
+  background: var(--bg-secondary);
+}
+
+.ft-tab {
+  min-height: 40px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  background: var(--bg-glass);
+  border-bottom: 1px solid var(--border-glass);
+  font-size: 0.8rem;
+}
+
+.ft-tab.active {
+  color: var(--text-primary);
+  border-color: rgba(var(--state-success-rgb), 0.4);
+  background: rgba(var(--state-success-rgb), 0.12);
+}
+
+.ft-panel-body {
+  padding: 12px;
+  gap: 12px;
+}
+
+.ft-how-it-works {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+}
+
+.ft-how-drive {
+  background: rgba(var(--brand-drive-green-rgb), 0.08);
+}
+
+.ft-how-drive .ft-how-icon {
+  color: var(--brand-drive-green);
+}
+
+.ft-how-header span {
+  min-width: 0;
+}
+
+.ft-how-body {
+  max-height: 96px;
+}
+
+.ft-how-merit,
+.ft-how-demerit,
+.ft-how-best {
+  display: inline-block;
+  line-height: 1.45;
+}
+
+.btn-ft-new,
+.btn-ft-drive-share {
+  min-height: 44px;
+  border-radius: var(--radius-md);
+}
+
+.ft-my-link-widget,
+.ft-drive-item,
+.ft-contact-item,
+.ft-item {
+  border-radius: var(--radius-md);
+}
+
+.ft-my-link-input {
+  min-height: 38px;
+  font-size: 0.78rem;
+}
+
+.ft-my-link-icon-btn {
+  min-width: 38px;
+  min-height: 38px;
+}
+
+@media (max-width: 768px) {
+  .ft-panel {
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 60px !important;
+    width: 100% !important;
+    height: min(82dvh, calc(100dvh - 72px)) !important;
+    max-height: min(82dvh, calc(100dvh - 72px)) !important;
+    border-radius: 20px 20px 0 0 !important;
+  }
+
+  .ft-panel-header {
+    cursor: default;
+    min-height: 62px;
+    padding: 10px 14px;
+  }
+
+  .ft-panel-header:active {
+    cursor: default;
+  }
+
+  .ft-panel-tool,
+  .ft-panel-resize {
+    display: none !important;
+  }
+
+  .ft-panel-close {
+    width: 40px;
+    height: 40px;
+  }
+
+  .ft-tabs {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .ft-tab {
+    min-height: 46px;
+    font-size: 0.78rem;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .ft-panel-body {
+    padding: 12px 12px calc(16px + env(safe-area-inset-bottom));
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ft-how-it-works {
+    padding: 12px;
+    gap: 9px;
+  }
+
+  .ft-how-header {
+    align-items: flex-start;
+  }
+
+  .ft-how-body {
+    max-height: 130px;
+  }
+
+  .btn-ft-new,
+  .btn-ft-drive-share,
+  .btn-ft-drive-open,
+  .btn-ft-accept,
+  .btn-ft-download {
+    min-height: 44px;
+  }
+
+  .ft-my-link-row,
+  .ft-drive-item-actions,
+  .ft-item-actions {
+    gap: 8px;
+  }
+
+  .ft-contact-item {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .ft-contact-name {
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+  }
+
+  .btn-ft-contact-send,
+  .btn-ft-contact-del {
+    min-height: 38px;
   }
 }
