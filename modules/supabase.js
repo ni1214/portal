@@ -70,6 +70,10 @@ function buildFilterValue(value) {
   return `"${raw.replace(/"/g, '""')}"`;
 }
 
+function encodeEqFilterValue(value) {
+  return encodeURIComponent(`${value ?? ''}`);
+}
+
 function encodeInFilter(ids = []) {
   return `(${ids.map(buildFilterValue).join(',')})`;
 }
@@ -435,7 +439,7 @@ function mapTodoRow(row = {}) {
 // --- プライベートセクション ---
 
 export async function fetchPrivateSectionsFromSupabase(username) {
-  const encoded = encodeURIComponent(buildFilterValue(username));
+  const encoded = encodeEqFilterValue(username);
   const rows = await requestSupabase(
     `private_sections?username=eq.${encoded}&select=id,label,icon,color_index,order_index&order=order_index.asc`,
     {
@@ -485,7 +489,7 @@ export async function deletePrivateSectionInSupabase(id) {
 // --- プライベートカード ---
 
 export async function fetchPrivateCardsFromSupabase(username) {
-  const encoded = encodeURIComponent(buildFilterValue(username));
+  const encoded = encodeEqFilterValue(username);
   const rows = await requestSupabase(
     `private_cards?username=eq.${encoded}&select=id,label,icon,url,section_id,parent_id,order_index&order=order_index.asc`,
     {
@@ -539,7 +543,7 @@ export async function deletePrivateCardInSupabase(id) {
 // --- 個人TODO ---
 
 export async function fetchUserTodosFromSupabase(username) {
-  const encoded = encodeURIComponent(buildFilterValue(username));
+  const encoded = encodeEqFilterValue(username);
   const rows = await requestSupabase(
     `user_todos?username=eq.${encoded}&select=id,text,done,due_date&order=created_at.asc`,
     {
@@ -646,7 +650,7 @@ function mapPreferencesRow(row = {}) {
 }
 
 export async function fetchUserPreferencesFromSupabase(username) {
-  const encoded = encodeURIComponent(buildFilterValue(username));
+  const encoded = encodeEqFilterValue(username);
   const rows = await requestSupabase(
     `user_preferences?username=eq.${encoded}&select=theme,font_size,fav_only,favorites,collapsed_sections,collapse_seeded,hidden_cards,mission_banner_hidden,last_viewed_suggestions_at&limit=1`,
     {

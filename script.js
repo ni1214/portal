@@ -858,7 +858,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
       // Supabase モード: 個人データを並行取得
       const [sbOrder, sbPrefs, sbSections, sbCards] = await Promise.all([
         fetchSectionOrderFromSupabase(username).catch(err => { console.warn('sectionOrder fallback:', err); return null; }),
-        fetchUserPreferencesFromSupabase(username).catch(err => { console.warn('prefs fallback:', err); return null; }),
+        fetchUserPreferencesFromSupabase(username).catch(err => { console.warn('prefs fallback:', err); return undefined; }),
         fetchPrivateSectionsFromSupabase(username).catch(err => { console.warn('privSections fallback:', err); return null; }),
         fetchPrivateCardsFromSupabase(username).catch(err => { console.warn('privCards fallback:', err); return null; }),
       ]);
@@ -879,7 +879,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
         if (sbPrefs.lastViewedSuggestionsAt) {
           state.lastViewedSuggestionsAt = sbPrefs.lastViewedSuggestionsAt;
         }
-      } else {
+      } else if (sbPrefs === null) {
         state.personalFavorites = [];
         state.favoritesOnlyMode = false;
         savePreferencesToFirestore();
