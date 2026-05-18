@@ -2484,7 +2484,9 @@ function openCardModal(docId, categoryId = null, isPrivate = false, privateSecti
     : null;
   const isSVG = card?.icon?.startsWith('svg:');
 
-  document.getElementById('card-modal-title').textContent = docId ? 'カードを編集' : 'カードを追加';
+  document.getElementById('card-modal-title').textContent = docId
+    ? 'カードを編集'
+    : (parentId ? '子アイコンを追加' : 'カードを追加');
   document.getElementById('card-delete').style.display = docId ? 'inline-flex' : 'none';
   document.getElementById('edit-icon-group').style.display = '';
   document.getElementById('icon-picker').style.display = isSVG ? 'none' : '';

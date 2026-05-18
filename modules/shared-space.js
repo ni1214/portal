@@ -462,19 +462,44 @@ function buildSharedLinkAppTile(card, allCategoryCards, cat, options = {}) {
   `;
   tile.appendChild(link);
 
-  const favoriteButton = document.createElement('button');
-  favoriteButton.type = 'button';
-  favoriteButton.className = `shared-link-app-favorite btn-favorite${isFavorite ? ' active' : ''}`;
-  favoriteButton.dataset.id = card.id || '';
-  favoriteButton.title = favoriteLabel;
-  favoriteButton.setAttribute('aria-label', favoriteLabel);
-  favoriteButton.innerHTML = `<i class="fa-${isFavorite ? 'solid' : 'regular'} fa-star" aria-hidden="true"></i>`;
-  favoriteButton.addEventListener('click', event => {
-    event.preventDefault();
-    event.stopPropagation();
-    deps.toggleFavorite?.(card.id);
-  });
-  if (card.id) tile.appendChild(favoriteButton);
+  if (card.id) {
+    const actionRow = document.createElement('div');
+    actionRow.className = 'shared-link-app-actions';
+
+    const favoriteButton = document.createElement('button');
+    favoriteButton.type = 'button';
+    favoriteButton.className = `shared-link-app-favorite${isFavorite ? ' active' : ''}`;
+    favoriteButton.dataset.id = card.id || '';
+    favoriteButton.title = favoriteLabel;
+    favoriteButton.setAttribute('aria-label', favoriteLabel);
+    favoriteButton.innerHTML = `
+      <i class="fa-${isFavorite ? 'solid' : 'regular'} fa-star" aria-hidden="true"></i>
+      <span>${isFavorite ? '登録済み' : 'お気に入り'}</span>
+    `;
+    favoriteButton.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      deps.toggleFavorite?.(card.id);
+    });
+    actionRow.appendChild(favoriteButton);
+
+    if (state.isEditMode) {
+      const childAddButton = document.createElement('button');
+      childAddButton.type = 'button';
+      childAddButton.className = 'shared-link-app-child-add';
+      childAddButton.title = '子アイコンを追加';
+      childAddButton.setAttribute('aria-label', '子アイコンを追加');
+      childAddButton.innerHTML = '<i class="fa-solid fa-sitemap" aria-hidden="true"></i><span>子追加</span>';
+      childAddButton.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        deps.openCardModal?.(null, cat?.id || null, false, null, card.id);
+      });
+      actionRow.appendChild(childAddButton);
+    }
+
+    tile.appendChild(actionRow);
+  }
 
   if (state.isEditMode && card.id) {
     const editButton = document.createElement('button');
@@ -704,7 +729,7 @@ export function renderSharedLinksBrowser() {
       hint.className = 'shared-links-favorite-hint';
       hint.innerHTML = `
         <i class="material-symbols-rounded" aria-hidden="true">star</i>
-        <span>外部ツールはアイコン左上の星で、自分専用のお気に入りに保存できます。</span>
+        <span>各アイコン下の「お気に入り」で保存、「子追加」で関連アイコンを作成できます。</span>
       `;
       body.appendChild(hint);
     }

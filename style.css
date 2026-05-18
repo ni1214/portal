@@ -13877,6 +13877,8 @@ html.font-xl { font-size: 21px; }
 
 .shared-link-section-favorite:hover,
 .shared-link-section-edit:hover,
+.shared-link-app-favorite:hover,
+.shared-link-app-child-add:hover,
 .shared-link-app-edit:hover,
 .shared-link-app-children-toggle:hover {
   background: var(--bg-card-hover);
@@ -13898,7 +13900,7 @@ html.font-xl { font-size: 21px; }
 .shared-link-app-link,
 .shared-link-add-tile {
   width: 100%;
-  min-height: 112px;
+  min-height: 108px;
   display: grid;
   grid-template-rows: auto auto auto;
   justify-items: center;
@@ -13975,7 +13977,6 @@ html.font-xl { font-size: 21px; }
   text-overflow: ellipsis;
 }
 
-.shared-link-app-favorite,
 .shared-link-app-edit,
 .shared-link-app-children-toggle {
   position: absolute;
@@ -13992,9 +13993,45 @@ html.font-xl { font-size: 21px; }
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
 }
 
-.shared-link-app-favorite {
-  top: -6px;
-  left: -6px;
+.shared-link-app-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.shared-link-app-favorite,
+.shared-link-app-child-add {
+  min-width: 0;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 6px;
+  border: 1px solid var(--border-glass);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-primary) 86%, transparent);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.shared-link-app-favorite i,
+.shared-link-app-child-add i {
+  font-size: 0.78rem;
+  flex: 0 0 auto;
+}
+
+.shared-link-app-favorite span,
+.shared-link-app-child-add span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .shared-link-app-edit {
@@ -14214,7 +14251,7 @@ html.font-xl { font-size: 21px; }
 
   .shared-link-app-link,
   .shared-link-add-tile {
-    min-height: 104px;
+    min-height: 102px;
     padding-inline: 6px;
   }
 
@@ -14231,6 +14268,24 @@ html.font-xl { font-size: 21px; }
 
   .shared-link-app-meta {
     display: none;
+  }
+
+  .shared-link-app-actions {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .shared-link-app-favorite,
+  .shared-link-app-child-add {
+    min-height: 24px;
+    padding: 0 6px;
+    font-size: 0.62rem;
+    gap: 4px;
+  }
+
+  .shared-link-app-favorite i,
+  .shared-link-app-child-add i {
+    font-size: 0.68rem;
   }
 }
 
