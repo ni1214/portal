@@ -600,8 +600,9 @@ initTodayDashboard({
   openFavoriteCategory: async categoryId => {
     await openFavoriteSharedLinksModal(categoryId || '');
   },
-  toggleFavoriteCategory: categoryId => {
-    toggleSectionFavorite(categoryId || '', false);
+  ensureSharedCardsLoaded,
+  toggleFavoriteCard: cardId => {
+    toggleFavorite(cardId || '');
   },
   reorderFavoriteLinks,
   openInviteCode: async () => {
