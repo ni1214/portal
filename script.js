@@ -560,6 +560,7 @@ initTodayDashboard({
   openSharedLinks: async () => {
     state.sharedLinksCategory = 'all';
     state.sharedLinksFavoritesOnlyCategory = '';
+    state.sharedLinksQuery = '';
     await openSharedLinksModal();
   },
   focusSearch: () => {
@@ -612,6 +613,11 @@ initReadDiagnostics();
 Object.assign(sharedSpaceDeps, {
   ensureSharedCardsLoaded,
   buildSection,
+  toggleFavorite,
+  toggleSectionFavorite,
+  openCardModal,
+  openServicePicker,
+  showContextMenu,
   openCategoryModal,
   normalizeForSearch,
   focusNoticeBoard: focusNoticeBoardFromDashboard,
@@ -3269,6 +3275,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('header-shared-btn').addEventListener('click', () => {
     state.sharedLinksCategory = 'all';
     state.sharedLinksFavoritesOnlyCategory = '';
+    state.sharedLinksQuery = '';
     void openSharedLinksModal();
   });
   document.getElementById('header-dashboard-btn').addEventListener('click', () => {
@@ -3314,6 +3321,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-shared-links').addEventListener('click', () => {
     state.sharedLinksCategory = 'all';
     state.sharedLinksFavoritesOnlyCategory = '';
+    state.sharedLinksQuery = '';
     void openSharedLinksModal();
   });
   false && document.getElementById('btn-my-category').addEventListener('click', () => {

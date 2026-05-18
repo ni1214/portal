@@ -1,5 +1,7 @@
 import { state } from './state.js';
 import { esc } from './utils.js';
+import { CATEGORY_COLORS, SVG_ICONS } from './config.js';
+import { getBrandIconHtmlForCard, shouldPreferBrandIcon } from './brand-icons.js';
 
 export let deps = {};
 
@@ -122,6 +124,7 @@ export function renderSharedHome() {
       if (action === 'links') {
         state.sharedLinksCategory = category || 'all';
         state.sharedLinksFavoritesOnlyCategory = '';
+        state.sharedLinksQuery = '';
       }
       void handleSharedHomeAction(action);
     });
@@ -367,7 +370,238 @@ function collectSharedLinkSearchCards(cards, queryText) {
   if (!queryText) return cards;
   const normalizedQuery = normalizeSearch(queryText);
   if (!normalizedQuery) return cards;
-  return cards.filter(card => normalizeSearch(card.label).includes(normalizedQuery));
+  return cards.filter(card => {
+    const haystack = [
+      card.label,
+      card.url,
+      card.icon,
+    ].map(value => normalizeSearch(value)).join(' ');
+    return haystack.includes(normalizedQuery);
+  });
+}
+
+function getSharedLinkCategoryTone(cat) {
+  if (cat?.isExternal) return 'linear-gradient(135deg, #6c5ce7, #a29bfe)';
+  const color = CATEGORY_COLORS.find(item => item.index === cat?.colorIndex);
+  return color ? color.gradient : CATEGORY_COLORS[0].gradient;
+}
+
+function getSharedLinkHost(card) {
+  const rawUrl = `${card?.url || ''}`.trim();
+  if (!rawUrl || rawUrl === '#' || rawUrl === 'solar:open') return '';
+  try {
+    return new URL(rawUrl, window.location.href).host || '';
+  } catch (_) {
+    return rawUrl.replace(/^https?:\/\//i, '').split('/')[0] || '';
+  }
+}
+
+function hasUsableUrl(card) {
+  const rawUrl = `${card?.url || ''}`.trim();
+  return rawUrl === 'solar:open' || (!!rawUrl && rawUrl !== '#');
+}
+
+function renderSharedLinkCardIcon(card, tone = '') {
+  if (shouldPreferBrandIcon(card)) {
+    const brandIcon = getBrandIconHtmlForCard(card, 'shared-link-app-brand');
+    if (brandIcon) return brandIcon;
+  }
+
+  if (card?.icon && card.icon.startsWith('svg:')) {
+    return SVG_ICONS[card.icon] || renderHomeIcon('link');
+  }
+
+  const icon = card?.url === 'solar:open'
+    ? 'fa-solid fa-solar-panel'
+    : (card?.icon || 'fa-solid fa-link');
+  const style = tone && !icon.startsWith('fa-brands') ? ` style="color: transparent; background: ${tone}; -webkit-background-clip: text; background-clip: text;"` : '';
+  return `<i class="${esc(icon)}"${style} aria-hidden="true"></i>`;
+}
+
+function buildSharedLinkAppTile(card, allCategoryCards, cat, options = {}) {
+  const tile = document.createElement('div');
+  tile.className = 'shared-link-app-tile' + (options.isChild ? ' shared-link-app-tile--child' : '');
+  tile.dataset.docId = card.id || '';
+
+  const children = allCategoryCards
+    .filter(child => child.parentId === card.id && !state.hiddenCards.includes(child.id))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const urlReady = hasUsableUrl(card);
+  const tone = getSharedLinkCategoryTone(cat);
+  const isFavorite = Array.isArray(state.personalFavorites) && state.personalFavorites.includes(card.id);
+  const favoriteLabel = isFavorite ? 'お気に入り解除' : 'お気に入りに追加';
+  const host = getSharedLinkHost(card);
+  const meta = card.url === 'solar:open'
+    ? '天気パネル'
+    : (host || (urlReady ? '共有リンク' : 'URL未設定'));
+
+  const link = document.createElement('a');
+  link.className = 'shared-link-app-link' + (!urlReady ? ' shared-link-app-link--empty' : '');
+  link.title = card.label || '共有リンク';
+  if (card.url === 'solar:open') {
+    link.href = '#';
+    link.dataset.solarOpen = '1';
+  } else if (urlReady) {
+    link.href = card.url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+  } else {
+    link.href = '#';
+    link.addEventListener('click', event => {
+      event.preventDefault();
+      if (state.isEditMode && typeof deps.openCardModal === 'function') {
+        deps.openCardModal(card.id);
+      }
+    });
+  }
+
+  link.innerHTML = `
+    <span class="shared-link-app-icon">${renderSharedLinkCardIcon(card, tone)}</span>
+    <span class="shared-link-app-label">${esc(card.label || '共有リンク')}</span>
+    <span class="shared-link-app-meta">${esc(meta)}</span>
+  `;
+  tile.appendChild(link);
+
+  const favoriteButton = document.createElement('button');
+  favoriteButton.type = 'button';
+  favoriteButton.className = `shared-link-app-favorite btn-favorite${isFavorite ? ' active' : ''}`;
+  favoriteButton.dataset.id = card.id || '';
+  favoriteButton.title = favoriteLabel;
+  favoriteButton.setAttribute('aria-label', favoriteLabel);
+  favoriteButton.innerHTML = `<i class="fa-${isFavorite ? 'solid' : 'regular'} fa-star" aria-hidden="true"></i>`;
+  favoriteButton.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    deps.toggleFavorite?.(card.id);
+  });
+  if (card.id) tile.appendChild(favoriteButton);
+
+  if (state.isEditMode && card.id) {
+    const editButton = document.createElement('button');
+    editButton.type = 'button';
+    editButton.className = 'shared-link-app-edit';
+    editButton.title = '編集';
+    editButton.setAttribute('aria-label', '編集');
+    editButton.innerHTML = '<i class="fa-solid fa-pen" aria-hidden="true"></i>';
+    editButton.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      deps.openCardModal?.(card.id);
+    });
+    tile.appendChild(editButton);
+  }
+
+  if (children.length > 0 && !options.isChild) {
+    const childButton = document.createElement('button');
+    childButton.type = 'button';
+    childButton.className = 'shared-link-app-children-toggle';
+    childButton.title = '関連リンクを表示';
+    childButton.innerHTML = `<i class="fa-solid fa-layer-group" aria-hidden="true"></i><span>${children.length}</span>`;
+    childButton.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      tile.classList.toggle('expanded');
+    });
+    tile.appendChild(childButton);
+
+    const tray = document.createElement('div');
+    tray.className = 'shared-link-children-tray';
+    children.forEach(child => {
+      tray.appendChild(buildSharedLinkAppTile(child, allCategoryCards, cat, { isChild: true }));
+    });
+    if (state.isEditMode) {
+      tray.appendChild(buildSharedLinkAddTile(cat, card.id, true));
+    }
+    tile.appendChild(tray);
+  }
+
+  tile.addEventListener('contextmenu', event => {
+    if (typeof deps.showContextMenu !== 'function' || !card.id) return;
+    event.preventDefault();
+    deps.showContextMenu(event, card);
+  });
+
+  return tile;
+}
+
+function buildSharedLinkAddTile(cat, parentId = null, compact = false) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'shared-link-add-tile' + (compact ? ' shared-link-add-tile--compact' : '');
+  button.innerHTML = `
+    <span class="shared-link-add-icon">${renderHomeIcon('add')}</span>
+    <span>${compact ? '追加' : 'リンク追加'}</span>
+  `;
+  button.addEventListener('click', () => {
+    if (cat?.isExternal && !parentId && typeof deps.openServicePicker === 'function') {
+      deps.openServicePicker();
+      return;
+    }
+    deps.openCardModal?.(null, cat?.id || null, false, null, parentId);
+  });
+  return button;
+}
+
+function buildSharedLinkAppSection(cat, cards, allCategoryCards, options = {}) {
+  const section = document.createElement('section');
+  section.className = 'shared-link-app-section';
+  section.dataset.categoryId = cat.id || '';
+
+  const tone = getSharedLinkCategoryTone(cat);
+  const favoriteIds = Array.isArray(state.personalFavorites) ? state.personalFavorites : [];
+  const sectionCardsForFavorite = allCategoryCards.filter(card => card.id);
+  const allFavorited = sectionCardsForFavorite.length > 0 && sectionCardsForFavorite.every(card => favoriteIds.includes(card.id));
+  const visibleCards = options.searchMode ? cards : cards.filter(card => !card.parentId);
+
+  section.innerHTML = `
+    <header class="shared-link-app-section-head">
+      <div class="shared-link-app-section-title">
+        <span class="shared-link-app-section-icon" style="--shared-link-tone:${esc(tone)}">${renderHomeIcon(cat.icon || 'folder')}</span>
+        <span>
+          <strong>${esc(cat.label || '共有リンク')}</strong>
+          <small>${cards.length}件${allCategoryCards.length !== cards.length ? ` / 全${allCategoryCards.length}件` : ''}</small>
+        </span>
+      </div>
+      <div class="shared-link-app-section-actions">
+        <button type="button" class="shared-link-section-favorite${allFavorited ? ' active' : ''}" title="${allFavorited ? 'カテゴリのお気に入りを解除' : 'カテゴリをまとめてお気に入り'}" aria-label="${allFavorited ? 'カテゴリのお気に入りを解除' : 'カテゴリをまとめてお気に入り'}">
+          <i class="fa-${allFavorited ? 'solid' : 'regular'} fa-star" aria-hidden="true"></i>
+        </button>
+        ${state.isEditMode ? `
+          <button type="button" class="shared-link-section-edit" title="カテゴリ編集" aria-label="カテゴリ編集">
+            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+          </button>
+        ` : ''}
+      </div>
+    </header>
+    <div class="shared-link-app-grid"></div>
+  `;
+
+  section.querySelector('.shared-link-section-favorite')?.addEventListener('click', event => {
+    event.preventDefault();
+    deps.toggleSectionFavorite?.(cat.id, false);
+  });
+  section.querySelector('.shared-link-section-edit')?.addEventListener('click', event => {
+    event.preventDefault();
+    const catObj = (state.allCategories || []).find(item => item.docId === cat.docId || item.id === cat.id) || cat;
+    deps.openCategoryModal?.(catObj);
+  });
+
+  const grid = section.querySelector('.shared-link-app-grid');
+  if (visibleCards.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'shared-link-app-empty';
+    empty.textContent = options.searchMode ? 'このカテゴリには一致するリンクがありません。' : 'まだリンクがありません。';
+    grid.appendChild(empty);
+  } else {
+    visibleCards.forEach(card => {
+      grid.appendChild(buildSharedLinkAppTile(card, allCategoryCards, cat));
+    });
+  }
+  if (state.isEditMode && !options.searchMode) {
+    grid.appendChild(buildSharedLinkAddTile(cat));
+  }
+
+  return section;
 }
 
 export function renderSharedLinksBrowser() {
@@ -419,7 +653,8 @@ export function renderSharedLinksBrowser() {
   const favoriteOnlyCategory = state.sharedLinksFavoritesOnlyCategory || '';
   const favoriteIds = new Set(Array.isArray(state.personalFavorites) ? state.personalFavorites : []);
   const publicCategories = getPublicCategories();
-  const cards = Array.isArray(state.allCards) ? state.allCards : [];
+  const cards = (Array.isArray(state.allCards) ? state.allCards : [])
+    .filter(card => !state.hiddenCards.includes(card.id));
   const sections = [];
 
   publicCategories.forEach(cat => {
@@ -432,10 +667,9 @@ export function renderSharedLinksBrowser() {
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
     if (queryText && catCards.length === 0) return;
-    const section = deps.buildSection?.(cat, catCards, {
+    const section = buildSharedLinkAppSection(cat, catCards, sourceCards, {
       searchMode: !!queryText,
       queryText,
-      allCategoryCards: sourceCards,
     });
     if (section) sections.push(section);
   });
@@ -465,7 +699,7 @@ export function renderSharedLinksBrowser() {
       `;
       body.appendChild(hint);
     }
-    if (categoryFilter === 'external' || sections.some(section => section.classList?.contains('external-tools'))) {
+    if (categoryFilter === 'external' || sections.some(section => section.dataset?.categoryId === 'external')) {
       const hint = document.createElement('div');
       hint.className = 'shared-links-favorite-hint';
       hint.innerHTML = `
@@ -556,6 +790,7 @@ function renderSharedLinkCategoryChips() {
 async function handleSharedHomeAction(action) {
   switch (action) {
     case 'links':
+      state.sharedLinksQuery = '';
       await openSharedLinksModal();
       return;
     case 'notice':
