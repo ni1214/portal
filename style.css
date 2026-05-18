@@ -13764,6 +13764,104 @@ html.font-xl { font-size: 21px; }
   white-space: nowrap;
 }
 
+.shared-link-ai-box {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 22%, var(--border-glass));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent-blue) 8%, var(--bg-card));
+}
+
+.shared-link-ai-copy {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.shared-link-ai-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  flex: 0 0 auto;
+  color: var(--accent-blue);
+  background: color-mix(in srgb, var(--accent-blue) 13%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 20%, var(--border-glass));
+}
+
+.shared-link-ai-copy strong,
+.shared-link-ai-copy span {
+  display: block;
+}
+
+.shared-link-ai-copy strong {
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.shared-link-ai-copy span {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.shared-link-ai-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.shared-link-ai-input {
+  min-height: 42px;
+}
+
+.shared-link-ai-button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent-blue);
+  color: var(--text-on-accent);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.shared-link-ai-button:disabled {
+  opacity: 0.68;
+  cursor: wait;
+}
+
+.shared-link-ai-status {
+  min-height: 16px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.shared-link-ai-status[data-type="success"] {
+  color: var(--state-success-soft);
+}
+
+.shared-link-ai-status[data-type="warning"] {
+  color: var(--state-warning-bright);
+}
+
+.shared-link-ai-status[data-type="error"] {
+  color: var(--state-danger-soft);
+}
+
 .shared-links-chip-list {
   display: flex;
   flex-wrap: wrap;
@@ -14235,6 +14333,14 @@ html.font-xl { font-size: 21px; }
 
   .shared-links-status {
     white-space: normal;
+  }
+
+  .shared-link-ai-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .shared-link-ai-button {
+    width: 100%;
   }
 
   .shared-links-manage {

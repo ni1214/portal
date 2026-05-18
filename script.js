@@ -185,6 +185,7 @@ import {
   openSharedLinksModal,
   closeSharedLinksModal,
 } from './modules/shared-space.js';
+import { initSharedLinkAi } from './modules/shared-link-ai.js';
 
 import {
   isSupabaseSharedCoreEnabled,
@@ -645,6 +646,11 @@ Object.assign(sharedSpaceDeps, {
 });
 
 initSharedSpace(sharedSpaceDeps);
+initSharedLinkAi({
+  addCard,
+  ensureSharedCardsLoaded,
+  renderSharedLinksBrowser,
+});
 
 initPropertySummary({
   openRequests: projectKey => {
