@@ -1005,7 +1005,7 @@ function bindDashboardEvents(section) {
     const favoriteCategory = event.target.closest('[data-favorite-category-id]');
     if (favoriteCategory && section.contains(favoriteCategory)) {
       event.preventDefault();
-      toggleFavoriteCategoryAccordion(favoriteCategory.dataset.favoriteCategoryId || '');
+      toggleFavoriteCategoryAccordion(favoriteCategory.dataset.favoriteCategoryId || '', favoriteCategory);
       return;
     }
     const card = event.target.closest('[data-dash-target]');
@@ -1018,7 +1018,7 @@ function bindDashboardEvents(section) {
     if (!favoriteCategory || !section.contains(favoriteCategory)) return;
     event.preventDefault();
     event.stopPropagation();
-    void openFavoriteCategoryManager(favoriteCategory.dataset.favoriteCategoryId || '');
+    void openFavoriteCategoryManager(favoriteCategory.dataset.favoriteCategoryId || '', favoriteCategory);
   });
 
   section.addEventListener('dragstart', event => {
@@ -1076,15 +1076,18 @@ function bindDashboardEvents(section) {
   });
 }
 
-function toggleFavoriteCategoryAccordion(categoryId) {
+function toggleFavoriteCategoryAccordion(categoryId, anchorElement = null) {
   if (!categoryId) return;
+  const anchor = captureFavoriteCategoryAnchor(categoryId, anchorElement);
   expandedFavoriteCategoryId = expandedFavoriteCategoryId === categoryId ? '' : categoryId;
   if (expandedFavoriteCategoryId) managingFavoriteCategoryId = '';
   renderTodayDashboard();
+  restoreFavoriteCategoryAnchor(anchor);
 }
 
-async function openFavoriteCategoryManager(categoryId) {
+async function openFavoriteCategoryManager(categoryId, anchorElement = null) {
   if (!categoryId) return;
+  const anchor = captureFavoriteCategoryAnchor(categoryId, anchorElement);
   try {
     await deps.ensureSharedCardsLoaded?.();
   } catch (err) {
@@ -1093,6 +1096,31 @@ async function openFavoriteCategoryManager(categoryId) {
   managingFavoriteCategoryId = managingFavoriteCategoryId === categoryId ? '' : categoryId;
   if (managingFavoriteCategoryId) expandedFavoriteCategoryId = '';
   renderTodayDashboard();
+  restoreFavoriteCategoryAnchor(anchor);
+}
+
+function captureFavoriteCategoryAnchor(categoryId, anchorElement = null) {
+  const element = anchorElement || document.querySelector(`[data-favorite-category-id="${cssEscape(categoryId)}"]`);
+  if (!element) return null;
+  const rect = element.getBoundingClientRect();
+  return { categoryId, top: rect.top };
+}
+
+function restoreFavoriteCategoryAnchor(anchor) {
+  if (!anchor) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const element = document.querySelector(`[data-favorite-category-id="${cssEscape(anchor.categoryId)}"]`);
+      if (!element) return;
+      const delta = element.getBoundingClientRect().top - anchor.top;
+      if (Math.abs(delta) > 1) window.scrollBy(0, delta);
+    });
+  });
+}
+
+function cssEscape(value) {
+  if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(value);
+  return `${value}`.replace(/["\\]/g, '\\$&');
 }
 
 function resolveFavoriteDropPosition(event, item) {
