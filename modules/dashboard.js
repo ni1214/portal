@@ -653,7 +653,7 @@ function renderHomeSimpleFavoriteLinks(links, isProfileReady) {
         ? `data-favorite-category-id="${esc(link.categoryId)}"`
         : `data-favorite-card-id="${esc(link.id)}"`}
       aria-label="${esc(`${link.label}を開く`)}"
-      title="${esc(link.meta || link.label)}"
+      title="${esc(link.type === 'category' ? `${link.meta || link.label} / 右クリックでまとめて登録・解除` : (link.meta || link.label))}"
     >
       <span class="home-simple-favorite-link__icon">
         ${link.type === 'category'
@@ -940,6 +940,14 @@ function bindDashboardEvents(section) {
     const card = event.target.closest('[data-dash-target]');
     if (!card || !section.contains(card)) return;
     void openDashboardTarget(card.dataset.dashTarget || '');
+  });
+
+  section.addEventListener('contextmenu', event => {
+    const favoriteCategory = event.target.closest('[data-favorite-category-id]');
+    if (!favoriteCategory || !section.contains(favoriteCategory)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    void deps.toggleFavoriteCategory?.(favoriteCategory.dataset.favoriteCategoryId || '');
   });
 
   section.addEventListener('dragstart', event => {
