@@ -8,6 +8,7 @@ let favoriteDragDropPosition = 'before';
 let favoriteDragSuppressClick = false;
 let expandedFavoriteCategoryId = '';
 let managingFavoriteCategoryId = '';
+let favoriteOutsideDismissBound = false;
 
 const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 const DASH_LIST_LIMIT = 3;
@@ -35,6 +36,7 @@ const DASH_TARGETS = Object.freeze({
 
 export function initTodayDashboard(d = {}) {
   deps = d;
+  bindFavoriteOutsideDismiss();
   renderTodayDashboard();
 }
 
@@ -1097,6 +1099,33 @@ async function openFavoriteCategoryManager(categoryId, anchorElement = null) {
   if (managingFavoriteCategoryId) expandedFavoriteCategoryId = '';
   renderTodayDashboard();
   restoreFavoriteCategoryAnchor(anchor);
+}
+
+function bindFavoriteOutsideDismiss() {
+  if (favoriteOutsideDismissBound) return;
+  favoriteOutsideDismissBound = true;
+  document.addEventListener('click', event => {
+    const activeCategoryId = managingFavoriteCategoryId || expandedFavoriteCategoryId;
+    if (!activeCategoryId) return;
+
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const selectorId = cssEscape(activeCategoryId);
+    if (
+      target.closest(`[data-favorite-category-id="${selectorId}"]`) ||
+      target.closest(`[data-favorite-panel-for="${selectorId}"]`) ||
+      target.closest(`[data-favorite-manage-for="${selectorId}"]`)
+    ) {
+      return;
+    }
+
+    const anchor = captureFavoriteCategoryAnchor(activeCategoryId);
+    expandedFavoriteCategoryId = '';
+    managingFavoriteCategoryId = '';
+    renderTodayDashboard();
+    restoreFavoriteCategoryAnchor(anchor);
+  });
 }
 
 function captureFavoriteCategoryAnchor(categoryId, anchorElement = null) {
