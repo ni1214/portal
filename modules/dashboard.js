@@ -6,6 +6,7 @@ let deps = {};
 let favoriteDragKey = '';
 let favoriteDragDropPosition = 'before';
 let favoriteDragSuppressClick = false;
+let expandedFavoriteCategoryId = '';
 
 const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 const DASH_LIST_LIMIT = 3;
@@ -304,7 +305,7 @@ function renderHomeHero(host, {
     : 0;
   const favoriteLinks = getFavoriteSharedLinks();
   const favoriteCountLabel = state.currentUsername ? `${favoriteCount}件` : '設定してください';
-  const favoriteActionTarget = state.currentUsername ? DASH_TARGETS.FAVORITE_LINKS : DASH_TARGETS.PROFILE;
+  const favoriteActionTarget = state.currentUsername ? DASH_TARGETS.SHARED_LINKS : DASH_TARGETS.PROFILE;
   const primaryTarget = state.currentUsername ? (focusCard.target || DASH_TARGETS.PROFILE) : DASH_TARGETS.PROFILE;
   const primaryLabel = state.currentUsername ? '今日の優先事項へ' : 'プロフィールを設定';
   const summaryCopy = state.currentUsername
@@ -341,7 +342,7 @@ function renderHomeHero(host, {
       meta: publicLinkCount > 0 ? '必要なリンクへすぐ移動できます' : '共有カテゴリを準備中です',
     },
     {
-      target: state.currentUsername ? DASH_TARGETS.FAVORITE_LINKS : DASH_TARGETS.PROFILE,
+      target: state.currentUsername ? DASH_TARGETS.FAVORITES : DASH_TARGETS.PROFILE,
       tone: favoriteCount > 0 ? 'active' : 'idle',
       symbol: 'star',
       label: 'お気に入り',
@@ -459,7 +460,7 @@ function renderHomeHero(host, {
               class="home-simple-text-action"
               data-dash-target="${esc(favoriteActionTarget)}"
             >
-              <span>${esc(state.currentUsername ? (favoriteCount > 0 ? '一覧' : '共有リンク') : '設定')}</span>
+              <span>${esc(state.currentUsername ? '設定' : '設定')}</span>
               <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
             </button>
           </div>
@@ -645,7 +646,7 @@ function renderHomeSimpleFavoriteLinks(links, isProfileReady) {
   return links.map(link => `
     <button
       type="button"
-      class="home-simple-favorite-link${link.type === 'category' ? ' home-simple-favorite-link--category' : ''}"
+      class="home-simple-favorite-link${link.type === 'category' ? ' home-simple-favorite-link--category' : ''}${link.expanded ? ' is-expanded' : ''}"
       draggable="true"
       data-favorite-sort-key="${esc(link.sortKey || '')}"
       ${link.type === 'category'
@@ -664,7 +665,53 @@ function renderHomeSimpleFavoriteLinks(links, isProfileReady) {
         ${link.type === 'category' ? `<span>${esc(link.meta || '')}</span>` : ''}
       </span>
     </button>
+    ${link.type === 'category' && link.expanded ? renderFavoriteAccordionPanel(link) : ''}
   `).join('');
+}
+
+function renderFavoriteAccordionPanel(group) {
+  const links = Array.isArray(group.links) ? group.links : [];
+  if (!links.length) {
+    return `
+      <div class="home-simple-favorite-accordion" data-favorite-panel-for="${esc(group.categoryId || '')}">
+        <div class="home-simple-empty">このカテゴリのお気に入りはありません</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="home-simple-favorite-accordion" data-favorite-panel-for="${esc(group.categoryId || '')}">
+      <div class="home-simple-favorite-accordion__head">
+        <strong>${esc(group.label || 'お気に入り')}</strong>
+        <span>${esc(`${links.length}件`)}</span>
+      </div>
+      <div class="home-simple-favorite-accordion__grid">
+        ${links.map(link => `
+          <button
+            type="button"
+            class="home-simple-favorite-child"
+            data-favorite-card-id="${esc(link.id)}"
+            aria-label="${esc(`${link.label}を開く`)}"
+            title="${esc(link.meta || link.label)}"
+          >
+            <span class="home-simple-favorite-child__icon">
+              ${renderFavoriteCardIcon(link)}
+            </span>
+            <span class="home-simple-favorite-child__label">${esc(link.label)}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderFavoriteCardIcon(link) {
+  if (link.brandIconHtml) return link.brandIconHtml;
+  const icon = `${link.icon || link.symbol || 'link'}`.trim();
+  if (icon.includes(' ') || icon.startsWith('fa-')) {
+    return `<i class="${esc(icon)}" aria-hidden="true"></i>`;
+  }
+  return `<span class="material-symbols-rounded" aria-hidden="true">${esc(icon)}</span>`;
 }
 
 function renderPersonalList(items, emptyText) {
@@ -795,6 +842,7 @@ function getFavoriteSharedLinks() {
           label: card.label || '共有リンク',
           meta: buildFavoriteLinkMeta(card, publicCategoriesById),
           brandIconHtml: getBrandIconHtmlForCard(card),
+          icon: card.icon || '',
           symbol: card.url === 'solar:open' ? 'wb_sunny' : 'link',
           arrow: card.url === 'solar:open' ? 'arrow_forward' : 'open_in_new',
         });
@@ -812,6 +860,8 @@ function getFavoriteSharedLinks() {
           meta: 'お気に入り 0件',
           symbol: 'folder',
           count: 0,
+          expanded: expandedFavoriteCategoryId === categoryId,
+          links: [],
         };
         categoryGroups.set(categoryId, group);
         orderedLinks.push(group);
@@ -819,6 +869,15 @@ function getFavoriteSharedLinks() {
       const group = categoryGroups.get(categoryId);
       group.count += 1;
       group.meta = `お気に入り ${group.count}件`;
+      group.links.push({
+        type: 'card',
+        id: card.id,
+        label: card.label || '共有リンク',
+        meta: buildFavoriteLinkMeta(card, publicCategoriesById),
+        brandIconHtml: getBrandIconHtmlForCard(card),
+        icon: card.icon || '',
+        symbol: card.url === 'solar:open' ? 'wb_sunny' : 'link',
+      });
     });
 
   return orderedLinks;
@@ -875,7 +934,7 @@ function bindDashboardEvents(section) {
     const favoriteCategory = event.target.closest('[data-favorite-category-id]');
     if (favoriteCategory && section.contains(favoriteCategory)) {
       event.preventDefault();
-      void deps.openFavoriteCategory?.(favoriteCategory.dataset.favoriteCategoryId || '');
+      toggleFavoriteCategoryAccordion(favoriteCategory.dataset.favoriteCategoryId || '');
       return;
     }
     const card = event.target.closest('[data-dash-target]');
@@ -936,6 +995,12 @@ function bindDashboardEvents(section) {
     event.preventDefault();
     void openDashboardTarget(card.dataset.dashTarget || '');
   });
+}
+
+function toggleFavoriteCategoryAccordion(categoryId) {
+  if (!categoryId) return;
+  expandedFavoriteCategoryId = expandedFavoriteCategoryId === categoryId ? '' : categoryId;
+  renderTodayDashboard();
 }
 
 function resolveFavoriteDropPosition(event, item) {
@@ -1019,7 +1084,7 @@ async function openDashboardTarget(target) {
         await deps.openServicePicker?.();
         return;
       case DASH_TARGETS.FAVORITES:
-        await deps.openFavorites?.();
+        focusHomeFavoriteSection();
         return;
       case DASH_TARGETS.INVITE:
         await deps.openInviteCode?.();
@@ -1030,6 +1095,14 @@ async function openDashboardTarget(target) {
   } catch (err) {
     console.error('Dashboard navigation error:', err);
   }
+}
+
+function focusHomeFavoriteSection() {
+  const section = document.querySelector('#home-dashboard .home-simple-favorites');
+  if (!section) return;
+  section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  section.classList.add('is-focused');
+  window.setTimeout(() => section.classList.remove('is-focused'), 900);
 }
 
 function getDashboardActionLabel(target) {
