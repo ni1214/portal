@@ -4,6 +4,8 @@ import { CATEGORY_COLORS, SVG_ICONS } from './config.js';
 import { getBrandIconHtmlForCard, shouldPreferBrandIcon } from './brand-icons.js';
 
 export let deps = {};
+let sharedLinksViewMode = 'manage';
+let sharedLinksFavoriteViewCategory = '';
 
 function renderHomeIcon(icon, className = '') {
   if (!icon) return '';
@@ -341,11 +343,14 @@ function getRequestSummary() {
   };
 }
 
-export async function openSharedLinksModal() {
+export async function openSharedLinksModal(options = {}) {
   const modal = document.getElementById('shared-links-modal');
   if (!modal) return;
+  sharedLinksViewMode = options.mode || 'manage';
+  sharedLinksFavoriteViewCategory = options.favoriteCategoryId || '';
   state.sharedLinksModalOpen = true;
   modal.classList.add('visible');
+  applySharedLinksModalMode();
   renderSharedLinksBrowser();
   if (!state.sharedCardsLoaded) {
     try {
@@ -356,7 +361,20 @@ export async function openSharedLinksModal() {
   }
   renderSharedLinksBrowser();
   const input = document.getElementById('shared-links-search');
-  setTimeout(() => input?.focus(), 30);
+  if (sharedLinksViewMode === 'manage') {
+    setTimeout(() => input?.focus(), 30);
+  }
+}
+
+export async function openFavoriteSharedLinksModal(categoryId = '') {
+  const normalizedCategoryId = categoryId || '';
+  state.sharedLinksCategory = normalizedCategoryId || 'all';
+  state.sharedLinksFavoritesOnlyCategory = '';
+  state.sharedLinksQuery = '';
+  await openSharedLinksModal({
+    mode: 'favorites',
+    favoriteCategoryId: normalizedCategoryId,
+  });
 }
 
 export function closeSharedLinksModal() {
@@ -364,6 +382,39 @@ export function closeSharedLinksModal() {
   if (!modal) return;
   state.sharedLinksModalOpen = false;
   modal.classList.remove('visible');
+  sharedLinksViewMode = 'manage';
+  sharedLinksFavoriteViewCategory = '';
+  applySharedLinksModalMode();
+}
+
+function applySharedLinksModalMode() {
+  const modal = document.getElementById('shared-links-modal');
+  if (!modal) return;
+  const isFavoriteView = sharedLinksViewMode === 'favorites';
+  const glass = modal.querySelector('.shared-links-glass');
+  const kicker = modal.querySelector('.shared-links-kicker');
+  const title = modal.querySelector('.shared-links-title');
+  const desc = modal.querySelector('.shared-links-desc');
+  const toolbar = modal.querySelector('.shared-links-toolbar');
+  const aiBox = modal.querySelector('#shared-link-ai-box');
+  const chips = modal.querySelector('#shared-links-chip-list');
+
+  modal.dataset.sharedLinksMode = sharedLinksViewMode;
+  glass?.classList.toggle('shared-links-glass--favorite-view', isFavoriteView);
+  if (kicker) kicker.textContent = isFavoriteView ? 'Favorite Links' : 'Shared Links';
+  if (title) {
+    title.innerHTML = isFavoriteView
+      ? '<i class="material-symbols-rounded" aria-hidden="true">star</i> お気に入り共有リンク'
+      : '<i class="material-symbols-rounded" aria-hidden="true">grid_view</i> 共有リンク一覧';
+  }
+  if (desc) {
+    desc.textContent = isFavoriteView
+      ? 'お気に入りに登録したリンクだけを、開きやすいアイコン表示でまとめています。'
+      : '星を付けたリンクは、ユーザーごとのお気に入りに保存されます。';
+  }
+  if (toolbar) toolbar.hidden = isFavoriteView;
+  if (aiBox) aiBox.hidden = isFavoriteView;
+  if (chips) chips.hidden = isFavoriteView;
 }
 
 function collectSharedLinkSearchCards(cards, queryText) {
@@ -419,8 +470,11 @@ function renderSharedLinkCardIcon(card, tone = '') {
 }
 
 function buildSharedLinkAppTile(card, allCategoryCards, cat, options = {}) {
+  const readonly = Boolean(options.readonly);
   const tile = document.createElement('div');
-  tile.className = 'shared-link-app-tile' + (options.isChild ? ' shared-link-app-tile--child' : '');
+  tile.className = 'shared-link-app-tile'
+    + (options.isChild ? ' shared-link-app-tile--child' : '')
+    + (readonly ? ' shared-link-app-tile--readonly' : '');
   tile.dataset.docId = card.id || '';
 
   const children = allCategoryCards
@@ -449,7 +503,7 @@ function buildSharedLinkAppTile(card, allCategoryCards, cat, options = {}) {
     link.href = '#';
     link.addEventListener('click', event => {
       event.preventDefault();
-      if (state.isEditMode && typeof deps.openCardModal === 'function') {
+      if (!readonly && state.isEditMode && typeof deps.openCardModal === 'function') {
         deps.openCardModal(card.id);
       }
     });
@@ -462,7 +516,7 @@ function buildSharedLinkAppTile(card, allCategoryCards, cat, options = {}) {
   `;
   tile.appendChild(link);
 
-  if (card.id) {
+  if (card.id && !readonly) {
     const actionRow = document.createElement('div');
     actionRow.className = 'shared-link-app-actions';
 
@@ -498,7 +552,7 @@ function buildSharedLinkAppTile(card, allCategoryCards, cat, options = {}) {
     tile.appendChild(actionRow);
   }
 
-  if (state.isEditMode && card.id) {
+  if (state.isEditMode && card.id && !readonly) {
     const editButton = document.createElement('button');
     editButton.type = 'button';
     editButton.className = 'shared-link-app-edit';
@@ -529,19 +583,24 @@ function buildSharedLinkAppTile(card, allCategoryCards, cat, options = {}) {
     const tray = document.createElement('div');
     tray.className = 'shared-link-children-tray';
     children.forEach(child => {
-      tray.appendChild(buildSharedLinkAppTile(child, allCategoryCards, cat, { isChild: true }));
+      tray.appendChild(buildSharedLinkAppTile(child, allCategoryCards, cat, {
+        isChild: true,
+        readonly,
+      }));
     });
-    if (state.isEditMode) {
+    if (state.isEditMode && !readonly) {
       tray.appendChild(buildSharedLinkAddTile(cat, card.id, true));
     }
     tile.appendChild(tray);
   }
 
-  tile.addEventListener('contextmenu', event => {
-    if (typeof deps.showContextMenu !== 'function' || !card.id) return;
-    event.preventDefault();
-    deps.showContextMenu(event, card);
-  });
+  if (!readonly) {
+    tile.addEventListener('contextmenu', event => {
+      if (typeof deps.showContextMenu !== 'function' || !card.id) return;
+      event.preventDefault();
+      deps.showContextMenu(event, card);
+    });
+  }
 
   return tile;
 }
@@ -562,7 +621,8 @@ function buildSharedLinkAddTile(cat, parentId = null, compact = false) {
 
 function buildSharedLinkAppSection(cat, cards, allCategoryCards, options = {}) {
   const section = document.createElement('section');
-  section.className = 'shared-link-app-section';
+  const readonly = Boolean(options.readonly);
+  section.className = 'shared-link-app-section' + (readonly ? ' shared-link-app-section--readonly' : '');
   section.dataset.categoryId = cat.id || '';
 
   const tone = getSharedLinkCategoryTone(cat);
@@ -580,29 +640,33 @@ function buildSharedLinkAppSection(cat, cards, allCategoryCards, options = {}) {
           <small>${cards.length}件${allCategoryCards.length !== cards.length ? ` / 全${allCategoryCards.length}件` : ''}</small>
         </span>
       </div>
-      <div class="shared-link-app-section-actions">
-        <button type="button" class="shared-link-section-favorite${allFavorited ? ' active' : ''}" title="${allFavorited ? 'カテゴリのお気に入りを解除' : 'カテゴリをまとめてお気に入り'}" aria-label="${allFavorited ? 'カテゴリのお気に入りを解除' : 'カテゴリをまとめてお気に入り'}">
-          <i class="fa-${allFavorited ? 'solid' : 'regular'} fa-star" aria-hidden="true"></i>
-        </button>
-        ${state.isEditMode ? `
-          <button type="button" class="shared-link-section-edit" title="カテゴリ編集" aria-label="カテゴリ編集">
-            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+      ${readonly ? '' : `
+        <div class="shared-link-app-section-actions">
+          <button type="button" class="shared-link-section-favorite${allFavorited ? ' active' : ''}" title="${allFavorited ? 'カテゴリのお気に入りを解除' : 'カテゴリをまとめてお気に入り'}" aria-label="${allFavorited ? 'カテゴリのお気に入りを解除' : 'カテゴリをまとめてお気に入り'}">
+            <i class="fa-${allFavorited ? 'solid' : 'regular'} fa-star" aria-hidden="true"></i>
           </button>
-        ` : ''}
-      </div>
+          ${state.isEditMode ? `
+            <button type="button" class="shared-link-section-edit" title="カテゴリ編集" aria-label="カテゴリ編集">
+              <i class="fa-solid fa-pen" aria-hidden="true"></i>
+            </button>
+          ` : ''}
+        </div>
+      `}
     </header>
     <div class="shared-link-app-grid"></div>
   `;
 
-  section.querySelector('.shared-link-section-favorite')?.addEventListener('click', event => {
-    event.preventDefault();
-    deps.toggleSectionFavorite?.(cat.id, false);
-  });
-  section.querySelector('.shared-link-section-edit')?.addEventListener('click', event => {
-    event.preventDefault();
-    const catObj = (state.allCategories || []).find(item => item.docId === cat.docId || item.id === cat.id) || cat;
-    deps.openCategoryModal?.(catObj);
-  });
+  if (!readonly) {
+    section.querySelector('.shared-link-section-favorite')?.addEventListener('click', event => {
+      event.preventDefault();
+      deps.toggleSectionFavorite?.(cat.id, false);
+    });
+    section.querySelector('.shared-link-section-edit')?.addEventListener('click', event => {
+      event.preventDefault();
+      const catObj = (state.allCategories || []).find(item => item.docId === cat.docId || item.id === cat.id) || cat;
+      deps.openCategoryModal?.(catObj);
+    });
+  }
 
   const grid = section.querySelector('.shared-link-app-grid');
   if (visibleCards.length === 0) {
@@ -612,10 +676,10 @@ function buildSharedLinkAppSection(cat, cards, allCategoryCards, options = {}) {
     grid.appendChild(empty);
   } else {
     visibleCards.forEach(card => {
-      grid.appendChild(buildSharedLinkAppTile(card, allCategoryCards, cat));
+      grid.appendChild(buildSharedLinkAppTile(card, allCategoryCards, cat, { readonly }));
     });
   }
-  if (state.isEditMode && !options.searchMode) {
+  if (state.isEditMode && !options.searchMode && !readonly) {
     grid.appendChild(buildSharedLinkAddTile(cat));
   }
 
@@ -634,6 +698,12 @@ export function renderSharedLinksBrowser() {
   }
 
   renderSharedLinkCategoryChips();
+  applySharedLinksModalMode();
+
+  if (sharedLinksViewMode === 'favorites') {
+    renderFavoriteSharedLinksView(body, status);
+    return;
+  }
 
   if (state.sharedCardsLoading) {
     status.textContent = '共有リンクを読み込み中です...';
@@ -743,6 +813,104 @@ export function renderSharedLinksBrowser() {
     });
     body.appendChild(manageWrap);
   }
+}
+
+function renderFavoriteSharedLinksView(body, status) {
+  if (state.sharedCardsLoading) {
+    status.textContent = 'お気に入りを読み込み中です...';
+    body.innerHTML = `
+      <div class="shared-links-loading">
+        <div class="shared-links-spinner"></div>
+        <p>お気に入りを読み込み中です...</p>
+      </div>
+    `;
+    return;
+  }
+
+  if (!state.sharedCardsLoaded) {
+    status.textContent = 'お気に入りはまだ読み込まれていません';
+    body.innerHTML = `
+      <div class="shared-links-empty-state">
+        <div class="shared-links-empty-icon">${renderHomeIcon('star')}</div>
+        <h3>お気に入り共有リンクを読み込みます</h3>
+        <p>必要な時だけ共有リンクを取得して、お気に入り表示を開きます。</p>
+        <button type="button" class="btn-modal-primary" id="shared-favorites-load-btn">
+          ${renderHomeIcon('download')} お気に入りを読み込む
+        </button>
+      </div>
+    `;
+    body.querySelector('#shared-favorites-load-btn')?.addEventListener('click', () => {
+      void deps.ensureSharedCardsLoaded?.().catch(err => {
+        console.error('Favorite shared links load error:', err);
+      });
+    });
+    return;
+  }
+
+  const favoriteIds = new Set(Array.isArray(state.personalFavorites) ? state.personalFavorites : []);
+  const publicCategories = getPublicCategories();
+  const selectedCategory = sharedLinksFavoriteViewCategory || '';
+  const selectedCategoryObj = publicCategories.find(cat => cat.id === selectedCategory);
+  const cards = (Array.isArray(state.allCards) ? state.allCards : [])
+    .filter(card => card.id && favoriteIds.has(card.id) && !state.hiddenCards.includes(card.id));
+  const sections = [];
+  let favoriteCount = 0;
+
+  publicCategories.forEach(cat => {
+    if (selectedCategory && selectedCategory !== cat.id) return;
+    const categoryCards = cards
+      .filter(card => card.category === cat.id)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    if (!categoryCards.length) return;
+    favoriteCount += categoryCards.length;
+    sections.push(buildSharedLinkAppSection(cat, categoryCards, categoryCards, {
+      readonly: true,
+    }));
+  });
+
+  status.textContent = selectedCategoryObj
+    ? `${selectedCategoryObj.label || 'カテゴリ'} のお気に入り ${favoriteCount}件`
+    : `お気に入り共有リンク ${favoriteCount}件`;
+
+  body.innerHTML = '';
+  const hero = document.createElement('div');
+  hero.className = 'shared-links-favorite-view-hero';
+  const heroTone = selectedCategoryObj ? getSharedLinkCategoryTone(selectedCategoryObj) : '';
+  hero.innerHTML = `
+    <span class="shared-links-favorite-view-icon"${heroTone ? ` style="--shared-link-tone:${esc(heroTone)}"` : ''}>
+      ${renderHomeIcon(selectedCategoryObj?.icon || 'star')}
+    </span>
+    <div class="shared-links-favorite-view-copy">
+      <strong>${esc(selectedCategoryObj?.label || 'お気に入り共有リンク')}</strong>
+      <span>${esc(selectedCategoryObj ? `${favoriteCount}件のリンクを表示しています` : 'お気に入りにした共有リンクをまとめて表示しています')}</span>
+    </div>
+    <button type="button" class="btn-modal-secondary shared-links-favorite-settings" id="shared-favorites-open-settings">
+      ${renderHomeIcon('tune')} 設定を開く
+    </button>
+  `;
+  hero.querySelector('#shared-favorites-open-settings')?.addEventListener('click', () => {
+    sharedLinksViewMode = 'manage';
+    sharedLinksFavoriteViewCategory = '';
+    state.sharedLinksCategory = selectedCategory || 'all';
+    state.sharedLinksFavoritesOnlyCategory = '';
+    state.sharedLinksQuery = '';
+    renderSharedLinksBrowser();
+  });
+  body.appendChild(hero);
+
+  if (!sections.length) {
+    const empty = document.createElement('div');
+    empty.className = 'shared-links-empty-state';
+    empty.innerHTML = `
+      <div class="shared-links-empty-icon">${renderHomeIcon('star')}</div>
+      <h3>まだお気に入りがありません</h3>
+      <p>共有リンク一覧でよく使うリンクに星を付けると、ここに表示されます。</p>
+    `;
+    body.appendChild(empty);
+    return;
+  }
+
+  sections.forEach(section => body.appendChild(section));
 }
 
 function bindSharedSpaceEvents() {

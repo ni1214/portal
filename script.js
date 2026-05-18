@@ -183,6 +183,7 @@ import {
   renderSharedHome,
   renderSharedLinksBrowser,
   openSharedLinksModal,
+  openFavoriteSharedLinksModal,
   closeSharedLinksModal,
 } from './modules/shared-space.js';
 import { initSharedLinkAi } from './modules/shared-link-ai.js';
@@ -564,6 +565,9 @@ initTodayDashboard({
     state.sharedLinksQuery = '';
     await openSharedLinksModal();
   },
+  openFavoriteLinks: async () => {
+    await openFavoriteSharedLinksModal();
+  },
   focusSearch: () => {
     const input = document.getElementById('search-input');
     if (!input) return;
@@ -594,10 +598,7 @@ initTodayDashboard({
     openFavoriteLinkFromHome(cardId);
   },
   openFavoriteCategory: async categoryId => {
-    state.sharedLinksCategory = categoryId || 'all';
-    state.sharedLinksFavoritesOnlyCategory = categoryId || '';
-    state.sharedLinksQuery = '';
-    await openSharedLinksModal();
+    await openFavoriteSharedLinksModal(categoryId || '');
   },
   reorderFavoriteLinks,
   openInviteCode: async () => {

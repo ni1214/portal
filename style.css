@@ -13891,6 +13891,63 @@ html.font-xl { font-size: 21px; }
   padding-right: 6px;
 }
 
+.shared-links-glass--favorite-view {
+  width: min(980px, calc(100vw - 32px));
+}
+
+.shared-links-glass--favorite-view .shared-links-header {
+  margin-bottom: 18px;
+}
+
+.shared-links-favorite-view-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--state-warning-bright) 28%, var(--border-glass));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--state-warning-bright) 8%, var(--bg-card));
+}
+
+.shared-links-favorite-view-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: #fff;
+  background: var(--shared-link-tone, linear-gradient(135deg, var(--state-warning-bright), var(--accent-blue)));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+}
+
+.shared-links-favorite-view-copy {
+  min-width: 0;
+}
+
+.shared-links-favorite-view-copy strong,
+.shared-links-favorite-view-copy span {
+  display: block;
+}
+
+.shared-links-favorite-view-copy strong {
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.shared-links-favorite-view-copy span {
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.shared-links-favorite-settings {
+  min-height: 38px;
+  white-space: nowrap;
+}
+
 .shared-link-app-section {
   padding: 14px;
   border: 1px solid var(--border-glass);
@@ -13907,6 +13964,10 @@ html.font-xl { font-size: 21px; }
   padding-bottom: 12px;
   margin-bottom: 12px;
   border-bottom: 1px solid var(--border-glass);
+}
+
+.shared-link-app-section--readonly .shared-link-app-section-head {
+  border-bottom-color: color-mix(in srgb, var(--state-warning-bright) 24%, var(--border-glass));
 }
 
 .shared-link-app-section-title {
@@ -13997,6 +14058,10 @@ html.font-xl { font-size: 21px; }
   flex-direction: column;
   min-width: 0;
   min-height: 148px;
+}
+
+.shared-link-app-tile--readonly {
+  min-height: 114px;
 }
 
 .shared-link-app-link,
@@ -14333,6 +14398,15 @@ html.font-xl { font-size: 21px; }
 
   .shared-links-status {
     white-space: normal;
+  }
+
+  .shared-links-favorite-view-hero {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .shared-links-favorite-settings {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 
   .shared-link-ai-controls {

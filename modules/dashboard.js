@@ -26,6 +26,7 @@ const DASH_TARGETS = Object.freeze({
   ATTENDANCE: 'attendance',
   NOTICE: 'notice',
   SHARED_LINKS: 'shared-links',
+  FAVORITE_LINKS: 'favorite-links',
   FAVORITES: 'favorites',
   INVITE: 'invite',
 });
@@ -303,7 +304,7 @@ function renderHomeHero(host, {
     : 0;
   const favoriteLinks = getFavoriteSharedLinks();
   const favoriteCountLabel = state.currentUsername ? `${favoriteCount}件` : '設定してください';
-  const favoriteActionTarget = state.currentUsername ? DASH_TARGETS.SHARED_LINKS : DASH_TARGETS.PROFILE;
+  const favoriteActionTarget = state.currentUsername ? DASH_TARGETS.FAVORITE_LINKS : DASH_TARGETS.PROFILE;
   const primaryTarget = state.currentUsername ? (focusCard.target || DASH_TARGETS.PROFILE) : DASH_TARGETS.PROFILE;
   const primaryLabel = state.currentUsername ? '今日の優先事項へ' : 'プロフィールを設定';
   const summaryCopy = state.currentUsername
@@ -340,7 +341,7 @@ function renderHomeHero(host, {
       meta: publicLinkCount > 0 ? '必要なリンクへすぐ移動できます' : '共有カテゴリを準備中です',
     },
     {
-      target: state.currentUsername ? DASH_TARGETS.FAVORITES : DASH_TARGETS.PROFILE,
+      target: state.currentUsername ? DASH_TARGETS.FAVORITE_LINKS : DASH_TARGETS.PROFILE,
       tone: favoriteCount > 0 ? 'active' : 'idle',
       symbol: 'star',
       label: 'お気に入り',
@@ -1011,6 +1012,9 @@ async function openDashboardTarget(target) {
       case DASH_TARGETS.SHARED_LINKS:
         await deps.openSharedLinks?.();
         return;
+      case DASH_TARGETS.FAVORITE_LINKS:
+        await deps.openFavoriteLinks?.();
+        return;
       case DASH_TARGETS.SERVICE_PICKER:
         await deps.openServicePicker?.();
         return;
@@ -1048,6 +1052,8 @@ function getDashboardActionLabel(target) {
       return '通知を開く';
     case DASH_TARGETS.SHARED_LINKS:
       return '共有リンクを開く';
+    case DASH_TARGETS.FAVORITE_LINKS:
+      return 'お気に入り共有リンクを開く';
     case DASH_TARGETS.SERVICE_PICKER:
       return 'サービスを追加';
     case DASH_TARGETS.FAVORITES:
