@@ -555,10 +555,6 @@ function buildSharedLinkAddTile(cat, parentId = null, compact = false) {
     <span>${compact ? '追加' : 'リンク追加'}</span>
   `;
   button.addEventListener('click', () => {
-    if (cat?.isExternal && !parentId && typeof deps.openServicePicker === 'function') {
-      deps.openServicePicker();
-      return;
-    }
     deps.openCardModal?.(null, cat?.id || null, false, null, parentId);
   });
   return button;

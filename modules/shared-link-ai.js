@@ -9,24 +9,24 @@ let geminiLoaded = false;
 let isCreating = false;
 
 const KNOWN_LINKS = [
-  { keys: ['chatgpt', 'chat gpt', 'チャットgpt', 'チャットジーピーティー', 'openai'], label: 'ChatGPT', url: 'https://chatgpt.com/' },
-  { keys: ['claude', 'クロード', 'anthropic'], label: 'Claude', url: 'https://claude.ai/' },
-  { keys: ['gemini', 'ジェミニ'], label: 'Gemini', url: 'https://gemini.google.com/' },
-  { keys: ['notion', 'ノーション'], label: 'Notion', url: 'https://www.notion.so/' },
-  { keys: ['slack', 'スラック'], label: 'Slack', url: 'https://slack.com/' },
-  { keys: ['google drive', 'drive', 'グーグルドライブ', 'ドライブ'], label: 'Google Drive', url: 'https://drive.google.com/' },
-  { keys: ['box', 'ボックス'], label: 'Box', url: 'https://www.box.com/' },
-  { keys: ['notebooklm', 'notebook lm', 'ノートブックlm'], label: 'NotebookLM', url: 'https://notebooklm.google.com/' },
-  { keys: ['github', 'ギットハブ'], label: 'GitHub', url: 'https://github.com/' },
-  { keys: ['gmail', 'ジーメール'], label: 'Gmail', url: 'https://mail.google.com/' },
-  { keys: ['teams', 'チームズ'], label: 'Teams', url: 'https://teams.microsoft.com/' },
-  { keys: ['zoom', 'ズーム'], label: 'Zoom', url: 'https://zoom.us/' },
-  { keys: ['dropbox', 'ドロップボックス'], label: 'Dropbox', url: 'https://www.dropbox.com/' },
-  { keys: ['onedrive', 'ワンドライブ'], label: 'OneDrive', url: 'https://onedrive.live.com/' },
-  { keys: ['sharepoint', 'シェアポイント'], label: 'SharePoint', url: 'https://www.sharepoint.com/' },
-  { keys: ['perplexity', 'パープレキシティ'], label: 'Perplexity', url: 'https://www.perplexity.ai/' },
-  { keys: ['genspark', 'ジェンスパーク'], label: 'Genspark', url: 'https://www.genspark.ai/' },
-  { keys: ['manus', 'マナス'], label: 'Manus', url: 'https://manus.im/' },
+  { keys: ['chatgpt', 'chat gpt', 'チャットgpt', 'チャットジーピーティー', 'openai'], label: 'ChatGPT', url: 'https://chatgpt.com/', icon: 'fa-solid fa-link' },
+  { keys: ['claude', 'クロード', 'anthropic'], label: 'Claude', url: 'https://claude.ai/', icon: 'fa-solid fa-link' },
+  { keys: ['gemini', 'ジェミニ'], label: 'Gemini', url: 'https://gemini.google.com/', icon: 'fa-solid fa-link' },
+  { keys: ['notion', 'ノーション'], label: 'Notion', url: 'https://www.notion.so/', icon: 'svg:notion' },
+  { keys: ['slack', 'スラック'], label: 'Slack', url: 'https://slack.com/', icon: 'svg:slack' },
+  { keys: ['google drive', 'drive', 'グーグルドライブ', 'ドライブ'], label: 'Google Drive', url: 'https://drive.google.com/', icon: 'svg:gdrive' },
+  { keys: ['box', 'ボックス'], label: 'Box', url: 'https://www.box.com/', icon: 'svg:box' },
+  { keys: ['notebooklm', 'notebook lm', 'ノートブックlm'], label: 'NotebookLM', url: 'https://notebooklm.google.com/', icon: 'fa-solid fa-link' },
+  { keys: ['github', 'ギットハブ'], label: 'GitHub', url: 'https://github.com/', icon: 'svg:github' },
+  { keys: ['gmail', 'ジーメール'], label: 'Gmail', url: 'https://mail.google.com/', icon: 'svg:gmail' },
+  { keys: ['teams', 'チームズ'], label: 'Teams', url: 'https://teams.microsoft.com/', icon: 'svg:teams' },
+  { keys: ['zoom', 'ズーム'], label: 'Zoom', url: 'https://zoom.us/', icon: 'svg:zoom' },
+  { keys: ['dropbox', 'ドロップボックス'], label: 'Dropbox', url: 'https://www.dropbox.com/', icon: 'svg:dropbox' },
+  { keys: ['onedrive', 'ワンドライブ'], label: 'OneDrive', url: 'https://onedrive.live.com/', icon: 'svg:onedrive' },
+  { keys: ['sharepoint', 'シェアポイント'], label: 'SharePoint', url: 'https://www.sharepoint.com/', icon: 'svg:sharepoint' },
+  { keys: ['perplexity', 'パープレキシティ'], label: 'Perplexity', url: 'https://www.perplexity.ai/', icon: 'fa-solid fa-link' },
+  { keys: ['genspark', 'ジェンスパーク'], label: 'Genspark', url: 'https://www.genspark.ai/', icon: 'fa-solid fa-link' },
+  { keys: ['manus', 'マナス'], label: 'Manus', url: 'https://manus.im/', icon: 'fa-solid fa-link' },
 ];
 
 export function initSharedLinkAi(d = {}) {
@@ -78,7 +78,7 @@ function buildHeuristicSuggestion(text) {
       label: known.label,
       url: known.url,
       category: getDefaultCategoryId(),
-      icon: 'fa-solid fa-link',
+      icon: known.icon || 'fa-solid fa-link',
       reason: 'known',
     };
   }
