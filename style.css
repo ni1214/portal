@@ -13890,23 +13890,28 @@ html.font-xl { font-size: 21px; }
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
   gap: 12px;
+  align-items: start;
 }
 
 .shared-link-app-tile {
   position: relative;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 148px;
 }
 
 .shared-link-app-link,
 .shared-link-add-tile {
   width: 100%;
-  min-height: 108px;
+  height: 114px;
   display: grid;
-  grid-template-rows: auto auto auto;
+  grid-template-rows: 50px 32px 13px;
   justify-items: center;
-  align-content: center;
+  align-content: start;
   gap: 6px;
   padding: 12px 8px 10px;
+  box-sizing: border-box;
   border: 1px solid var(--border-glass);
   border-radius: 14px;
   background: color-mix(in srgb, var(--bg-card-hover) 56%, transparent);
@@ -13954,6 +13959,7 @@ html.font-xl { font-size: 21px; }
 
 .shared-link-app-label {
   width: 100%;
+  height: 32px;
   min-width: 0;
   color: var(--text-primary);
   font-size: 0.78rem;
@@ -13968,6 +13974,7 @@ html.font-xl { font-size: 21px; }
 
 .shared-link-app-meta {
   width: 100%;
+  height: 13px;
   color: var(--text-muted);
   font-size: 0.66rem;
   line-height: 1.2;
@@ -13994,23 +14001,25 @@ html.font-xl { font-size: 21px; }
 }
 
 .shared-link-app-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   margin-top: 6px;
+  height: 28px;
+  flex: 0 0 auto;
 }
 
 .shared-link-app-favorite,
 .shared-link-app-child-add {
-  min-width: 0;
-  min-height: 28px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 0 6px;
+  padding: 0;
   border: 1px solid var(--border-glass);
-  border-radius: 999px;
+  border-radius: 50%;
   background: color-mix(in srgb, var(--bg-primary) 86%, transparent);
   color: var(--text-secondary);
   cursor: pointer;
@@ -14018,20 +14027,12 @@ html.font-xl { font-size: 21px; }
   font-size: 0.62rem;
   font-weight: 800;
   line-height: 1;
-  white-space: nowrap;
 }
 
 .shared-link-app-favorite i,
 .shared-link-app-child-add i {
   font-size: 0.78rem;
   flex: 0 0 auto;
-}
-
-.shared-link-app-favorite span,
-.shared-link-app-child-add span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .shared-link-app-edit {
@@ -14076,7 +14077,8 @@ html.font-xl { font-size: 21px; }
 
 .shared-link-app-tile--child .shared-link-app-link,
 .shared-link-add-tile--compact {
-  min-height: 92px;
+  height: 100px;
+  grid-template-rows: 42px 30px 0;
 }
 
 .shared-link-app-tile--child .shared-link-app-icon,
@@ -14092,6 +14094,7 @@ html.font-xl { font-size: 21px; }
   font: inherit;
   font-size: 0.78rem;
   font-weight: 800;
+  grid-template-rows: 50px 18px;
 }
 
 .shared-link-add-icon {
@@ -14249,9 +14252,14 @@ html.font-xl { font-size: 21px; }
     gap: 10px;
   }
 
+  .shared-link-app-tile {
+    min-height: 142px;
+  }
+
   .shared-link-app-link,
   .shared-link-add-tile {
-    min-height: 102px;
+    height: 108px;
+    grid-template-rows: 46px 34px 0;
     padding-inline: 6px;
   }
 
@@ -14271,16 +14279,16 @@ html.font-xl { font-size: 21px; }
   }
 
   .shared-link-app-actions {
-    grid-template-columns: 1fr;
-    gap: 4px;
+    gap: 6px;
+    height: 28px;
   }
 
   .shared-link-app-favorite,
   .shared-link-app-child-add {
-    min-height: 24px;
-    padding: 0 6px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
     font-size: 0.62rem;
-    gap: 4px;
   }
 
   .shared-link-app-favorite i,

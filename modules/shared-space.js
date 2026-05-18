@@ -472,10 +472,7 @@ function buildSharedLinkAppTile(card, allCategoryCards, cat, options = {}) {
     favoriteButton.dataset.id = card.id || '';
     favoriteButton.title = favoriteLabel;
     favoriteButton.setAttribute('aria-label', favoriteLabel);
-    favoriteButton.innerHTML = `
-      <i class="fa-${isFavorite ? 'solid' : 'regular'} fa-star" aria-hidden="true"></i>
-      <span>${isFavorite ? '登録済み' : 'お気に入り'}</span>
-    `;
+    favoriteButton.innerHTML = `<i class="fa-${isFavorite ? 'solid' : 'regular'} fa-star" aria-hidden="true"></i>`;
     favoriteButton.addEventListener('click', event => {
       event.preventDefault();
       event.stopPropagation();
@@ -489,7 +486,7 @@ function buildSharedLinkAppTile(card, allCategoryCards, cat, options = {}) {
       childAddButton.className = 'shared-link-app-child-add';
       childAddButton.title = '子アイコンを追加';
       childAddButton.setAttribute('aria-label', '子アイコンを追加');
-      childAddButton.innerHTML = '<i class="fa-solid fa-sitemap" aria-hidden="true"></i><span>子追加</span>';
+      childAddButton.innerHTML = '<i class="fa-solid fa-sitemap" aria-hidden="true"></i>';
       childAddButton.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
@@ -729,7 +726,7 @@ export function renderSharedLinksBrowser() {
       hint.className = 'shared-links-favorite-hint';
       hint.innerHTML = `
         <i class="material-symbols-rounded" aria-hidden="true">star</i>
-        <span>各アイコン下の「お気に入り」で保存、「子追加」で関連アイコンを作成できます。</span>
+        <span>各アイコン下の星でお気に入り保存、ツリーアイコンで関連アイコンを作成できます。</span>
       `;
       body.appendChild(hint);
     }
