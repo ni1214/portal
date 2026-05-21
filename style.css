@@ -18572,7 +18572,8 @@ body {
 }
 
 .app-header-inner {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(320px, 640px) minmax(220px, 1fr);
   align-items: center;
   height: 100%;
   padding: 0 12px;
@@ -18585,6 +18586,7 @@ body {
   gap: 8px;
   flex-shrink: 0;
   min-width: 0;
+  justify-self: start;
 }
 
 .app-menu-btn {
@@ -18635,10 +18637,11 @@ body {
   letter-spacing: -0.01em;
 }
 .app-header-center {
-  flex: 1;
+  width: 100%;
   min-width: 0;
   max-width: 640px;
-  margin: 0 8px;
+  margin: 0 auto;
+  justify-self: center;
 }
 
 .app-search-wrap {
@@ -18705,7 +18708,9 @@ body {
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  margin-left: auto;
+  min-width: 0;
+  margin-left: 0;
+  justify-self: end;
 }
 
 .app-header-btn {
@@ -19313,7 +19318,14 @@ body {
 
   .app-brand-name { display: none; }
   .app-user-info { display: none; }
-  .app-header-center { margin: 0 4px; }
+  .app-header-inner {
+    display: flex;
+  }
+  .app-header-center {
+    flex: 1;
+    max-width: none;
+    margin: 0 4px;
+  }
 .app-sidebar {
     position: fixed;
     top: var(--app-header-h);
