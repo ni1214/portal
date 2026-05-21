@@ -3999,6 +3999,10 @@ html.font-xl { font-size: 21px; }
   margin-left: 6px;
   line-height: 1.6;
 }
+.notice-new-badge--posted {
+  background: color-mix(in srgb, var(--state-success) 18%, transparent);
+  color: var(--state-success-bright);
+}
 .notice-unread-label {
   font-size: 0.75rem;
   color: var(--text-muted);
@@ -22520,6 +22524,7 @@ body:has(#home-dashboard) #home-dashboard .home-simple-main {
   grid-template-columns: minmax(0, 1.04fr) minmax(360px, 0.96fr);
   grid-template-areas:
     "focus actions"
+    "latest actions"
     "favorites actions";
   align-items: start;
   gap: 12px;
@@ -22534,11 +22539,16 @@ body:has(#home-dashboard) #home-dashboard .home-simple-actions {
   grid-area: actions;
 }
 
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice {
+  grid-area: latest;
+}
+
 body:has(#home-dashboard) #home-dashboard .home-simple-favorites {
   grid-area: favorites;
 }
 
 body:has(#home-dashboard) #home-dashboard .home-simple-focus,
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice,
 body:has(#home-dashboard) #home-dashboard .home-simple-action,
 body:has(#home-dashboard) #home-dashboard .home-simple-favorites,
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link,
@@ -22550,6 +22560,7 @@ body:has(#home-dashboard) #home-dashboard .home-simple-favorite-more {
 }
 
 body:has(#home-dashboard) #home-dashboard .home-simple-focus,
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice,
 body:has(#home-dashboard) #home-dashboard .home-simple-action,
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link,
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-more,
@@ -22571,7 +22582,94 @@ body:has(#home-dashboard) #home-dashboard .home-simple-focus {
   text-align: left;
 }
 
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 24px;
+  align-items: start;
+  gap: 14px;
+  min-height: 118px;
+  padding: 15px 16px;
+  text-align: left;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice--alert {
+  border-color: color-mix(in srgb, var(--portal-home-danger) 34%, var(--portal-home-line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--portal-home-danger) 9%, var(--portal-home-card)), color-mix(in srgb, var(--portal-home-card) 94%, var(--portal-home-elevated)));
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice--active {
+  border-color: color-mix(in srgb, var(--portal-home-accent) 34%, var(--portal-home-line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--portal-home-accent) 10%, var(--portal-home-card)), color-mix(in srgb, var(--portal-home-card) 94%, var(--portal-home-elevated)));
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice__top,
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice__chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice__top {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice__label {
+  color: var(--portal-home-copy);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-notice-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: color-mix(in srgb, var(--portal-home-line) 34%, transparent);
+  color: var(--portal-home-copy);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-notice-chip--new,
+body:has(#home-dashboard) #home-dashboard .home-simple-notice-chip--unread {
+  background: color-mix(in srgb, var(--portal-home-accent) 16%, transparent);
+  color: var(--portal-home-accent);
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-notice-chip--alert {
+  background: color-mix(in srgb, var(--portal-home-danger) 16%, transparent);
+  color: var(--portal-home-danger);
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-notice-chip--posted {
+  background: color-mix(in srgb, var(--portal-home-success) 16%, transparent);
+  color: var(--portal-home-success);
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice__title {
+  color: var(--portal-home-title);
+  font-family: var(--portal-home-heading-font);
+  font-size: 1.08rem;
+  font-weight: 800;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice__excerpt,
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice__meta {
+  color: var(--portal-home-copy);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 body:has(#home-dashboard) #home-dashboard .home-simple-focus:hover,
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice:hover,
 body:has(#home-dashboard) #home-dashboard .home-simple-action:hover,
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link:hover,
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-more:hover,
@@ -22581,6 +22679,7 @@ body:has(#home-dashboard) #home-dashboard .home-simple-text-action:hover {
 }
 
 body:has(#home-dashboard) #home-dashboard .home-simple-focus:focus-visible,
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice:focus-visible,
 body:has(#home-dashboard) #home-dashboard .home-simple-action:focus-visible,
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link:focus-visible,
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-more:focus-visible,
@@ -22590,6 +22689,7 @@ body:has(#home-dashboard) #home-dashboard .home-simple-text-action:focus-visible
 }
 
 body:has(#home-dashboard) #home-dashboard .home-simple-focus__icon,
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice__icon,
 body:has(#home-dashboard) #home-dashboard .home-simple-action__icon,
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link__icon {
   display: inline-flex;
@@ -22604,6 +22704,7 @@ body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link__icon {
 }
 
 body:has(#home-dashboard) #home-dashboard .home-simple-focus__body,
+body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice__body,
 body:has(#home-dashboard) #home-dashboard .home-simple-action__body,
 body:has(#home-dashboard) #home-dashboard .home-simple-favorite-link__body {
   display: flex;
@@ -23215,6 +23316,7 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
   body:has(#home-dashboard) #home-dashboard .home-simple-main {
     grid-template-areas:
       "focus"
+      "latest"
       "actions"
       "favorites";
   }
@@ -23254,11 +23356,19 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
     padding: 14px;
   }
 
-  body:has(#home-dashboard) #home-dashboard .home-simple-focus > .home-simple-arrow {
+  body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice {
+    grid-template-columns: 38px minmax(0, 1fr);
+    min-height: 0;
+    padding: 13px;
+  }
+
+  body:has(#home-dashboard) #home-dashboard .home-simple-focus > .home-simple-arrow,
+  body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice > .home-simple-arrow {
     display: none;
   }
 
-  body:has(#home-dashboard) #home-dashboard .home-simple-focus__icon {
+  body:has(#home-dashboard) #home-dashboard .home-simple-focus__icon,
+  body:has(#home-dashboard) #home-dashboard .home-simple-latest-notice__icon {
     width: 38px;
     height: 38px;
   }

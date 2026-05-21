@@ -12,6 +12,7 @@ let favoriteOutsideDismissBound = false;
 
 const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 const DASH_LIST_LIMIT = 3;
+const LATEST_NOTICE_NEW_MS = 15 * 60 * 1000;
 const ATTENDANCE_TYPE_LABELS = {
   normal: '通常',
   有給: '有給',
@@ -403,6 +404,7 @@ function renderHomeHero(host, {
       meta: profile.roleLabel || 'ユーザー設定',
     },
   ];
+  const latestNoticeCard = buildLatestNoticeHomeCard();
   host.innerHTML = `
     <section class="home-simple-shell" aria-label="ホーム">
       <header class="home-simple-header">
@@ -432,6 +434,8 @@ function renderHomeHero(host, {
           </span>
           <span class="material-symbols-rounded home-simple-arrow" aria-hidden="true">arrow_forward</span>
         </button>
+
+        ${renderLatestNoticeHomeCard(latestNoticeCard)}
 
         <div class="home-simple-actions" aria-label="主要メニュー">
           ${quickActions.map(action => `
@@ -617,6 +621,98 @@ function renderHomeHero(host, {
         `).join('')}
       </div>
     </section>
+  `;
+}
+
+function getHomeNoticeSource() {
+  const source = Array.isArray(state.visibleNotices) && state.visibleNotices.length > 0
+    ? state.visibleNotices
+    : (Array.isArray(state.allNotices) ? state.allNotices : []);
+  return [...source].sort((a, b) => compareTimestamp(b.createdAt, a.createdAt));
+}
+
+function isNoticeCreatedByCurrentUser(notice) {
+  return !!state.currentUsername && !!notice?.createdBy && notice.createdBy === state.currentUsername;
+}
+
+function isNoticeAcknowledgedByCurrentUser(notice) {
+  if (!state.currentUsername) return false;
+  const acknowledgedBy = Array.isArray(notice?.acknowledgedBy) ? notice.acknowledgedBy : [];
+  return acknowledgedBy.includes(state.currentUsername);
+}
+
+function isNoticeFresh(notice) {
+  const createdMs = toMillis(notice?.createdAt);
+  return createdMs > 0 && Date.now() - createdMs <= LATEST_NOTICE_NEW_MS;
+}
+
+function truncateNoticeText(value, maxLength = 72) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}...` : text;
+}
+
+function buildLatestNoticeHomeCard() {
+  const latest = getHomeNoticeSource()[0];
+  if (!latest) return null;
+
+  const isOwn = isNoticeCreatedByCurrentUser(latest);
+  const needsAck = !!latest.requireAcknowledgement && !isOwn && !isNoticeAcknowledgedByCurrentUser(latest);
+  const unread = !!state.currentUsername && !isOwn && !state.readNoticeIds.has(latest.id);
+  const fresh = isNoticeFresh(latest);
+  const urgent = latest.priority === 'urgent';
+  const tone = needsAck || urgent ? 'alert' : (unread || fresh ? 'active' : (isOwn ? 'posted' : 'clear'));
+  const chips = [];
+
+  if (fresh) chips.push({ text: '新着', tone: 'new' });
+  if (isOwn) {
+    chips.push({ text: '投稿済み', tone: 'posted' });
+  } else if (needsAck) {
+    chips.push({ text: '確認必須', tone: 'alert' });
+  } else if (unread) {
+    chips.push({ text: '未読', tone: 'unread' });
+  } else {
+    chips.push({ text: '既読', tone: 'read' });
+  }
+  if (urgent) chips.push({ text: '重要', tone: 'alert' });
+
+  const meta = [
+    isOwn ? 'あなたが投稿' : (latest.createdBy ? `${latest.createdBy} から` : ''),
+    formatNoticeDate(latest.createdAt),
+  ].filter(Boolean).join(' / ');
+
+  return {
+    title: latest.title || '名称未設定',
+    body: truncateNoticeText(latest.body || ''),
+    meta,
+    tone,
+    chips,
+  };
+}
+
+function renderLatestNoticeHomeCard(card) {
+  if (!card) return '';
+  return `
+    <button
+      type="button"
+      class="home-simple-latest-notice home-simple-latest-notice--${esc(card.tone || 'clear')}"
+      data-dash-target="${esc(DASH_TARGETS.NOTICE)}"
+    >
+      <span class="home-simple-latest-notice__icon">
+        <span class="material-symbols-rounded" aria-hidden="true">campaign</span>
+      </span>
+      <span class="home-simple-latest-notice__body">
+        <span class="home-simple-latest-notice__top">
+          <span class="home-simple-latest-notice__label">最新のお知らせ</span>
+          <span class="home-simple-latest-notice__chips">
+            ${card.chips.map(chip => `<span class="home-simple-notice-chip home-simple-notice-chip--${esc(chip.tone)}">${esc(chip.text)}</span>`).join('')}
+          </span>
+        </span>
+        <strong class="home-simple-latest-notice__title">${esc(card.title)}</strong>
+        ${card.body ? `<span class="home-simple-latest-notice__excerpt">${esc(card.body)}</span>` : ''}
+        ${card.meta ? `<span class="home-simple-latest-notice__meta">${esc(card.meta)}</span>` : ''}
+      </span>
+      <span class="material-symbols-rounded home-simple-arrow" aria-hidden="true">arrow_forward</span>
+    </button>
   `;
 }
 
@@ -1377,7 +1473,7 @@ function buildNoticeCard() {
     : (state.allNotices || []);
   const pendingAck = getPendingAckNotices();
   const unread = noticeSource.filter(notice =>
-    !state.readNoticeIds.has(notice.id) && !notice?.requireAcknowledgement
+    !isNoticeCreatedByCurrentUser(notice) && !state.readNoticeIds.has(notice.id) && !notice?.requireAcknowledgement
   );
   const urgentUnread = unread.filter(notice => notice.priority === 'urgent');
   const listSource = (pendingAck.length > 0 ? pendingAck : (urgentUnread.length > 0 ? urgentUnread : unread))
@@ -1539,6 +1635,7 @@ function getPendingAckNotices() {
     : (state.allNotices || []);
   return noticeSource.filter(notice => {
     if (!notice?.requireAcknowledgement || !state.currentUsername) return false;
+    if (isNoticeCreatedByCurrentUser(notice)) return false;
     const acknowledgedBy = Array.isArray(notice.acknowledgedBy) ? notice.acknowledgedBy : [];
     return !acknowledgedBy.includes(state.currentUsername);
   });

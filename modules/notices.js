@@ -56,6 +56,10 @@ function noticeRequiresAcknowledgement(notice) {
   return !!notice?.requireAcknowledgement;
 }
 
+function isNoticeCreatedByCurrentUser(notice) {
+  return !!state.currentUsername && !!notice?.createdBy && notice.createdBy === state.currentUsername;
+}
+
 function isNoticeAcknowledgedByCurrentUser(notice) {
   if (!state.currentUsername || !noticeRequiresAcknowledgement(notice)) return false;
   return normalizeAcknowledgedUsers(notice.acknowledgedBy).includes(state.currentUsername);
@@ -64,12 +68,12 @@ function isNoticeAcknowledgedByCurrentUser(notice) {
 function getPendingAcknowledgementNotices(notices = state.visibleNotices) {
   if (!state.currentUsername) return [];
   return (Array.isArray(notices) ? notices : []).filter(notice =>
-    noticeRequiresAcknowledgement(notice) && !isNoticeAcknowledgedByCurrentUser(notice)
+    !isNoticeCreatedByCurrentUser(notice) && noticeRequiresAcknowledgement(notice) && !isNoticeAcknowledgedByCurrentUser(notice)
   );
 }
 
 function getVisibleUnreadCount() {
-  return (state.visibleNotices || []).filter(n => !state.readNoticeIds.has(n.id)).length;
+  return (state.visibleNotices || []).filter(n => !isNoticeCreatedByCurrentUser(n) && !state.readNoticeIds.has(n.id)).length;
 }
 
 function formatNoticeDate(notice) {
@@ -83,7 +87,7 @@ function formatNoticeDate(notice) {
 
 function getVisibleUnreadNoticeCount() {
   return (state.visibleNotices || []).filter(notice =>
-    !state.readNoticeIds.has(notice.id) && !noticeRequiresAcknowledgement(notice)
+    !isNoticeCreatedByCurrentUser(notice) && !state.readNoticeIds.has(notice.id) && !noticeRequiresAcknowledgement(notice)
   ).length;
 }
 
@@ -104,6 +108,20 @@ function buildAudienceBadgeHtml(notice) {
 function buildAcknowledgementHtml(notice) {
   if (!noticeRequiresAcknowledgement(notice)) return '';
   const acknowledgedUsers = normalizeAcknowledgedUsers(notice.acknowledgedBy);
+  if (isNoticeCreatedByCurrentUser(notice)) {
+    const confirmedBy = acknowledgedUsers.length > 0
+      ? `<div class="notice-ack-users">確認済み: ${acknowledgedUsers.map(username => esc(username)).join(' / ')}</div>`
+      : '<div class="notice-ack-users">まだ確認者はいません</div>';
+    return `
+      <div class="notice-ack-row">
+        <div class="notice-ack-head">
+          <span class="notice-ack-chip notice-ack-chip--done"><i class="fa-solid fa-circle-check"></i> 投稿済み</span>
+          <span class="notice-ack-count">${acknowledgedUsers.length}名確認</span>
+        </div>
+        ${confirmedBy}
+      </div>
+    `;
+  }
   const acknowledged = isNoticeAcknowledgedByCurrentUser(notice);
   const statusChip = acknowledged
     ? '<span class="notice-ack-chip notice-ack-chip--done"><i class="fa-solid fa-circle-check"></i> 確認済み</span>'
@@ -484,6 +502,11 @@ export async function saveNotice(data) {
     requireAcknowledgement: !!data?.requireAcknowledgement,
     acknowledgedBy: normalizeAcknowledgedUsers(existingNotice?.acknowledgedBy),
   };
+  if (state.editingNoticeId) {
+    delete normalizedData.createdBy;
+  } else if (!normalizedData.createdBy) {
+    normalizedData.createdBy = state.currentUsername || '';
+  }
 
   if (state.editingNoticeId) {
     await updateNoticeInSupabase(state.editingNoticeId, normalizedData);
@@ -512,6 +535,7 @@ export async function addNotice(data) {
     targetDepartments: normalizeTargetDepartments(data?.targetDepartments),
     requireAcknowledgement: !!data?.requireAcknowledgement,
     acknowledgedBy: [],
+    createdBy: data?.createdBy || state.currentUsername || '',
   };
   await createNoticeInSupabase(normalizedData);
 }
@@ -575,11 +599,14 @@ export function renderNotices(notices) {
   }
 
   visibleNotices.forEach(n => {
-    const isUnread = state.currentUsername && !state.readNoticeIds.has(n.id);
+    const isOwnNotice = isNoticeCreatedByCurrentUser(n);
+    const isUnread = state.currentUsername && !isOwnNotice && !state.readNoticeIds.has(n.id);
     const item = document.createElement('div');
     item.className = `notice-item${n.priority === 'urgent' ? ' urgent' : ''}${isUnread ? ' notice-unread' : ''}`;
     const dateStr = formatNoticeDate(n);
-    const newBadge = isUnread ? `<span class="notice-new-badge">NEW</span>` : '';
+    const newBadge = isUnread
+      ? `<span class="notice-new-badge">NEW</span>`
+      : (isOwnNotice ? `<span class="notice-new-badge notice-new-badge--posted">投稿済み</span>` : '');
     const editBtns = state.isEditMode
       ? `<button class="btn-notice-edit" data-id="${n.id}" aria-label="お知らせを編集"><i class="fa-solid fa-pen"></i></button>`
       : '';

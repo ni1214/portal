@@ -4210,6 +4210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         requireAcknowledgement,
         targetScope,
         targetDepartments,
+        createdBy: state.currentUsername || '',
         updatedAt: serverTimestamp()
       });
       closeNoticeModal();
