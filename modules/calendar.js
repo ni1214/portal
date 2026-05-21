@@ -477,6 +477,7 @@ export function renderCalendar() {
 
     let cellCls = 'cal-cell';
     if (isToday)   cellCls += ' cal-today';
+    if (state.calendarSelectedDate === dateStr) cellCls += ' cal-selected';
     if (dow === 0) cellCls += ' cal-sun';
     if (dow === 6 && !info.isWorkSaturday) cellCls += ' cal-sat';
     if (info.jpHolidayName && dow !== 0) cellCls += ' cal-jp-holiday';
@@ -522,7 +523,13 @@ export function renderCalendar() {
       if (sentCount > 0)     taskHtml += `<span class="cal-task-dot cal-task-sent" title="依頼したタスク ${sentCount}件">${sentCount}</span>`;
     }
 
-    html += `<div class="${cellCls}" data-date="${dateStr}">
+    const dayLabelParts = [`${month + 1}月${d}日`];
+    if (att?.type && att.type !== 'normal') dayLabelParts.push(att.type);
+    if (att?.hayade) dayLabelParts.push(`早出 ${att.hayade}時間`);
+    if (att?.zangyo) dayLabelParts.push(`残業 ${att.zangyo}時間`);
+    if (tasks.length > 0) dayLabelParts.push(`タスク ${tasks.length}件`);
+
+    html += `<div class="${cellCls}" data-date="${dateStr}" role="button" tabindex="0" aria-label="${esc(dayLabelParts.join('、'))}">
       <div class="cal-day-num">${d}</div>
       <div class="cal-day-content">
         ${companyBadges}
@@ -537,6 +544,11 @@ export function renderCalendar() {
   // クリックイベント
   el.querySelectorAll('.cal-cell[data-date]').forEach(cell => {
     cell.addEventListener('click', () => openDayPanel(cell.dataset.date));
+    cell.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      openDayPanel(cell.dataset.date);
+    });
   });
 
   updateCalendarSummary();
@@ -1162,8 +1174,11 @@ function renderDayWorkInputs(dateStr, workSiteHours, preservedRows = null) {
         ? '<div class="cal-day-work-recent-loading">最近使った現場を読み込み中...</div>'
         : '');
 
-    container.innerHTML = recentHtml + rows.map((row, idx) => `
-      <div class="cal-day-work-row" data-index="${idx}">
+    container.innerHTML = recentHtml + rows.map((row, idx) => {
+      const hasValue = Boolean((row.search || '').trim() || row.siteId || row.hours);
+      const hideDelete = !hasValue && rows.length <= 1;
+      return `
+      <div class="cal-day-work-row${hasValue ? '' : ' cal-day-work-row-empty'}" data-index="${idx}">
         <input
           type="search"
           class="form-input cal-day-work-search"
@@ -1182,9 +1197,9 @@ function renderDayWorkInputs(dateStr, workSiteHours, preservedRows = null) {
           placeholder="時間"
           value="${esc(row.hours || '')}"
         >
-        <button type="button" class="btn-modal-danger cal-day-work-del-btn" data-index="${idx}">削除</button>
+        <button type="button" class="btn-modal-danger cal-day-work-del-btn" data-index="${idx}"${hideDelete ? ' hidden' : ''}>削除</button>
       </div>
-    `).join('');
+    `; }).join('');
 
     [...container.querySelectorAll('.cal-day-work-row')].forEach((rowEl, idx) => {
       const searchInput = rowEl.querySelector('.cal-day-work-search');
@@ -1307,6 +1322,11 @@ export function openDayPanel(dateStr) {
   state.calendarSelectedDate = dateStr;
   const panel = document.getElementById('cal-day-panel');
   if (!panel) return;
+  const view = document.getElementById('calw-view-calendar');
+  if (view) view.classList.add('cal-day-open');
+  document.querySelectorAll('#cal-grid-container .cal-cell[data-date]').forEach(cell => {
+    cell.classList.toggle('cal-selected', cell.dataset.date === dateStr);
+  });
 
   const d    = new Date(dateStr + 'T00:00:00');
   const dow  = DOW_LABELS[d.getDay()];
@@ -1379,7 +1399,11 @@ export function openDayPanel(dateStr) {
   renderDayTasks(dateStr);
 
   panel.hidden = false;
-  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  const stacked = window.matchMedia?.('(max-width: 980px)').matches;
+  if (stacked) {
+    const compact = window.matchMedia?.('(max-width: 720px)').matches;
+    panel.scrollIntoView({ behavior: 'smooth', block: compact ? 'start' : 'nearest' });
+  }
 }
 
 // ===== 早出・残業 合計表示 =====
@@ -1408,6 +1432,8 @@ function updateTimeTotal() {
 export function closeDayPanel() {
   const panel = document.getElementById('cal-day-panel');
   if (panel) panel.hidden = true;
+  document.getElementById('calw-view-calendar')?.classList.remove('cal-day-open');
+  document.querySelectorAll('#cal-grid-container .cal-cell.cal-selected').forEach(cell => cell.classList.remove('cal-selected'));
   state.calendarSelectedDate = null;
   state.calendarAutoProjectKeys = [];
 }
