@@ -124,6 +124,7 @@ import {
 import {
   initCalendar,
   openCalendarModal, closeCalendarModal,
+  openCalendarWorkspace,
   calPrevMonth, calNextMonth, calGoToday,
   openDayPanel, closeDayPanel, saveDayAttendance, deleteAttendance,
   switchCalTab, renderCalendar, updateCalendarSummary,
@@ -340,6 +341,7 @@ initCalendar({
   subscribeCompanyCalConfig,
   unsubscribeCompanyCalConfig,
   getDateInfo,
+  onCalendarWorkspaceClose: onCalendarModalClose,
 });
 
 initAttendanceWork({
@@ -551,7 +553,7 @@ initTodayDashboard({
     openReqModal('request');
   },
   openTodayAttendance: async () => {
-    await openCalendarModal();
+    await openCalendarWorkspace();
     if (!document.getElementById('cal-modal')?.classList.contains('visible')) return;
     await onCalendarModalOpen();
     openDayPanel(buildTodayDateKey());
@@ -629,7 +631,7 @@ Object.assign(sharedSpaceDeps, {
   focusNoticeBoard: focusNoticeBoardFromDashboard,
   focusWeatherWidget,
   openCalendarModal: async () => {
-    await openCalendarModal();
+    await openCalendarWorkspace();
     if (document.getElementById('cal-modal')?.classList.contains('visible')) {
       await onCalendarModalOpen();
     }
@@ -675,7 +677,7 @@ initPropertySummary({
   openWork: async projectKey => {
     state.attendanceWorkProjectKeyFilter = projectKey;
     state.calPersonalTab = 'work';
-    await openCalendarModal();
+    await openCalendarWorkspace();
     if (document.getElementById('cal-modal')?.classList.contains('visible')) {
       await onCalendarModalOpen();
       await switchCalPersonalTab('work');
@@ -3329,6 +3331,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('sidebar-home-btn').addEventListener('click', () => {
     closeSettingsPanel();
+    if (document.getElementById('cal-modal')?.classList.contains('cal-workspace-mode')) {
+      closeCalendarModal();
+      onCalendarModalClose();
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
   document.getElementById('btn-shared-links').addEventListener('click', () => {
@@ -3919,7 +3925,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       promptUsernameFor('カレンダー・勤怠');
       return;
     }
-    await openCalendarModal();
+    await openCalendarWorkspace();
     if (document.getElementById('cal-modal')?.classList.contains('visible')) {
       await onCalendarModalOpen();
     }

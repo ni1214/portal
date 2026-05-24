@@ -43,6 +43,10 @@ let attendanceLoadSeq = 0;
 let todayAttendanceLoadSeq = 0;
 let prevMonthAttendanceLoadSeq = 0;
 let fiscalYearLoadSeq = 0;
+let calendarOriginalParent = null;
+let calendarOriginalNextSibling = null;
+let calendarCloseIconText = '';
+let calendarCloseTitle = '';
 export function initCalendar(d) { deps = d; }
 
 // ===== Supabase helpers =====
@@ -642,11 +646,7 @@ export function switchCalTab(tab) {
   }
 }
 
-// ===== モーダル開閉 =====
-export async function openCalendarModal() {
-  if (!state.currentUsername) { showToast('ユーザーネームを設定してください', 'warning'); return; }
-  document.getElementById('cal-modal').classList.add('visible');
-  // タブをリセット
+function resetCalendarViewState() {
   state.calTab = 'personal';
   document.getElementById('cal-tab-personal')?.classList.add('active');
   document.getElementById('cal-tab-shared')?.classList.remove('active');
@@ -654,20 +654,111 @@ export async function openCalendarModal() {
   const sharedEl   = document.getElementById('cal-shared-container');
   if (personalEl) personalEl.style.display = '';
   if (sharedEl)   sharedEl.style.display   = 'none';
-  // 購読開始
+}
+
+function startCalendarRuntime() {
+  resetCalendarViewState();
   subscribeAttendance(state.currentUsername);
   deps.subscribeCompanyCalConfig?.();
   renderCalendar();
   void loadRecentWorkSites(true);
-  // 年度累計を非同期で取得（UIをブロックしない）
   fetchFiscalYearPaidLeave();
 }
 
+function mountCalendarWorkspace() {
+  const modal = document.getElementById('cal-modal');
+  const dashboard = document.getElementById('home-dashboard');
+  const appMain = document.getElementById('app-main');
+  if (!modal || !dashboard || !appMain) return false;
+  if (modal.classList.contains('cal-workspace-mode')) {
+    modal.classList.add('visible');
+    appMain?.classList.add('calendar-workspace-active', 'home-compact');
+    return true;
+  }
+
+  if (!calendarOriginalParent) {
+    calendarOriginalParent = modal.parentNode;
+    calendarOriginalNextSibling = modal.nextSibling;
+  }
+
+  let workspaceHost = document.getElementById('calendar-workspace-host');
+  if (!workspaceHost) {
+    workspaceHost = document.createElement('section');
+    workspaceHost.id = 'calendar-workspace-host';
+    workspaceHost.className = 'cal-workspace-shell';
+    workspaceHost.setAttribute('aria-label', 'カレンダー勤怠');
+    dashboard.after(workspaceHost);
+  }
+  workspaceHost.hidden = false;
+  workspaceHost.innerHTML = '<div class="cal-workspace-mount" id="cal-workspace-mount"></div>';
+  workspaceHost.querySelector('#cal-workspace-mount')?.appendChild(modal);
+  modal.classList.add('cal-workspace-mode', 'visible');
+  appMain?.classList.add('calendar-workspace-active', 'home-compact');
+
+  const closeBtn = document.getElementById('cal-close-btn');
+  const closeIcon = closeBtn?.querySelector('.material-symbols-rounded');
+  if (closeBtn && !calendarCloseTitle) calendarCloseTitle = closeBtn.getAttribute('title') || '';
+  if (closeIcon && !calendarCloseIconText) calendarCloseIconText = closeIcon.textContent || 'close';
+  if (closeBtn) closeBtn.setAttribute('title', 'ホームへ戻る');
+  if (closeIcon) closeIcon.textContent = 'home';
+  if (closeBtn && closeBtn.dataset.calendarWorkspaceCloseBound !== '1') {
+    closeBtn.dataset.calendarWorkspaceCloseBound = '1';
+    closeBtn.addEventListener('click', event => {
+      const currentModal = document.getElementById('cal-modal');
+      if (!currentModal?.classList.contains('cal-workspace-mode')) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeCalendarModal();
+      deps.onCalendarWorkspaceClose?.();
+    });
+  }
+  return true;
+}
+
+function unmountCalendarWorkspace() {
+  const modal = document.getElementById('cal-modal');
+  if (!modal?.classList.contains('cal-workspace-mode')) return;
+
+  modal.classList.remove('cal-workspace-mode', 'visible');
+  if (calendarOriginalParent) {
+    calendarOriginalParent.insertBefore(modal, calendarOriginalNextSibling);
+  }
+  document.getElementById('app-main')?.classList.remove('calendar-workspace-active');
+  const workspaceHost = document.getElementById('calendar-workspace-host');
+  if (workspaceHost) {
+    workspaceHost.innerHTML = '';
+    workspaceHost.hidden = true;
+  }
+
+  const closeBtn = document.getElementById('cal-close-btn');
+  const closeIcon = closeBtn?.querySelector('.material-symbols-rounded');
+  if (closeBtn) closeBtn.setAttribute('title', calendarCloseTitle || '閉じる');
+  if (closeIcon) closeIcon.textContent = calendarCloseIconText || 'close';
+
+  deps.renderTodayDashboard?.();
+}
+
+// ===== モーダル / ホームビュー開閉 =====
+export async function openCalendarModal() {
+  if (!state.currentUsername) { showToast('ユーザーネームを設定してください', 'warning'); return; }
+  document.getElementById('cal-modal').classList.add('visible');
+  startCalendarRuntime();
+}
+
+export async function openCalendarWorkspace() {
+  if (!state.currentUsername) { showToast('ユーザーネームを設定してください', 'warning'); return; }
+  if (!mountCalendarWorkspace()) return;
+  startCalendarRuntime();
+}
+
 export function closeCalendarModal() {
-  document.getElementById('cal-modal').classList.remove('visible');
+  const modal = document.getElementById('cal-modal');
+  const isWorkspace = modal?.classList.contains('cal-workspace-mode');
+  modal?.classList.remove('visible');
   closeDayPanel();
   unsubscribeAttendance();
   deps.unsubscribeCompanyCalConfig?.();
+  if (isWorkspace) unmountCalendarWorkspace();
 }
 
 // ===== 前月・次月 =====
@@ -1399,11 +1490,8 @@ export function openDayPanel(dateStr) {
   renderDayTasks(dateStr);
 
   panel.hidden = false;
-  const stacked = window.matchMedia?.('(max-width: 980px)').matches;
-  if (stacked) {
-    const compact = window.matchMedia?.('(max-width: 720px)').matches;
-    panel.scrollIntoView({ behavior: 'smooth', block: compact ? 'start' : 'nearest' });
-  }
+  const compact = window.matchMedia?.('(max-width: 720px)').matches;
+  panel.scrollIntoView({ behavior: 'smooth', block: compact ? 'start' : 'nearest' });
 }
 
 // ===== 早出・残業 合計表示 =====

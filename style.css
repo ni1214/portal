@@ -25982,7 +25982,7 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
 
 /* ===== calendar.js responsive refresh ===== */
 #cal-modal .cal-modal-glass {
-  width: min(1080px, 96vw);
+  width: min(840px, 96vw);
   max-height: min(92vh, 980px);
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--bg-secondary) 94%, var(--bg-card));
@@ -26109,8 +26109,10 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
 }
 
 .cal-day-panel {
+  margin: 12px 0 0;
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--bg-card) 82%, transparent);
+  overflow-x: hidden;
 }
 
 .cal-modal-glass .form-input {
@@ -26137,32 +26139,12 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
 }
 
 @media (min-width: 981px) {
-  #calw-view-calendar.cal-day-open {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
-    grid-template-areas:
-      "summary summary"
-      "calendar detail";
-    gap: 16px;
-    align-items: start;
+  .cal-day-panel {
+    margin-inline: 0;
   }
 
-  #calw-view-calendar.cal-day-open .cal-summary {
-    grid-area: summary;
-    margin-bottom: 0;
-  }
-
-  #calw-view-calendar.cal-day-open #cal-grid-container {
-    grid-area: calendar;
-  }
-
-  #calw-view-calendar.cal-day-open #cal-day-panel {
-    grid-area: detail;
-    position: sticky;
-    top: 84px;
-    max-height: calc(92vh - 270px);
-    overflow: auto;
-    margin: 0;
+  .cal-day-work-row {
+    grid-template-columns: minmax(170px, 1fr) minmax(220px, 1.35fr) 92px auto;
   }
 }
 
@@ -26316,7 +26298,7 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
 
   .cal-day-panel {
     margin: 10px 0 0;
-    padding: 12px;
+    padding: 12px 12px 92px;
     border-radius: var(--radius-md);
   }
 
@@ -26393,15 +26375,20 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
   }
 
   .cal-day-panel .modal-actions {
-    position: sticky;
-    bottom: -12px;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 0;
     z-index: 6;
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-    margin: 16px -12px -12px;
+    margin: 0;
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
     border-top: 1px solid var(--border-glass);
+    border-left: 1px solid var(--border-glass);
+    border-right: 1px solid var(--border-glass);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
     background: color-mix(in srgb, var(--bg-secondary) 94%, transparent);
     backdrop-filter: blur(14px);
   }
@@ -26423,5 +26410,112 @@ body:has(#home-dashboard) #home-dashboard .home-simple-empty {
 
   .cal-time-row {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ===== calendar workspace view ===== */
+body:has(#home-dashboard) .app-main.calendar-workspace-active .home-content-grid,
+.app-main.calendar-workspace-active .home-content-grid {
+  display: none !important;
+}
+
+body:has(#home-dashboard) .app-main.calendar-workspace-active #home-dashboard,
+.app-main.calendar-workspace-active #home-dashboard {
+  display: none !important;
+}
+
+.cal-workspace-shell {
+  display: none;
+}
+
+.app-main.calendar-workspace-active .cal-workspace-shell {
+  display: block;
+  width: min(1120px, 100%);
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.cal-workspace-mount {
+  width: 100%;
+}
+
+#cal-modal.cal-workspace-mode {
+  position: static;
+  inset: auto;
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  overflow: visible;
+}
+
+#cal-modal.cal-workspace-mode .cal-modal-glass {
+  width: 100%;
+  max-height: none;
+  min-height: calc(100dvh - var(--header-height) - 48px);
+  overflow: visible;
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
+#cal-modal.cal-workspace-mode .cal-modal-header {
+  position: sticky;
+  top: 8px;
+  z-index: 10;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+#cal-modal.cal-workspace-mode #calw-view-calendar {
+  padding-bottom: 24px;
+}
+
+#cal-modal.cal-workspace-mode .cal-day-panel {
+  margin: 16px 0 0;
+  overflow: visible;
+}
+
+#cal-modal.cal-workspace-mode .cal-day-panel .modal-actions {
+  position: sticky;
+  bottom: 0;
+}
+
+@media (min-width: 981px) {
+  #cal-modal.cal-workspace-mode .cal-cell {
+    min-height: 92px;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-main.calendar-workspace-active {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .app-main.calendar-workspace-active .cal-workspace-shell {
+    width: 100%;
+    max-width: none;
+  }
+
+  #cal-modal.cal-workspace-mode .cal-modal-glass {
+    min-height: 100dvh;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+  }
+
+  #cal-modal.cal-workspace-mode .cal-modal-header {
+    top: 0;
+    border-radius: 0;
+  }
+
+  #cal-modal.cal-workspace-mode .cal-day-panel {
+    padding-bottom: 150px;
+  }
+
+  #cal-modal.cal-workspace-mode .cal-day-panel .modal-actions {
+    bottom: 64px;
   }
 }
