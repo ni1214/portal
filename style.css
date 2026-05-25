@@ -26997,3 +26997,216 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
     flex: 0 0 auto;
   }
 }
+
+/* ===== calendar workspace polish ===== */
+.app-main.calendar-workspace-active .cal-workspace-shell {
+  width: min(1080px, 100%);
+  max-width: 1080px;
+}
+
+#cal-modal.cal-workspace-mode .cal-modal-glass {
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  padding: 0 0 28px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+#cal-modal.cal-workspace-mode .cal-modal-header {
+  position: static;
+  top: auto;
+  margin: 0 0 10px;
+  padding: 10px 0 12px;
+  border: 0;
+  background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+#cal-modal.cal-workspace-mode .cal-tab-bar,
+#cal-modal.cal-workspace-mode .calw-subtab-bar {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+#cal-modal.cal-workspace-mode .cal-tab-bar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+  border-bottom: 0;
+}
+
+#cal-modal.cal-workspace-mode .calw-subtab-bar {
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+#cal-modal.cal-workspace-mode .cal-tab-btn,
+#cal-modal.cal-workspace-mode .calw-subtab-btn,
+#cal-modal.cal-workspace-mode .cal-summary-item,
+#cal-modal.cal-workspace-mode .cal-cell,
+#cal-modal.cal-workspace-mode .cal-day-panel {
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+#cal-modal.cal-workspace-mode #calw-view-calendar {
+  padding: 0 0 28px;
+}
+
+#cal-modal.cal-workspace-mode #calw-view-calendar .cal-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+#cal-modal.cal-workspace-mode .cal-summary-item {
+  min-height: 38px;
+  padding: 7px 11px;
+}
+
+#cal-modal.cal-workspace-mode #cal-grid-container {
+  min-width: 0;
+}
+
+#cal-modal.cal-workspace-mode .cal-cells {
+  gap: 6px;
+}
+
+#cal-modal.cal-workspace-mode .cal-cell {
+  min-height: 88px;
+  padding: 7px;
+}
+
+#cal-modal.cal-workspace-mode .cal-day-panel {
+  margin: 0;
+  padding: 16px;
+  background: color-mix(in srgb, var(--bg-card) 82%, transparent);
+  border: 1px solid var(--border-glass);
+}
+
+#cal-modal.cal-workspace-mode .cal-day-panel[hidden] {
+  display: none;
+}
+
+#cal-modal.cal-workspace-mode .cal-day-panel .form-group {
+  margin-bottom: 12px;
+}
+
+#cal-modal.cal-workspace-mode .cal-day-panel .modal-actions {
+  margin: 16px -16px -16px;
+  bottom: 0;
+}
+
+@media (min-width: 981px) {
+  #cal-modal.cal-workspace-mode #calw-view-calendar.cal-day-open {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+    gap: 16px;
+    align-items: start;
+  }
+
+  #cal-modal.cal-workspace-mode #calw-view-calendar.cal-day-open .cal-summary {
+    grid-column: 1 / -1;
+  }
+
+  #cal-modal.cal-workspace-mode #calw-view-calendar.cal-day-open #cal-grid-container {
+    grid-column: 1;
+  }
+
+  #cal-modal.cal-workspace-mode #calw-view-calendar.cal-day-open .cal-day-panel {
+    position: sticky;
+    top: 84px;
+    grid-column: 2;
+    max-height: calc(100dvh - 112px);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-main.calendar-workspace-active .cal-workspace-shell {
+    width: 100%;
+    max-width: none;
+  }
+
+  #cal-modal.cal-workspace-mode .cal-modal-glass {
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    padding: 0 14px 92px;
+  }
+
+  #cal-modal.cal-workspace-mode .cal-modal-header {
+    top: auto;
+    margin-left: -14px;
+    margin-right: -14px;
+    padding: 10px 12px;
+  }
+
+  #cal-modal.cal-workspace-mode .cal-tab-bar {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  #cal-modal.cal-workspace-mode .calw-subtab-bar,
+  #cal-modal.cal-workspace-mode #calw-view-calendar .cal-summary {
+    margin-left: 0;
+    margin-right: 0;
+    overflow: visible;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  #cal-modal.cal-workspace-mode .calw-subtab-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #cal-modal.cal-workspace-mode #calw-view-calendar .cal-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  #cal-modal.cal-workspace-mode .calw-subtab-btn {
+    min-width: 0;
+    white-space: normal;
+  }
+
+  #cal-modal.cal-workspace-mode .cal-summary-item {
+    min-width: 0;
+    justify-content: center;
+  }
+
+  #cal-modal.cal-workspace-mode #calw-view-calendar {
+    padding: 0 0 18px;
+  }
+
+  #cal-modal.cal-workspace-mode .cal-cells {
+    gap: 5px;
+  }
+
+  #cal-modal.cal-workspace-mode .cal-cell {
+    min-height: 58px;
+    padding: 5px 3px;
+  }
+
+  #cal-modal.cal-workspace-mode .cal-day-panel {
+    margin-top: 12px;
+    padding: 14px 12px 112px;
+    scroll-margin-top: 124px;
+  }
+
+  #cal-modal.cal-workspace-mode .cal-day-panel .modal-actions {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: 64px;
+    margin: 16px 0 0;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+}
