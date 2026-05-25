@@ -792,6 +792,15 @@ Object.assign(sharedSpaceDeps, {
     state.activeTaskTab = 'received';
     openTaskWorkspace();
   },
+  openSharedLinksView: async () => {
+    state.sharedLinksCategory = 'all';
+    state.sharedLinksFavoritesOnlyCategory = '';
+    state.sharedLinksQuery = '';
+    await openSharedLinksWorkspace();
+  },
+  openFavoriteSharedLinksView: async categoryId => {
+    await openFavoriteSharedLinksWorkspace(categoryId || '');
+  },
   openPropertySummary: () => openPropertySummaryWorkspace(),
   openOrderModal: openOrderWorkspace,
   openReqModal: () => {

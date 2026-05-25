@@ -977,7 +977,7 @@ async function handleSharedHomeAction(action) {
   switch (action) {
     case 'links':
       state.sharedLinksQuery = '';
-      await openSharedLinksModal();
+      await (deps.openSharedLinksView?.() || openSharedLinksModal());
       return;
     case 'notice':
       deps.focusNoticeBoard?.();
