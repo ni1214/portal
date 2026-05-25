@@ -27472,3 +27472,208 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
     padding-right: 0;
   }
 }
+
+/* ===== request workspace viewport fit ===== */
+#reqboard-modal.portal-workspace-mode .reqboard-modal-inner {
+  position: static;
+  inset: auto;
+  width: 100%;
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
+  transform: none;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-modal-header {
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+  margin: 0 0 12px;
+  padding: 10px 0 12px;
+  border: 0;
+  background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-tabs,
+#reqboard-modal.portal-workspace-mode .reqboard-subtabs,
+#reqboard-modal.portal-workspace-mode #reqboard-request-area,
+#reqboard-modal.portal-workspace-mode #reqboard-suggestion-area,
+#reqboard-modal.portal-workspace-mode .reqboard-content,
+#reqboard-modal.portal-workspace-mode .req-item,
+#reqboard-modal.portal-workspace-mode .sugg-item,
+#reqboard-modal.portal-workspace-mode .sugg-form-section,
+#reqboard-modal.portal-workspace-mode .req-form,
+#reqboard-modal.portal-workspace-mode .req-project-filter-row {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
+#reqboard-modal.portal-workspace-mode #reqboard-request-area,
+#reqboard-modal.portal-workspace-mode #reqboard-suggestion-area {
+  display: block;
+  overflow: visible;
+}
+
+#reqboard-modal.portal-workspace-mode #reqboard-request-area[hidden],
+#reqboard-modal.portal-workspace-mode #reqboard-suggestion-area[hidden] {
+  display: none;
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+  border-bottom: 0;
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-tab {
+  min-height: 44px;
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-card) 70%, transparent);
+  white-space: normal;
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-tab.active {
+  border-color: color-mix(in srgb, var(--accent-cyan) 56%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-cyan) 13%, var(--bg-card));
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 0;
+  overflow: visible;
+  border-bottom: 0;
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-subtab {
+  flex: 1 1 150px;
+  min-height: 38px;
+  min-width: 0;
+  border-color: var(--border-glass);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-card) 70%, transparent);
+  text-align: center;
+  white-space: normal;
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: visible;
+  padding: 0 0 24px;
+}
+
+#reqboard-modal.portal-workspace-mode .req-empty,
+#reqboard-modal.portal-workspace-mode .req-item,
+#reqboard-modal.portal-workspace-mode .sugg-item,
+#reqboard-modal.portal-workspace-mode .sugg-form-section,
+#reqboard-modal.portal-workspace-mode .req-form .form-group {
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+#reqboard-modal.portal-workspace-mode .req-form {
+  gap: 12px;
+}
+
+#reqboard-modal.portal-workspace-mode .req-item-title,
+#reqboard-modal.portal-workspace-mode .req-item-body,
+#reqboard-modal.portal-workspace-mode .sugg-item-content {
+  overflow-wrap: anywhere;
+}
+
+#reqboard-modal.portal-workspace-mode .req-item-actions,
+#reqboard-modal.portal-workspace-mode .sugg-form-footer,
+#reqboard-modal.portal-workspace-mode .req-form-footer {
+  align-items: stretch;
+}
+
+@media (min-width: 981px) {
+  #reqboard-modal.portal-workspace-mode .req-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #reqboard-modal.portal-workspace-mode .req-form .form-group:nth-child(1),
+  #reqboard-modal.portal-workspace-mode .req-form .form-group:nth-child(4),
+  #reqboard-modal.portal-workspace-mode .req-form .form-group:nth-child(5),
+  #reqboard-modal.portal-workspace-mode .req-form .form-group:nth-child(6),
+  #reqboard-modal.portal-workspace-mode .req-form-footer {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  #reqboard-modal.portal-workspace-mode .reqboard-modal-inner {
+    padding: 0 14px 92px;
+  }
+
+  #reqboard-modal.portal-workspace-mode .reqboard-modal-header {
+    top: 0;
+    margin-left: -14px;
+    margin-right: -14px;
+    padding: 12px 14px;
+  }
+
+  #reqboard-modal.portal-workspace-mode .reqboard-tabs {
+    gap: 8px;
+  }
+
+  #reqboard-modal.portal-workspace-mode .reqboard-tab {
+    min-height: 42px;
+    padding: 8px;
+    font-size: 0.78rem;
+  }
+
+  #reqboard-modal.portal-workspace-mode .reqboard-subtabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #reqboard-modal.portal-workspace-mode .reqboard-subtab {
+    flex: initial;
+    padding: 8px 6px;
+    font-size: 0.76rem;
+  }
+
+  #reqboard-modal.portal-workspace-mode .reqboard-content {
+    padding-bottom: 16px;
+  }
+
+  #reqboard-modal.portal-workspace-mode .req-project-filter-row,
+  #reqboard-modal.portal-workspace-mode .req-form-footer,
+  #reqboard-modal.portal-workspace-mode .sugg-form-footer {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  #reqboard-modal.portal-workspace-mode .req-item-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #reqboard-modal.portal-workspace-mode .req-item-actions > button,
+  #reqboard-modal.portal-workspace-mode .btn-sugg-reply,
+  #reqboard-modal.portal-workspace-mode .req-form-footer > button,
+  #reqboard-modal.portal-workspace-mode .sugg-form-footer > button {
+    width: 100%;
+    justify-content: center;
+    min-width: 0;
+    white-space: normal;
+  }
+}
