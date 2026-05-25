@@ -674,6 +674,45 @@ export async function saveUserPreferencesToSupabase(username, prefs = {}) {
   if ('hiddenCards' in prefs) payload.hidden_cards = prefs.hiddenCards;
   if ('missionBannerHidden' in prefs) payload.mission_banner_hidden = !!prefs.missionBannerHidden;
   if ('lastViewedSuggestionsAt' in prefs) payload.last_viewed_suggestions_at = prefs.lastViewedSuggestionsAt;
+  const updatePayload = { ...payload };
+  delete updatePayload.username;
+  if (Object.keys(updatePayload).length === 0) return;
+
+  const allColumns = [
+    'theme',
+    'font_size',
+    'fav_only',
+    'favorites',
+    'collapsed_sections',
+    'collapse_seeded',
+    'hidden_cards',
+    'mission_banner_hidden',
+  ];
+  const updateKeys = Object.keys(updatePayload);
+  const isPartialUpdate = updateKeys.some(key => !allColumns.includes(key))
+    || allColumns.some(key => !(key in updatePayload));
+
+  if (isPartialUpdate) {
+    const encoded = encodeEqFilterValue(username);
+    const rows = await requestSupabase(`user_preferences?username=eq.${encoded}`, {
+      method: 'PATCH',
+      prefer: 'return=representation',
+      body: updatePayload,
+    });
+    if (Array.isArray(rows) && rows.length > 0) return;
+
+    await requestSupabase('user_preferences', {
+      method: 'POST',
+      prefer: 'resolution=ignore-duplicates,return=minimal',
+      body: { username },
+    });
+    await requestSupabase(`user_preferences?username=eq.${encoded}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: updatePayload,
+    });
+    return;
+  }
   // Upsert: username が主キー（ON CONFLICT DO UPDATE）
   await requestSupabase('user_preferences', {
     method: 'POST',
