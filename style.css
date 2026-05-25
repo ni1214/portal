@@ -26519,3 +26519,204 @@ body:has(#home-dashboard) .app-main.calendar-workspace-active #home-dashboard,
     bottom: 64px;
   }
 }
+
+/* ===== portal workspace view ===== */
+body:has(#home-dashboard) .app-main.portal-workspace-active .home-content-grid,
+.app-main.portal-workspace-active .home-content-grid,
+body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
+.app-main.portal-workspace-active #home-dashboard {
+  display: none !important;
+}
+
+.portal-workspace-shell {
+  display: none;
+}
+
+.app-main.portal-workspace-active .portal-workspace-shell {
+  display: block;
+  width: min(1120px, 100%);
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.portal-workspace-mount {
+  width: 100%;
+}
+
+.portal-workspace-mode.modal-overlay,
+.portal-workspace-mode.notice-center-modal {
+  position: static;
+  inset: auto;
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  opacity: 1;
+  pointer-events: auto;
+  overflow: visible;
+}
+
+.portal-workspace-mode .modal-glass,
+.portal-workspace-mode .task-modal-inner,
+.portal-workspace-mode .reqboard-modal-inner,
+.portal-workspace-mode .email-modal-inner,
+.portal-workspace-mode .profile-modal-inner,
+.portal-workspace-mode .ord-modal-inner,
+.portal-workspace-mode .prop-summary-inner,
+.portal-workspace-mode .shared-links-glass,
+.portal-workspace-mode .notice-center-panel {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  min-height: calc(100dvh - var(--header-height) - 48px);
+  overflow: visible;
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  transform: none;
+}
+
+.portal-workspace-mode .notice-center-backdrop {
+  display: none;
+}
+
+.portal-workspace-mode .modal-header,
+.portal-workspace-mode .task-modal-header,
+.portal-workspace-mode .reqboard-modal-header,
+.portal-workspace-mode .email-modal-header,
+.portal-workspace-mode .profile-modal-header,
+.portal-workspace-mode .shared-links-head,
+.portal-workspace-mode .notice-center-header,
+.portal-workspace-mode .ft-panel-header,
+.portal-workspace-mode .chat-header {
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+}
+
+.portal-workspace-mode .modal-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 15;
+}
+
+.chat-panel.portal-workspace-mode,
+.ft-panel.portal-workspace-mode {
+  position: static !important;
+  inset: auto !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: auto !important;
+  display: flex !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: calc(100dvh - var(--header-height) - 48px);
+  max-height: none !important;
+  transform: none !important;
+  opacity: 1;
+  box-shadow: none;
+  border-radius: var(--radius-md);
+}
+
+.chat-panel.portal-workspace-mode .chat-body,
+.ft-panel.portal-workspace-mode .ft-panel-body {
+  min-height: 0;
+}
+
+.ft-panel.portal-workspace-mode .ft-panel-tool,
+.ft-panel.portal-workspace-mode .ft-panel-resize {
+  display: none !important;
+}
+
+.chat-panel.portal-workspace-mode::before,
+.ft-panel.portal-workspace-mode::before {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .app-main.portal-workspace-active {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .app-main.portal-workspace-active .portal-workspace-shell {
+    width: 100%;
+    max-width: none;
+  }
+
+  .portal-workspace-mode .modal-glass,
+  .portal-workspace-mode .task-modal-inner,
+  .portal-workspace-mode .reqboard-modal-inner,
+  .portal-workspace-mode .email-modal-inner,
+  .portal-workspace-mode .profile-modal-inner,
+  .portal-workspace-mode .ord-modal-inner,
+  .portal-workspace-mode .prop-summary-inner,
+  .portal-workspace-mode .shared-links-glass,
+  .portal-workspace-mode .notice-center-panel,
+  .chat-panel.portal-workspace-mode,
+  .ft-panel.portal-workspace-mode {
+    min-height: 100dvh;
+    border-radius: 0 !important;
+    border-left: 0;
+    border-right: 0;
+  }
+
+  .portal-workspace-mode .modal-header,
+  .portal-workspace-mode .task-modal-header,
+  .portal-workspace-mode .reqboard-modal-header,
+  .portal-workspace-mode .email-modal-header,
+  .portal-workspace-mode .profile-modal-header,
+  .portal-workspace-mode .shared-links-head,
+  .portal-workspace-mode .notice-center-header,
+  .portal-workspace-mode .ft-panel-header,
+  .portal-workspace-mode .chat-header {
+    top: 0;
+    border-radius: 0;
+  }
+
+  .portal-workspace-mode .modal-actions {
+    bottom: 64px;
+  }
+
+  .portal-workspace-mode .modal-glass,
+  .portal-workspace-mode .task-modal-inner,
+  .portal-workspace-mode .reqboard-modal-inner,
+  .portal-workspace-mode .email-modal-inner,
+  .portal-workspace-mode .profile-modal-inner,
+  .portal-workspace-mode .ord-modal-inner,
+  .portal-workspace-mode .prop-summary-inner,
+  .portal-workspace-mode .shared-links-glass,
+  .portal-workspace-mode .notice-center-body,
+  .chat-panel.portal-workspace-mode,
+  .ft-panel.portal-workspace-mode {
+    padding-bottom: 92px;
+  }
+
+  #ord-modal.portal-workspace-mode .modal-actions {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  #ord-modal.portal-workspace-mode .modal-actions > button {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    padding-inline: 8px;
+    font-size: 0.82rem;
+    white-space: normal;
+  }
+
+  #ord-modal.portal-workspace-mode .ord-add-custom-btn {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    white-space: normal;
+  }
+}

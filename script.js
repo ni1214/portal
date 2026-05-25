@@ -78,7 +78,7 @@ import {
   deps as noticeDeps,
   loadReadNotices, markAllNoticesRead, updateNoticeBadge, setupNoticeObserver,
   subscribeNotices, saveNotice as moduleSaveNotice, addNotice as moduleAddNotice, deleteNotice as moduleDeleteNotice,
-  renderNotices, openNoticeModal, closeNoticeModal, openNoticeCenter, refreshNoticeVisibility, handleNoticeTargetScopeChange
+  renderNotices, openNoticeModal, closeNoticeModal, openNoticeCenter, closeNoticeCenter, refreshNoticeVisibility, handleNoticeTargetScopeChange
 } from './modules/notices.js';
 
 import {
@@ -154,6 +154,12 @@ import {
 import { initBottomNav } from './modules/bottom-nav.js';
 
 import {
+  openWorkspaceView,
+  closeActiveWorkspaceView,
+  isWorkspaceViewOpen,
+} from './modules/workspace-view.js';
+
+import {
   initOrder,
   openOrderModal, closeOrderModal,
   openOrderHistoryModal, closeOrderHistoryModal,
@@ -163,6 +169,7 @@ import {
 import {
   initPropertySummary,
   openPropertySummaryModal,
+  closePropertySummaryModal,
 } from './modules/property-summary.js';
 
 import {
@@ -361,7 +368,151 @@ function buildTodayDateKey() {
 }
 
 function focusNoticeBoardFromDashboard() {
-  openNoticeCenter();
+  openNoticeWorkspace();
+}
+
+function closeCalendarWorkspaceIfOpen() {
+  const modal = document.getElementById('cal-modal');
+  if (!modal?.classList.contains('cal-workspace-mode')) return false;
+  closeCalendarModal();
+  onCalendarModalClose();
+  return true;
+}
+
+function returnToHomeWorkspace() {
+  closeSettingsPanel();
+  closeActiveWorkspaceView();
+  closeCalendarWorkspaceIfOpen();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function openPortalWorkspace({
+  elementId,
+  openAction,
+  closeAction,
+  closeSelector,
+  extraClass = '',
+  hideOnClose = false,
+  closeOnBackdrop = true,
+}) {
+  closeSettingsPanel();
+  closeCalendarWorkspaceIfOpen();
+  closeActiveWorkspaceView();
+  await openAction?.();
+  openWorkspaceView({
+    elementId,
+    closeAction,
+    closeSelector,
+    extraClass,
+    hideOnClose,
+    closeOnBackdrop,
+  });
+}
+
+function openTaskWorkspace() {
+  return openPortalWorkspace({
+    elementId: 'task-modal',
+    openAction: openTaskModal,
+    closeAction: closeTaskModal,
+    closeSelector: '#task-modal-close',
+  });
+}
+
+function openReqWorkspace(initialTab) {
+  return openPortalWorkspace({
+    elementId: 'reqboard-modal',
+    openAction: () => openReqModal(initialTab),
+    closeAction: closeReqModal,
+    closeSelector: '#reqboard-modal-close',
+  });
+}
+
+function openOrderWorkspace() {
+  return openPortalWorkspace({
+    elementId: 'ord-modal',
+    openAction: openOrderModal,
+    closeAction: closeOrderModal,
+    closeSelector: '#ord-modal-close, #ord-btn-cancel',
+  });
+}
+
+function openPropertySummaryWorkspace(initialProjectKey = '') {
+  return openPortalWorkspace({
+    elementId: 'prop-summary-modal',
+    openAction: () => openPropertySummaryModal(initialProjectKey),
+    closeAction: closePropertySummaryModal,
+    closeSelector: '#prop-summary-close',
+  });
+}
+
+function openEmailWorkspace() {
+  return openPortalWorkspace({
+    elementId: 'email-modal',
+    openAction: openEmailModal,
+    closeAction: closeEmailModal,
+    closeSelector: '#email-modal-close',
+  });
+}
+
+function openProfileWorkspace() {
+  return openPortalWorkspace({
+    elementId: 'profile-modal',
+    openAction: openProfileModal,
+    closeAction: closeProfileModal,
+    closeSelector: '#profile-modal-close',
+  });
+}
+
+function openNoticeWorkspace() {
+  return openPortalWorkspace({
+    elementId: 'notice-center-modal',
+    openAction: openNoticeCenter,
+    closeAction: closeNoticeCenter,
+    closeSelector: '[data-notice-center-close]',
+    extraClass: 'notice-workspace-mode',
+  });
+}
+
+function openSharedLinksWorkspace(options = {}) {
+  return openPortalWorkspace({
+    elementId: 'shared-links-modal',
+    openAction: () => openSharedLinksModal(options),
+    closeAction: closeSharedLinksModal,
+    closeSelector: '#shared-links-close',
+  });
+}
+
+function openFavoriteSharedLinksWorkspace(categoryId = '') {
+  return openPortalWorkspace({
+    elementId: 'shared-links-modal',
+    openAction: () => openFavoriteSharedLinksModal(categoryId),
+    closeAction: closeSharedLinksModal,
+    closeSelector: '#shared-links-close',
+  });
+}
+
+function openChatWorkspace() {
+  return openPortalWorkspace({
+    elementId: 'chat-panel',
+    openAction: openChatPanel,
+    closeAction: closeChatPanel,
+    closeSelector: '#chat-panel-close',
+    extraClass: 'portal-workspace-panel',
+    hideOnClose: true,
+    closeOnBackdrop: false,
+  });
+}
+
+function openFileTransferWorkspace() {
+  return openPortalWorkspace({
+    elementId: 'ft-panel',
+    openAction: openFileTransferPanel,
+    closeAction: closeFileTransferPanel,
+    closeSelector: '#ft-panel-close',
+    extraClass: 'portal-workspace-panel',
+    hideOnClose: true,
+    closeOnBackdrop: false,
+  });
 }
 
 function focusWeatherWidget() {
@@ -528,29 +679,29 @@ function openPortalShareInGmail() {
 
 initTodayDashboard({
   openProfileSettings: () => {
-    openProfileModal();
+    openProfileWorkspace();
   },
   openReceivedTasks: () => {
     state.taskProjectKeyFilter = '';
     state.activeTaskTab = 'received';
-    openTaskModal();
+    openTaskWorkspace();
   },
   openSentTasks: () => {
     state.taskProjectKeyFilter = '';
     state.activeTaskTab = 'sent';
-    openTaskModal();
+    openTaskWorkspace();
   },
   openReceivedRequests: () => {
     state.reqProjectKeyFilter = '';
     state.activeReqTab = 'request';
     state.activeReqSubTab = 'received';
-    openReqModal('request');
+    openReqWorkspace('request');
   },
   openSentRequests: () => {
     state.reqProjectKeyFilter = '';
     state.activeReqTab = 'request';
     state.activeReqSubTab = 'sent';
-    openReqModal('request');
+    openReqWorkspace('request');
   },
   openTodayAttendance: async () => {
     await openCalendarWorkspace();
@@ -565,10 +716,10 @@ initTodayDashboard({
     state.sharedLinksCategory = 'all';
     state.sharedLinksFavoritesOnlyCategory = '';
     state.sharedLinksQuery = '';
-    await openSharedLinksModal();
+    await openSharedLinksWorkspace();
   },
   openFavoriteLinks: async () => {
-    await openFavoriteSharedLinksModal();
+    await openFavoriteSharedLinksWorkspace();
   },
   focusSearch: () => {
     const input = document.getElementById('search-input');
@@ -600,7 +751,7 @@ initTodayDashboard({
     openFavoriteLinkFromHome(cardId);
   },
   openFavoriteCategory: async categoryId => {
-    await openFavoriteSharedLinksModal(categoryId || '');
+    await openFavoriteSharedLinksWorkspace(categoryId || '');
   },
   ensureSharedCardsLoaded,
   toggleFavoriteCard: cardId => {
@@ -639,17 +790,17 @@ Object.assign(sharedSpaceDeps, {
   openTaskModal: () => {
     state.taskProjectKeyFilter = '';
     state.activeTaskTab = 'received';
-    openTaskModal();
+    openTaskWorkspace();
   },
-  openPropertySummary: () => openPropertySummaryModal(),
-  openOrderModal,
+  openPropertySummary: () => openPropertySummaryWorkspace(),
+  openOrderModal: openOrderWorkspace,
   openReqModal: () => {
     state.reqProjectKeyFilter = '';
     state.activeReqTab = 'request';
     state.activeReqSubTab = 'received';
-    openReqModal('request');
+    openReqWorkspace('request');
   },
-  openEmailModal,
+  openEmailModal: openEmailWorkspace,
 });
 
 initSharedSpace(sharedSpaceDeps);
@@ -664,12 +815,12 @@ initPropertySummary({
     state.reqProjectKeyFilter = projectKey;
     state.activeReqTab = 'request';
     state.activeReqSubTab = 'received';
-    openReqModal('request');
+    openReqWorkspace('request');
   },
   openTasks: projectKey => {
     state.taskProjectKeyFilter = projectKey;
     state.activeTaskTab = 'received';
-    openTaskModal();
+    openTaskWorkspace();
   },
   openOrders: async projectKey => {
     await openOrderHistoryModal(projectKey);
@@ -793,7 +944,7 @@ function renderTodoSection() {
       `;
       li.title = 'クリックでタスクを開く';
       li.addEventListener('click', () => {
-        openTaskModal();
+        openTaskWorkspace();
         setTimeout(() => switchTaskTab('received'), 50);
       });
       assignedList.appendChild(li);
@@ -3285,13 +3436,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === e.currentTarget) closePortalShareModal();
   });
   document.getElementById('header-home-btn').addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    returnToHomeWorkspace();
   });
   document.getElementById('header-shared-btn').addEventListener('click', () => {
     state.sharedLinksCategory = 'all';
     state.sharedLinksFavoritesOnlyCategory = '';
     state.sharedLinksQuery = '';
-    void openSharedLinksModal();
+    void openSharedLinksWorkspace();
   });
   document.getElementById('header-dashboard-btn').addEventListener('click', () => {
     document.getElementById('shared-home-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -3330,18 +3481,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   document.getElementById('sidebar-home-btn').addEventListener('click', () => {
-    closeSettingsPanel();
-    if (document.getElementById('cal-modal')?.classList.contains('cal-workspace-mode')) {
-      closeCalendarModal();
-      onCalendarModalClose();
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    returnToHomeWorkspace();
   });
   document.getElementById('btn-shared-links').addEventListener('click', () => {
     state.sharedLinksCategory = 'all';
     state.sharedLinksFavoritesOnlyCategory = '';
     state.sharedLinksQuery = '';
-    void openSharedLinksModal();
+    void openSharedLinksWorkspace();
   });
   false && document.getElementById('btn-my-category').addEventListener('click', () => {
     if (!state.currentUsername) {
@@ -3354,7 +3500,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ===== ニックネーム / プロフィール =====
   document.getElementById('btn-user').addEventListener('click', () => {
     if (state.currentUsername) {
-      openProfileModal();
+      openProfileWorkspace();
       bindProfileQuickActions();
       return;
     }
@@ -3710,8 +3856,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ===== 鋼材発注 =====
-  document.getElementById('btn-order-launch').addEventListener('click', openOrderModal);
-  document.getElementById('btn-property-summary').addEventListener('click', () => openPropertySummaryModal());
+  document.getElementById('btn-order-launch').addEventListener('click', openOrderWorkspace);
+  document.getElementById('btn-property-summary').addEventListener('click', () => openPropertySummaryWorkspace());
   document.getElementById('ord-open-admin-btn').addEventListener('click', () => {
     document.getElementById('ord-modal').classList.remove('visible');
     openOrderAdminModal();
@@ -3719,7 +3865,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== メールアシスタント =====
   document.getElementById('btn-email-assist').addEventListener('click', () => {
-    openEmailModal();
+    openEmailWorkspace();
   });
   document.getElementById('email-modal-close').addEventListener('click', closeEmailModal);
   document.getElementById('email-modal').addEventListener('click', e => {
@@ -3731,7 +3877,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('email-open-profile-btn').addEventListener('click', () => {
     closeEmailModal();
-    openProfileModal();
+    openProfileWorkspace();
   });
   // 新規/返信選択
   document.getElementById('email-type-new').addEventListener('click', () => setEmailMode('new'));
@@ -3765,7 +3911,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== チャットFAB =====
   document.getElementById('chat-fab').addEventListener('click', () => {
-    state.chatPanelOpen ? closeChatPanel() : openChatPanel();
+    isWorkspaceViewOpen('chat-panel') ? closeActiveWorkspaceView() : openChatWorkspace();
   });
   document.getElementById('chat-panel-close').addEventListener('click', closeChatPanel);
   initChatResize();
@@ -3777,7 +3923,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ===== チャット内ショートカット =====
-  document.getElementById('chat-launch-task').addEventListener('click', openTaskModal);
+  document.getElementById('chat-launch-task').addEventListener('click', openTaskWorkspace);
   document.getElementById('chat-launch-ft').addEventListener('click', () => {
     // DMの場合は相手を自動選択してFT送信モーダルを開く
     if (state.currentRoomType === 'dm' && state.currentRoomId) {
@@ -3787,7 +3933,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
     }
-    openFileTransferPanel();
+    openFileTransferWorkspace();
   });
 
   // ===== 説明文折りたたみ（P2P / Drive） =====
@@ -3807,7 +3953,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initFileTransferPanelFrame();
   initInlineP2pSend();
   document.getElementById('ft-fab').addEventListener('click', () => {
-    state._ftPanelOpen ? closeFileTransferPanel() : openFileTransferPanel();
+    isWorkspaceViewOpen('ft-panel') ? closeActiveWorkspaceView() : openFileTransferWorkspace();
   });
   document.getElementById('ft-panel-close').addEventListener('click', closeFileTransferPanel);
   document.getElementById('ft-cancel-btn').addEventListener('click', closeFtSendModal);
@@ -3867,7 +4013,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('new-group-create').addEventListener('click', createGroupRoom);
 
   // ===== 部門間依頼・目安箱 =====
-  document.getElementById('btn-reqboard').addEventListener('click', () => openReqModal());
+  document.getElementById('btn-reqboard').addEventListener('click', () => openReqWorkspace());
   document.getElementById('reqboard-modal-close').addEventListener('click', closeReqModal);
   document.querySelectorAll('.reqboard-tab').forEach(btn => {
     btn.addEventListener('click', () => switchReqTab(btn.dataset.tab));
@@ -3973,7 +4119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initCompanyCalSettingsForms();
 
   // ===== タスク =====
-  document.getElementById('btn-task').addEventListener('click', openTaskModal);
+  document.getElementById('btn-task').addEventListener('click', openTaskWorkspace);
   document.getElementById('task-modal-close').addEventListener('click', closeTaskModal);
   document.getElementById('task-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeTaskModal();
