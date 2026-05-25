@@ -27677,3 +27677,241 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
     white-space: normal;
   }
 }
+
+/* ===== workspace view navigation ===== */
+.app-main.portal-workspace-active {
+  padding-inline: clamp(16px, 2.8vw, 34px) !important;
+}
+
+.app-main.portal-workspace-active .portal-workspace-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: min(1240px, 100%);
+  margin-inline: auto;
+}
+
+.portal-workspace-chrome {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--bg-card) 86%, transparent);
+  box-shadow: var(--shadow-soft);
+}
+
+.portal-workspace-home-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-primary) 72%, transparent);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.portal-workspace-home-btn:hover {
+  border-color: color-mix(in srgb, var(--accent-cyan) 48%, var(--border-glass));
+  color: var(--accent-cyan);
+}
+
+.portal-workspace-title-block {
+  min-width: 0;
+}
+
+.portal-workspace-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.portal-workspace-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-cyan) 13%, transparent);
+  color: var(--accent-cyan);
+}
+
+.portal-workspace-title-icon .material-symbols-rounded {
+  font-size: 1.15rem;
+}
+
+.portal-workspace-kicker {
+  margin: 0 0 2px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.portal-workspace-title {
+  min-width: 0;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.1rem, 1.6vw, 1.48rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.portal-workspace-subtitle {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.portal-workspace-subtitle[hidden] {
+  display: none !important;
+}
+
+.portal-workspace-viewport-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-cyan) 11%, transparent);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.portal-workspace-viewport-note .material-symbols-rounded {
+  font-size: 1rem;
+}
+
+.portal-workspace-mount {
+  min-width: 0;
+}
+
+.portal-workspace-mode .modal-glass,
+.portal-workspace-mode .task-modal-inner,
+.portal-workspace-mode .reqboard-modal-inner,
+.portal-workspace-mode .email-modal-inner,
+.portal-workspace-mode .profile-modal-inner,
+.portal-workspace-mode .ord-modal-inner,
+.portal-workspace-mode .prop-summary-inner,
+.portal-workspace-mode .shared-links-glass,
+.portal-workspace-mode .notice-center-panel,
+.chat-panel.portal-workspace-mode,
+.ft-panel.portal-workspace-mode {
+  min-height: calc(100dvh - var(--header-height) - 112px);
+}
+
+.portal-workspace-mode .modal-header,
+.portal-workspace-mode .task-modal-header,
+.portal-workspace-mode .reqboard-modal-header,
+.portal-workspace-mode .email-modal-header,
+.portal-workspace-mode .profile-modal-header,
+.portal-workspace-mode .shared-links-head,
+.portal-workspace-mode .notice-center-header,
+.portal-workspace-mode .ft-panel-header,
+.portal-workspace-mode .chat-header {
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+@media (max-width: 980px) {
+  .app-main.portal-workspace-active {
+    padding-inline: 14px !important;
+  }
+
+  .portal-workspace-chrome {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .portal-workspace-viewport-note {
+    display: none;
+  }
+
+  .portal-workspace-mode .modal-glass,
+  .portal-workspace-mode .task-modal-inner,
+  .portal-workspace-mode .reqboard-modal-inner,
+  .portal-workspace-mode .email-modal-inner,
+  .portal-workspace-mode .profile-modal-inner,
+  .portal-workspace-mode .ord-modal-inner,
+  .portal-workspace-mode .prop-summary-inner,
+  .portal-workspace-mode .shared-links-glass,
+  .portal-workspace-mode .notice-center-panel,
+  .chat-panel.portal-workspace-mode,
+  .ft-panel.portal-workspace-mode {
+    min-height: calc(100dvh - var(--header-height) - 104px);
+  }
+}
+
+@media (max-width: 720px) {
+  .app-main.portal-workspace-active {
+    padding-inline: 0 !important;
+  }
+
+  .app-main.portal-workspace-active .portal-workspace-shell {
+    gap: 10px;
+  }
+
+  .portal-workspace-chrome {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    margin-inline: 10px;
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .portal-workspace-home-btn {
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .portal-workspace-title {
+    font-size: 1.08rem;
+  }
+
+  .portal-workspace-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .portal-workspace-mode .modal-glass,
+  .portal-workspace-mode .task-modal-inner,
+  .portal-workspace-mode .reqboard-modal-inner,
+  .portal-workspace-mode .email-modal-inner,
+  .portal-workspace-mode .profile-modal-inner,
+  .portal-workspace-mode .ord-modal-inner,
+  .portal-workspace-mode .prop-summary-inner,
+  .portal-workspace-mode .shared-links-glass,
+  .portal-workspace-mode .notice-center-panel,
+  .chat-panel.portal-workspace-mode,
+  .ft-panel.portal-workspace-mode {
+    min-height: calc(100dvh - var(--header-height) - var(--app-bottom-nav-h, 62px) - 70px);
+  }
+}
+
+@media (max-width: 420px) {
+  .portal-workspace-chrome {
+    margin-inline: 8px;
+  }
+
+  .portal-workspace-title,
+  .portal-workspace-subtitle {
+    max-width: 100%;
+  }
+}

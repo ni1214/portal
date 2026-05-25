@@ -157,6 +157,8 @@ import {
   openWorkspaceView,
   closeActiveWorkspaceView,
   isWorkspaceViewOpen,
+  resetWorkspaceNavigationState,
+  setWorkspaceNavigationState,
 } from './modules/workspace-view.js';
 
 import {
@@ -348,7 +350,10 @@ initCalendar({
   subscribeCompanyCalConfig,
   unsubscribeCompanyCalConfig,
   getDateInfo,
-  onCalendarWorkspaceClose: onCalendarModalClose,
+  onCalendarWorkspaceClose: () => {
+    onCalendarModalClose();
+    resetWorkspaceNavigationState();
+  },
 });
 
 initAttendanceWork({
@@ -379,10 +384,24 @@ function closeCalendarWorkspaceIfOpen() {
   return true;
 }
 
+async function openCalendarWorkspaceView() {
+  await openCalendarWorkspace();
+  if (!document.getElementById('cal-modal')?.classList.contains('visible')) return false;
+  setWorkspaceNavigationState({
+    route: 'calendar',
+    title: 'カレンダー・勤怠',
+    subtitle: '個人勤怠、共有カレンダー、勤務内容を確認します。',
+    icon: 'calendar_month',
+    sourceButtonId: 'btn-calendar',
+  });
+  return true;
+}
+
 function returnToHomeWorkspace() {
   closeSettingsPanel();
   closeActiveWorkspaceView();
   closeCalendarWorkspaceIfOpen();
+  resetWorkspaceNavigationState();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -394,6 +413,11 @@ async function openPortalWorkspace({
   extraClass = '',
   hideOnClose = false,
   closeOnBackdrop = true,
+  route = '',
+  title = '',
+  subtitle = '',
+  icon = '',
+  sourceButtonId = '',
 }) {
   closeSettingsPanel();
   closeCalendarWorkspaceIfOpen();
@@ -406,6 +430,11 @@ async function openPortalWorkspace({
     extraClass,
     hideOnClose,
     closeOnBackdrop,
+    route,
+    title,
+    subtitle,
+    icon,
+    sourceButtonId,
   });
 }
 
@@ -415,6 +444,11 @@ function openTaskWorkspace() {
     openAction: openTaskModal,
     closeAction: closeTaskModal,
     closeSelector: '#task-modal-close',
+    route: 'task',
+    title: 'タスク管理',
+    subtitle: '受信・送信・共有タスクを本体ビューで確認します。',
+    icon: 'checklist',
+    sourceButtonId: 'btn-task',
   });
 }
 
@@ -424,6 +458,11 @@ function openReqWorkspace(initialTab) {
     openAction: () => openReqModal(initialTab),
     closeAction: closeReqModal,
     closeSelector: '#reqboard-modal-close',
+    route: 'request',
+    title: '部署間依頼',
+    subtitle: '部署間の依頼、対応状況、目安箱をまとめて扱います。',
+    icon: 'swap_horiz',
+    sourceButtonId: 'btn-reqboard',
   });
 }
 
@@ -433,6 +472,11 @@ function openOrderWorkspace() {
     openAction: openOrderModal,
     closeAction: closeOrderModal,
     closeSelector: '#ord-modal-close, #ord-btn-cancel',
+    route: 'order',
+    title: '鋼材発注',
+    subtitle: '発注入力と履歴確認をワークスペース内で行います。',
+    icon: 'inventory_2',
+    sourceButtonId: 'btn-order-launch',
   });
 }
 
@@ -442,6 +486,11 @@ function openPropertySummaryWorkspace(initialProjectKey = '') {
     openAction: () => openPropertySummaryModal(initialProjectKey),
     closeAction: closePropertySummaryModal,
     closeSelector: '#prop-summary-close',
+    route: 'property',
+    title: '物件Noまとめ',
+    subtitle: '物件Noを軸に依頼・タスク・発注・勤怠を横断します。',
+    icon: 'archive',
+    sourceButtonId: 'btn-property-summary',
   });
 }
 
@@ -451,6 +500,11 @@ function openEmailWorkspace() {
     openAction: openEmailModal,
     closeAction: closeEmailModal,
     closeSelector: '#email-modal-close',
+    route: 'email',
+    title: 'メール生成AI',
+    subtitle: 'メール作成と文面調整を本体ビューで行います。',
+    icon: 'auto_fix_high',
+    sourceButtonId: 'btn-email-assist',
   });
 }
 
@@ -460,6 +514,11 @@ function openProfileWorkspace() {
     openAction: openProfileModal,
     closeAction: closeProfileModal,
     closeSelector: '#profile-modal-close',
+    route: 'profile',
+    title: 'プロフィール設定',
+    subtitle: '署名、所属、連絡先など個人設定を編集します。',
+    icon: 'person',
+    sourceButtonId: 'btn-user',
   });
 }
 
@@ -470,6 +529,11 @@ function openNoticeWorkspace() {
     closeAction: closeNoticeCenter,
     closeSelector: '[data-notice-center-close]',
     extraClass: 'notice-workspace-mode',
+    route: 'notice',
+    title: 'お知らせ',
+    subtitle: '未読、確認が必要な通知、社内連絡を確認します。',
+    icon: 'campaign',
+    sourceButtonId: 'btn-notice-bell',
   });
 }
 
@@ -479,6 +543,11 @@ function openSharedLinksWorkspace(options = {}) {
     openAction: () => openSharedLinksModal(options),
     closeAction: closeSharedLinksModal,
     closeSelector: '#shared-links-close',
+    route: 'shared-links',
+    title: '共有リンク',
+    subtitle: '共有カードとカテゴリを必要な時だけ読み込みます。',
+    icon: 'share',
+    sourceButtonId: 'btn-shared-links',
   });
 }
 
@@ -488,6 +557,11 @@ function openFavoriteSharedLinksWorkspace(categoryId = '') {
     openAction: () => openFavoriteSharedLinksModal(categoryId),
     closeAction: closeSharedLinksModal,
     closeSelector: '#shared-links-close',
+    route: 'shared-links',
+    title: 'お気に入り共有リンク',
+    subtitle: 'よく使う共有リンクに絞って確認します。',
+    icon: 'star',
+    sourceButtonId: 'btn-shared-links',
   });
 }
 
@@ -500,6 +574,11 @@ function openChatWorkspace() {
     extraClass: 'portal-workspace-panel',
     hideOnClose: true,
     closeOnBackdrop: false,
+    route: 'chat',
+    title: 'チャット',
+    subtitle: 'DM とグループチャットをポータル本体で開きます。',
+    icon: 'chat',
+    sourceButtonId: 'chat-fab',
   });
 }
 
@@ -512,6 +591,11 @@ function openFileTransferWorkspace() {
     extraClass: 'portal-workspace-panel',
     hideOnClose: true,
     closeOnBackdrop: false,
+    route: 'file-transfer',
+    title: 'ファイル転送',
+    subtitle: 'P2P 送信と Drive 共有をワークスペース内で扱います。',
+    icon: 'drive_folder_upload',
+    sourceButtonId: 'ft-fab',
   });
 }
 
@@ -704,8 +788,7 @@ initTodayDashboard({
     openReqWorkspace('request');
   },
   openTodayAttendance: async () => {
-    await openCalendarWorkspace();
-    if (!document.getElementById('cal-modal')?.classList.contains('visible')) return;
+    if (!await openCalendarWorkspaceView()) return;
     await onCalendarModalOpen();
     openDayPanel(buildTodayDateKey());
   },
@@ -782,8 +865,7 @@ Object.assign(sharedSpaceDeps, {
   focusNoticeBoard: focusNoticeBoardFromDashboard,
   focusWeatherWidget,
   openCalendarModal: async () => {
-    await openCalendarWorkspace();
-    if (document.getElementById('cal-modal')?.classList.contains('visible')) {
+    if (await openCalendarWorkspaceView()) {
       await onCalendarModalOpen();
     }
   },
@@ -837,8 +919,7 @@ initPropertySummary({
   openWork: async projectKey => {
     state.attendanceWorkProjectKeyFilter = projectKey;
     state.calPersonalTab = 'work';
-    await openCalendarWorkspace();
-    if (document.getElementById('cal-modal')?.classList.contains('visible')) {
+    if (await openCalendarWorkspaceView()) {
       await onCalendarModalOpen();
       await switchCalPersonalTab('work');
     }
@@ -4136,14 +4217,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       promptUsernameFor('カレンダー・勤怠');
       return;
     }
-    await openCalendarWorkspace();
-    if (document.getElementById('cal-modal')?.classList.contains('visible')) {
+    if (await openCalendarWorkspaceView()) {
       await onCalendarModalOpen();
     }
   });
   document.getElementById('cal-close-btn').addEventListener('click', () => {
     closeCalendarModal();
     onCalendarModalClose();
+    resetWorkspaceNavigationState();
   });
   document.getElementById('cal-prev-btn').addEventListener('click', async () => {
     calPrevMonth();

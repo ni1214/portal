@@ -1,7 +1,32 @@
+import { state } from './state.js';
+
 // Shared home workspace mount for primary portal tools.
 const workspaceMeta = new WeakMap();
 let activeWorkspaceElement = null;
 const BACK_TO_HOME_LABEL = '\u30db\u30fc\u30e0\u3078\u623b\u308b';
+const HOME_BUTTON_ID = 'sidebar-home-btn';
+
+const WORKSPACE_HOME_META = {
+  route: 'home',
+  title: 'ホーム',
+  subtitle: '',
+  icon: 'home',
+  sourceButtonId: HOME_BUTTON_ID,
+};
+
+const BOTTOM_NAV_BY_SOURCE = {
+  [HOME_BUTTON_ID]: 'bnav-home',
+  'btn-task': 'bnav-task',
+  'btn-shared-links': 'bnav-shared',
+  'btn-notice-bell': 'bnav-more',
+  'chat-fab': 'bnav-more',
+  'ft-fab': 'bnav-more',
+  'btn-calendar': 'bnav-more',
+  'btn-reqboard': 'bnav-more',
+  'btn-order-launch': 'bnav-more',
+  'btn-property-summary': 'bnav-more',
+  'btn-email-assist': 'bnav-more',
+};
 
 function getElement(target) {
   if (!target) return null;
@@ -11,7 +36,10 @@ function getElement(target) {
 
 function ensureHost() {
   let host = document.getElementById('portal-workspace-host');
-  if (host) return host;
+  if (host) {
+    ensureHostMarkup(host);
+    return host;
+  }
 
   const dashboard = document.getElementById('home-dashboard');
   const appMain = document.getElementById('app-main');
@@ -21,9 +49,112 @@ function ensureHost() {
   host.id = 'portal-workspace-host';
   host.className = 'portal-workspace-shell';
   host.hidden = true;
-  host.innerHTML = '<div class="portal-workspace-mount" id="portal-workspace-mount"></div>';
+  ensureHostMarkup(host);
   dashboard.after(host);
   return host;
+}
+
+function ensureHostMarkup(host) {
+  if (!host.querySelector('.portal-workspace-chrome')) {
+    host.insertAdjacentHTML('afterbegin', `
+      <header class="portal-workspace-chrome" aria-live="polite">
+        <button class="portal-workspace-home-btn" id="portal-workspace-home-btn" type="button">
+          <i class="material-symbols-rounded" aria-hidden="true">home</i>
+          <span>ホーム</span>
+        </button>
+        <div class="portal-workspace-title-block">
+          <p class="portal-workspace-kicker" id="portal-workspace-kicker">ワークスペース</p>
+          <div class="portal-workspace-title-row">
+            <span class="portal-workspace-title-icon">
+              <i class="material-symbols-rounded" id="portal-workspace-title-icon" aria-hidden="true">home</i>
+            </span>
+            <h1 class="portal-workspace-title" id="portal-workspace-title">ホーム</h1>
+          </div>
+          <p class="portal-workspace-subtitle" id="portal-workspace-subtitle" hidden></p>
+        </div>
+        <div class="portal-workspace-viewport-note" aria-hidden="true">
+          <i class="material-symbols-rounded">responsive_layout</i>
+          <span>Responsive</span>
+        </div>
+      </header>
+    `);
+  }
+
+  if (!host.querySelector('#portal-workspace-mount')) {
+    host.insertAdjacentHTML('beforeend', '<div class="portal-workspace-mount" id="portal-workspace-mount"></div>');
+  }
+
+  const homeButton = host.querySelector('#portal-workspace-home-btn');
+  if (homeButton && homeButton.dataset.workspaceHomeBound !== '1') {
+    homeButton.dataset.workspaceHomeBound = '1';
+    homeButton.addEventListener('click', () => closeWorkspaceView(activeWorkspaceElement));
+  }
+}
+
+function normalizeWorkspaceMeta(options = {}) {
+  return {
+    route: options.route || options.workspaceRoute || 'workspace',
+    title: options.title || options.workspaceTitle || 'ワークスペース',
+    subtitle: options.subtitle || options.workspaceSubtitle || '',
+    icon: options.icon || options.workspaceIcon || 'space_dashboard',
+    sourceButtonId: options.sourceButtonId || options.activeButtonId || '',
+  };
+}
+
+function setElementText(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = value;
+}
+
+function updateWorkspaceChrome(meta) {
+  const host = document.getElementById('portal-workspace-host');
+  if (!host) return;
+
+  host.dataset.workspaceRoute = meta.route || 'workspace';
+  setElementText('portal-workspace-kicker', meta.route === 'home' ? 'ポータル' : 'ワークスペース');
+  setElementText('portal-workspace-title', meta.title || 'ワークスペース');
+
+  const subtitle = document.getElementById('portal-workspace-subtitle');
+  if (subtitle) {
+    subtitle.textContent = meta.subtitle || '';
+    subtitle.hidden = !meta.subtitle;
+  }
+
+  const icon = document.getElementById('portal-workspace-title-icon');
+  if (icon) icon.textContent = meta.icon || 'home';
+}
+
+function setActiveNavigation(sourceButtonId = HOME_BUTTON_ID) {
+  document
+    .querySelectorAll('.app-sidebar-item.active, .app-sidebar-util.active, .app-sidebar-invite.active, .bottom-nav-item.active')
+    .forEach(element => element.classList.remove('active'));
+
+  const source = document.getElementById(sourceButtonId);
+  source?.classList.add('active');
+
+  const bottomId = BOTTOM_NAV_BY_SOURCE[sourceButtonId];
+  if (bottomId) {
+    document.getElementById(bottomId)?.classList.add('active');
+  }
+}
+
+export function setWorkspaceNavigationState(options = {}) {
+  const meta = { ...WORKSPACE_HOME_META, ...normalizeWorkspaceMeta(options) };
+  state.activeWorkspaceRoute = meta.route;
+  state.activeWorkspaceButtonId = meta.sourceButtonId || HOME_BUTTON_ID;
+  state.activeWorkspaceTitle = meta.title;
+  state.activeWorkspaceSubtitle = meta.subtitle;
+  updateWorkspaceChrome(meta);
+  setActiveNavigation(state.activeWorkspaceButtonId);
+}
+
+export function resetWorkspaceNavigationState() {
+  state.activeWorkspaceRoute = WORKSPACE_HOME_META.route;
+  state.activeWorkspaceButtonId = WORKSPACE_HOME_META.sourceButtonId;
+  state.activeWorkspaceTitle = WORKSPACE_HOME_META.title;
+  state.activeWorkspaceSubtitle = WORKSPACE_HOME_META.subtitle;
+  updateWorkspaceChrome(WORKSPACE_HOME_META);
+  setActiveNavigation(HOME_BUTTON_ID);
 }
 
 function scrollAppMainToTop(behavior = 'auto') {
@@ -145,6 +276,7 @@ export function openWorkspaceView(options = {}) {
   host.hidden = false;
   appMain.classList.add('portal-workspace-active', 'home-compact');
   activeWorkspaceElement = element;
+  setWorkspaceNavigationState(options);
 
   setCloseButtonMode(element, meta, true);
   attachCloseInterceptor(element, meta);
@@ -187,6 +319,7 @@ export function closeWorkspaceView(target = activeWorkspaceElement) {
   if (mount) mount.innerHTML = '';
   if (host) host.hidden = true;
   document.getElementById('app-main')?.classList.remove('portal-workspace-active');
+  resetWorkspaceNavigationState();
 
   if (activeWorkspaceElement === element) activeWorkspaceElement = null;
   scrollAppMainToTop('auto');

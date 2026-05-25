@@ -87,6 +87,10 @@ export const state = {
   // ニックネーム・個人データ
   homeWorkspaceTarget: 'notice',
   homeWorkspaceActiveButtonId: 'sidebar-home-btn',
+  activeWorkspaceRoute: 'home',
+  activeWorkspaceButtonId: 'sidebar-home-btn',
+  activeWorkspaceTitle: 'ホーム',
+  activeWorkspaceSubtitle: '',
   currentUsername: localStorage.getItem('portal-username') || null,
   dataBackendMode: 'supabase',
   supabaseUrl: '',
