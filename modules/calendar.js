@@ -665,6 +665,33 @@ function startCalendarRuntime() {
   fetchFiscalYearPaidLeave();
 }
 
+function scrollCalendarWorkspaceToTop() {
+  const appMain = document.getElementById('app-main');
+  appMain?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+}
+
+function scrollCalendarDayPanelIntoView(panel) {
+  const appMain = document.getElementById('app-main');
+  const isWorkspace = document.getElementById('cal-modal')?.classList.contains('cal-workspace-mode');
+  if (!isWorkspace || !appMain) {
+    const compact = window.matchMedia?.('(max-width: 720px)').matches;
+    panel.scrollIntoView({ behavior: 'smooth', block: compact ? 'start' : 'nearest' });
+    return;
+  }
+
+  const compact = window.matchMedia?.('(max-width: 980px)').matches;
+  if (!compact) return;
+
+  requestAnimationFrame(() => {
+    const rootRect = appMain.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const offset = 72;
+    const top = Math.max(0, appMain.scrollTop + panelRect.top - rootRect.top - offset);
+    appMain.scrollTo({ top, left: 0, behavior: 'smooth' });
+  });
+}
+
 function mountCalendarWorkspace() {
   const modal = document.getElementById('cal-modal');
   const dashboard = document.getElementById('home-dashboard');
@@ -673,6 +700,7 @@ function mountCalendarWorkspace() {
   if (modal.classList.contains('cal-workspace-mode')) {
     modal.classList.add('visible');
     appMain?.classList.add('calendar-workspace-active', 'home-compact');
+    scrollCalendarWorkspaceToTop();
     return true;
   }
 
@@ -694,6 +722,7 @@ function mountCalendarWorkspace() {
   workspaceHost.querySelector('#cal-workspace-mount')?.appendChild(modal);
   modal.classList.add('cal-workspace-mode', 'visible');
   appMain?.classList.add('calendar-workspace-active', 'home-compact');
+  scrollCalendarWorkspaceToTop();
 
   const closeBtn = document.getElementById('cal-close-btn');
   const closeIcon = closeBtn?.querySelector('.material-symbols-rounded');
@@ -1490,8 +1519,7 @@ export function openDayPanel(dateStr) {
   renderDayTasks(dateStr);
 
   panel.hidden = false;
-  const compact = window.matchMedia?.('(max-width: 720px)').matches;
-  panel.scrollIntoView({ behavior: 'smooth', block: compact ? 'start' : 'nearest' });
+  scrollCalendarDayPanelIntoView(panel);
 }
 
 // ===== 早出・残業 合計表示 =====

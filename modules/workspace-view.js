@@ -26,6 +26,12 @@ function ensureHost() {
   return host;
 }
 
+function scrollAppMainToTop(behavior = 'auto') {
+  const appMain = document.getElementById('app-main');
+  appMain?.scrollTo({ top: 0, left: 0, behavior });
+  window.scrollTo({ top: 0, left: 0, behavior });
+}
+
 function setCloseButtonMode(element, meta, toWorkspace) {
   const button = meta.closeSelector ? element.querySelector(meta.closeSelector) : null;
   if (!button) return;
@@ -143,7 +149,7 @@ export function openWorkspaceView(options = {}) {
   setCloseButtonMode(element, meta, true);
   attachCloseInterceptor(element, meta);
 
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  scrollAppMainToTop('auto');
   return true;
 }
 
@@ -183,6 +189,7 @@ export function closeWorkspaceView(target = activeWorkspaceElement) {
   document.getElementById('app-main')?.classList.remove('portal-workspace-active');
 
   if (activeWorkspaceElement === element) activeWorkspaceElement = null;
+  scrollAppMainToTop('auto');
   return true;
 }
 

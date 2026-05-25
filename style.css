@@ -27097,6 +27097,39 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   margin-bottom: 12px;
 }
 
+#cal-modal.cal-workspace-mode .cal-day-work-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "search search"
+    "site site"
+    "hours delete";
+  align-items: stretch;
+}
+
+#cal-modal.cal-workspace-mode .cal-day-work-search {
+  grid-area: search;
+}
+
+#cal-modal.cal-workspace-mode .cal-day-work-site {
+  grid-area: site;
+}
+
+#cal-modal.cal-workspace-mode .cal-day-work-hours {
+  grid-area: hours;
+  text-align: left;
+}
+
+#cal-modal.cal-workspace-mode .cal-day-work-del-btn {
+  grid-area: delete;
+  width: auto;
+  min-width: 64px;
+}
+
+#cal-modal.cal-workspace-mode .cal-day-work-recent-list {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
 #cal-modal.cal-workspace-mode .cal-day-panel .modal-actions {
   margin: 16px -16px -16px;
   bottom: 0;
@@ -27208,5 +27241,107 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
     bottom: 64px;
     margin: 16px 0 0;
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ===== workspace viewport fit ===== */
+.app-main.calendar-workspace-active,
+.app-main.portal-workspace-active {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scroll-padding-top: 84px;
+}
+
+.app-main.calendar-workspace-active .cal-workspace-shell,
+.app-main.portal-workspace-active .portal-workspace-shell {
+  box-sizing: border-box;
+  max-width: min(1080px, 100%);
+  padding-top: 0;
+}
+
+#cal-modal.cal-workspace-mode,
+#cal-modal.cal-workspace-mode .cal-modal-glass,
+#cal-modal.cal-workspace-mode #calw-view-calendar,
+#cal-modal.cal-workspace-mode #cal-grid-container,
+#cal-modal.cal-workspace-mode .cal-cells,
+#cal-modal.cal-workspace-mode .cal-day-panel,
+.portal-workspace-mode,
+.portal-workspace-mode .modal-glass,
+.portal-workspace-mode .task-modal-inner,
+.portal-workspace-mode .reqboard-modal-inner,
+.portal-workspace-mode .email-modal-inner,
+.portal-workspace-mode .profile-modal-inner,
+.portal-workspace-mode .ord-modal-inner,
+.portal-workspace-mode .prop-summary-inner,
+.portal-workspace-mode .shared-links-glass,
+.portal-workspace-mode .notice-center-panel,
+.chat-panel.portal-workspace-mode,
+.ft-panel.portal-workspace-mode {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
+#cal-modal.cal-workspace-mode .cal-modal-glass {
+  display: block;
+  overflow: visible;
+}
+
+#cal-modal.cal-workspace-mode .cal-modal-header,
+.portal-workspace-mode .modal-header,
+.portal-workspace-mode .task-modal-header,
+.portal-workspace-mode .reqboard-modal-header,
+.portal-workspace-mode .email-modal-header,
+.portal-workspace-mode .profile-modal-header,
+.portal-workspace-mode .shared-links-head,
+.portal-workspace-mode .notice-center-header,
+.portal-workspace-mode .ft-panel-header,
+.portal-workspace-mode .chat-header {
+  scroll-margin-top: 84px;
+}
+
+@media (min-width: 981px) {
+  #cal-modal.cal-workspace-mode #calw-view-calendar.cal-day-open .cal-day-panel {
+    position: static;
+    top: auto;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 980px) {
+  .app-main.calendar-workspace-active,
+  .app-main.portal-workspace-active {
+    scroll-padding-top: 72px;
+  }
+
+  #cal-modal.cal-workspace-mode #calw-view-calendar.cal-day-open {
+    display: block;
+  }
+
+  #cal-modal.cal-workspace-mode .cal-day-panel {
+    width: 100%;
+    scroll-margin-top: 72px;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-main.calendar-workspace-active,
+  .app-main.portal-workspace-active {
+    padding-top: 12px !important;
+    padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .app-main.calendar-workspace-active .cal-workspace-shell,
+  .app-main.portal-workspace-active .portal-workspace-shell {
+    width: 100%;
+    max-width: none;
+  }
+
+  #cal-modal.cal-workspace-mode .cal-modal-header,
+  #task-modal.portal-workspace-mode .task-modal-header,
+  #shared-links-modal.portal-workspace-mode .shared-links-header {
+    position: sticky;
+    top: 0;
   }
 }
