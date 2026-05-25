@@ -27345,3 +27345,71 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
     top: 0;
   }
 }
+
+/* ===== task workspace viewport fit ===== */
+#task-modal.portal-workspace-mode .task-modal-metrics,
+#task-modal.portal-workspace-mode .task-tabs,
+#task-modal.portal-workspace-mode .task-tab-context,
+#task-modal.portal-workspace-mode .task-tab-content,
+#task-modal.portal-workspace-mode .task-new-form,
+#task-modal.portal-workspace-mode .task-item,
+#task-modal.portal-workspace-mode .task-item-main,
+#task-modal.portal-workspace-mode .task-item-title,
+#task-modal.portal-workspace-mode .task-item-details,
+#task-modal.portal-workspace-mode .task-project-filter-row {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+#task-modal.portal-workspace-mode .task-tab-content {
+  overflow: visible;
+}
+
+#task-modal.portal-workspace-mode .task-item-title {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  #task-modal.portal-workspace-mode .task-modal-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-left: 0;
+    margin-right: 0;
+    overflow: visible;
+    padding: 0 0 10px;
+  }
+
+  #task-modal.portal-workspace-mode .task-modal-metric {
+    flex: initial;
+    min-width: 0;
+    min-height: 64px;
+    padding: 10px;
+  }
+
+  #task-modal.portal-workspace-mode .task-modal-metric__copy {
+    min-width: 0;
+  }
+
+  #task-modal.portal-workspace-mode .task-modal-metric__label,
+  #task-modal.portal-workspace-mode .task-modal-metric__value {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #task-modal.portal-workspace-mode .task-tabs {
+    top: 0;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 8px 0;
+  }
+
+  #task-modal.portal-workspace-mode .task-tab-context,
+  #task-modal.portal-workspace-mode .task-tab-content {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
