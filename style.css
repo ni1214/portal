@@ -26861,6 +26861,35 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   border-radius: 12px;
 }
 
+#shared-links-modal.portal-workspace-mode .shared-links-toolbar,
+#shared-links-modal.portal-workspace-mode .shared-link-ai-box,
+#shared-links-modal.portal-workspace-mode .shared-link-ai-controls,
+#shared-links-modal.portal-workspace-mode .shared-links-chip-list,
+#shared-links-modal.portal-workspace-mode .shared-links-browser-body,
+#shared-links-modal.portal-workspace-mode .shared-link-app-section,
+#shared-links-modal.portal-workspace-mode .shared-link-app-section-head,
+#shared-links-modal.portal-workspace-mode .shared-link-app-grid,
+#shared-links-modal.portal-workspace-mode .shared-link-app-tile,
+#shared-links-modal.portal-workspace-mode .shared-link-app-link,
+#shared-links-modal.portal-workspace-mode .shared-link-add-tile {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
+#shared-links-modal.portal-workspace-mode .shared-link-app-grid {
+  overflow: visible;
+}
+
+#shared-links-modal.portal-workspace-mode .shared-link-app-edit {
+  top: 2px;
+  right: 2px;
+}
+
+#shared-links-modal.portal-workspace-mode .shared-link-app-children-toggle {
+  right: 2px;
+}
+
 @media (max-width: 720px) {
   .app-main.portal-workspace-active .portal-workspace-shell {
     width: 100%;
@@ -26981,20 +27010,50 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   }
 
   #shared-links-modal.portal-workspace-mode .shared-links-chip-list {
-    flex-wrap: nowrap;
-    margin-left: -14px;
-    margin-right: -14px;
-    padding: 0 14px 4px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  #shared-links-modal.portal-workspace-mode .shared-links-chip-list::-webkit-scrollbar {
-    display: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 0 0 4px;
+    overflow: visible;
   }
 
   #shared-links-modal.portal-workspace-mode .shared-links-chip {
-    flex: 0 0 auto;
+    flex: 1 1 calc(50% - 8px);
+    justify-content: center;
+    min-width: 0;
+    white-space: normal;
+  }
+
+  #shared-links-modal.portal-workspace-mode .shared-link-app-section {
+    padding: 12px;
+  }
+
+  #shared-links-modal.portal-workspace-mode .shared-link-app-section-head {
+    gap: 10px;
+  }
+
+  #shared-links-modal.portal-workspace-mode .shared-link-app-section-title strong {
+    overflow-wrap: anywhere;
+  }
+
+  #shared-links-modal.portal-workspace-mode .shared-link-app-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  #shared-links-modal.portal-workspace-mode .shared-link-app-tile {
+    min-height: 138px;
+  }
+
+  #shared-links-modal.portal-workspace-mode .shared-link-app-link,
+  #shared-links-modal.portal-workspace-mode .shared-link-add-tile {
+    height: 106px;
+  }
+
+  #shared-links-modal.portal-workspace-mode .shared-link-app-label {
+    overflow-wrap: anywhere;
   }
 }
 
