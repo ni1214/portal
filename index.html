@@ -394,9 +394,9 @@
     <div class="modal-glass shared-links-glass">
       <div class="shared-links-header">
         <div>
-          <div class="shared-links-kicker">Shared Links</div>
-          <h3 class="shared-links-title"><i class="material-symbols-rounded" aria-hidden="true">grid_view</i> 共有リンク一覧</h3>
-          <p class="shared-links-desc">星を付けたリンクは、ユーザーごとのお気に入りに保存されます。</p>
+          <div class="shared-links-kicker">共有リンクワークスペース</div>
+          <h3 class="shared-links-title"><i class="material-symbols-rounded" aria-hidden="true">grid_view</i> 共有リンク</h3>
+          <p class="shared-links-desc">カテゴリごとに探す、追加する、よく使うリンクに星を付ける操作をここでまとめて行います。</p>
         </div>
         <button type="button" class="shared-links-close" id="shared-links-close" title="閉じる">
           <i class="material-symbols-rounded" aria-hidden="true">close</i>
@@ -408,11 +408,14 @@
           type="text"
           id="shared-links-search"
           class="form-input shared-links-search"
+          aria-label="共有リンクを検索"
           placeholder="共有リンク名で検索"
           autocomplete="off"
         >
         <div class="shared-links-status" id="shared-links-status"></div>
       </div>
+
+      <div class="shared-links-overview" id="shared-links-overview" aria-live="polite"></div>
 
       <div class="shared-link-ai-box" id="shared-link-ai-box">
         <div class="shared-link-ai-copy">

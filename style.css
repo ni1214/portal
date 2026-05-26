@@ -13967,8 +13967,7 @@ html.font-xl { font-size: 21px; }
   color: var(--accent-blue);
   font-size: 0.74rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .shared-links-title {
@@ -14008,6 +14007,61 @@ html.font-xl { font-size: 21px; }
 .shared-links-status {
   color: var(--text-muted);
   font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.shared-links-overview {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.shared-links-overview-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-card) 82%, transparent);
+}
+
+.shared-links-overview-icon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  color: var(--accent-blue);
+  background: color-mix(in srgb, var(--accent-blue) 11%, var(--bg-card));
+}
+
+.shared-links-overview-copy {
+  min-width: 0;
+}
+
+.shared-links-overview-label,
+.shared-links-overview-value {
+  display: block;
+  min-width: 0;
+}
+
+.shared-links-overview-label {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.shared-links-overview-value {
+  margin-top: 2px;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -14622,6 +14676,10 @@ html.font-xl { font-size: 21px; }
   .shared-home-grid {
     grid-template-columns: 1fr;
   }
+
+  .shared-links-overview {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 768px) {
@@ -14645,6 +14703,10 @@ html.font-xl { font-size: 21px; }
 
   .shared-links-status {
     white-space: normal;
+  }
+
+  .shared-links-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .shared-links-favorite-view-hero {
@@ -27084,6 +27146,10 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   grid-column: 1 / -1;
 }
 
+#shared-links-modal.portal-workspace-mode .shared-links-overview {
+  margin-bottom: 12px;
+}
+
 #shared-links-modal.portal-workspace-mode .shared-links-chip-list {
   gap: 8px;
   margin-bottom: 12px;
@@ -27107,6 +27173,8 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
 #shared-links-modal.portal-workspace-mode .shared-links-toolbar,
 #shared-links-modal.portal-workspace-mode .shared-link-ai-box,
 #shared-links-modal.portal-workspace-mode .shared-link-ai-controls,
+#shared-links-modal.portal-workspace-mode .shared-links-overview,
+#shared-links-modal.portal-workspace-mode .shared-links-overview-item,
 #shared-links-modal.portal-workspace-mode .shared-links-chip-list,
 #shared-links-modal.portal-workspace-mode .shared-links-browser-body,
 #shared-links-modal.portal-workspace-mode .shared-link-app-section,
@@ -27250,6 +27318,11 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
 
   #shared-links-modal.portal-workspace-mode .shared-link-ai-controls {
     grid-template-columns: 1fr;
+  }
+
+  #shared-links-modal.portal-workspace-mode .shared-links-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   #shared-links-modal.portal-workspace-mode .shared-links-chip-list {

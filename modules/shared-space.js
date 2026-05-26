@@ -401,20 +401,65 @@ function applySharedLinksModalMode() {
 
   modal.dataset.sharedLinksMode = sharedLinksViewMode;
   glass?.classList.toggle('shared-links-glass--favorite-view', isFavoriteView);
-  if (kicker) kicker.textContent = isFavoriteView ? 'Favorite Links' : 'Shared Links';
+  if (kicker) kicker.textContent = isFavoriteView ? 'お気に入りビュー' : '共有リンクワークスペース';
   if (title) {
     title.innerHTML = isFavoriteView
-      ? '<i class="material-symbols-rounded" aria-hidden="true">star</i> お気に入り共有リンク'
-      : '<i class="material-symbols-rounded" aria-hidden="true">grid_view</i> 共有リンク一覧';
+      ? '<i class="material-symbols-rounded" aria-hidden="true">star</i> お気に入りリンク'
+      : '<i class="material-symbols-rounded" aria-hidden="true">grid_view</i> 共有リンク';
   }
   if (desc) {
     desc.textContent = isFavoriteView
       ? 'お気に入りに登録したリンクだけを、開きやすいアイコン表示でまとめています。'
-      : '星を付けたリンクは、ユーザーごとのお気に入りに保存されます。';
+      : 'カテゴリごとに探す、追加する、よく使うリンクに星を付ける操作をここでまとめて行います。';
   }
   if (toolbar) toolbar.hidden = isFavoriteView;
   if (aiBox) aiBox.hidden = isFavoriteView;
   if (chips) chips.hidden = isFavoriteView;
+}
+
+function renderSharedLinksOverview(host, options = {}) {
+  if (!host) return;
+  const hiddenIds = Array.isArray(state.hiddenCards) ? state.hiddenCards : [];
+  const hiddenSet = new Set(hiddenIds);
+  const publicCategories = getPublicCategories();
+  const cards = (Array.isArray(state.allCards) ? state.allCards : [])
+    .filter(card => card?.id && !hiddenSet.has(card.id));
+  const favoriteIds = new Set(Array.isArray(state.personalFavorites) ? state.personalFavorites : []);
+  const favoriteCount = cards.filter(card => favoriteIds.has(card.id)).length;
+  const isFavoriteView = (options.mode || sharedLinksViewMode) === 'favorites';
+  const categoryFilter = state.sharedLinksCategory || 'all';
+  const selectedCategory = publicCategories.find(cat => cat.id === categoryFilter);
+  const searchText = `${state.sharedLinksQuery || ''}`.trim();
+  const loadLabel = state.sharedCardsLoading
+    ? '読込中'
+    : state.sharedCardsLoaded
+    ? '読込済み'
+    : '未読込';
+  const filterLabel = isFavoriteView
+    ? 'お気に入り'
+    : searchText
+    ? `検索: ${searchText}`
+    : selectedCategory
+    ? selectedCategory.label
+    : 'すべて';
+
+  const metrics = [
+    { icon: 'folder', label: 'カテゴリ', value: state.sharedCardsLoaded ? `${publicCategories.length}件` : '-' },
+    { icon: 'link', label: 'リンク', value: state.sharedCardsLoaded ? `${cards.length}件` : '-' },
+    { icon: 'star', label: 'お気に入り', value: state.sharedCardsLoaded ? `${favoriteCount}件` : '-' },
+    { icon: 'filter_list', label: '表示', value: filterLabel },
+    { icon: 'sync', label: '状態', value: loadLabel },
+  ];
+
+  host.innerHTML = metrics.map(item => `
+    <div class="shared-links-overview-item">
+      <span class="shared-links-overview-icon">${renderHomeIcon(item.icon)}</span>
+      <span class="shared-links-overview-copy">
+        <span class="shared-links-overview-label">${esc(item.label)}</span>
+        <strong class="shared-links-overview-value">${esc(item.value)}</strong>
+      </span>
+    </div>
+  `).join('');
 }
 
 function collectSharedLinkSearchCards(cards, queryText) {
@@ -691,6 +736,7 @@ export function renderSharedLinksBrowser() {
   const chips = document.getElementById('shared-links-chip-list');
   const status = document.getElementById('shared-links-status');
   const input = document.getElementById('shared-links-search');
+  const overview = document.getElementById('shared-links-overview');
   if (!body || !chips || !status) return;
 
   if (input && input.value !== state.sharedLinksQuery) {
@@ -699,6 +745,7 @@ export function renderSharedLinksBrowser() {
 
   renderSharedLinkCategoryChips();
   applySharedLinksModalMode();
+  renderSharedLinksOverview(overview);
 
   if (sharedLinksViewMode === 'favorites') {
     renderFavoriteSharedLinksView(body, status);
@@ -767,6 +814,7 @@ export function renderSharedLinksBrowser() {
     : queryText
     ? `「${state.sharedLinksQuery.trim()}」 の検索結果 ${sections.length}カテゴリ`
     : `共有リンク ${cards.length}件 / ${publicCategories.length}カテゴリ`;
+  renderSharedLinksOverview(overview);
 
   body.innerHTML = '';
   if (!sections.length) {
@@ -816,6 +864,9 @@ export function renderSharedLinksBrowser() {
 }
 
 function renderFavoriteSharedLinksView(body, status) {
+  const overview = document.getElementById('shared-links-overview');
+  renderSharedLinksOverview(overview, { mode: 'favorites' });
+
   if (state.sharedCardsLoading) {
     status.textContent = 'お気に入りを読み込み中です...';
     body.innerHTML = `
@@ -871,6 +922,7 @@ function renderFavoriteSharedLinksView(body, status) {
   status.textContent = selectedCategoryObj
     ? `${selectedCategoryObj.label || 'カテゴリ'} のお気に入り ${favoriteCount}件`
     : `お気に入り共有リンク ${favoriteCount}件`;
+  renderSharedLinksOverview(overview, { mode: 'favorites' });
 
   body.innerHTML = '';
   const hero = document.createElement('div');
