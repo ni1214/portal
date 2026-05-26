@@ -27079,9 +27079,25 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   margin: 0 0 10px;
   padding: 10px 0 12px;
   border: 0;
-  background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-glass) 62%, transparent);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+#cal-modal.cal-workspace-mode .cal-nav-btn,
+#cal-modal.cal-workspace-mode .cal-today-btn,
+#cal-modal.cal-workspace-mode .cal-close-btn {
+  border: 1px solid color-mix(in srgb, var(--border-glass) 72%, transparent);
+  background: transparent;
+  box-shadow: none;
+}
+
+#cal-modal.cal-workspace-mode .cal-nav-btn:hover,
+#cal-modal.cal-workspace-mode .cal-today-btn:hover,
+#cal-modal.cal-workspace-mode .cal-close-btn:hover {
+  background: color-mix(in srgb, var(--accent-cyan) 8%, transparent);
 }
 
 #cal-modal.cal-workspace-mode .cal-tab-bar,

@@ -47,6 +47,7 @@ let calendarOriginalParent = null;
 let calendarOriginalNextSibling = null;
 let calendarCloseIconText = '';
 let calendarCloseTitle = '';
+let calendarCloseAriaLabel = '';
 export function initCalendar(d) { deps = d; }
 
 // ===== Supabase helpers =====
@@ -727,8 +728,12 @@ function mountCalendarWorkspace() {
   const closeBtn = document.getElementById('cal-close-btn');
   const closeIcon = closeBtn?.querySelector('.material-symbols-rounded');
   if (closeBtn && !calendarCloseTitle) calendarCloseTitle = closeBtn.getAttribute('title') || '';
+  if (closeBtn && !calendarCloseAriaLabel) calendarCloseAriaLabel = closeBtn.getAttribute('aria-label') || '';
   if (closeIcon && !calendarCloseIconText) calendarCloseIconText = closeIcon.textContent || 'close';
-  if (closeBtn) closeBtn.setAttribute('title', 'ホームへ戻る');
+  if (closeBtn) {
+    closeBtn.setAttribute('title', 'ホームへ戻る');
+    closeBtn.setAttribute('aria-label', 'ホームへ戻る');
+  }
   if (closeIcon) closeIcon.textContent = 'home';
   if (closeBtn && closeBtn.dataset.calendarWorkspaceCloseBound !== '1') {
     closeBtn.dataset.calendarWorkspaceCloseBound = '1';
@@ -762,6 +767,10 @@ function unmountCalendarWorkspace() {
   const closeBtn = document.getElementById('cal-close-btn');
   const closeIcon = closeBtn?.querySelector('.material-symbols-rounded');
   if (closeBtn) closeBtn.setAttribute('title', calendarCloseTitle || '閉じる');
+  if (closeBtn) {
+    if (calendarCloseAriaLabel) closeBtn.setAttribute('aria-label', calendarCloseAriaLabel);
+    else closeBtn.removeAttribute('aria-label');
+  }
   if (closeIcon) closeIcon.textContent = calendarCloseIconText || 'close';
 
   deps.renderTodayDashboard?.();
