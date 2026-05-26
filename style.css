@@ -11207,6 +11207,12 @@ html.font-xl { font-size: 21px; }
   color: var(--text-secondary);
   margin-bottom: 10px;
 }
+.ord-admin-edit-note {
+  margin: -4px 0 10px;
+  color: var(--accent-cyan);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
 .ord-admin-form-row {
   display: flex;
   gap: 8px;

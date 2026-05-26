@@ -2545,7 +2545,8 @@
         <div id="ord-admin-panel-items" class="ord-admin-panel">
           <div id="ord-admin-items-list" class="ord-admin-list"></div>
           <div class="ord-admin-add-form">
-            <h4 class="ord-admin-add-title">新規追加</h4>
+            <h4 class="ord-admin-add-title" id="ord-item-form-title">新規追加</h4>
+            <p class="ord-admin-edit-note" id="ord-item-edit-note" hidden></p>
             <div class="ord-admin-form-row">
               <input type="text" id="ord-item-add-category" class="form-input" placeholder="品種 (例: 平鋼, アングル)" style="min-width:120px">
               <input type="text" id="ord-item-add-spec" class="form-input" placeholder="サイズ (例: 6×30)">
@@ -2560,6 +2561,7 @@
                 <option value="site">現場名発注</option>
               </select>
               <button class="btn-modal-primary" id="ord-item-add-btn">追加</button>
+              <button class="btn-modal-secondary" id="ord-item-edit-cancel" hidden>編集をやめる</button>
             </div>
           </div>
         </div>
