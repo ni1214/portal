@@ -991,6 +991,52 @@ function switchMaterialFilter(type) {
   renderOrderItemList();
 }
 
+function getOrderEmptyFilterLabels(q) {
+  const labels = [_orderType === 'site' ? '現場名発注' : '工場在庫'];
+  if (_materialFilter !== 'all') labels.push(_materialFilter === 'stainless' ? 'ステンレス' : 'スチール');
+  if (_categoryFilter !== 'all') labels.push(_categoryFilter);
+  if (q) labels.push(`検索: ${q}`);
+  if (_showSelectedOnly) labels.push('選択済みのみ');
+  return labels;
+}
+
+function resetOrderItemFilters() {
+  _materialFilter = 'all';
+  _categoryFilter = 'all';
+  _searchQuery = '';
+  _showSelectedOnly = false;
+  const searchEl = document.getElementById('ord-search-input');
+  if (searchEl) searchEl.value = '';
+  document.getElementById('ord-search-clear')?.toggleAttribute('hidden', true);
+  const selectedToggle = document.getElementById('ord-show-selected');
+  if (selectedToggle) selectedToggle.checked = false;
+  document.querySelectorAll('#ord-material-tabs .ord-material-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.type === 'all');
+  });
+  renderCategoryTabs();
+  const catSel = document.getElementById('ord-cat-select');
+  if (catSel) catSel.value = 'all';
+  renderOrderItemList();
+}
+
+function buildOrderEmptyState(q) {
+  const labels = getOrderEmptyFilterLabels(q);
+  const actionButtons = [
+    q ? '<button type="button" class="btn-modal-secondary ord-empty-action" data-ord-empty-action="clear-search">検索をクリア</button>' : '',
+    _categoryFilter !== 'all' ? '<button type="button" class="btn-modal-secondary ord-empty-action" data-ord-empty-action="clear-category">カテゴリを解除</button>' : '',
+    _materialFilter !== 'all' ? '<button type="button" class="btn-modal-secondary ord-empty-action" data-ord-empty-action="all-material">素材をすべて表示</button>' : '',
+    _showSelectedOnly ? '<button type="button" class="btn-modal-secondary ord-empty-action" data-ord-empty-action="show-all">すべて表示</button>' : '',
+    '<button type="button" class="btn-modal-secondary ord-empty-action" data-ord-empty-action="reset">条件をリセット</button>',
+    '<button type="button" class="btn-modal-primary ord-empty-action" data-ord-empty-action="admin">鋼材マスタを開く</button>',
+  ].filter(Boolean).join('');
+  return `
+    <div class="ord-empty ord-empty--actionable">
+      <strong>該当する鋼材が見つかりません</strong>
+      <p>現在の条件: ${labels.map(esc).join(' / ')}</p>
+      <div class="ord-empty-actions">${actionButtons}</div>
+    </div>`;
+}
+
 function renderOrderItemList() {
   const listEl = document.getElementById('ord-item-list');
   if (!listEl) return;
@@ -1026,7 +1072,7 @@ function renderOrderItemList() {
   filtered = filtered.filter(it => !specialIds.has(it.id));
 
   if (!filtered.length && !pinnedItems.length && !recentItems.length) {
-    listEl.innerHTML = `<p class="ord-empty">該当する鋼材が見つかりません</p>`;
+    listEl.innerHTML = buildOrderEmptyState(q);
     return;
   }
 
@@ -1841,6 +1887,44 @@ function bindOrderEvents() {
   document.getElementById('ord-show-selected')?.addEventListener('change', e => {
     _showSelectedOnly = e.target.checked;
     renderOrderItemList();
+  });
+
+  document.getElementById('ord-item-list')?.addEventListener('click', e => {
+    const action = e.target.closest('[data-ord-empty-action]')?.dataset.ordEmptyAction;
+    if (!action) return;
+    if (action === 'clear-search') {
+      _searchQuery = '';
+      const el = document.getElementById('ord-search-input');
+      if (el) el.value = '';
+      document.getElementById('ord-search-clear')?.toggleAttribute('hidden', true);
+      renderOrderItemList();
+      return;
+    }
+    if (action === 'clear-category') {
+      _categoryFilter = 'all';
+      const sel = document.getElementById('ord-cat-select');
+      if (sel) sel.value = 'all';
+      renderOrderItemList();
+      return;
+    }
+    if (action === 'all-material') {
+      switchMaterialFilter('all');
+      return;
+    }
+    if (action === 'show-all') {
+      _showSelectedOnly = false;
+      const selectedToggle = document.getElementById('ord-show-selected');
+      if (selectedToggle) selectedToggle.checked = false;
+      renderOrderItemList();
+      return;
+    }
+    if (action === 'reset') {
+      resetOrderItemFilters();
+      return;
+    }
+    if (action === 'admin') {
+      openOrderAdminModal();
+    }
   });
 
   // カテゴリドロップダウン

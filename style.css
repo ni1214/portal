@@ -10981,6 +10981,28 @@ html.font-xl { font-size: 21px; }
   padding: 24px;
   font-size: 0.9rem;
 }
+.ord-empty--actionable {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  border: 1px dashed var(--border-glass);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg-card) 58%, transparent);
+}
+.ord-empty--actionable strong {
+  color: var(--text-primary);
+}
+.ord-empty--actionable p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+.ord-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
 
 /* :*/
 .ord-period-nav {
