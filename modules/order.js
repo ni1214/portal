@@ -374,8 +374,6 @@ async function seedInitialData() {
 
     // ── V1: スチール鋼材カタログ ──
     if (seedVer < 1) {
-      const suppSnap2 = await getDocs(collection(db, 'order_suppliers'));
-      const suppId = suppSnap2.docs[0]?.id || '';
       await Promise.all(CATALOG_SEED.map(item => addDoc(collection(db, 'order_items'), {
         itemCategory: item.itemCategory,
         name: item.itemCategory,
@@ -384,7 +382,7 @@ async function seedInitialData() {
         availableLengths: item.availableLengths,
         unit: '本',
         defaultQty: 1,
-        supplierId: suppId,
+        supplierId: null,
         sortOrder: item.sortOrder,
         orderType: 'both',
         active: true
@@ -400,8 +398,6 @@ async function seedInitialData() {
 
     // ── V2: 磨き材 + ステンレス ──
     if (seedVer < 2) {
-      const suppSnap3 = await getDocs(collection(db, 'order_suppliers'));
-      const suppId2 = suppSnap3.docs[0]?.id || '';
       await Promise.all(CATALOG_SEED_V2.map(item => addDoc(collection(db, 'order_items'), {
         itemCategory: item.itemCategory,
         name: item.itemCategory,
@@ -410,7 +406,7 @@ async function seedInitialData() {
         availableLengths: item.availableLengths,
         unit: '本',
         defaultQty: 1,
-        supplierId: suppId2,
+        supplierId: null,
         sortOrder: item.sortOrder,
         orderType: 'both',
         active: true
@@ -495,6 +491,10 @@ async function cleanupFactoryDuplicates() {
 }
 
 // ===== マスタ読み込み =====
+function normalizeSharedOrderItem(item = {}) {
+  return { ...item, supplierId: null };
+}
+
 async function loadMasters() {
   if (isSupabaseSharedCoreEnabled()) {
     try {
@@ -507,7 +507,7 @@ async function loadMasters() {
         }),
       ]);
       _suppliers = suppliers;
-      _items = items;
+      _items = items.map(normalizeSharedOrderItem);
       _gasUrl = config.gasOrderUrl || '';
     } catch (err) {
       console.error('order: loadMasters (Supabase) error', err);
@@ -521,7 +521,7 @@ async function loadMasters() {
       getDoc(doc(db, 'portal', 'config'))
     ]);
     _suppliers = suppSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    _items = itemSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    _items = itemSnap.docs.map(d => normalizeSharedOrderItem({ id: d.id, ...d.data() }));
     if (configSnap.exists()) {
       _gasUrl = configSnap.data().gasOrderUrl || '';
     }
@@ -1672,14 +1672,15 @@ function renderAdminItems() {
 
 async function addOrUpdateItem(id, data) {
   try {
+    const sharedData = normalizeSharedOrderItem(data);
     if (isSupabaseSharedCoreEnabled()) {
       // 既存データとマージしてupsert（sortOrder・defaultQty等を保持）
       const existing = id ? _items.find(it => it.id === id) : null;
-      await upsertOrderItemInSupabase({ ...(existing || {}), ...data, ...(id ? { id } : {}) });
+      await upsertOrderItemInSupabase({ ...(existing || {}), ...sharedData, ...(id ? { id } : {}) });
     } else if (id) {
-      await updateDoc(doc(db, 'order_items', id), data);
+      await updateDoc(doc(db, 'order_items', id), sharedData);
     } else {
-      await addDoc(collection(db, 'order_items'), { ...data, active: true });
+      await addDoc(collection(db, 'order_items'), { ...sharedData, active: true });
     }
     await loadMasters();
     renderAdminItems();
@@ -1926,12 +1927,11 @@ function bindOrderEvents() {
     const rawLen   = document.getElementById('ord-item-add-lengths')?.value.trim() || '';
     const lengths  = rawLen ? rawLen.split(/[,、\s]+/).map(s => s.trim()).filter(Boolean) : ['6m'];
     const ordType  = document.getElementById('ord-item-add-type')?.value || 'both';
-    const suppId   = _suppliers[0]?.id || '';
     if (!category || !spec) { alert('品種とサイズは必須です。'); return; }
     await addOrUpdateItem(null, {
       itemCategory: category, name: category, spec, materialType: material,
       availableLengths: lengths, unit: '本', defaultQty: 1,
-      orderType: ordType, supplierId: suppId, sortOrder: _items.length + 1
+      orderType: ordType, sortOrder: _items.length + 1
     });
     ['ord-item-add-category','ord-item-add-spec','ord-item-add-lengths'].forEach(id => {
       const el = document.getElementById(id);
