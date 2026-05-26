@@ -11304,7 +11304,14 @@ html.font-xl { font-size: 21px; }
 .ord-cat-chevron { font-size: 0.7rem; color: var(--text-muted); transition: transform 0.2s; }
 .ord-cat-name { flex: 1; }
 .ord-cat-count { font-size: 0.72rem; color: var(--text-muted); background: var(--bg-card); border-radius: 10px; padding: 1px 7px; }
+.ord-filter-result-meta {
+  margin: 2px 0 8px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
 .ord-cat-items { padding: 2px 0 2px 8px; }
+.ord-cat-items--flat { padding-left: 0; }
 .ord-cat-items.collapsed { display: none; }
 
 .ord-item-row { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 4px; transition: background 0.1s; }

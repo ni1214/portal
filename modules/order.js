@@ -1037,6 +1037,38 @@ function buildOrderEmptyState(q) {
     </div>`;
 }
 
+function buildOrderFilteredList(filtered, q) {
+  const useFlatList = q.length > 0 || _categoryFilter !== 'all' || _showSelectedOnly;
+  if (useFlatList) {
+    const heading = _categoryFilter !== 'all'
+      ? `${esc(_categoryFilter)} / ${filtered.length}件`
+      : `検索結果 / ${filtered.length}件`;
+    return `
+      <div class="ord-filter-result-meta">${heading}</div>
+      <div class="ord-cat-items ord-cat-items--flat">
+        ${filtered.map(buildItemRow).join('')}
+      </div>`;
+  }
+
+  const grouped = {};
+  filtered.forEach(item => {
+    const cat = item.itemCategory || item.name || '鋼材';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(item);
+  });
+  return Object.entries(grouped).map(([cat, items]) => `
+    <div class="ord-cat-group">
+      <div class="ord-cat-header" data-cat="${esc(cat)}">
+        <i class="fa-solid fa-chevron-down ord-cat-chevron" style="transform:rotate(-90deg)"></i>
+        <span class="ord-cat-name">${esc(cat)}</span>
+        <span class="ord-cat-count">${items.length}種</span>
+      </div>
+      <div class="ord-cat-items collapsed">
+        ${items.map(buildItemRow).join('')}
+      </div>
+    </div>`).join('');
+}
+
 function renderOrderItemList() {
   const listEl = document.getElementById('ord-item-list');
   if (!listEl) return;
@@ -1096,26 +1128,8 @@ function renderOrderItemList() {
 
   // ── カテゴリグループ ──
   if (filtered.length) {
-    const grouped = {};
-    filtered.forEach(item => {
-      const cat = item.itemCategory || item.name || '鋼材';
-      if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push(item);
-    });
-    const expandAll = q.length > 0;
-    html += Object.entries(grouped).map(([cat, items]) => `
-      <div class="ord-cat-group">
-        <div class="ord-cat-header" data-cat="${esc(cat)}">
-          <i class="fa-solid fa-chevron-down ord-cat-chevron" style="${expandAll ? '' : 'transform:rotate(-90deg)'}"></i>
-          <span class="ord-cat-name">${esc(cat)}</span>
-          <span class="ord-cat-count">${items.length}種</span>
-        </div>
-        <div class="ord-cat-items${expandAll ? '' : ' collapsed'}">
-          ${items.map(buildItemRow).join('')}
-        </div>
-      </div>`).join('');
+    html += buildOrderFilteredList(filtered, q);
   }
-
   listEl.innerHTML = html;
 
   // カテゴリ折りたたみイベント
