@@ -851,6 +851,7 @@ function printOrder(orderData) {
   const now = orderData.orderedAt instanceof Date ? orderData.orderedAt : new Date();
   const pad = n => String(n).padStart(2, '0');
   const dateStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const { itemCount, totalQty } = getOrderItemStats(orderData);
   const orderNo = orderData.orderId
     ? `ORD-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${orderData.orderId.slice(-3).toUpperCase()}`
     : `ORD-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-001`;
@@ -881,6 +882,7 @@ function printOrder(orderData) {
         <tr><th>発注者</th><td>${esc(orderData.orderedBy)}（日建フレメックス株式会社 生産管理課）</td></tr>
         <tr><th>発注区分</th><td>${orderData.orderType === 'site' ? '現場名発注' : '工場在庫'}${orderData.siteName ? `　現場名：${esc(orderData.siteName)}` : ''}</td></tr>
         ${orderData.projectKey ? `<tr><th>物件No</th><td>${esc(orderData.projectKey)}</td></tr>` : ''}
+        <tr><th>品目/本数</th><td>${itemCount}品目 / 合計${totalQty}本</td></tr>
       </table>
       <div class="ord-print-section-title">【発注先】</div>
       <div class="ord-print-supplier">
@@ -1942,12 +1944,28 @@ function renderAdminSuppliers() {
 function renderAdminGas() {
   const input = document.getElementById('ord-gas-url-input');
   if (input) input.value = _gasUrl;
+  renderGasStatus();
+}
+
+function renderGasStatus() {
+  const status = document.getElementById('ord-gas-status');
+  if (!status) return;
+  const configured = Boolean(_gasUrl);
+  status.className = `ord-gas-status ${configured ? 'ord-gas-status--ready' : 'ord-gas-status--missing'}`;
+  status.innerHTML = configured
+    ? '<i class="fa-solid fa-circle-check"></i><div><strong>メール送信設定済み</strong><span>プレビュー画面から発注メールを送信できます。</span></div>'
+    : '<i class="fa-solid fa-triangle-exclamation"></i><div><strong>メール送信は未設定</strong><span>GAS Webアプリ URLを保存するまで、発注メールは送信できません。</span></div>';
 }
 
 async function saveGasUrl() {
   const input = document.getElementById('ord-gas-url-input');
   if (!input) return;
   const url = input.value.trim();
+  if (url && !/^https:\/\/script\.google\.com\/macros\/s\//.test(url)) {
+    alert('GAS Webアプリ URLを入力してください。URLは https://script.google.com/macros/s/... で始まる形式です。');
+    input.focus();
+    return;
+  }
   try {
     if (isSupabaseSharedCoreEnabled()) {
       await savePortalConfigToSupabase({ gasOrderUrl: url });
@@ -1955,6 +1973,7 @@ async function saveGasUrl() {
       await setDoc(doc(db, 'portal', 'config'), { gasOrderUrl: url }, { merge: true });
     }
     _gasUrl = url;
+    renderGasStatus();
     alert('GAS URLを保存しました。');
   } catch (err) {
     alert('保存に失敗しました: ' + err.message);

@@ -11310,6 +11310,38 @@ html.font-xl { font-size: 21px; }
   color: var(--text-secondary);
   line-height: 1.6;
 }
+.ord-gas-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  background: var(--bg-card);
+}
+.ord-gas-status i {
+  margin-top: 2px;
+}
+.ord-gas-status strong,
+.ord-gas-status span {
+  display: block;
+}
+.ord-gas-status strong {
+  color: var(--text-primary);
+  font-size: 0.86rem;
+}
+.ord-gas-status span {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.ord-gas-status--ready i {
+  color: var(--accent-cyan);
+}
+.ord-gas-status--missing i {
+  color: var(--accent-orange);
+}
 
 /* ===== ====*/
 .ord-item-list-header {

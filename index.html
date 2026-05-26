@@ -2601,7 +2601,8 @@
 
         <!-- GAS設定 -->
         <div id="ord-admin-panel-gas" class="ord-admin-panel" hidden>
-          <p class="ord-gas-desc">GAS WebアプリのURLを入力してください。このURLにPOSTリクエストでメールが送信されます。</p>
+          <div class="ord-gas-status" id="ord-gas-status"></div>
+          <p class="ord-gas-desc">GAS WebアプリのURLを入力してください。このURLにPOSTリクエストでメールが送信されます。通常の発注担当者は触らない管理用設定です。</p>
           <div class="form-group">
             <label class="form-label" for="ord-gas-url-input">GAS Webアプリ URL</label>
             <input type="url" id="ord-gas-url-input" class="form-input" placeholder="https://script.google.com/macros/s/...">
