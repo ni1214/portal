@@ -11079,6 +11079,34 @@ html.font-xl { font-size: 21px; }
   max-height: 400px;
   overflow-y: auto;
 }
+.ord-history-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.ord-history-overview-card {
+  min-width: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  padding: 9px 10px;
+}
+.ord-history-overview-card span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.ord-history-overview-card strong {
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+.ord-history-overview-card--warn {
+  border-color: color-mix(in srgb, var(--accent-orange) 35%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-orange) 10%, var(--bg-card));
+}
 .ord-history-group {
   display: flex;
   flex-direction: column;
@@ -11132,6 +11160,29 @@ html.font-xl { font-size: 21px; }
 .ord-history-items {
   font-size: 0.85rem;
   color: var(--text-secondary);
+}
+.ord-history-item-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ord-history-metrics {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+.ord-history-metrics span {
+  color: var(--text-muted);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 .ord-history-note {
   font-size: 0.8rem;
@@ -11869,6 +11920,31 @@ html.font-xl { font-size: 21px; }
   border-bottom: 2px solid var(--border-glass-hover);
   margin-bottom: 14px;
 }
+.ord-detail-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.ord-detail-summary-grid div {
+  min-width: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  padding: 9px 10px;
+}
+.ord-detail-summary-grid span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.ord-detail-summary-grid strong {
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
 .ord-detail-deleted-banner {
   display: flex;
   align-items: flex-start;
@@ -11943,6 +12019,24 @@ html.font-xl { font-size: 21px; }
   margin-top: 14px;
   padding-top: 8px;
   border-top: 1px solid var(--border-glass);
+}
+
+@media (max-width: 640px) {
+  .ord-history-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ord-history-item {
+    margin-left: 0;
+  }
+  .ord-history-item-main {
+    flex-direction: column;
+  }
+  .ord-history-metrics {
+    justify-content: flex-start;
+  }
+  .ord-detail-summary-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ===== (attendance-work.js) =====*/

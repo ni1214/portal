@@ -643,6 +643,38 @@ function getOrderItemsSummary(order) {
   }).join('、');
 }
 
+function getOrderItemStats(order) {
+  const items = Array.isArray(order.items) ? order.items : [];
+  const totalQty = items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+  return { itemCount: items.length, totalQty };
+}
+
+function buildHistoryOverview(activeOrders, deletedOrders) {
+  const visibleCount = activeOrders.length;
+  const deletedCount = deletedOrders.length;
+  const totalQty = activeOrders.reduce((sum, order) => sum + getOrderItemStats(order).totalQty, 0);
+  const unsentCount = activeOrders.filter(order => !order.emailSent).length;
+  return `
+    <div class="ord-history-overview">
+      <div class="ord-history-overview-card">
+        <span>表示中</span>
+        <strong>${visibleCount}件</strong>
+      </div>
+      <div class="ord-history-overview-card">
+        <span>合計本数</span>
+        <strong>${totalQty}本</strong>
+      </div>
+      <div class="ord-history-overview-card${unsentCount ? ' ord-history-overview-card--warn' : ''}">
+        <span>未送信</span>
+        <strong>${unsentCount}件</strong>
+      </div>
+      <div class="ord-history-overview-card">
+        <span>削除済み</span>
+        <strong>${deletedCount}件</strong>
+      </div>
+    </div>`;
+}
+
 function buildStoredOrderData(data, { emailSent = false } = {}) {
   return {
     supplierId: data.supplierId,
@@ -665,6 +697,7 @@ function buildStoredOrderData(data, { emailSent = false } = {}) {
 function renderHistoryItem(order, { deleted = false } = {}) {
   const { label: typeLabel, className: typeCls } = getOrderTypeMeta(order);
   const itemsSummary = getOrderItemsSummary(order);
+  const { itemCount, totalQty } = getOrderItemStats(order);
   const projectKeyHtml = order.projectKey
     ? `<div class="ord-history-project"><span class="ord-history-project-label">物件No</span><span class="ord-project-key-chip">${esc(order.projectKey)}</span></div>`
     : '';
@@ -694,7 +727,13 @@ function renderHistoryItem(order, { deleted = false } = {}) {
         ${emailBadge}
         ${deletedBadge}
       </div>
-      <div class="ord-history-items">${esc(itemsSummary)}</div>
+      <div class="ord-history-item-main">
+        <div class="ord-history-items">${esc(itemsSummary)}</div>
+        <div class="ord-history-metrics">
+          <span>${itemCount}品目</span>
+          <span>合計${totalQty}本</span>
+        </div>
+      </div>
       ${projectKeyHtml}
       ${order.note ? `<div class="ord-history-note">備考: ${esc(order.note)}</div>` : ''}
       ${deletedMeta}
@@ -1578,7 +1617,7 @@ function renderHistoryList() {
         </details>`
     : '';
 
-  listEl.innerHTML = activeHtml + deletedHtml;
+  listEl.innerHTML = buildHistoryOverview(filteredActiveOrders, filteredDeletedOrders) + activeHtml + deletedHtml;
 }
 
 function openOrderDetailModal(orderId) {
@@ -1595,6 +1634,7 @@ function openOrderDetailModal(orderId) {
   const supplier = _suppliers.find(s => s.id === order.supplierId) || { name: order.supplierName || '', address: '', tel: '' };
   const typeLabel = (!order.orderType || order.orderType === 'factory') ? '工場在庫' : (order.siteName || '現場名発注');
   const noteText = (order.note || '').trim() || '（なし）';
+  const { itemCount, totalQty } = getOrderItemStats(order);
   const deletedInfo = isOrderDeleted(order)
     ? `<div class="ord-detail-deleted-banner"><i class="fa-solid fa-trash-can-arrow-up"></i> この履歴は削除済みです。${fmtDatetime(order.deletedAt)} に ${esc(order.deletedBy || '不明')} が削除しました。</div>`
     : '';
@@ -1609,6 +1649,12 @@ function openOrderDetailModal(orderId) {
     <div class="ord-detail-doc">
       <div class="ord-detail-title">鋼 材 発 注 書</div>
       ${deletedInfo}
+      <div class="ord-detail-summary-grid">
+        <div><span>発注先</span><strong>${esc(supplier.name || order.supplierName || '-')}</strong></div>
+        <div><span>発注区分</span><strong>${esc(typeLabel)}</strong></div>
+        <div><span>品目</span><strong>${itemCount}品目 / 合計${totalQty}本</strong></div>
+        <div><span>送信状態</span><strong>${order.emailSent ? '送信済み' : '未送信'}</strong></div>
+      </div>
       <table class="ord-detail-meta">
         <tr><th>発注日時</th><td>${dateStr}</td></tr>
         <tr><th>発注番号</th><td>${orderNo}</td></tr>
