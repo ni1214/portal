@@ -1292,6 +1292,30 @@ function collectOrderData() {
 }
 
 // プレビューモーダルを開く
+function buildOrderPreviewSummary(data) {
+  const totalQty = data.items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+  const destination = data.orderType === 'site' ? `現場名発注: ${data.siteName || '-'}` : '工場在庫';
+  const project = data.projectKey || '-';
+  const itemChips = data.items.map(item => {
+    const sub = [item.category, item.length, item.finish].filter(Boolean).join(' / ');
+    return `
+      <span class="ord-preview-item-chip">
+        <strong>${esc(item.spec || item.category || '品目')}</strong>
+        <small>${esc(sub || '鋼材')}</small>
+        <em>${esc(item.qty)}${esc(item.unit || '本')}</em>
+      </span>`;
+  }).join('');
+
+  return `
+    <div class="ord-preview-summary-grid">
+      <div><span>発注先</span><strong>${esc(data.supplierName || '-')}</strong></div>
+      <div><span>区分</span><strong>${esc(destination)}</strong></div>
+      <div><span>物件No</span><strong>${esc(project)}</strong></div>
+      <div><span>品目</span><strong>${data.items.length}品目 / 合計${totalQty}本</strong></div>
+    </div>
+    <div class="ord-preview-item-chips">${itemChips}</div>`;
+}
+
 let _pendingOrderData = null;
 async function openPreviewModal() {
   const data = collectOrderData();
@@ -1302,6 +1326,7 @@ async function openPreviewModal() {
 
   document.getElementById('ord-preview-subject').textContent = subject;
   document.getElementById('ord-preview-to').textContent = toEmail;
+  document.getElementById('ord-preview-summary').innerHTML = buildOrderPreviewSummary(data);
   document.getElementById('ord-preview-body').textContent = body;
 
   document.getElementById('ord-modal').classList.remove('visible');
