@@ -1597,6 +1597,11 @@ function updatePersonalTabUi(tab) {
     const view = document.getElementById(`calw-view-${name}`);
     if (view) view.style.display = tab === name ? '' : 'none';
   });
+  document.querySelectorAll('[data-cal-workspace-action]').forEach(btn => {
+    const action = btn.dataset.calWorkspaceAction;
+    const isActive = action === tab || (tab === 'calendar' && action === 'today');
+    btn.classList.toggle('active', isActive);
+  });
 }
 
 export async function switchCalPersonalTab(tab) {

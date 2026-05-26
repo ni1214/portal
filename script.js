@@ -4240,6 +4240,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     calGoToday();
     await onCalendarMonthChanged();
   });
+  document.getElementById('cal-modal').addEventListener('click', async e => {
+    const actionButton = e.target.closest?.('[data-cal-workspace-action]');
+    if (!actionButton) return;
+    const modal = document.getElementById('cal-modal');
+    if (!modal?.classList.contains('cal-workspace-mode')) return;
+
+    const action = actionButton.dataset.calWorkspaceAction;
+    switchCalTab('personal');
+    if (action === 'today') {
+      await switchCalPersonalTab('calendar');
+      calGoToday();
+      await onCalendarMonthChanged();
+      openDayPanel(buildTodayDateKey());
+      return;
+    }
+
+    if (action === 'work' || action === 'summary' || action === 'sites') {
+      closeDayPanel();
+      await switchCalPersonalTab(action);
+    }
+  });
   document.getElementById('cal-day-cancel-btn').addEventListener('click', closeDayPanel);
   document.getElementById('cal-day-save-btn').addEventListener('click', saveDayAttendance);
   document.getElementById('cal-day-delete-btn').addEventListener('click', () => {
