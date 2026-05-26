@@ -436,6 +436,7 @@ function _updateFiscalDisplay() {
 export function renderCalendar() {
   const el = document.getElementById('cal-grid-container');
   if (!el) return;
+  resetDayPanelMount();
 
   const year  = state.calendarYear;
   const month = state.calendarMonth;
@@ -557,6 +558,9 @@ export function renderCalendar() {
   });
 
   updateCalendarSummary();
+  if (state.calendarSelectedDate && !document.getElementById('cal-day-panel')?.hidden) {
+    mountDayPanelAfterSelectedWeek(state.calendarSelectedDate);
+  }
 }
 
 // ===== タスクマップ構築（期限日 → タスク配列） =====
@@ -691,6 +695,46 @@ function scrollCalendarDayPanelIntoView(panel) {
     const top = Math.max(0, appMain.scrollTop + panelRect.top - rootRect.top - offset);
     appMain.scrollTo({ top, left: 0, behavior: 'smooth' });
   });
+}
+
+function resetDayPanelMount() {
+  const panel = document.getElementById('cal-day-panel');
+  const view = document.getElementById('calw-view-calendar');
+  if (!panel || !view) return;
+  if (panel.parentElement !== view) view.appendChild(panel);
+  panel.classList.remove('cal-day-panel-inline');
+  panel.style.removeProperty('--cal-detail-arrow-left');
+}
+
+function mountDayPanelAfterSelectedWeek(dateStr) {
+  const modal = document.getElementById('cal-modal');
+  const panel = document.getElementById('cal-day-panel');
+  const cells = document.querySelector('#cal-grid-container .cal-cells');
+  if (!modal?.classList.contains('cal-workspace-mode') || !panel || !cells) {
+    resetDayPanelMount();
+    return;
+  }
+
+  const dayCells = Array.from(cells.querySelectorAll('.cal-cell'));
+  const selectedCell = dayCells.find(cell => cell.dataset.date === dateStr);
+  if (!selectedCell) {
+    resetDayPanelMount();
+    return;
+  }
+
+  const selectedIndex = dayCells.indexOf(selectedCell);
+  const weekEndIndex = Math.min(dayCells.length - 1, Math.floor(selectedIndex / 7) * 7 + 6);
+  const weekEndCell = dayCells[weekEndIndex];
+  if (weekEndCell) weekEndCell.after(panel);
+
+  const cellsRect = cells.getBoundingClientRect();
+  const cellRect = selectedCell.getBoundingClientRect();
+  if (cellsRect.width > 0) {
+    const center = cellRect.left + (cellRect.width / 2) - cellsRect.left;
+    const percent = Math.min(96, Math.max(4, (center / cellsRect.width) * 100));
+    panel.style.setProperty('--cal-detail-arrow-left', `${percent}%`);
+  }
+  panel.classList.add('cal-day-panel-inline');
 }
 
 function mountCalendarWorkspace() {
@@ -1528,6 +1572,7 @@ export function openDayPanel(dateStr) {
   renderDayTasks(dateStr);
 
   panel.hidden = false;
+  mountDayPanelAfterSelectedWeek(dateStr);
   scrollCalendarDayPanelIntoView(panel);
 }
 
@@ -1557,6 +1602,7 @@ function updateTimeTotal() {
 export function closeDayPanel() {
   const panel = document.getElementById('cal-day-panel');
   if (panel) panel.hidden = true;
+  resetDayPanelMount();
   document.getElementById('calw-view-calendar')?.classList.remove('cal-day-open');
   document.querySelectorAll('#cal-grid-container .cal-cell.cal-selected').forEach(cell => cell.classList.remove('cal-selected'));
   state.calendarSelectedDate = null;
