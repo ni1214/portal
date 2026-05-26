@@ -27497,9 +27497,10 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   margin: 0 0 12px;
   padding: 10px 0 12px;
   border: 0;
-  background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-glass) 62%, transparent);
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 #reqboard-modal.portal-workspace-mode .reqboard-tabs,
@@ -27806,15 +27807,16 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
 
 .portal-workspace-chrome {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
-  padding: 12px 14px;
-  border: 1px solid var(--border-glass);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--bg-card) 86%, transparent);
-  box-shadow: var(--shadow-soft);
+  padding: 2px 0 8px;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-glass) 72%, transparent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .portal-workspace-home-btn {
@@ -27824,9 +27826,9 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   gap: 8px;
   min-height: 42px;
   padding: 0 12px;
-  border: 1px solid var(--border-glass);
+  border: 1px solid color-mix(in srgb, var(--border-glass) 74%, transparent);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--bg-primary) 72%, transparent);
+  background: transparent;
   color: var(--text-primary);
   font: inherit;
   font-weight: 700;
@@ -27836,6 +27838,7 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
 
 .portal-workspace-home-btn:hover {
   border-color: color-mix(in srgb, var(--accent-cyan) 48%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-cyan) 8%, transparent);
   color: var(--accent-cyan);
 }
 
@@ -27895,7 +27898,7 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
 }
 
 .portal-workspace-viewport-note {
-  display: inline-flex;
+  display: none;
   align-items: center;
   gap: 6px;
   min-height: 36px;

@@ -72,10 +72,6 @@ function ensureHostMarkup(host) {
           </div>
           <p class="portal-workspace-subtitle" id="portal-workspace-subtitle" hidden></p>
         </div>
-        <div class="portal-workspace-viewport-note" aria-hidden="true">
-          <i class="material-symbols-rounded">responsive_layout</i>
-          <span>Responsive</span>
-        </div>
       </header>
     `);
   }
