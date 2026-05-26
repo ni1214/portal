@@ -869,7 +869,19 @@ function switchOrderType(type) {
   });
   const siteGroup = document.getElementById('ord-site-name-group');
   if (siteGroup) siteGroup.hidden = (type !== 'site');
+  renderCategoryTabs();
   renderOrderItemList();
+}
+
+function normalizeOrderItemType(item) {
+  const type = item?.orderType || 'both';
+  return ['factory', 'site', 'both'].includes(type) ? type : 'both';
+}
+
+function matchesOrderType(item) {
+  const type = normalizeOrderItemType(item);
+  if (_orderType === 'factory') return type === 'factory' || type === 'both';
+  return type === 'site' || type === 'both';
 }
 
 // ===== ピン留め管理 =====
@@ -923,9 +935,13 @@ function renderCategoryTabs() {
   const cats = [...new Set(
     _items.filter(it =>
       it.active !== false &&
+      matchesOrderType(it) &&
       (_materialFilter === 'all' || (it.materialType || 'steel') === _materialFilter)
     ).map(it => it.itemCategory || it.name || '')
   )];
+  if (_categoryFilter !== 'all' && !cats.includes(_categoryFilter)) {
+    _categoryFilter = 'all';
+  }
   sel.innerHTML = [
     `<option value="all">── カテゴリで絞り込む ──</option>`,
     ...cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`)
@@ -980,13 +996,7 @@ function renderOrderItemList() {
   // ── フィルタ適用 ──
   let filtered = _items.filter(it => {
     if (it.active === false) return false;
-    // 工場在庫タブ: orderType='factory' の専用品目のみ表示
-    // 現場名発注タブ: factory専用品目は除外（both / site / 未設定を表示）
-    if (_orderType === 'factory') {
-      if (it.orderType !== 'factory') return false;
-    } else {
-      if (it.orderType === 'factory') return false;
-    }
+    if (!matchesOrderType(it)) return false;
     if (_materialFilter !== 'all' && (it.materialType || 'steel') !== _materialFilter) return false;
     if (_categoryFilter !== 'all' && (it.itemCategory || '') !== _categoryFilter) return false;
     if (q && !`${it.itemCategory || ''} ${it.spec || ''}`.toLowerCase().includes(q)) return false;
@@ -996,16 +1006,15 @@ function renderOrderItemList() {
 
   // ── スペシャルセクション（検索・カテゴリ絞り・選択済みモード中は非表示）──
   const showSpecial = !q && _categoryFilter === 'all' && !_showSelectedOnly;
-  const _matchesOrderTab = it => _orderType === 'factory' ? it.orderType === 'factory' : it.orderType !== 'factory';
   const pinnedItems = showSpecial
     ? _pins.map(id => _items.find(it => it.id === id)).filter(Boolean)
-        .filter(it => it.active !== false && _matchesOrderTab(it) &&
+        .filter(it => it.active !== false && matchesOrderType(it) &&
           (_materialFilter === 'all' || (it.materialType || 'steel') === _materialFilter))
     : [];
   const pinnedIds = new Set(pinnedItems.map(it => it.id));
   const recentItems = showSpecial
     ? _recent.map(id => _items.find(it => it.id === id)).filter(Boolean)
-        .filter(it => it.active !== false && !pinnedIds.has(it.id) && _matchesOrderTab(it) &&
+        .filter(it => it.active !== false && !pinnedIds.has(it.id) && matchesOrderType(it) &&
           (_materialFilter === 'all' || (it.materialType || 'steel') === _materialFilter))
     : [];
   const specialIds = new Set([...pinnedIds, ...recentItems.map(it => it.id)]);
