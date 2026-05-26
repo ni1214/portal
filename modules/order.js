@@ -963,8 +963,13 @@ function renderSelectedSummary() {
     if (!item) return;
     selected.push({ item, saved });
   });
-  if (!selected.length) { el.hidden = true; return; }
   el.hidden = false;
+  if (!selected.length) {
+    el.innerHTML = `
+      <div class="ord-sum-header"><i class="fa-solid fa-cart-shopping"></i> 選択中 <strong>0</strong>品目</div>
+      <div class="ord-sum-empty">左の一覧から発注する鋼材を選択してください。</div>`;
+    return;
+  }
   const chips = selected.map(({ item, saved }) => {
     const fin = saved.finish ? ` <span class="ord-sum-fin">${esc(saved.finish)}</span>` : '';
     const len = saved.length ? ` <span class="ord-sum-len">${esc(saved.length)}</span>` : '';

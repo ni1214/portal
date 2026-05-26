@@ -2378,6 +2378,8 @@
       </div>
 
       <!-- 発注区分トグル -->
+      <div class="ord-flow-shell">
+        <section class="ord-order-setup" aria-label="発注条件">
       <div class="ord-type-toggle">
         <button class="ord-type-btn active" id="ord-type-factory" data-type="factory">
           <i class="fa-solid fa-warehouse"></i> 工場在庫
@@ -2403,9 +2405,12 @@
         <div class="ord-supplier-label">発注先</div>
         <select id="ord-supplier-select" class="form-input ord-supplier-select"></select>
       </div>
+        </section>
+
+        <div class="ord-order-workgrid">
 
       <!-- 鋼材チェックリスト -->
-      <div class="form-group">
+          <section class="form-group ord-order-items-panel" aria-label="発注品目">
         <div class="ord-item-list-header">
           <label class="form-label">発注品目</label>
           <div class="ord-material-tabs" id="ord-material-tabs">
@@ -2423,7 +2428,6 @@
         <!-- カテゴリ絞り込み（ドロップダウン） -->
         <select id="ord-cat-select" class="form-input ord-cat-select"></select>
         <!-- 選択中サマリー -->
-        <div id="ord-selected-summary" class="ord-selected-summary" hidden></div>
         <!-- 選択済みのみ表示 -->
         <div class="ord-filter-row">
           <label class="ord-selected-toggle">
@@ -2435,7 +2439,6 @@
         <button class="ord-add-custom-btn" id="ord-add-custom-btn">
           <i class="fa-solid fa-plus"></i> この発注に品目を追加
         </button>
-      </div>
 
       <!-- 備考 -->
       <div class="form-group">
@@ -2443,11 +2446,23 @@
         <textarea id="ord-note" class="form-input ord-note-textarea" placeholder="特記事項があれば入力してください" rows="3"></textarea>
       </div>
 
-      <div class="modal-actions">
+          </section>
+
+          <aside class="ord-order-review-panel" aria-label="&#30330;&#27880;&#20869;&#23481;&#12398;&#30906;&#35469;">
+            <div class="ord-review-panel-head">
+              <span>&#30330;&#27880;&#20869;&#23481;</span>
+              <strong>&#36865;&#20449;&#21069;&#30906;&#35469;</strong>
+            </div>
+            <div id="ord-selected-summary" class="ord-selected-summary" hidden></div>
+
+      <div class="modal-actions ord-review-actions">
         <button class="btn-modal-secondary" id="ord-btn-cancel">キャンセル</button>
         <button class="btn-modal-secondary" id="ord-btn-history"><i class="fa-solid fa-clock-rotate-left"></i> 履歴</button>
         <button class="btn-modal-secondary" id="ord-btn-print"><i class="fa-solid fa-print"></i> 印刷/PDF</button>
         <button class="btn-modal-primary" id="ord-btn-email"><i class="fa-solid fa-eye"></i> プレビュー・送信</button>
+      </div>
+          </aside>
+        </div>
       </div>
     </div>
   </div>
@@ -2677,4 +2692,3 @@
 </body>
 
 </html>
-

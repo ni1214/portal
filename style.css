@@ -11787,6 +11787,11 @@ html.font-xl { font-size: 21px; }
   font-size: 0.78rem;
   white-space: nowrap;
 }
+.ord-sum-empty {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
 .ord-sum-fin {
   color: var(--accent-cyan);
   font-weight: 600;
@@ -28102,6 +28107,70 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   display: none;
 }
 
+.ord-flow-shell {
+  display: grid;
+  gap: 14px;
+}
+
+.ord-order-setup {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.85fr) minmax(180px, 0.7fr) minmax(240px, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.ord-order-workgrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  gap: 14px;
+  align-items: start;
+}
+
+.ord-order-items-panel,
+.ord-order-review-panel {
+  min-width: 0;
+  background: color-mix(in srgb, var(--bg-card) 76%, transparent);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.ord-order-review-panel {
+  position: sticky;
+  top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.ord-review-panel-head {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.ord-review-panel-head span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.ord-review-panel-head strong {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.ord-review-actions {
+  display: grid !important;
+  grid-template-columns: 1fr;
+  gap: 8px !important;
+}
+
+.ord-review-actions > button {
+  width: 100%;
+  justify-content: center;
+}
+
 #ord-modal.portal-workspace-mode .ord-modal-inner {
   border: 0;
   border-radius: 0;
@@ -28191,6 +28260,8 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
 
 #ord-modal.portal-workspace-mode .ord-type-toggle,
 #ord-modal.portal-workspace-mode .ord-supplier-info,
+#ord-modal.portal-workspace-mode .ord-order-items-panel,
+#ord-modal.portal-workspace-mode .ord-order-review-panel,
 #ord-modal.portal-workspace-mode .ord-search-bar-wrap,
 #ord-modal.portal-workspace-mode .ord-filter-row,
 #ord-modal.portal-workspace-mode .ord-selected-summary,
@@ -28203,7 +28274,7 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   #ord-modal.portal-workspace-mode #ord-site-name-group,
   #ord-modal.portal-workspace-mode .ord-project-key-group,
   #ord-modal.portal-workspace-mode .ord-supplier-info {
-    max-width: min(720px, 100%);
+    max-width: none;
   }
 
   #ord-modal.portal-workspace-mode .ord-item-list {
@@ -28212,12 +28283,30 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
 }
 
 @media (max-width: 980px) {
+  .ord-order-setup,
+  .ord-order-workgrid {
+    grid-template-columns: 1fr;
+  }
+
+  .ord-order-review-panel {
+    position: static;
+  }
+
   #ord-modal.portal-workspace-mode .ord-workspace-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 520px) {
+  .ord-order-items-panel,
+  .ord-order-review-panel {
+    padding: 10px;
+  }
+
+  .ord-review-actions {
+    grid-template-columns: 1fr;
+  }
+
   #ord-modal.portal-workspace-mode .modal-header {
     align-items: flex-start;
   }
