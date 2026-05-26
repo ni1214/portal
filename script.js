@@ -99,6 +99,7 @@ import {
   startRequestListeners, stopRequestListeners,
   updateReqBadge,
   openReqModal, closeReqModal,
+  initReqWorkspaceShortcuts,
   switchReqTab, switchReqSubTab,
   renderReqContent,
   submitRequest, openStatusModal, updateRequestStatus,
@@ -4167,6 +4168,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.reqboard-subtab').forEach(btn => {
     btn.addEventListener('click', () => switchReqSubTab(btn.dataset.subtab));
   });
+  initReqWorkspaceShortcuts();
   document.getElementById('req-status-cancel').addEventListener('click', () => {
     document.getElementById('req-status-modal').classList.remove('visible');
     state._pendingStatusChange = null;

@@ -27678,6 +27678,118 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   }
 }
 
+/* ===== request workspace quick actions ===== */
+.reqboard-workspace-intro {
+  display: none;
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-workspace-intro {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-workspace-action {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 74px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-card) 78%, transparent);
+  box-shadow: var(--shadow-soft);
+  text-align: left;
+  cursor: pointer;
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-workspace-action:hover,
+#reqboard-modal.portal-workspace-mode .reqboard-workspace-action:focus-visible {
+  border-color: color-mix(in srgb, var(--accent-cyan) 48%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-cyan) 10%, var(--bg-card));
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-workspace-action:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent-cyan) 65%, transparent);
+  outline-offset: 2px;
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-workspace-action.active {
+  border-color: color-mix(in srgb, var(--accent-cyan) 62%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-cyan) 16%, var(--bg-card));
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-workspace-action-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  color: var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 14%, transparent);
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-workspace-action-body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-workspace-action-body strong,
+#reqboard-modal.portal-workspace-mode .reqboard-workspace-action-body small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-workspace-action-body strong {
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+#reqboard-modal.portal-workspace-mode .reqboard-workspace-action-body small {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 980px) {
+  #reqboard-modal.portal-workspace-mode .reqboard-workspace-intro {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  #reqboard-modal.portal-workspace-mode .reqboard-workspace-intro {
+    gap: 8px;
+  }
+
+  #reqboard-modal.portal-workspace-mode .reqboard-workspace-action {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 8px;
+    min-height: 68px;
+    padding: 10px;
+  }
+
+  #reqboard-modal.portal-workspace-mode .reqboard-workspace-action-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+  }
+
+  #reqboard-modal.portal-workspace-mode .reqboard-workspace-action-body strong {
+    font-size: 0.82rem;
+  }
+
+  #reqboard-modal.portal-workspace-mode .reqboard-workspace-action-body small {
+    font-size: 0.68rem;
+  }
+}
+
 /* ===== workspace view navigation ===== */
 .app-main.portal-workspace-active {
   padding-inline: clamp(16px, 2.8vw, 34px) !important;

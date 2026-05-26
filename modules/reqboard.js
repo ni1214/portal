@@ -366,6 +366,29 @@ export function closeReqModal() {
   closeReqTaskifyModal();
 }
 
+export function initReqWorkspaceShortcuts() {
+  const modal = document.getElementById('reqboard-modal');
+  if (!modal || modal.dataset.reqWorkspaceShortcutsBound === '1') return;
+  modal.dataset.reqWorkspaceShortcutsBound = '1';
+  modal.addEventListener('click', event => {
+    const action = event.target instanceof Element
+      ? event.target.closest('[data-req-workspace-action]')
+      : null;
+    if (!action || !modal.contains(action)) return;
+
+    const target = action.dataset.reqWorkspaceAction;
+    if (target === 'suggestion') {
+      switchReqTab('suggestion');
+      return;
+    }
+
+    if (target === 'received' || target === 'sent' || target === 'new') {
+      switchReqTab('request');
+      switchReqSubTab(target);
+    }
+  });
+}
+
 export function switchReqTab(tab) {
   state.activeReqTab = tab;
   if (tab === 'suggestion') {
@@ -497,11 +520,24 @@ function _syncReqTabUI() {
   });
   document.getElementById('reqboard-request-area').hidden    = state.activeReqTab !== 'request';
   document.getElementById('reqboard-suggestion-area').hidden = state.activeReqTab !== 'suggestion';
+  _syncReqWorkspaceActions();
 }
 
 function _syncReqSubTabUI() {
   document.querySelectorAll('.reqboard-subtab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.subtab === state.activeReqSubTab);
+  });
+  _syncReqWorkspaceActions();
+}
+
+function _syncReqWorkspaceActions() {
+  document.querySelectorAll('[data-req-workspace-action]').forEach(btn => {
+    const action = btn.dataset.reqWorkspaceAction;
+    const isActive = action === 'suggestion'
+      ? state.activeReqTab === 'suggestion'
+      : state.activeReqTab === 'request' && state.activeReqSubTab === action;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-pressed', String(isActive));
   });
 }
 
