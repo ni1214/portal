@@ -37,6 +37,7 @@ let _checkedItems = new Map();  // itemId → {checked, qty, length, finish}
 let _historyOrders = [];     // 履歴モーダルで読み込んだ発注データ
 let _deletedHistoryOrders = []; // 削除済み履歴
 let _editingItemId = null;
+let _editingSupplierId = null;
 
 // ===== カタログシードデータ =====
 // materialType: 'steel'=スチール, 'stainless'=ステンレス
@@ -1179,6 +1180,18 @@ function renderOrderItemList() {
 }
 
 // ===== 発注モーダル =====
+function renderSupplierSelect(preferredId = '') {
+  const sel = document.getElementById('ord-supplier-select');
+  if (!sel) return;
+  const nextValue = preferredId || sel.value;
+  sel.innerHTML = _suppliers.length
+    ? _suppliers.map(s => `<option value="${esc(s.id)}">${esc(s.name)}　${esc(s.email)}</option>`).join('')
+    : '<option value="">発注先が登録されていません</option>';
+  if (nextValue && _suppliers.some(s => s.id === nextValue)) {
+    sel.value = nextValue;
+  }
+}
+
 export async function openOrderModal() {
   await loadMasters();
   loadPins();
@@ -1188,12 +1201,7 @@ export async function openOrderModal() {
   if (!modal) return;
 
   // 発注先プルダウンを構築
-  const sel = document.getElementById('ord-supplier-select');
-  if (sel) {
-    sel.innerHTML = _suppliers.length
-      ? _suppliers.map(s => `<option value="${esc(s.id)}">${esc(s.name)}　${esc(s.email)}</option>`).join('')
-      : '<option value="">（発注先が登録されていません）</option>';
-  }
+  renderSupplierSelect();
 
   // フィルタ・検索・選択状態をリセット
   _materialFilter = 'all';
@@ -1699,6 +1707,7 @@ export async function openOrderAdminModal() {
   const modal = document.getElementById('ord-admin-modal');
   if (!modal) return;
   await loadMasters();
+  resetSupplierForm();
   switchOrderAdminTab('items');
   modal.classList.add('visible');
 }
@@ -1710,6 +1719,7 @@ export function closeOrderAdminModal() {
 
 async function openOrderAdminPanel() {
   await loadMasters();
+  resetSupplierForm();
   switchOrderAdminTab('items');
 }
 
@@ -1830,6 +1840,35 @@ async function deleteItem(id) {
 }
 
 // --- 発注先 ---
+function setSupplierFormMode(supplier = null) {
+  _editingSupplierId = supplier?.id || null;
+  const isEditing = Boolean(supplier);
+  const title = document.getElementById('ord-supp-form-title');
+  const note = document.getElementById('ord-supp-edit-note');
+  const addBtn = document.getElementById('ord-supp-add-btn');
+  const cancelBtn = document.getElementById('ord-supp-edit-cancel');
+  const nameEl = document.getElementById('ord-supp-add-name');
+  const emailEl = document.getElementById('ord-supp-add-email');
+  const telEl = document.getElementById('ord-supp-add-tel');
+  const addrEl = document.getElementById('ord-supp-add-addr');
+
+  if (title) title.textContent = isEditing ? '発注先を編集' : '新規追加';
+  if (note) {
+    note.hidden = !isEditing;
+    note.textContent = isEditing ? `${supplier.name || '発注先'} を編集中` : '';
+  }
+  if (addBtn) addBtn.textContent = isEditing ? '更新' : '追加';
+  if (cancelBtn) cancelBtn.hidden = !isEditing;
+  if (nameEl) nameEl.value = supplier?.name || '';
+  if (emailEl) emailEl.value = supplier?.email || '';
+  if (telEl) telEl.value = supplier?.tel || '';
+  if (addrEl) addrEl.value = supplier?.address || '';
+}
+
+function resetSupplierForm() {
+  setSupplierFormMode(null);
+}
+
 function renderAdminSuppliers() {
   const listEl = document.getElementById('ord-admin-suppliers-list');
   if (!listEl) return;
@@ -2129,26 +2168,12 @@ function bindOrderEvents() {
     const id = editBtn.dataset.id;
     const supp = _suppliers.find(s => s.id === id);
     if (!supp) return;
-    const newName  = prompt('会社名:', supp.name);
-    if (newName === null) return;
-    const newEmail = prompt('メールアドレス:', supp.email);
-    if (newEmail === null) return;
-    const newTel   = prompt('電話番号:', supp.tel || '');
-    if (newTel === null) return;
-    const newAddr  = prompt('住所:', supp.address || '');
-    if (newAddr === null) return;
-    try {
-      if (isSupabaseSharedCoreEnabled()) {
-        await updateOrderSupplierInSupabase(id, { name: newName, email: newEmail, tel: newTel, address: newAddr });
-      } else {
-        await updateDoc(doc(db, 'order_suppliers', id), { name: newName, email: newEmail, tel: newTel, address: newAddr });
-      }
-      await loadMasters();
-      renderAdminSuppliers();
-    } catch (err) {
-      alert('保存に失敗しました: ' + err.message);
-    }
+    setSupplierFormMode(supp);
+    document.getElementById('ord-supp-form-title')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('ord-supp-add-name')?.focus();
   });
+
+  document.getElementById('ord-supp-edit-cancel')?.addEventListener('click', resetSupplierForm);
 
   // 発注先: 追加
   document.getElementById('ord-supp-add-btn')?.addEventListener('click', async () => {
@@ -2157,20 +2182,28 @@ function bindOrderEvents() {
     const tel   = document.getElementById('ord-supp-add-tel')?.value.trim() || '';
     const addr  = document.getElementById('ord-supp-add-addr')?.value.trim() || '';
     if (!name || !email) { alert('会社名とメールアドレスは必須です。'); return; }
+    const supplierId = _editingSupplierId;
+    const payload = { name, email, tel, address: addr };
     try {
-      if (isSupabaseSharedCoreEnabled()) {
-        await createOrderSupplierInSupabase({ name, email, tel, address: addr });
+      if (supplierId) {
+        if (isSupabaseSharedCoreEnabled()) {
+          await updateOrderSupplierInSupabase(supplierId, payload);
+        } else {
+          await updateDoc(doc(db, 'order_suppliers', supplierId), payload);
+        }
       } else {
-        await addDoc(collection(db, 'order_suppliers'), {
-          name, email, tel, address: addr, active: true, createdAt: serverTimestamp()
-        });
+        if (isSupabaseSharedCoreEnabled()) {
+          await createOrderSupplierInSupabase(payload);
+        } else {
+          await addDoc(collection(db, 'order_suppliers'), {
+            ...payload, active: true, createdAt: serverTimestamp()
+          });
+        }
       }
       await loadMasters();
+      renderSupplierSelect(supplierId);
       renderAdminSuppliers();
-      ['ord-supp-add-name','ord-supp-add-email','ord-supp-add-tel','ord-supp-add-addr'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-      });
+      resetSupplierForm();
     } catch (err) {
       alert('保存に失敗しました: ' + err.message);
     }
