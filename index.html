@@ -2309,10 +2309,41 @@
     <div class="modal-glass ord-modal-inner">
       <div class="modal-header">
         <h2 class="modal-title"><i class="fa-solid fa-boxes-stacked"></i> 鋼材発注</h2>
-        <div style="display:flex;gap:6px;align-items:center;">
+        <div class="ord-header-actions">
           <button class="btn-modal-secondary ord-admin-open-btn" id="ord-open-admin-btn" title="発注先・鋼材・GAS設定"><i class="material-symbols-rounded" aria-hidden="true">settings</i> 設定</button>
           <button class="modal-close" id="ord-modal-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
         </div>
+      </div>
+
+      <div class="ord-workspace-actions" aria-label="発注ワークスペースの主要操作">
+        <button type="button" class="ord-workspace-action" data-ord-workspace-action="history">
+          <span class="ord-workspace-action-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+          <span class="ord-workspace-action-body">
+            <strong>履歴を見る</strong>
+            <small>20日締め期間ごとの発注を確認</small>
+          </span>
+        </button>
+        <button type="button" class="ord-workspace-action" data-ord-workspace-action="custom">
+          <span class="ord-workspace-action-icon"><i class="fa-solid fa-plus"></i></span>
+          <span class="ord-workspace-action-body">
+            <strong>品目を追加</strong>
+            <small>マスタにない鋼材を今回だけ追加</small>
+          </span>
+        </button>
+        <button type="button" class="ord-workspace-action" data-ord-workspace-action="print">
+          <span class="ord-workspace-action-icon"><i class="fa-solid fa-print"></i></span>
+          <span class="ord-workspace-action-body">
+            <strong>印刷/PDF</strong>
+            <small>選択内容を発注書として出力</small>
+          </span>
+        </button>
+        <button type="button" class="ord-workspace-action" data-ord-workspace-action="preview">
+          <span class="ord-workspace-action-icon"><i class="fa-solid fa-eye"></i></span>
+          <span class="ord-workspace-action-body">
+            <strong>プレビュー</strong>
+            <small>送信前に件名・宛先・本文を確認</small>
+          </span>
+        </button>
       </div>
 
       <!-- 発注区分トグル -->

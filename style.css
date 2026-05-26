@@ -10801,6 +10801,14 @@ html.font-xl { font-size: 21px; }
   justify-content: space-between;
   gap: 8px;
 }
+
+.ord-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .ord-modal-inner .modal-title {
   font-size: 1.05rem;
   font-weight: 700;
@@ -27815,6 +27823,163 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   }
 
   #reqboard-modal.portal-workspace-mode .reqboard-workspace-action-body small {
+    font-size: 0.68rem;
+  }
+}
+
+/* ===== order workspace actions ===== */
+.ord-workspace-actions {
+  display: none;
+}
+
+#ord-modal.portal-workspace-mode .ord-modal-inner {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+#ord-modal.portal-workspace-mode .modal-header {
+  margin: 0 0 12px;
+  padding: 10px 0 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-glass) 62%, transparent);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+#ord-modal.portal-workspace-mode .ord-workspace-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+#ord-modal.portal-workspace-mode .ord-workspace-action {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 74px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-card) 76%, transparent);
+  box-shadow: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+#ord-modal.portal-workspace-mode .ord-workspace-action:hover,
+#ord-modal.portal-workspace-mode .ord-workspace-action:focus-visible {
+  border-color: color-mix(in srgb, var(--accent-cyan) 48%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-cyan) 10%, var(--bg-card));
+}
+
+#ord-modal.portal-workspace-mode .ord-workspace-action:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent-cyan) 65%, transparent);
+  outline-offset: 2px;
+}
+
+#ord-modal.portal-workspace-mode .ord-workspace-action-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  color: var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 14%, transparent);
+}
+
+#ord-modal.portal-workspace-mode .ord-workspace-action-body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+#ord-modal.portal-workspace-mode .ord-workspace-action-body strong,
+#ord-modal.portal-workspace-mode .ord-workspace-action-body small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#ord-modal.portal-workspace-mode .ord-workspace-action-body strong {
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+#ord-modal.portal-workspace-mode .ord-workspace-action-body small {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+#ord-modal.portal-workspace-mode .ord-type-toggle,
+#ord-modal.portal-workspace-mode .ord-supplier-info,
+#ord-modal.portal-workspace-mode .ord-search-bar-wrap,
+#ord-modal.portal-workspace-mode .ord-filter-row,
+#ord-modal.portal-workspace-mode .ord-selected-summary,
+#ord-modal.portal-workspace-mode .ord-item-row {
+  box-shadow: none;
+}
+
+@media (min-width: 981px) {
+  #ord-modal.portal-workspace-mode .ord-type-toggle,
+  #ord-modal.portal-workspace-mode #ord-site-name-group,
+  #ord-modal.portal-workspace-mode .ord-project-key-group,
+  #ord-modal.portal-workspace-mode .ord-supplier-info {
+    max-width: min(720px, 100%);
+  }
+
+  #ord-modal.portal-workspace-mode .ord-item-list {
+    max-height: none;
+  }
+}
+
+@media (max-width: 980px) {
+  #ord-modal.portal-workspace-mode .ord-workspace-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  #ord-modal.portal-workspace-mode .modal-header {
+    align-items: flex-start;
+  }
+
+  #ord-modal.portal-workspace-mode .ord-header-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  #ord-modal.portal-workspace-mode .ord-workspace-actions {
+    gap: 8px;
+  }
+
+  #ord-modal.portal-workspace-mode .ord-workspace-action {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 8px;
+    min-height: 68px;
+    padding: 10px;
+  }
+
+  #ord-modal.portal-workspace-mode .ord-workspace-action-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+  }
+
+  #ord-modal.portal-workspace-mode .ord-workspace-action-body strong {
+    font-size: 0.82rem;
+  }
+
+  #ord-modal.portal-workspace-mode .ord-workspace-action-body small {
     font-size: 0.68rem;
   }
 }

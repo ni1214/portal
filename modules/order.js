@@ -1750,6 +1750,20 @@ function bindOrderEvents() {
   document.getElementById('ord-modal')?.addEventListener('click', e => {
     if (e.target === document.getElementById('ord-modal')) closeOrderModal();
   });
+  document.getElementById('ord-modal')?.addEventListener('click', e => {
+    const action = e.target instanceof Element
+      ? e.target.closest('[data-ord-workspace-action]')
+      : null;
+    if (!action) return;
+    const target = action.dataset.ordWorkspaceAction;
+    const targetButton = {
+      history: 'ord-btn-history',
+      custom: 'ord-add-custom-btn',
+      print: 'ord-btn-print',
+      preview: 'ord-btn-email',
+    }[target];
+    if (targetButton) document.getElementById(targetButton)?.click();
+  });
 
   // プレビューモーダル
   document.getElementById('ord-preview-close')?.addEventListener('click', closePreviewModal);
