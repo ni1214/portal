@@ -28289,7 +28289,10 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   }
 
   .ord-order-review-panel {
-    position: static;
+    order: -1;
+    position: sticky;
+    top: 0;
+    z-index: 3;
   }
 
   #ord-modal.portal-workspace-mode .ord-workspace-actions {
@@ -28298,13 +28301,56 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
 }
 
 @media (max-width: 520px) {
+  .ord-item-list-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ord-material-tabs {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .ord-cat-select,
+  .ord-search-input {
+    font-size: 16px !important;
+  }
+
+  .ord-item-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 6px;
+  }
+
+  .ord-item-label {
+    min-width: calc(100% - 58px);
+  }
+
+  .ord-length-select,
+  .ord-finish-select,
+  .ord-qty-input,
+  .ord-item-fixed-length {
+    margin-left: 30px;
+  }
+
+  .ord-qty-input {
+    width: 72px !important;
+  }
+
   .ord-order-items-panel,
   .ord-order-review-panel {
     padding: 10px;
   }
 
   .ord-review-actions {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ord-review-actions #ord-btn-email {
+    grid-column: 1 / -1;
   }
 
   #ord-modal.portal-workspace-mode .modal-header {
