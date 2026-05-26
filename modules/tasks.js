@@ -903,7 +903,7 @@ function ensureTaskModalScaffold() {
     const heading = document.createElement('div');
     heading.className = 'task-modal-heading';
     heading.innerHTML = `
-      <p class="task-modal-kicker">Task Workspace</p>
+      <p class="task-modal-kicker">タスクワークスペース</p>
       <div class="task-modal-title-row">
         <span class="material-symbols-rounded task-modal-title-icon" aria-hidden="true">task_alt</span>
         <div class="task-modal-title-copy">
@@ -990,21 +990,25 @@ function renderTaskModalChrome() {
         { tab: urgentDueCount > 0 ? activeTab : 'received', label: '期限注意', icon: 'event_busy', value: `${urgentDueCount}件`, note: urgentDueCount > 0 ? '今日まで/超過' : '期限注意なし' },
         { tab: 'new', label: '新規依頼', icon: TASK_TAB_META.new.icon, value: '作成', note: '担当者へ送る' },
       ];
-      metricsEl.innerHTML = metricItems.map(item => `
-        <button
-          type="button"
-          class="task-modal-metric"
-          data-task-metric-tab="${item.tab}"
-          aria-pressed="false"
-        >
-          <span class="material-symbols-rounded task-modal-metric__icon" aria-hidden="true">${item.icon}</span>
-          <span class="task-modal-metric__copy">
-            <span class="task-modal-metric__label">${esc(item.label)}</span>
-            <strong class="task-modal-metric__value">${esc(item.value)}</strong>
-            <span class="task-modal-metric__note">${esc(item.note)}</span>
-          </span>
-        </button>
-      `).join('');
+      metricsEl.innerHTML = metricItems.map((item, index) => {
+        const isActiveMetric = item.tab === activeTab
+          && !metricItems.slice(0, index).some(prev => prev.tab === activeTab);
+        return `
+          <button
+            type="button"
+            class="task-modal-metric${isActiveMetric ? ' active' : ''}"
+            data-task-metric-tab="${item.tab}"
+            aria-pressed="${isActiveMetric ? 'true' : 'false'}"
+          >
+            <span class="material-symbols-rounded task-modal-metric__icon" aria-hidden="true">${item.icon}</span>
+            <span class="task-modal-metric__copy">
+              <span class="task-modal-metric__label">${esc(item.label)}</span>
+              <strong class="task-modal-metric__value">${esc(item.value)}</strong>
+              <span class="task-modal-metric__note">${esc(item.note)}</span>
+            </span>
+          </button>
+        `;
+      }).join('');
       metricsEl.querySelectorAll('[data-task-metric-tab]').forEach(button => {
         button.addEventListener('click', () => switchTaskTab(button.dataset.taskMetricTab || 'received'));
       });
