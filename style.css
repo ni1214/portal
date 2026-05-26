@@ -27292,10 +27292,10 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   bottom: 0;
 }
 
-@media (min-width: 981px) {
+@media (min-width: 1360px) {
   #cal-modal.cal-workspace-mode #calw-view-calendar.cal-day-open {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
     gap: 16px;
     align-items: start;
   }
@@ -27467,7 +27467,7 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   scroll-margin-top: 84px;
 }
 
-@media (min-width: 981px) {
+@media (min-width: 1360px) {
   #cal-modal.cal-workspace-mode #calw-view-calendar.cal-day-open .cal-day-panel {
     position: static;
     top: auto;
