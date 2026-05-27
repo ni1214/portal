@@ -1191,7 +1191,7 @@ body::after {
 }
 
 /* ===========================
- Responsive
+ Small screen layout
  ===========================*/
 @media (max-width: 768px) {
   .header-inner {
@@ -17858,7 +17858,7 @@ button.portal-home-panel:hover,
   }
 }
 
-/* ===== Stitch1 Layout =====*/
+/* ===== Home compact layout =====*/
 
 /* 1. Narrow 96px sidebar with icon-above-label*/
 :root {
@@ -18024,7 +18024,7 @@ button.portal-home-panel:hover,
   margin-top: 0 !important;
 }
 
-/* 6. Stitch-style glass notice cards*/
+/* 6. Notice cards*/
 #notice-board .notice-item {
   display: flex !important;
   gap: 14px !important;
@@ -18101,7 +18101,7 @@ button.portal-home-panel:hover,
   gap: 10px;
 }
 
-/* Stitch-style notice section header*/
+/* Notice section header*/
 .notice-header {
   display: flex !important;
   align-items: center;
@@ -18115,7 +18115,7 @@ button.portal-home-panel:hover,
   padding-bottom: 10px;
 }
 
-/* 7. Responsive - collapse to 1 col below 1100px*/
+/* 7. Collapse to 1 col below 1100px*/
 @media (max-width: 1100px) {
   .home-content-grid {
     grid-template-columns: minmax(0, 1fr) !important;
@@ -18124,7 +18124,7 @@ button.portal-home-panel:hover,
 
 /* 8. Hide old bento-rail dashboard ()*/
 
-/* 9. Restore area section headers as clean Stitch1 titles*/
+/* 9. Restore area section headers as clean titles*/
 .area-header {
   display: flex !important;
   flex-direction: column !important;
@@ -18158,7 +18158,7 @@ button.portal-home-panel:hover,
 .area-personal .area-header-title i { color: var(--portal-home-success) !important; }
 .area-shared   .area-header-title i { color: var(--portal-home-accent) !important; }
 
-/* 10. Personal space - todo/favorites Stitch-style container*/
+/* 10. Personal space - todo/favorites container*/
 #todo-section,
 #favorites-section {
   border-radius: 12px;
@@ -18173,7 +18173,7 @@ button.portal-home-panel:hover,
   gap: 12px !important;
 }
 
-/* todo header Stitch style*/
+/* todo header*/
 .todo-header {
   margin-bottom: 10px;
 }
@@ -18185,7 +18185,7 @@ button.portal-home-panel:hover,
   color: var(--portal-home-title) !important;
 }
 
-/* todo items Stitch style*/
+/* todo items*/
 .todo-item {
   background: color-mix(in srgb, var(--portal-home-elevated) 60%, transparent) !important;
   border-radius: 8px !important;
@@ -18196,7 +18196,7 @@ button.portal-home-panel:hover,
   background: color-mix(in srgb, var(--portal-home-card-hover) 70%, transparent) !important;
 }
 
-/* favorites section Stitch style*/
+/* favorites section*/
 .favorites-section .section-title,
 .category-section .section-title {
   font-family: var(--portal-home-heading-font) !important;
@@ -18205,13 +18205,13 @@ button.portal-home-panel:hover,
   color: var(--portal-home-title) !important;
 }
 
-/* Stitch2*/
+/* Home layout phase 2*/
 .card-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   gap: 8px !important;
 }
 
-/* Stitch*/
+/* Home layout*/
 .card {
   border-radius: 8px !important;
   border: 1px solid rgba(65, 71, 82, 0.2) !important;
@@ -18224,7 +18224,7 @@ button.portal-home-panel:hover,
   border-color: rgba(65, 71, 82, 0.4) !important;
 }
 
-/* ===== Stitch HTML CSSTailwind =====*/
+/* ===== Home HTML alignment =====*/
 
 /* body: #10141a*/
 body {
@@ -18258,7 +18258,7 @@ body {
   max-width: 1280px;
 }
 
-/* search hero: Stitch*/
+/* search hero*/
 
 /* : h-12(48px)bg #31353cradius 12px*/
 
@@ -18354,7 +18354,7 @@ body {
   color: #c0c7d4 !important;
 }
 
-/* notice header (board header): Stitch section-header style*/
+/* notice header (board header)*/
 .notice-header {
   font-size: 0.875rem !important;
   font-weight: 700 !important;
@@ -18365,7 +18365,7 @@ body {
   margin-bottom: 12px !important;
 }
 
-/* area headers: Stitch section-title style*/
+/* area headers*/
 .area-header {
   border-bottom: 1px solid rgba(65, 71, 82, 0.20) !important;
   padding: 0 0 10px !important;
@@ -18484,7 +18484,7 @@ body {
   .home-dashboard { display: none; }
 }
 
-/* ===== 2026-03 Home Refresh (Stitch-aligned) =====*/
+/* ===== 2026-03 Home Refresh =====*/
 body {
   background: var(--portal-home-bg) !important;
   color: var(--portal-home-title) !important;
@@ -20029,7 +20029,7 @@ body {
 
 /* ===== 3. =====*/
 
-/* ===== 4. Stitch finale =====*/
+/* ===== 4. Home finale =====*/
 [data-theme="light"] body {
   background: var(--bg-primary) !important;
 }
@@ -28880,24 +28880,6 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   display: none !important;
 }
 
-.portal-workspace-viewport-note {
-  display: none;
-  align-items: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent-cyan) 11%, transparent);
-  color: var(--text-secondary);
-  font-size: 0.76rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.portal-workspace-viewport-note .material-symbols-rounded {
-  font-size: 1rem;
-}
-
 .portal-workspace-mount {
   min-width: 0;
 }
@@ -28937,10 +28919,6 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
 
   .portal-workspace-chrome {
     grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .portal-workspace-viewport-note {
-    display: none;
   }
 
   .portal-workspace-mode .modal-glass,
