@@ -505,6 +505,29 @@
         </button>
       </div>
     </div>
+    <div class="ft-workspace-overview" aria-label="ファイル転送の使い分け">
+      <button type="button" class="ft-workspace-action active" data-ft-workspace-tab="p2p">
+        <span class="ft-workspace-action-icon"><i class="fa-solid fa-wifi" aria-hidden="true"></i></span>
+        <span class="ft-workspace-action-body">
+          <strong>社内ですぐ送る</strong>
+          <small>相手がポータルを開いている時</small>
+        </span>
+      </button>
+      <button type="button" class="ft-workspace-action" data-ft-workspace-open="drive">
+        <span class="ft-workspace-action-icon"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i></span>
+        <span class="ft-workspace-action-body">
+          <strong>社外・後で渡す</strong>
+          <small>共有フォルダのURLを送る</small>
+        </span>
+      </button>
+      <button type="button" class="ft-workspace-action" data-ft-workspace-tab="drive">
+        <span class="ft-workspace-action-icon"><i class="fa-solid fa-folder-open" aria-hidden="true"></i></span>
+        <span class="ft-workspace-action-body">
+          <strong>受け取ったリンク</strong>
+          <small>共有済みフォルダを確認する</small>
+        </span>
+      </button>
+    </div>
     <!-- P2P / Drive タブ -->
     <div class="ft-tabs">
       <button class="ft-tab active" data-tab="p2p" id="ft-tab-p2p">
@@ -676,8 +699,33 @@
     <!-- リサイズハンドル（左上コーナーをドラッグ） -->
     <div class="chat-resize-handle" id="chat-resize-handle" title="ドラッグしてサイズを変更"></div>
 
-    <!-- 左：ルームリスト -->
-    <div class="chat-sidebar">
+    <div class="chat-workspace-overview" aria-label="チャットの使い分け">
+      <button type="button" class="chat-workspace-action active" data-chat-workspace-tab="dm">
+        <span class="chat-workspace-action-icon"><i class="fa-solid fa-user" aria-hidden="true"></i></span>
+        <span class="chat-workspace-action-body">
+          <strong>個別チャット</strong>
+          <small>相手を選んですぐ連絡</small>
+        </span>
+      </button>
+      <button type="button" class="chat-workspace-action" data-chat-workspace-tab="group">
+        <span class="chat-workspace-action-icon"><i class="material-symbols-rounded" aria-hidden="true">groups</i></span>
+        <span class="chat-workspace-action-body">
+          <strong>グループ</strong>
+          <small>複数人のやり取りをまとめる</small>
+        </span>
+      </button>
+      <button type="button" class="chat-workspace-action" id="chat-workspace-file-action">
+        <span class="chat-workspace-action-icon"><i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i></span>
+        <span class="chat-workspace-action-body">
+          <strong>ファイル送信</strong>
+          <small>画像・PDFは転送画面へ</small>
+        </span>
+      </button>
+    </div>
+
+    <div class="chat-layout">
+      <!-- 左：ルームリスト -->
+      <div class="chat-sidebar">
       <div class="chat-sidebar-header">
         <span><i class="fa-solid fa-comments"></i> チャット</span>
         <button class="chat-panel-close" id="chat-panel-close" title="閉じる">
@@ -741,8 +789,8 @@
       </div>
     </div>
 
-    <!-- 右：メッセージエリア -->
-    <div class="chat-main">
+      <!-- 右：メッセージエリア -->
+      <div class="chat-main">
       <div class="chat-no-room" id="chat-no-room">
         <i class="fa-solid fa-comment-dots"></i>
         <p>ルームを選択してください</p>
@@ -781,6 +829,7 @@
           </div>
         </div>
       </div>
+    </div>
     </div>
   </div>
 

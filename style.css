@@ -4879,6 +4879,18 @@ html.font-xl { font-size: 21px; }
   pointer-events: all;
 }
 
+.chat-layout {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.chat-workspace-overview,
+.ft-workspace-overview {
+  display: none;
+}
+
 /* ---- ----*/
 .chat-sidebar {
   width: 210px;
@@ -5676,6 +5688,11 @@ html.font-xl { font-size: 21px; }
     border-radius: 2px;
     margin: 10px auto 2px;
     flex-shrink: 0;
+  }
+  .chat-layout {
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
   }
   .chat-sidebar {
     width: 100% !important;
@@ -28994,5 +29011,230 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   .portal-workspace-title,
   .portal-workspace-subtitle {
     max-width: 100%;
+  }
+}
+
+/* ===== chat/file-transfer workspace refresh ===== */
+.chat-panel.portal-workspace-mode {
+  flex-direction: column;
+  gap: 12px;
+  overflow: visible;
+}
+
+.chat-panel.portal-workspace-mode .chat-resize-handle,
+.ft-panel.portal-workspace-mode .ft-panel-resize {
+  display: none !important;
+}
+
+.chat-panel.portal-workspace-mode .chat-workspace-overview,
+.ft-panel.portal-workspace-mode .ft-workspace-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 14px;
+}
+
+.chat-workspace-action,
+.ft-workspace-action {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 62px;
+  padding: 10px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  background: var(--bg-glass);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.chat-workspace-action:hover,
+.chat-workspace-action:focus-visible,
+.ft-workspace-action:hover,
+.ft-workspace-action:focus-visible {
+  background: var(--bg-card-hover);
+  border-color: var(--border-glass-hover);
+  transform: translateY(-1px);
+}
+
+.chat-workspace-action:focus-visible,
+.ft-workspace-action:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.chat-workspace-action.active,
+.ft-workspace-action.active {
+  border-color: color-mix(in srgb, var(--accent-blue) 48%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-blue) 13%, var(--bg-card));
+}
+
+.chat-workspace-action-icon,
+.ft-workspace-action-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent-blue) 14%, var(--bg-secondary));
+  color: var(--accent-blue);
+  flex-shrink: 0;
+}
+
+.chat-workspace-action-icon .material-symbols-rounded {
+  font-size: 1.2rem;
+}
+
+.chat-workspace-action-body,
+.ft-workspace-action-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-workspace-action-body strong,
+.chat-workspace-action-body small,
+.ft-workspace-action-body strong,
+.ft-workspace-action-body small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-workspace-action-body strong,
+.ft-workspace-action-body strong {
+  font-size: 0.84rem;
+  line-height: 1.25;
+}
+
+.chat-workspace-action-body small,
+.ft-workspace-action-body small {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.chat-panel.portal-workspace-mode .chat-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 12px;
+  flex: 1;
+  padding: 0 14px 14px;
+}
+
+.chat-panel.portal-workspace-mode .chat-sidebar,
+.chat-panel.portal-workspace-mode .chat-main {
+  min-height: 520px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.chat-panel.portal-workspace-mode .chat-sidebar {
+  width: auto;
+  max-height: none;
+  border-right: 1px solid var(--border-glass);
+}
+
+.chat-panel.portal-workspace-mode .chat-sidebar-header {
+  cursor: default;
+  touch-action: auto;
+  background: transparent;
+}
+
+.ft-panel.portal-workspace-mode {
+  flex-direction: column;
+  gap: 12px;
+  overflow: visible;
+}
+
+.ft-panel.portal-workspace-mode .ft-tabs {
+  margin-inline: 14px;
+  padding: 8px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+}
+
+.ft-panel.portal-workspace-mode .ft-panel-body {
+  padding: 0 14px 14px;
+}
+
+.ft-panel.portal-workspace-mode #ft-content {
+  min-height: 0;
+}
+
+.ft-panel.portal-workspace-mode .ft-p2p-send-card,
+.ft-panel.portal-workspace-mode .ft-my-link-widget,
+.ft-panel.portal-workspace-mode .ft-how-it-works,
+.ft-panel.portal-workspace-mode .ft-item,
+.ft-panel.portal-workspace-mode .ft-drive-item,
+.ft-panel.portal-workspace-mode .ft-contact-item {
+  border: 1px solid var(--border-glass);
+  background: var(--bg-secondary);
+}
+
+@media (max-width: 900px) {
+  .chat-panel.portal-workspace-mode .chat-workspace-overview,
+  .ft-panel.portal-workspace-mode .ft-workspace-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-panel.portal-workspace-mode .chat-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-panel.portal-workspace-mode .chat-sidebar,
+  .chat-panel.portal-workspace-mode .chat-main {
+    min-height: 0;
+  }
+
+  .chat-panel.portal-workspace-mode .chat-sidebar {
+    max-height: none !important;
+  }
+
+  .chat-panel.portal-workspace-mode .chat-main {
+    min-height: 420px;
+  }
+}
+
+@media (max-width: 520px) {
+  .chat-panel.portal-workspace-mode,
+  .ft-panel.portal-workspace-mode {
+    gap: 10px;
+  }
+
+  .chat-panel.portal-workspace-mode .chat-workspace-overview,
+  .ft-panel.portal-workspace-mode .ft-workspace-overview,
+  .chat-panel.portal-workspace-mode .chat-layout,
+  .ft-panel.portal-workspace-mode .ft-panel-body {
+    padding-inline: 10px;
+  }
+
+  .ft-panel.portal-workspace-mode .ft-tabs {
+    margin-inline: 10px;
+  }
+
+  .chat-workspace-action,
+  .ft-workspace-action {
+    min-height: 56px;
+    padding: 9px;
+  }
+
+  .chat-workspace-action-body strong,
+  .ft-workspace-action-body strong {
+    font-size: 0.8rem;
+  }
+
+  .chat-workspace-action-body small,
+  .ft-workspace-action-body small {
+    font-size: 0.68rem;
   }
 }

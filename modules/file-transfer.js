@@ -781,6 +781,8 @@ export async function deleteDriveContact(contactUsername) {
 export function switchFtTab(tab) {
   state._ftCurrentTab = tab;
   document.querySelectorAll('.ft-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('[data-ft-workspace-tab]')
+    .forEach(b => b.classList.toggle('active', b.dataset.ftWorkspaceTab === tab));
   document.getElementById('ft-p2p-area').hidden   = (tab !== 'p2p');
   document.getElementById('ft-drive-area').hidden = (tab !== 'drive');
   if (tab === 'drive') {

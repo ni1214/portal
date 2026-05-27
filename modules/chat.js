@@ -399,6 +399,8 @@ export function updateChatBadge() {
 export function switchChatSidebarTab(tab) {
   document.getElementById('chat-tab-dm').classList.toggle('active', tab === 'dm');
   document.getElementById('chat-tab-group').classList.toggle('active', tab === 'group');
+  document.querySelectorAll('[data-chat-workspace-tab]')
+    .forEach(btn => btn.classList.toggle('active', btn.dataset.chatWorkspaceTab === tab));
   document.getElementById('chat-panel-dm').hidden = (tab !== 'dm');
   document.getElementById('chat-panel-group').hidden = (tab !== 'group');
   if (tab === 'group') {

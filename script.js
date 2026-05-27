@@ -4078,6 +4078,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   initChatResize();
   document.getElementById('chat-tab-dm').addEventListener('click', () => switchChatSidebarTab('dm'));
   document.getElementById('chat-tab-group').addEventListener('click', () => switchChatSidebarTab('group'));
+  document.querySelectorAll('[data-chat-workspace-tab]').forEach(btn => {
+    btn.addEventListener('click', () => switchChatSidebarTab(btn.dataset.chatWorkspaceTab));
+  });
+  document.getElementById('chat-workspace-file-action')?.addEventListener('click', openFileTransferWorkspace);
   document.getElementById('chat-send-btn').addEventListener('click', sendChatMessage);
   document.getElementById('chat-input').addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
@@ -4123,6 +4127,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ===== Drive シェア =====
   document.querySelectorAll('.ft-tab').forEach(btn =>
     btn.addEventListener('click', () => switchFtTab(btn.dataset.tab)));
+  document.querySelectorAll('[data-ft-workspace-tab]').forEach(btn => {
+    btn.addEventListener('click', () => switchFtTab(btn.dataset.ftWorkspaceTab));
+  });
+  document.querySelectorAll('[data-ft-workspace-open]').forEach(btn => {
+    btn.addEventListener('click', () => switchFtTab(btn.dataset.ftWorkspaceOpen));
+  });
   document.getElementById('ft-drive-send-btn').addEventListener('click', confirmInlineDriveShare);
   document.getElementById('ft-drive-cancel-btn').addEventListener('click', closeDriveSendModal);
   document.getElementById('ft-drive-confirm-btn').addEventListener('click', confirmDriveSend);
