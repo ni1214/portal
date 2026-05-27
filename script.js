@@ -2651,6 +2651,12 @@ function renderFavorites() {
 function openCategoryModal(cat) {
   state.editingCategoryId = cat?.docId || null;
   document.getElementById('category-modal-title').textContent = cat ? 'カテゴリを編集' : 'カテゴリを追加';
+  const context = document.getElementById('category-modal-context');
+  if (context) {
+    context.textContent = cat
+      ? 'カテゴリ名、アイコン、色を変更します。既存リンクはそのまま残ります。'
+      : '共有リンクを探しやすくするためのカテゴリを作成します。';
+  }
   document.getElementById('cat-label').value = cat?.label || '';
   document.getElementById('cat-icon').value = cat?.icon || 'fa-solid fa-star';
   document.getElementById('cat-delete').style.display = (cat && !cat.isExternal) ? 'inline-flex' : 'none';
@@ -2798,6 +2804,14 @@ function openCardModal(docId, categoryId = null, isPrivate = false, privateSecti
   document.getElementById('card-modal-title').textContent = docId
     ? 'カードを編集'
     : (parentId ? '子アイコンを追加' : 'カードを追加');
+  const context = document.getElementById('card-modal-context');
+  if (context) {
+    context.textContent = docId
+      ? '表示名、アイコン、URLを変更します。お気に入り設定は各ユーザーごとに残ります。'
+      : parentId
+      ? '選択した共有リンクの下に、関連リンクとして追加します。'
+      : '共有リンクに表示する名前、アイコン、URLを登録します。';
+  }
   document.getElementById('card-delete').style.display = docId ? 'inline-flex' : 'none';
   document.getElementById('edit-icon-group').style.display = '';
   document.getElementById('icon-picker').style.display = isSVG ? 'none' : '';

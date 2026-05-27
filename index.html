@@ -412,6 +412,10 @@
           placeholder="共有リンク名で検索"
           autocomplete="off"
         >
+        <button type="button" class="shared-links-toolbar-action" id="shared-links-add-category-top">
+          <i class="material-symbols-rounded" aria-hidden="true">create_new_folder</i>
+          <span>カテゴリ追加</span>
+        </button>
         <div class="shared-links-status" id="shared-links-status"></div>
       </div>
 
@@ -987,8 +991,11 @@
 
   <!-- ==================== カード編集モーダル ==================== -->
   <div class="modal-overlay" id="card-modal">
-    <div class="modal-glass">
-      <h3 class="modal-title" id="card-modal-title">カードを編集</h3>
+    <div class="modal-glass shared-edit-glass">
+      <div class="shared-edit-header">
+        <h3 class="modal-title" id="card-modal-title">カードを編集</h3>
+        <p class="shared-edit-desc" id="card-modal-context">共有リンクの表示名、アイコン、URLを編集します。</p>
+      </div>
 
       <div class="form-group">
         <label class="form-label">カード名</label>
@@ -1075,8 +1082,11 @@
 
   <!-- ==================== カテゴリ編集モーダル ==================== -->
   <div class="modal-overlay" id="category-modal">
-    <div class="modal-glass">
-      <h3 class="modal-title" id="category-modal-title">カテゴリを追加</h3>
+    <div class="modal-glass shared-edit-glass">
+      <div class="shared-edit-header">
+        <h3 class="modal-title" id="category-modal-title">カテゴリを追加</h3>
+        <p class="shared-edit-desc" id="category-modal-context">共有リンクを探しやすくするためのカテゴリを作成します。</p>
+      </div>
 
       <div class="form-group">
         <label class="form-label">カテゴリ名</label>

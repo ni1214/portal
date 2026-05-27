@@ -13994,7 +13994,7 @@ html.font-xl { font-size: 21px; }
 
 .shared-links-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 12px;
   align-items: center;
   margin-bottom: 12px;
@@ -14008,6 +14008,33 @@ html.font-xl { font-size: 21px; }
   color: var(--text-muted);
   font-size: 0.82rem;
   white-space: nowrap;
+}
+
+.shared-links-toolbar-action {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 13px;
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 32%, var(--border-glass));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-blue) 10%, var(--bg-card));
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.shared-links-toolbar-action:hover {
+  border-color: color-mix(in srgb, var(--accent-blue) 48%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-blue) 16%, var(--bg-card));
+}
+
+.shared-links-toolbar-action[hidden] {
+  display: none;
 }
 
 .shared-links-overview {
@@ -14502,7 +14529,7 @@ html.font-xl { font-size: 21px; }
 .shared-link-app-edit {
   top: -6px;
   right: -6px;
-  opacity: 0;
+  opacity: 0.9;
 }
 
 .shared-link-app-tile:hover .shared-link-app-edit {
@@ -14672,6 +14699,25 @@ html.font-xl { font-size: 21px; }
   font-size: 1.05rem;
 }
 
+.shared-edit-glass {
+  width: min(520px, calc(100vw - 32px));
+}
+
+.shared-edit-header {
+  margin-bottom: 18px;
+}
+
+.shared-edit-header .modal-title {
+  margin-bottom: 6px;
+}
+
+.shared-edit-desc {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
 @media (max-width: 900px) {
   .shared-home-grid {
     grid-template-columns: 1fr;
@@ -14703,6 +14749,10 @@ html.font-xl { font-size: 21px; }
 
   .shared-links-status {
     white-space: normal;
+  }
+
+  .shared-links-toolbar-action {
+    width: 100%;
   }
 
   .shared-links-overview {
@@ -27310,6 +27360,10 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
 
   #shared-links-modal.portal-workspace-mode .shared-links-status {
     white-space: normal;
+  }
+
+  #shared-links-modal.portal-workspace-mode .shared-links-toolbar-action {
+    width: 100%;
   }
 
   #shared-links-modal.portal-workspace-mode .shared-link-ai-box {

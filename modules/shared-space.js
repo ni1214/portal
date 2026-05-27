@@ -398,6 +398,7 @@ function applySharedLinksModalMode() {
   const toolbar = modal.querySelector('.shared-links-toolbar');
   const aiBox = modal.querySelector('#shared-link-ai-box');
   const chips = modal.querySelector('#shared-links-chip-list');
+  const addCategoryTop = modal.querySelector('#shared-links-add-category-top');
 
   modal.dataset.sharedLinksMode = sharedLinksViewMode;
   glass?.classList.toggle('shared-links-glass--favorite-view', isFavoriteView);
@@ -415,6 +416,7 @@ function applySharedLinksModalMode() {
   if (toolbar) toolbar.hidden = isFavoriteView;
   if (aiBox) aiBox.hidden = isFavoriteView;
   if (chips) chips.hidden = isFavoriteView;
+  if (addCategoryTop) addCategoryTop.hidden = isFavoriteView || !state.isEditMode;
 }
 
 function renderSharedLinksOverview(host, options = {}) {
@@ -969,6 +971,7 @@ function bindSharedSpaceEvents() {
   const modal = document.getElementById('shared-links-modal');
   const closeButton = document.getElementById('shared-links-close');
   const searchInput = document.getElementById('shared-links-search');
+  const addCategoryTop = document.getElementById('shared-links-add-category-top');
 
   if (modal && !modal.dataset.bound) {
     modal.dataset.bound = '1';
@@ -994,6 +997,13 @@ function bindSharedSpaceEvents() {
         searchInput.value = '';
         renderSharedLinksBrowser();
       }
+    });
+  }
+
+  if (addCategoryTop && !addCategoryTop.dataset.bound) {
+    addCategoryTop.dataset.bound = '1';
+    addCategoryTop.addEventListener('click', () => {
+      deps.openCategoryModal?.(null);
     });
   }
 }
