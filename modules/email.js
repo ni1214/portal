@@ -420,6 +420,71 @@ function renderRoleTypeOptions(selectEl, selectedValue) {
   selectEl.value = USER_ROLE_LABELS[selectedValue] ? selectedValue : 'member';
 }
 
+function readProfileDraftFromForm() {
+  return {
+    realName: document.getElementById('ep-real-name')?.value.trim() || '',
+    department: document.getElementById('ep-department')?.value.trim() || '',
+    roleType: document.getElementById('ep-role-type')?.value || userEmailProfile.roleType || 'member',
+    email: document.getElementById('ep-email')?.value.trim() || '',
+    phone: document.getElementById('ep-phone')?.value.trim() || '',
+    signatureTemplate: document.getElementById('ep-signature')?.value || '',
+  };
+}
+
+function renderProfileSummary(profile = readProfileDraftFromForm()) {
+  const host = document.getElementById('ep-profile-summary');
+  if (!host) return;
+
+  const checks = [
+    { icon: 'fa-solid fa-user', label: '名前', value: profile.realName, missing: '未設定' },
+    { icon: 'fa-solid fa-building-user', label: '所属', value: profile.department, missing: '未設定' },
+    { icon: 'fa-solid fa-user-shield', label: '役割', value: USER_ROLE_LABELS[profile.roleType] || USER_ROLE_LABELS.member, missing: '一般' },
+    { icon: 'fa-solid fa-envelope', label: 'メール', value: profile.email, missing: '未設定' },
+    { icon: 'fa-solid fa-signature', label: '署名', value: profile.signatureTemplate ? '設定済み' : '', missing: '未設定' },
+  ];
+  const requiredReady = Boolean(profile.realName && profile.department);
+  const contactReady = Boolean(profile.email || profile.phone);
+  const signatureReady = Boolean(profile.signatureTemplate);
+  const readyCount = [requiredReady, contactReady, signatureReady].filter(Boolean).length;
+  const statusText = readyCount === 3
+    ? 'メール作成に必要な情報は揃っています'
+    : readyCount === 0
+    ? 'まず名前と所属部署を設定してください'
+    : '不足している項目があります';
+  const statusClass = readyCount === 3 ? 'ready' : readyCount === 0 ? 'missing' : 'partial';
+
+  host.className = `ep-profile-summary ep-profile-summary--${statusClass}`;
+  host.innerHTML = `
+    <div class="ep-profile-summary-main">
+      <span class="ep-profile-summary-icon"><i class="fa-solid fa-id-card" aria-hidden="true"></i></span>
+      <div>
+        <strong>${esc(statusText)}</strong>
+        <span>${esc(profile.realName || state.currentUsername || 'プロフィール未設定')} / ${esc(profile.department || '所属未設定')} / ${esc(USER_ROLE_LABELS[profile.roleType] || USER_ROLE_LABELS.member)}</span>
+      </div>
+    </div>
+    <div class="ep-profile-summary-grid">
+      ${checks.map(item => `
+        <div class="ep-profile-summary-item${item.value ? '' : ' is-missing'}">
+          <i class="${esc(item.icon)}" aria-hidden="true"></i>
+          <span>${esc(item.label)}</span>
+          <strong>${esc(item.value || item.missing)}</strong>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function bindProfileSummaryEvents() {
+  const ids = ['ep-real-name', 'ep-department', 'ep-role-type', 'ep-email', 'ep-phone', 'ep-signature'];
+  ids.forEach(id => {
+    const input = document.getElementById(id);
+    if (!input || input.dataset.profileSummaryBound === '1') return;
+    input.dataset.profileSummaryBound = '1';
+    input.addEventListener('input', () => renderProfileSummary(readProfileDraftFromForm()));
+    input.addEventListener('change', () => renderProfileSummary(readProfileDraftFromForm()));
+  });
+}
+
 function renderProfileTab() {
   renderDepartmentOptions(document.getElementById('ep-department'), userEmailProfile.department || '');
   renderRoleTypeOptions(document.getElementById('ep-role-type'), userEmailProfile.roleType || 'member');
@@ -429,6 +494,8 @@ function renderProfileTab() {
   const sig = userEmailProfile.signatureTemplate || DEFAULT_SIGNATURE_TEMPLATE;
   document.getElementById('ep-signature').value = sig;
   updateSignaturePreview(sig);
+  renderProfileSummary(readProfileDraftFromForm());
+  bindProfileSummaryEvents();
 }
 
 export function updateSignaturePreview(template) {
@@ -467,11 +534,13 @@ export async function saveUserEmailProfile() {
   btn.innerHTML = '<i class="fa-solid fa-check"></i> 保存しました';
   setTimeout(() => { btn.innerHTML = orig; }, 1500);
   updateSignaturePreview(userEmailProfile.signatureTemplate);
+  renderProfileSummary(userEmailProfile);
 }
 
 export function resetSignatureTemplate() {
   document.getElementById('ep-signature').value = DEFAULT_SIGNATURE_TEMPLATE;
   updateSignaturePreview(DEFAULT_SIGNATURE_TEMPLATE);
+  renderProfileSummary(readProfileDraftFromForm());
 }
 
 // ===== タブ切替 =====
