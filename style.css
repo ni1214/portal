@@ -6616,6 +6616,9 @@ html.font-xl { font-size: 21px; }
     width: 100%;
     justify-content: center;
   }
+  .email-compose-readiness-grid {
+    grid-template-columns: 1fr;
+  }
   .email-profile-sidebar {
     width: 100%;
     border-right: none;
@@ -6696,6 +6699,99 @@ html.font-xl { font-size: 21px; }
 .email-compose-info-btn {
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+.email-compose-readiness {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-card) 84%, transparent);
+}
+
+.email-compose-readiness-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.email-compose-readiness-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  color: var(--state-warning-bright);
+  background: rgba(var(--state-warning-rgb), 0.12);
+  border: 1px solid rgba(var(--state-warning-rgb), 0.28);
+}
+
+.email-compose-readiness.is-ready .email-compose-readiness-icon {
+  color: var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 12%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--accent-cyan) 26%, var(--border-glass));
+}
+
+.email-compose-readiness-head strong,
+.email-compose-readiness-head span {
+  display: block;
+}
+
+.email-compose-readiness-head strong {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.email-compose-readiness-head span {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.email-compose-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.email-compose-readiness-item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-primary) 62%, transparent);
+}
+
+.email-compose-readiness-item i {
+  color: var(--accent-purple);
+  font-size: 0.82rem;
+}
+
+.email-compose-readiness-item span {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.email-compose-readiness-item strong {
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.email-compose-readiness-item.is-missing strong {
+  color: var(--state-warning-bright);
 }
 
 /* ===========================

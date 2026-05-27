@@ -149,6 +149,63 @@ function renderContactSelect() {
   if (current && emailContacts.find(c => c.id === current)) sel.value = current;
 }
 
+function renderEmailReadiness() {
+  const host = document.getElementById('email-compose-readiness');
+  if (!host) return;
+
+  const profileReady = Boolean(userEmailProfile.realName && userEmailProfile.department);
+  const apiReady = Boolean(geminiApiKey);
+  const contactCount = Array.isArray(emailContacts) ? emailContacts.length : 0;
+  const signatureReady = Boolean(userEmailProfile.signatureTemplate || DEFAULT_SIGNATURE_TEMPLATE);
+  const readyCount = [profileReady, apiReady, signatureReady].filter(Boolean).length;
+  const statusText = readyCount === 3
+    ? 'メール生成の準備はできています'
+    : '生成前に確認が必要です';
+
+  const items = [
+    {
+      icon: 'fa-solid fa-id-card',
+      label: 'プロフィール',
+      value: profileReady ? `${userEmailProfile.realName} / ${userEmailProfile.department}` : '名前と所属を設定',
+      ready: profileReady,
+    },
+    {
+      icon: 'fa-solid fa-key',
+      label: 'Gemini',
+      value: apiReady ? '設定済み' : 'APIキー未設定',
+      ready: apiReady,
+    },
+    {
+      icon: 'fa-solid fa-address-book',
+      label: '連絡先',
+      value: contactCount > 0 ? `${contactCount}件` : '必要なら追加',
+      ready: true,
+    },
+  ];
+
+  host.className = `email-compose-readiness ${readyCount === 3 ? 'is-ready' : 'is-warning'}`;
+  host.innerHTML = `
+    <div class="email-compose-readiness-head">
+      <span class="email-compose-readiness-icon">
+        <i class="fa-solid ${readyCount === 3 ? 'fa-circle-check' : 'fa-triangle-exclamation'}" aria-hidden="true"></i>
+      </span>
+      <div>
+        <strong>${esc(statusText)}</strong>
+        <span>プロフィールとAI設定を確認してから作成します。</span>
+      </div>
+    </div>
+    <div class="email-compose-readiness-grid">
+      ${items.map(item => `
+        <div class="email-compose-readiness-item${item.ready ? '' : ' is-missing'}">
+          <i class="${esc(item.icon)}" aria-hidden="true"></i>
+          <span>${esc(item.label)}</span>
+          <strong>${esc(item.value)}</strong>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 // ===== 連絡先保存 =====
 export async function saveNewContact() {
   if (!state.currentUsername) { showToast('ユーザーネームを設定してください', 'warning'); return; }
@@ -174,6 +231,7 @@ export async function saveNewContact() {
     }
     emailContacts.push({ id, companyName: company || '', personName: person || '' });
     renderContactSelect();
+    renderEmailReadiness();
     document.getElementById('email-contact-select').value = id;
     selectedContactId = id;
 
@@ -192,6 +250,7 @@ function updateApiKeyUI() {
   const area = document.getElementById('email-api-key-area');
   if (!area) return;
   area.hidden = !!geminiApiKey;
+  renderEmailReadiness();
 }
 
 // ===== モード設定（新規/返信） =====
@@ -495,6 +554,7 @@ function renderProfileTab() {
   document.getElementById('ep-signature').value = sig;
   updateSignaturePreview(sig);
   renderProfileSummary(readProfileDraftFromForm());
+  renderEmailReadiness();
   bindProfileSummaryEvents();
 }
 
@@ -535,6 +595,7 @@ export async function saveUserEmailProfile() {
   setTimeout(() => { btn.innerHTML = orig; }, 1500);
   updateSignaturePreview(userEmailProfile.signatureTemplate);
   renderProfileSummary(userEmailProfile);
+  renderEmailReadiness();
 }
 
 export function resetSignatureTemplate() {
@@ -582,6 +643,8 @@ export function openEmailModal() {
   switchEmailTab('compose');
   if (!emailModalLoaded) {
     loadEmailData();
+  } else {
+    renderEmailReadiness();
   }
 }
 
