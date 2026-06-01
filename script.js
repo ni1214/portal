@@ -3520,7 +3520,7 @@ async function runInitialPortalBootstrap(storedUsername) {
     renderAllSections();
     renderFavorites();
   } catch (err) {
-    console.error('Firestore 繧ｨ繝ｩ繝ｼ:', err);
+    console.error('Runtime data bootstrap error:', err);
   }
 
   if (!storedUsername) {

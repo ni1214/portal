@@ -723,7 +723,7 @@ export async function saveUserPreferencesToSupabase(username, prefs = {}) {
 
 // ===== 鋼材発注（order_suppliers / order_items / orders）=====
 
-function isoToFirestoreTs(isoStr) {
+function isoToCompatTimestamp(isoStr) {
   if (!isoStr) return null;
   const ms = Date.parse(isoStr);
   return Number.isFinite(ms) ? { seconds: Math.floor(ms / 1000), nanoseconds: 0 } : null;
@@ -859,13 +859,13 @@ function mapOrderRow(row = {}) {
     items:         Array.isArray(row.items) ? row.items : [],
     orderedBy:     row.ordered_by     || '',
     note:          row.note           || '',
-    orderedAt:     isoToFirestoreTs(row.ordered_at),
+    orderedAt:     isoToCompatTimestamp(row.ordered_at),
     emailSent:     !!row.email_sent,
-    emailSentAt:   row.email_sent_at  ? isoToFirestoreTs(row.email_sent_at) : null,
-    deletedAt:     row.deleted_at     ? isoToFirestoreTs(row.deleted_at) : null,
+    emailSentAt:   row.email_sent_at  ? isoToCompatTimestamp(row.email_sent_at) : null,
+    deletedAt:     row.deleted_at     ? isoToCompatTimestamp(row.deleted_at) : null,
     deletedBy:     row.deleted_by     || null,
-    createdAt:     isoToFirestoreTs(row.created_at),
-    updatedAt:     isoToFirestoreTs(row.updated_at),
+    createdAt:     isoToCompatTimestamp(row.created_at),
+    updatedAt:     isoToCompatTimestamp(row.updated_at),
   };
 }
 
@@ -922,7 +922,7 @@ export async function updateOrderInSupabase(id, data) {
 
 // ==================== ヘルパー関数 ====================
 
-/** ISO 日時文字列を Firebase Timestamp 互換オブジェクトに変換 */
+/** ISO 日時文字列を既存UIの Timestamp 互換オブジェクトに変換 */
 function toTimestamp(isoStr) {
   if (!isoStr) return null;
   const ms = new Date(isoStr).getTime();

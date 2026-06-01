@@ -346,7 +346,7 @@ const CATALOG_SEED_V4 = [
   { itemCategory: '磨き丸鋼',       spec: 'φ8',        materialType: 'steel', availableLengths: ['4m'],   sortOrder: 2007, defaultQty: 30 },
 ];
 
-// ===== Firestore 初期データ投入 =====
+// ===== Legacy backend seed data =====
 async function seedInitialData() {
   try {
     // 発注先の初期化

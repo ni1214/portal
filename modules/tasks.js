@@ -122,7 +122,7 @@ async function syncRequestLink(taskId, updates) {
   if (isSupabaseSharedCoreEnabled()) {
     const task = await getAssignedTaskFromSupabase(taskId);
     if (!task?.sourceRequestId) return task;
-    // Firebase serverTimestamp() sentinel をISO文字列に変換
+    // Legacy timestamp sentinel をISO文字列に変換
     const isoUpdates = Object.fromEntries(
       Object.entries(updates).map(([k, v]) =>
         [k, (v && typeof v === 'object' && '_methodName' in v) ? new Date().toISOString() : v]
@@ -740,7 +740,7 @@ async function _loadTaskHistory(tab, force = false) {
     return;
   }
 
-  // Firestore の既存コード...
+  // Legacy backend fallback
   try {
     let historyQuery = null;
     if (tab === 'received') {
@@ -796,7 +796,7 @@ export function startTaskListeners(username) {
     return;
   }
 
-  // Firestore の既存コード（onSnapshot 4つ）はそのまま残す
+  // Legacy backend fallback（onSnapshot 4つ）
   // orderBy を外してクライアント側でソート（複合インデックス不要）
   const rQ = query(
     collection(db, 'assigned_tasks'),
