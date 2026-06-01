@@ -817,7 +817,7 @@ initTodayDashboard({
   openFavorites: () => {
     if (!state.favoritesOnlyMode) {
       state.favoritesOnlyMode = true;
-      savePreferencesToFirestore({ fields: [PREF_FIELDS.favOnly] });
+      schedulePreferenceSave({ fields: [PREF_FIELDS.favOnly] });
     }
     applyFavoritesOnlyMode();
     requestAnimationFrame(() => {
@@ -1183,7 +1183,7 @@ async function persistPreferencesForUser(targetUsername, options = {}) {
   }
 }
 
-function savePreferencesToFirestore(options = {}) {
+function schedulePreferenceSave(options = {}) {
   const targetUsername = state.currentUsername;
   if (!targetUsername) return;
   queuePreferenceFields(normalizePreferenceFields(options.fields));
@@ -1256,7 +1256,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
       } else if (sbPrefs === null) {
         state.personalFavorites = [];
         state.favoritesOnlyMode = false;
-        savePreferencesToFirestore();
+        schedulePreferenceSave();
       }
 
       // private sections / cards
@@ -1267,7 +1267,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
         state.privateCards = sbCards;
       }
     } else {
-      // Firebase モード（既存処理）
+      // Legacy backend fallback
       const [orderSnap, prefSnap, privSecSnap, privCardSnap] = await Promise.all([
         getDoc(doc(db, 'users', username, 'data', 'section_order')),
         getDoc(doc(db, 'users', username, 'data', 'preferences')),
@@ -1293,7 +1293,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
       } else {
         state.personalFavorites = [];
         state.favoritesOnlyMode = false;
-        savePreferencesToFirestore();
+        schedulePreferenceSave();
       }
 
       state.privateCategories = privSecSnap.docs.map(d => ({ docId: d.id, isPrivate: true, ...d.data() }));
@@ -1838,7 +1838,7 @@ function renderMissionBanner() {
 function toggleMissionBanner() {
   state.missionBannerHidden = !state.missionBannerHidden;
   renderMissionBanner();
-  savePreferencesToFirestore({ fields: [PREF_FIELDS.missionBannerHidden] });
+  schedulePreferenceSave({ fields: [PREF_FIELDS.missionBannerHidden] });
 }
 
 async function saveMissionText() {
@@ -1931,7 +1931,7 @@ function toggleSectionCollapse(sectionId) {
       setTimeout(() => sectionEl.classList.remove('expanding'), 700);
     }
   }
-  savePreferencesToFirestore({ fields: [PREF_FIELDS.collapsedSections] });
+  schedulePreferenceSave({ fields: [PREF_FIELDS.collapsedSections] });
 }
 
 // ===== カード非表示 =====
@@ -1959,7 +1959,7 @@ function hideCard(cardId) {
 function _doHideCard(cardId) {
   if (!state.hiddenCards.includes(cardId)) {
     state.hiddenCards.push(cardId);
-    savePreferencesToFirestore({ fields: [PREF_FIELDS.hiddenCards] });
+    schedulePreferenceSave({ fields: [PREF_FIELDS.hiddenCards] });
     renderAllSections();
     renderFavorites();
     _renderHiddenCardsList();
@@ -1969,7 +1969,7 @@ function _doHideCard(cardId) {
 function unhideCard(cardId) {
   if (!state.currentUsername) return;
   state.hiddenCards = state.hiddenCards.filter(id => id !== cardId);
-  savePreferencesToFirestore({ fields: [PREF_FIELDS.hiddenCards] });
+  schedulePreferenceSave({ fields: [PREF_FIELDS.hiddenCards] });
   renderAllSections();
   renderFavorites();
   _renderHiddenCardsList();
@@ -2009,7 +2009,7 @@ function _seedDefaultCollapse() {
   }).filter(Boolean);
   state.collapsedSections = allIds;
   state._collapseSeeded = true;
-  savePreferencesToFirestore({ fields: [PREF_FIELDS.collapsedSections, PREF_FIELDS.collapseSeeded] });
+  schedulePreferenceSave({ fields: [PREF_FIELDS.collapsedSections, PREF_FIELDS.collapseSeeded] });
   renderAllSections(); // 折りたたんだ状態で再描画
 }
 
@@ -2518,7 +2518,7 @@ function getFavorites() {
 
 function setFavorites(ids) {
   state.personalFavorites = [...new Set((ids || []).filter(Boolean))];
-  savePreferencesToFirestore({ immediate: true, fields: [PREF_FIELDS.favorites] });
+  schedulePreferenceSave({ immediate: true, fields: [PREF_FIELDS.favorites] });
   renderTodayDashboard();
 }
 
@@ -3187,7 +3187,7 @@ function applyFavoritesOnlyMode() {
 
 function toggleFavoritesOnly() {
   state.favoritesOnlyMode = !state.favoritesOnlyMode;
-  savePreferencesToFirestore({ fields: [PREF_FIELDS.favOnly] });
+  schedulePreferenceSave({ fields: [PREF_FIELDS.favOnly] });
   applyFavoritesOnlyMode();
 }
 
@@ -3470,7 +3470,7 @@ function applyTheme(theme, save = true) {
     btn.classList.toggle('active', btn.dataset.theme === t);
   });
   localStorage.setItem('portal-theme', t);
-  if (save) savePreferencesToFirestore({ fields: [PREF_FIELDS.theme] });
+  if (save) schedulePreferenceSave({ fields: [PREF_FIELDS.theme] });
 }
 
 function applyFontSize(sizeClass, save = true) {
@@ -3481,7 +3481,7 @@ function applyFontSize(sizeClass, save = true) {
     btn.classList.toggle('active', btn.dataset.size === s);
   });
   localStorage.setItem('portal-font-size', s);
-  if (save) savePreferencesToFirestore({ fields: [PREF_FIELDS.fontSize] });
+  if (save) schedulePreferenceSave({ fields: [PREF_FIELDS.fontSize] });
 }
 
 function loadSettings() {

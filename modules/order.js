@@ -540,7 +540,7 @@ async function loadMasters() {
 export async function initOrder(d) {
   // d は deps（将来の拡張用）
   if (!isSupabaseSharedCoreEnabled()) {
-    // Firestore モード: シードロジック実行
+    // Legacy backend fallback: seed local master data only when Supabase is unavailable.
     await seedInitialData();
     await cleanupFactoryDuplicates();
   }
