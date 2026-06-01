@@ -1443,7 +1443,7 @@ function printDraftOrder() {
 // ===== 履歴モーダル =====
 // 1年以上古い履歴と、30日を過ぎた削除済み履歴を自動削除（バックグラウンド実行）
 async function purgeOldOrders() {
-  if (isSupabaseSharedCoreEnabled()) return; // Supabaseモードでは自動パージ未実装
+  if (isSupabaseSharedCoreEnabled()) return; // Runtime APIでは自動パージ未実装
   try {
     const orderCutoff = new Date();
     orderCutoff.setFullYear(orderCutoff.getFullYear() - 1);

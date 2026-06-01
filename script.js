@@ -1229,7 +1229,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     }
 
     if (isSupabaseSharedCoreEnabled()) {
-      // Supabase モード: 個人データを並行取得
+      // Runtime data: 個人データを並行取得
       const [sbOrder, sbPrefs, sbSections, sbCards] = await Promise.all([
         fetchSectionOrderFromSupabase(username).catch(err => { console.warn('sectionOrder fallback:', err); return null; }),
         fetchUserPreferencesFromSupabase(username).catch(err => { console.warn('prefs fallback:', err); return undefined; }),
@@ -1530,7 +1530,7 @@ function closePrivateSectionModal() {
 }
 
 
-// ========== Firestore CRUD (カード) ==========
+// ========== Shared Card CRUD ==========
 async function migrateIfNeeded() {
   const configRef = doc(db, 'portal', 'config');
   const configSnap = await getDoc(configRef);
@@ -1772,8 +1772,8 @@ async function deleteCard(docId) {
 }
 
 
-// ========== Firestore CRUD (カテゴリ) ==========
-async function addCategoryToFirestore(data) {
+// ========== Shared Category CRUD ==========
+async function addSharedCategory(data) {
   if (isSupabaseSharedCoreEnabled()) {
     await createSharedCategoryInSupabase(data);
     state.allCategories.push({ docId: data.id, ...data });
@@ -1783,7 +1783,7 @@ async function addCategoryToFirestore(data) {
   }
 }
 
-async function updateCategoryInFirestore(docId, data) {
+async function updateSharedCategory(docId, data) {
   if (isSupabaseSharedCoreEnabled()) {
     await updateSharedCategoryInSupabase(docId, data);
   } else {
@@ -1793,7 +1793,7 @@ async function updateCategoryInFirestore(docId, data) {
   if (idx !== -1) state.allCategories[idx] = { ...state.allCategories[idx], ...data };
 }
 
-async function deleteCategoryFromFirestore(docId) {
+async function deleteSharedCategory(docId) {
   if (isSupabaseSharedCoreEnabled()) {
     await deleteSharedCategoryInSupabase(docId);
   } else {
@@ -3719,7 +3719,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const inviteOk = await ensureInviteAccess();
   if (!inviteOk) return;
 
-  // Firestore 読み込み
+  // Runtime data bootstrap
   try {
     if (!isSupabaseSharedCoreEnabled()) {
       await migrateIfNeeded();
@@ -3731,7 +3731,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderAllSections();
     renderFavorites();
   } catch (err) {
-    console.error('Firestore エラー:', err);
+    console.error('Runtime data bootstrap error:', err);
   }
 
   // お気に入りのみ表示ボタン
@@ -4597,11 +4597,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       if (state.editingCategoryId) {
-        await updateCategoryInFirestore(state.editingCategoryId, { label, icon, colorIndex: state.selectedColorIndex });
+        await updateSharedCategory(state.editingCategoryId, { label, icon, colorIndex: state.selectedColorIndex });
       } else {
         const maxOrder = state.allCategories.length > 0 ? Math.max(...state.allCategories.map(c => c.order)) + 1 : 10;
         const newId = label.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '') + '-' + Date.now();
-        await addCategoryToFirestore({ id: newId, label, icon, colorIndex: state.selectedColorIndex, order: maxOrder, isExternal: false });
+        await addSharedCategory({ id: newId, label, icon, colorIndex: state.selectedColorIndex, order: maxOrder, isExternal: false });
       }
       closeCategoryModal();
       scheduleCardRerender();
@@ -4623,7 +4623,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     if (await confirmDelete(`「${cat?.label}」を削除しますか？`)) {
-      await deleteCategoryFromFirestore(state.editingCategoryId);
+      await deleteSharedCategory(state.editingCategoryId);
       closeCategoryModal();
       scheduleCardRerender();
     }

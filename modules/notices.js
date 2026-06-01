@@ -479,7 +479,7 @@ export function buildReactionBar(noticeId) {
 
 // ========== CRUD ==========
 export async function subscribeNotices() {
-  // Supabase モード: realtime なし、一回読み込み
+  // Runtime: realtime なし、一回読み込み
   try {
     const notices = await fetchNoticesFromSupabase();
     state.allNotices = notices;
