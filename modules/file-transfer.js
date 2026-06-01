@@ -4,11 +4,6 @@ import { state, RTC_CONFIG, FILE_CHUNK_SIZE } from './state.js';
 import { esc, getUserAvatarColor } from './utils.js';
 import { showToast, showConfirm } from './notify.js';
 import {
-  recordListenerStart,
-  recordListenerSnapshot,
-  wrapTrackedListenerUnsubscribe,
-} from './read-diagnostics.js';
-import {
   fetchMyDriveLinkFromSupabase,
   saveMyDriveLinkInSupabase,
   fetchDriveContactsFromSupabase,
@@ -253,11 +248,7 @@ export async function cleanupP2p(sessionId) {
   }
   delete state._sendProgress[sessionId];
   delete state._receiveProgress[sessionId];
-  if (true) {
-    try { await deleteP2pSignalInSupabase(sessionId); } catch (_) {}
-  } else {
-    try { await deleteDoc(doc(db, 'p2p_signals', sessionId)); } catch (_) {}
-  }
+  try { await deleteP2pSignalInSupabase(sessionId); } catch (_) {}
 }
 
 export async function sendFileChunks(dc, file, sessionId) {
@@ -601,32 +592,20 @@ export function renderFtPanel() {
 
 export function startFtListener() {
   if (!state.currentUsername || state._ftIncomingSub) return;
-  if (true) {
-    const poll = async () => {
-      try {
-        state._ftIncoming = await fetchP2pSignalsFromSupabase(state.currentUsername);
-        updateFtBadge();
-        renderFtPanel();
-      } catch (_) {}
-    };
-    poll();
-    state._ftIncomingSub = setInterval(poll, 5000);
-  } else {
-    const q = query(collection(db, 'p2p_signals'), where('to', '==', state.currentUsername));
-    recordListenerStart('ft.p2p', 'P2Pファイル受信', `p2p_signals:${state.currentUsername}`);
-    state._ftIncomingSub = wrapTrackedListenerUnsubscribe('ft.p2p', onSnapshot(q, snap => {
-      recordListenerSnapshot('ft.p2p', snap.size, state.currentUsername, snap.docs);
-      state._ftIncoming = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const poll = async () => {
+    try {
+      state._ftIncoming = await fetchP2pSignalsFromSupabase(state.currentUsername);
       updateFtBadge();
       renderFtPanel();
-    }));
-  }
+    } catch (_) {}
+  };
+  poll();
+  state._ftIncomingSub = setInterval(poll, 5000);
 }
 
 export function stopFtListener() {
   if (state._ftIncomingSub) {
-    if (true) clearInterval(state._ftIncomingSub);
-    else state._ftIncomingSub();
+    clearInterval(state._ftIncomingSub);
     state._ftIncomingSub = null;
   }
   state._ftIncoming = [];
@@ -639,91 +618,45 @@ export function stopFtListener() {
 export async function loadMyDriveUrl(username) {
   if (!username) return;
   try {
-    if (true) {
-      state._myDriveUrl = await fetchMyDriveLinkFromSupabase(username);
-    } else {
-      const snap = await getDoc(doc(db, 'users', username, 'data', 'drive_link'));
-      state._myDriveUrl = snap.exists() ? (snap.data().url || '') : '';
-    }
+    state._myDriveUrl = await fetchMyDriveLinkFromSupabase(username);
   } catch (_) { state._myDriveUrl = ''; }
 }
 
 export async function saveMyDriveUrl(url) {
   if (!state.currentUsername) return;
   state._myDriveUrl = url;
-  if (true) {
-    await saveMyDriveLinkInSupabase(state.currentUsername, url);
-  } else {
-    await setDoc(doc(db, 'users', state.currentUsername, 'data', 'drive_link'), { url, updatedAt: serverTimestamp() });
-  }
+  await saveMyDriveLinkInSupabase(state.currentUsername, url);
 }
 
-// --- Supabaseリスナー / Supabaseポーリング ---
+// --- Supabase polling ---
 let _driveKnownIncomingIds = new Set();
 
 export function startDriveListeners(username) {
   if (!username) return;
-  if (true) {
-    if (state._driveIncomingSub) return;
-    const poll = async () => {
-      try {
-        const { incoming, outgoing } = await fetchDriveSharesFromSupabase(username);
-        // 新規受信を検知して連絡先を自動保存
-        incoming.forEach(s => {
-          if (!_driveKnownIncomingIds.has(s.id) && s.from && s.driveUrl && s.from !== username) {
-            saveDriveContact(s.from, s.driveUrl);
-          }
-          _driveKnownIncomingIds.add(s.id);
-        });
-        state._driveIncoming = incoming;
-        state._driveOutgoing = outgoing;
-        updateFtBadge();
-        renderDrivePanel();
-      } catch (_) {}
-    };
-    poll();
-    state._driveIncomingSub = setInterval(poll, 30000);
-  } else {
-    // 受信リスナー
-    if (!state._driveIncomingSub) {
-      const qIn = query(collection(db, 'drive_shares'), where('to', '==', username));
-      recordListenerStart('ft.drive-in', 'Drive受信', `drive_shares:${username}`);
-      state._driveIncomingSub = wrapTrackedListenerUnsubscribe('ft.drive-in', onSnapshot(qIn, snap => {
-        recordListenerSnapshot('ft.drive-in', snap.size, username, snap.docs);
-        snap.docChanges().forEach(change => {
-          if (change.type === 'added') {
-            const data = change.doc.data();
-            if (data.from && data.driveUrl && data.from !== state.currentUsername) {
-              saveDriveContact(data.from, data.driveUrl);
-            }
-          }
-        });
-        state._driveIncoming = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        updateFtBadge();
-        renderDrivePanel();
-      }));
-    }
-    // 送信リスナー
-    if (!state._driveOutgoingSub) {
-      const qOut = query(collection(db, 'drive_shares'), where('from', '==', username));
-      recordListenerStart('ft.drive-out', 'Drive送信', `drive_shares:${username}`);
-      state._driveOutgoingSub = wrapTrackedListenerUnsubscribe('ft.drive-out', onSnapshot(qOut, snap => {
-        recordListenerSnapshot('ft.drive-out', snap.size, username, snap.docs);
-        state._driveOutgoing = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderDrivePanel();
-      }));
-    }
-  }
+  if (state._driveIncomingSub) return;
+  const poll = async () => {
+    try {
+      const { incoming, outgoing } = await fetchDriveSharesFromSupabase(username);
+      // 新規受信を検知して連絡先を自動保存
+      incoming.forEach(s => {
+        if (!_driveKnownIncomingIds.has(s.id) && s.from && s.driveUrl && s.from !== username) {
+          saveDriveContact(s.from, s.driveUrl);
+        }
+        _driveKnownIncomingIds.add(s.id);
+      });
+      state._driveIncoming = incoming;
+      state._driveOutgoing = outgoing;
+      updateFtBadge();
+      renderDrivePanel();
+    } catch (_) {}
+  };
+  poll();
+  state._driveIncomingSub = setInterval(poll, 30000);
 }
 
 export function stopDriveListeners() {
-  if (true) {
-    if (state._driveIncomingSub) { clearInterval(state._driveIncomingSub); state._driveIncomingSub = null; }
-    _driveKnownIncomingIds.clear();
-  } else {
-    if (state._driveIncomingSub) { state._driveIncomingSub(); state._driveIncomingSub = null; }
-    if (state._driveOutgoingSub) { state._driveOutgoingSub(); state._driveOutgoingSub = null; }
-  }
+  if (state._driveIncomingSub) { clearInterval(state._driveIncomingSub); state._driveIncomingSub = null; }
+  _driveKnownIncomingIds.clear();
   state._driveIncoming = [];
   state._driveOutgoing = [];
   updateFtBadge();
@@ -733,12 +666,7 @@ export function stopDriveListeners() {
 export async function loadDriveContacts(username) {
   if (!username) return;
   try {
-    if (true) {
-      state._driveContacts = await fetchDriveContactsFromSupabase(username);
-    } else {
-      const snap = await getDoc(doc(db, 'users', username, 'data', 'drive_contacts'));
-      state._driveContacts = snap.exists() ? (snap.data().contacts || {}) : {};
-    }
+    state._driveContacts = await fetchDriveContactsFromSupabase(username);
   } catch (_) { state._driveContacts = {}; }
 }
 
@@ -747,15 +675,7 @@ export async function saveDriveContact(contactUsername, url) {
   if (!state.currentUsername || !contactUsername || !url) return;
   state._driveContacts[contactUsername] = { url, savedAt: Date.now() };
   try {
-    if (true) {
-      await saveDriveContactInSupabase(state.currentUsername, contactUsername, url);
-    } else {
-      await setDoc(
-        doc(db, 'users', state.currentUsername, 'data', 'drive_contacts'),
-        { contacts: state._driveContacts, updatedAt: serverTimestamp() },
-        { merge: true }
-      );
-    }
+    await saveDriveContactInSupabase(state.currentUsername, contactUsername, url);
   } catch (err) { console.error('Drive連絡先保存エラー:', err); }
 }
 
@@ -764,15 +684,7 @@ export async function deleteDriveContact(contactUsername) {
   if (!state.currentUsername || !contactUsername) return;
   delete state._driveContacts[contactUsername];
   try {
-    if (true) {
-      await deleteDriveContactInSupabase(state.currentUsername, contactUsername);
-    } else {
-      await setDoc(
-        doc(db, 'users', state.currentUsername, 'data', 'drive_contacts'),
-        { contacts: state._driveContacts, updatedAt: serverTimestamp() },
-        { merge: true }
-      );
-    }
+    await deleteDriveContactInSupabase(state.currentUsername, contactUsername);
   } catch (err) { console.error('Drive連絡先削除エラー:', err); }
   renderDrivePanel();
 }
@@ -883,11 +795,7 @@ export function renderDrivePanel() {
 export async function openDriveShare(id, url) {
   if (!url) return;
   try {
-    if (true) {
-      await updateDriveShareStatusInSupabase(id, 'viewed');
-    } else {
-      await updateDoc(doc(db, 'drive_shares', id), { status: 'viewed', viewedAt: serverTimestamp() });
-    }
+    await updateDriveShareStatusInSupabase(id, 'viewed');
   } catch (_) {}
   window.open(url, '_blank', 'noopener,noreferrer');
 }
@@ -895,15 +803,11 @@ export async function openDriveShare(id, url) {
 // --- 消去 ---
 export async function dismissDriveShare(id) {
   try {
-    if (true) {
-      await deleteDriveShareInSupabase(id);
-      state._driveIncoming = state._driveIncoming.filter(s => s.id !== id);
-      _driveKnownIncomingIds.delete(id);
-      updateFtBadge();
-      renderDrivePanel();
-    } else {
-      await deleteDoc(doc(db, 'drive_shares', id));
-    }
+    await deleteDriveShareInSupabase(id);
+    state._driveIncoming = state._driveIncoming.filter(s => s.id !== id);
+    _driveKnownIncomingIds.delete(id);
+    updateFtBadge();
+    renderDrivePanel();
   } catch (_) {}
 }
 
@@ -962,20 +866,8 @@ export async function confirmDriveSend() {
   btn.disabled    = true;
   btn.textContent = '送信中…';
   try {
-    if (true) {
-      await addDriveShareInSupabase(state.currentUsername, state._ftDriveSelectedUser, url, msg);
-    } else {
-      await addDoc(collection(db, 'drive_shares'), {
-        from:      state.currentUsername,
-        to:        state._ftDriveSelectedUser,
-        driveUrl:  url,
-        message:   msg,
-        status:    'pending',
-        createdAt: serverTimestamp(),
-        viewedAt:  null,
-      });
-    }
-    // 連絡先は受信側が自動保存（startDriveListeners の onSnapshot 内）
+    await addDriveShareInSupabase(state.currentUsername, state._ftDriveSelectedUser, url, msg);
+    // 連絡先は受信側が自動保存（startDriveListeners の polling 内）
     closeDriveSendModal();
     switchFtTab('drive');
     renderDrivePanel();
@@ -1182,7 +1074,7 @@ export async function confirmInlineP2pSend() {
 
 // ===== P2P 転送コア =====
 
-// ポーリングで onSnapshot を模倣するヘルパー（P2P用）
+// Supabase polling helper for P2P signal updates.
 function _pollSignal(sessionId, intervalMs, handler) {
   const id = setInterval(async () => {
     const data = await getP2pSignalFromSupabase(sessionId).catch(() => null);
@@ -1209,85 +1101,42 @@ export async function initiateFileTransfer(file, recipientUsername) {
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
 
-  if (true) {
-    pc.onicecandidate = async e => {
-      if (e.candidate) {
-        try { await appendP2pCandidateInSupabase(sessionId, 'from', JSON.stringify(e.candidate.toJSON())); } catch (_) {}
-      }
-    };
+  pc.onicecandidate = async e => {
+    if (e.candidate) {
+      try { await appendP2pCandidateInSupabase(sessionId, 'from', JSON.stringify(e.candidate.toJSON())); } catch (_) {}
+    }
+  };
 
-    dc.onopen  = () => sendFileChunks(dc, file, sessionId);
-    dc.onerror = () => { cleanupP2p(sessionId); _updateOutgoing(sessionId, 'error'); renderFtPanel(); };
+  dc.onopen  = () => sendFileChunks(dc, file, sessionId);
+  dc.onerror = () => { cleanupP2p(sessionId); _updateOutgoing(sessionId, 'error'); renderFtPanel(); };
 
-    await createP2pSignalInSupabase(sessionId, {
-      from: state.currentUsername, to: recipientUsername,
-      fileName: file.name, fileSize: file.size,
-      fileType: file.type || 'application/octet-stream',
-      offer: JSON.stringify(offer),
-    });
+  await createP2pSignalInSupabase(sessionId, {
+    from: state.currentUsername, to: recipientUsername,
+    fileName: file.name, fileSize: file.size,
+    fileType: file.type || 'application/octet-stream',
+    offer: JSON.stringify(offer),
+  });
 
-    // answer / toCandidates をポーリングで監視
-    conn.unsub = _pollSignal(sessionId, 3000, async data => {
-      if (!data) { _updateOutgoing(sessionId, 'done'); renderFtPanel(); return; }
-      const c = state._p2pConnections[sessionId];
-      if (!c) return;
-      _updateOutgoing(sessionId, data.status);
+  // answer / toCandidates をポーリングで監視
+  conn.unsub = _pollSignal(sessionId, 3000, async data => {
+    if (!data) { _updateOutgoing(sessionId, 'done'); renderFtPanel(); return; }
+    const c = state._p2pConnections[sessionId];
+    if (!c) return;
+    _updateOutgoing(sessionId, data.status);
+    renderFtPanel();
+    if (data.answer && !c.pc.currentRemoteDescription) {
+      try { await c.pc.setRemoteDescription(JSON.parse(data.answer)); } catch (e) { console.error('setRemoteDescription:', e); }
+    }
+    const toCands = data.toCandidates || [];
+    for (let i = c.addedToIdx; i < toCands.length; i++) {
+      try { await c.pc.addIceCandidate(JSON.parse(toCands[i])); c.addedToIdx = i + 1; } catch (_) {}
+    }
+    if (data.status === 'rejected') {
+      cleanupP2p(sessionId);
+      _updateOutgoing(sessionId, 'rejected');
       renderFtPanel();
-      if (data.answer && !c.pc.currentRemoteDescription) {
-        try { await c.pc.setRemoteDescription(JSON.parse(data.answer)); } catch (e) { console.error('setRemoteDescription:', e); }
-      }
-      const toCands = data.toCandidates || [];
-      for (let i = c.addedToIdx; i < toCands.length; i++) {
-        try { await c.pc.addIceCandidate(JSON.parse(toCands[i])); c.addedToIdx = i + 1; } catch (_) {}
-      }
-      if (data.status === 'rejected') {
-        cleanupP2p(sessionId);
-        _updateOutgoing(sessionId, 'rejected');
-        renderFtPanel();
-      }
-    });
-  } else {
-    const signalRef = doc(db, 'p2p_signals', sessionId);
-
-    pc.onicecandidate = async e => {
-      if (e.candidate) {
-        try { await updateDoc(signalRef, { fromCandidates: arrayUnion(JSON.stringify(e.candidate.toJSON())) }); } catch (_) {}
-      }
-    };
-
-    dc.onopen  = () => sendFileChunks(dc, file, sessionId);
-    dc.onerror = () => { cleanupP2p(sessionId); _updateOutgoing(sessionId, 'error'); renderFtPanel(); };
-
-    await setDoc(signalRef, {
-      from: state.currentUsername, to: recipientUsername,
-      fileName: file.name, fileSize: file.size,
-      fileType: file.type || 'application/octet-stream',
-      status: 'pending', offer: JSON.stringify(offer), answer: null,
-      fromCandidates: [], toCandidates: [],
-      createdAt: serverTimestamp()
-    });
-
-    conn.unsub = onSnapshot(signalRef, async snap => {
-      if (!snap.exists()) { _updateOutgoing(sessionId, 'done'); renderFtPanel(); return; }
-      const data = snap.data();
-      const c = state._p2pConnections[sessionId];
-      if (!c) return;
-      _updateOutgoing(sessionId, data.status);
-      renderFtPanel();
-      if (data.answer && !c.pc.currentRemoteDescription) {
-        try { await c.pc.setRemoteDescription(JSON.parse(data.answer)); } catch (e) { console.error('setRemoteDescription:', e); }
-      }
-      const toCands = data.toCandidates || [];
-      for (let i = c.addedToIdx; i < toCands.length; i++) {
-        try { await c.pc.addIceCandidate(JSON.parse(toCands[i])); c.addedToIdx = i + 1; } catch (_) {}
-      }
-      if (data.status === 'rejected') {
-        cleanupP2p(sessionId);
-        _updateOutgoing(sessionId, 'rejected');
-        renderFtPanel();
-      }
-    });
-  }
+    }
+  });
 }
 
 function _updateOutgoing(sessionId, status) {
@@ -1300,13 +1149,7 @@ export async function acceptFtTransfer(sessionId) {
   if (!state.currentUsername) return;
   let signal;
   try {
-    if (true) {
-      signal = await getP2pSignalFromSupabase(sessionId);
-    } else {
-      const signalSnap = await getDoc(doc(db, 'p2p_signals', sessionId));
-      if (!signalSnap.exists()) { showToast('転送セッションが見つかりません。送信側がオフラインの可能性があります。', 'error'); return; }
-      signal = signalSnap.data();
-    }
+    signal = await getP2pSignalFromSupabase(sessionId);
   } catch (_) { showToast('転送セッションの取得に失敗しました。', 'error'); return; }
   if (!signal) { showToast('転送セッションが見つかりません。送信側がオフラインの可能性があります。', 'error'); return; }
   if (signal.status !== 'pending') return;
@@ -1321,24 +1164,13 @@ export async function acceptFtTransfer(sessionId) {
   renderFtPanel();
 
   const onDataComplete = async () => {
-    if (true) {
-      try { await updateP2pSignalInSupabase(sessionId, { status: 'done' }); } catch (_) {}
-      try { if (conn.unsub) conn.unsub(); } catch (_) {}
-      try { dc.close(); } catch (_) {}
-      try { pc.close(); } catch (_) {}
-      delete state._p2pConnections[sessionId];
-      delete state._receiveProgress[sessionId];
-      try { await deleteP2pSignalInSupabase(sessionId); } catch (_) {}
-    } else {
-      const signalRef = doc(db, 'p2p_signals', sessionId);
-      try { await updateDoc(signalRef, { status: 'done' }); } catch (_) {}
-      try { if (conn.unsub) conn.unsub(); } catch (_) {}
-      try { dc.close(); } catch (_) {}
-      try { pc.close(); } catch (_) {}
-      delete state._p2pConnections[sessionId];
-      delete state._receiveProgress[sessionId];
-      try { await deleteDoc(signalRef); } catch (_) {}
-    }
+    try { await updateP2pSignalInSupabase(sessionId, { status: 'done' }); } catch (_) {}
+    try { if (conn.unsub) conn.unsub(); } catch (_) {}
+    try { dc.close(); } catch (_) {}
+    try { pc.close(); } catch (_) {}
+    delete state._p2pConnections[sessionId];
+    delete state._receiveProgress[sessionId];
+    try { await deleteP2pSignalInSupabase(sessionId); } catch (_) {}
     _updateOutgoing(sessionId, 'done');
     renderFtPanel();
   };
@@ -1377,63 +1209,33 @@ export async function acceptFtTransfer(sessionId) {
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
 
-  if (true) {
-    pc.onicecandidate = async e => {
-      if (e.candidate) {
-        try { await appendP2pCandidateInSupabase(sessionId, 'to', JSON.stringify(e.candidate.toJSON())); } catch (_) {}
-      }
-    };
-
-    await updateP2pSignalInSupabase(sessionId, { answer: JSON.stringify(answer), status: 'accepted' });
-
-    for (const candStr of (signal.fromCandidates || [])) {
-      try { await pc.addIceCandidate(JSON.parse(candStr)); conn.addedFromIdx++; } catch (_) {}
+  pc.onicecandidate = async e => {
+    if (e.candidate) {
+      try { await appendP2pCandidateInSupabase(sessionId, 'to', JSON.stringify(e.candidate.toJSON())); } catch (_) {}
     }
+  };
 
-    // fromCandidates をポーリングで監視
-    conn.unsub = _pollSignal(sessionId, 3000, async data => {
-      if (!data) return;
-      const c = state._p2pConnections[sessionId];
-      if (!c) return;
-      const froms = data.fromCandidates || [];
-      for (let i = c.addedFromIdx; i < froms.length; i++) {
-        try { await c.pc.addIceCandidate(JSON.parse(froms[i])); c.addedFromIdx = i + 1; } catch (_) {}
-      }
-    });
-  } else {
-    const signalRef = doc(db, 'p2p_signals', sessionId);
+  await updateP2pSignalInSupabase(sessionId, { answer: JSON.stringify(answer), status: 'accepted' });
 
-    pc.onicecandidate = async e => {
-      if (e.candidate) {
-        try { await updateDoc(signalRef, { toCandidates: arrayUnion(JSON.stringify(e.candidate.toJSON())) }); } catch (_) {}
-      }
-    };
-
-    await updateDoc(signalRef, { answer: JSON.stringify(answer), status: 'accepted' });
-
-    for (const candStr of (signal.fromCandidates || [])) {
-      try { await pc.addIceCandidate(JSON.parse(candStr)); conn.addedFromIdx++; } catch (_) {}
-    }
-
-    conn.unsub = onSnapshot(signalRef, async snap => {
-      if (!snap.exists()) return;
-      const c = state._p2pConnections[sessionId];
-      if (!c) return;
-      const froms = snap.data().fromCandidates || [];
-      for (let i = c.addedFromIdx; i < froms.length; i++) {
-        try { await c.pc.addIceCandidate(JSON.parse(froms[i])); c.addedFromIdx = i + 1; } catch (_) {}
-      }
-    });
+  for (const candStr of (signal.fromCandidates || [])) {
+    try { await pc.addIceCandidate(JSON.parse(candStr)); conn.addedFromIdx++; } catch (_) {}
   }
+
+  // fromCandidates をポーリングで監視
+  conn.unsub = _pollSignal(sessionId, 3000, async data => {
+    if (!data) return;
+    const c = state._p2pConnections[sessionId];
+    if (!c) return;
+    const froms = data.fromCandidates || [];
+    for (let i = c.addedFromIdx; i < froms.length; i++) {
+      try { await c.pc.addIceCandidate(JSON.parse(froms[i])); c.addedFromIdx = i + 1; } catch (_) {}
+    }
+  });
 }
 
 export async function rejectFtTransfer(sessionId) {
   try {
-    if (true) {
-      await updateP2pSignalInSupabase(sessionId, { status: 'rejected' });
-    } else {
-      await updateDoc(doc(db, 'p2p_signals', sessionId), { status: 'rejected' });
-    }
+    await updateP2pSignalInSupabase(sessionId, { status: 'rejected' });
     state._ftIncoming = state._ftIncoming.filter(s => s.id !== sessionId);
     updateFtBadge();
     renderFtPanel();
