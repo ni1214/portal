@@ -1,13 +1,8 @@
 // ========== メールアシスタント ==========
-import {
-  db, doc, getDoc, getDocs, setDoc, deleteDoc,
-  collection, query, orderBy, serverTimestamp
-} from './config.js';
 import { state, USER_ROLE_OPTIONS, USER_ROLE_LABELS } from './state.js';
 import { esc } from './utils.js';
 import { showToast } from './notify.js';
 import {
-  isSupabaseSharedCoreEnabled,
   fetchPortalConfigFromSupabase,
   savePortalConfigToSupabase,
   fetchUserProfileFromSupabase,
@@ -76,18 +71,9 @@ function syncUserEmailProfile(raw = {}) {
 export async function loadUserEmailProfile(username = state.currentUsername) {
   syncUserEmailProfile();
   if (!username) return state.userEmailProfile;
-  if (isSupabaseSharedCoreEnabled()) {
-    try {
-      const row = await fetchUserProfileFromSupabase(username);
-      if (row) syncUserEmailProfile(row);
-    } catch (_) {}
-
-    if (emailModalLoaded) renderProfileTab();
-    return state.userEmailProfile;
-  }
   try {
-    const profSnap = await getDoc(doc(db, 'users', username, 'data', 'email_profile'));
-    if (profSnap.exists()) syncUserEmailProfile(profSnap.data());
+    const row = await fetchUserProfileFromSupabase(username);
+    if (row) syncUserEmailProfile(row);
   } catch (_) {}
 
   if (emailModalLoaded) renderProfileTab();
@@ -98,13 +84,8 @@ export async function loadUserEmailProfile(username = state.currentUsername) {
 // ===== 初期データ読み込み =====
 export async function loadEmailData() {
   try {
-    if (isSupabaseSharedCoreEnabled()) {
-      const config = await fetchPortalConfigFromSupabase();
-      geminiApiKey = config.geminiApiKey || null;
-    } else {
-      const snap = await getDoc(doc(db, 'portal', 'config'));
-      geminiApiKey = snap.data()?.geminiApiKey || null;
-    }
+    const config = await fetchPortalConfigFromSupabase();
+    geminiApiKey = config.geminiApiKey || null;
   } catch (_) {}
 
   if (state.currentUsername) {
@@ -121,14 +102,7 @@ export async function loadEmailData() {
 // ===== 連絡先読み込み =====
 async function loadEmailContacts() {
   try {
-    if (isSupabaseSharedCoreEnabled()) {
-      emailContacts = await fetchEmailContactsFromSupabase(state.currentUsername);
-      return;
-    }
-    const snap = await getDocs(
-      query(collection(db, 'users', state.currentUsername, 'email_contacts'), orderBy('createdAt', 'asc'))
-    );
-    emailContacts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    emailContacts = await fetchEmailContactsFromSupabase(state.currentUsername);
   } catch (_) {
     emailContacts = [];
   }
@@ -215,20 +189,11 @@ export async function saveNewContact() {
 
   const baseId = `contact_${Date.now()}`;
   try {
-    let id = baseId;
-    if (isSupabaseSharedCoreEnabled()) {
-      id = await createEmailContactInSupabase(state.currentUsername, {
-        id: baseId,
-        companyName: company || '',
-        personName:  person  || '',
-      });
-    } else {
-      await setDoc(doc(db, 'users', state.currentUsername, 'email_contacts', id), {
-        companyName: company || '',
-        personName:  person  || '',
-        createdAt:   serverTimestamp(),
-      });
-    }
+    const id = await createEmailContactInSupabase(state.currentUsername, {
+      id: baseId,
+      companyName: company || '',
+      personName:  person  || '',
+    });
     emailContacts.push({ id, companyName: company || '', personName: person || '' });
     renderContactSelect();
     renderEmailReadiness();
@@ -432,11 +397,7 @@ export async function saveGeminiApiKey() {
   const key = document.getElementById('email-api-key-input').value.trim();
   if (!key) return;
   try {
-    if (isSupabaseSharedCoreEnabled()) {
-      await savePortalConfigToSupabase({ geminiApiKey: key });
-    } else {
-      await setDoc(doc(db, 'portal', 'config'), { geminiApiKey: key }, { merge: true });
-    }
+    await savePortalConfigToSupabase({ geminiApiKey: key });
     geminiApiKey = key;
     document.getElementById('email-api-key-input').value = '';
     updateApiKeyUI();
@@ -578,14 +539,7 @@ export async function saveUserEmailProfile() {
 
   if (state.currentUsername) {
     try {
-      if (isSupabaseSharedCoreEnabled()) {
-        await saveUserProfileToSupabase(state.currentUsername, userEmailProfile);
-      } else {
-        await setDoc(
-          doc(db, 'users', state.currentUsername, 'data', 'email_profile'),
-          { ...userEmailProfile, updatedAt: serverTimestamp() }, { merge: true }
-        );
-      }
+      await saveUserProfileToSupabase(state.currentUsername, userEmailProfile);
     } catch (err) { console.error('プロフィール保存エラー:', err); }
   }
   await deps.afterUserProfileSaved?.(state.userEmailProfile);
