@@ -77,6 +77,7 @@
 - runtime 本線は Supabase
 - Firebase / Firestore の記述は移行履歴として残っている箇所がある
 - UI ワークスペース移行と並行して、Firebase SDK / request / コメント / 旧分岐の不要箇所を機能単位で削る
+- 2026-06-02 時点で `script.js` / `modules/` / `index.html` / `style.css` の Firebase / Firestore 文言は整理済み。以後は `docs/` や `tools/build-firestore-*.mjs` などの移行履歴・移行ツールだけを例外として扱う。
 
 ---
 
@@ -328,7 +329,7 @@ export function xxxFunction() { ... }
 ## Supabase 転送量超過 再発防止ルール
 
 > **目的**: Supabase Free の転送量 5GB/月を意識しながら、30人規模でも無料運用を維持しやすくする。
-> **補足**: 移行完了までは Firebase 側も残るので、「無駄な初期読込を増やさない」姿勢はそのまま継続する。
+> **補足**: runtime 本線は Supabase。Firebase / Firestore は移行履歴・移行スクリプトの参照名として残るだけなので、新規実装で fallback や並行書込みを増やさない。
 
 ### ルールA: ホーム初期表示で大きい一覧を自動読込しない
 - ログイン直後やホーム表示時に、全件リンク集・履歴・集計結果をまとめて自動取得しない
@@ -358,23 +359,14 @@ export function xxxFunction() { ... }
 - 表示確認だけでなく `保存 → 閉じる → 再表示 → 関連画面反映` まで見る
 - 転送量まわりの変更後は `転送診断` を見て、ホーム初期表示やモーダル表示で不要な大きい取得が走っていないか確認する
 
-## 🔧 積み残しタスク（優先度順）
+## 完了済みタスク・誤再開防止
 
-### ① style.css のハードコード色を CSS変数に全置換（継続対応中）
-**背景**: ダークモード開発時に `rgba(255,255,255,0.xx)` を直書きした箇所が多数残っており、
-ライトモードで「白+白=消える」バグの温床になっている。
-見つかるたびに個別修正しているが、根本解決のため一括対応が必要。
+### style.css のハードコード色 CSS変数化
+- 2026-03-23 の `f9641a8 docs: 完了済みの style.css CSS変数化タスクを積み残しから削除` で完了扱い。
+- `style.css` の色検索結果だけを根拠に、この作業を未完了タスクとして再開しない。`:root` / `[data-theme="light"]` の変数定義、ブランド色、プレビュー見本、ロック画面専用変数は置換対象外。
+- 新しい UI でテーマ崩れを見つけた場合は、該当機能ブロックだけを修正する。`style.css` 全体の一括置換タスクとして扱わない。
 
-**作業内容**:
-1. `style.css` 内の `rgba(255,255,255,0.xx)` を全検索
-2. 用途に応じて以下の変数に置き換える：
-   - 背景系: `var(--bg-glass)` / `var(--bg-card)` / `var(--bg-card-hover)`
-   - ボーダー系: `var(--border-glass)` / `var(--border-glass-hover)`
-3. ライトモード専用オーバーライドが不要になった箇所は削除してスリム化
-
-**注意**: 大規模変更になるため、1機能ブロックずつコミットして確認しながら進める。
-
-**運用ルール（2026-03 追記）**:
+**継続する運用ルール**:
 - `style.css` では **新しいハードコード色を追加しない**
 - 色を追加したい場合は、先に `:root` / `[data-theme="light"]` の CSS 変数へ定義してから使う
 - 例外として残してよいのは `ブランド固有色`、`プレビュー見本`、`ロゴ/装飾表現` のみ
@@ -493,8 +485,11 @@ export function xxxFunction() { ... }
 - 実機テスト用の招待コード・PIN など**秘密値そのものは AGENTS.md に書かない**。必要な場合はローカル専用の `C:\Users\frx\.codex\memory.md` を参照し、ここには「ローカル専用メモを使う」という運用ルールだけ残す
 
 ## 2026-03-18 Supabase runtime config（shared core）
+
+> この章は移行履歴メモ。現在の runtime 方針は「Supabase 本線 / Firebase は移行スクリプト専用」。ここにある Firebase fallback や未対応一覧を、現在の新規実装タスクとして再開しない。
+
 - `portal/config` に次の runtime 設定を追加して扱う
-  - `dataBackendMode`: `'firebase' | 'supabase'`
+  - `dataBackendMode`: 旧互換項目。現在の runtime は `modules/supabase.js` 側で常に `'supabase'` を設定する
   - `supabaseUrl`: Supabase project URL
   - `supabasePublishableKey`: フロントで使う API key（publishable 推奨）
   - `supabaseAnonKey`: 旧メモ互換の fallback。新規保存は `supabasePublishableKey` を優先
@@ -505,7 +500,7 @@ export function xxxFunction() { ... }
   - `notice_reactions` ✅（行単位 insert/delete。Firebase の arrayUnion は使わない）
   - `user_notice_reads` ✅（`username` + `notice_id` 行単位）
 - 管理画面の `データ接続設定` から保存する
-- 実装側は「読込だけ fallback 可 / 保存系は選んだ backend に固定」を守る
+- 新規実装では Firebase / Firestore fallback を増やさない。既存 fallback は Supabase 未設定時の旧互換分岐としてのみ扱い、整理するときは機能単位で削る。
 
 ### notices Supabase の注意点
 - `subscribeNotices()` は Supabase モードで `async function` に変更済み。呼び出し元は `await` 必須
@@ -526,11 +521,11 @@ export function xxxFunction() { ... }
 | `private_cards` | `users/{name}/private_cards` | `script.js` |
 
 ### 注意点
-- `registerUserLogin` は Supabase モードでも Firebase `users_list` に並行書込み（users_list 依存の他機能のため）
-- 読込は全て Supabase fallback → Firestore の順で行う（Supabase 障害時の安全網）
+- 現在の `registerUserLogin` は Supabase `user_accounts` が本線。Firebase `users_list` への並行書込み前提は旧メモとして扱う。
+- 読込は Supabase 本線。Firestore fallback 前提の記述は旧互換分岐の説明であり、新規に広げない。
 - `user_preferences` は `lastViewedSuggestionsAt` を ISO 文字列 ↔ `seconds` で変換
 - `private_cards` の `category` フィールドは Supabase の `section_id` にマッピング
-- 未対応: `user_todos`（別モジュール `tasks.js` に関連）/ `user_email_contacts` / `user_drive_links`
+- 旧未対応メモ: `user_todos` / `user_email_contacts` / `user_drive_links` / `user_drive_contacts` / `user_chat_reads` は現在 `modules/supabase.js` に Supabase 関数があるため、未対応扱いで繰り返さない。
 
 ## Supabase 移行追記（2026-03-18 / 個人データ続き）
 - `supabase/004_fix_private_cards_hierarchy.sql` を remote 適用済み
@@ -575,9 +570,9 @@ export function xxxFunction() { ... }
   - Management API に `generated-*.sql` を1文ずつ流す補助ツール
   - 一括 `SqlFile` 実行で件数が入らない場合は、こちらで逐次適用して切り分ける
 
-## Supabase 移行メモ（2026-03-18 追加）
+## Supabase 移行履歴メモ（2026-03-18 追加）
 
-### 方針
+### 移行当時の方針
 - Firestore の read 最適化を続けるより、段階的に `Supabase` へ移行する方針で進める
 - 以後の Supabase 操作は Codex 側で SQL editor / テーブル作成まで担当する前提でステップを切る
 - ただし `project URL / anon key / service role key / project ref` などの秘密値は repo に書かない
@@ -585,9 +580,9 @@ export function xxxFunction() { ... }
 - まずは `DB 置換` を優先し、`ニックネームログイン + 招待コード + ログイン前 PIN` の UX は維持する
 
 ### 参照先
-- 詳細な移行順とフェーズは `docs/supabase-migration-plan.md` を最新として扱う
+- 詳細な移行順とフェーズは `docs/supabase-migration-plan.md` に履歴として残す。現在の未完了タスク一覧として扱わない。
 
-### 次の開始点
+### 移行当時の開始点
 1. `Step 0`: Supabase プロジェクト情報の扱いをローカル秘密値へ固定
 2. `Step 1`: `supabase/001_core_schema.sql` を作成
 3. `Step 2`: shared core 用の DB adapter 設計へ入る
@@ -679,10 +674,10 @@ export function xxxFunction() { ... }
 ### Supabase モードでの挙動
 - `loadTodos`: onSnapshot を使わず `fetchUserTodosFromSupabase` で一回取得 → `state.personalTodos` に反映 → `renderTodoSection()`
 - `addTodo` / `toggleTodo` / `deleteTodo`: Supabase 更新後に `state.personalTodos` をローカル更新 → `renderTodoSection()` で即時反映（再フェッチ不要）
-- `loadEmailContacts`: Supabase → Firestore fallback の順で取得
+- `loadEmailContacts`: Supabase 本線で取得。Firestore fallback 前提では扱わない
 - `saveNewContact`: Supabase モード時は `createEmailContactInSupabase` を使用
 
-### 必要な Supabase テーブル（まだ作成していない場合は SQL Editor で実行）
+### 参考DDL（移行当時のメモ）
 ```sql
 -- user_todos
 create table if not exists public.user_todos (
@@ -706,6 +701,6 @@ create table if not exists public.user_email_contacts (
 create index if not exists user_email_contacts_username_idx on public.user_email_contacts (username);
 ```
 
-### 残りの未対応個人データ
-- `user_drive_links` / `user_drive_contacts` — file-transfer.js 関連（優先度低）
-- `user_chat_reads` — chat.js 関連（Phase D で対応）
+### 旧未対応個人データの現在扱い
+- `user_drive_links` / `user_drive_contacts` / `user_chat_reads` は Supabase 関数と各機能側の呼び出しがあるため、未対応タスクとして再開しない。
+- 追加で整理する場合は、旧 fallback 分岐や移行ツールの削除対象として扱う。

@@ -1,5 +1,11 @@
 # Supabase 移行計画
 
+## 現在の扱い（2026-06-02）
+
+- この文書は移行当時の計画・判断履歴。現在の未完了タスク一覧として扱わない。
+- runtime 本線は Supabase。Firebase / Firestore は移行履歴、旧互換分岐、`tools/build-firestore-*.mjs` の移行スクリプト名として残る場合だけ例外。
+- 「移行当時の Firestore 依存範囲」「Phase」「Step」の記述を根拠に、完了済み機能を未対応扱いに戻さない。現在の実装方針は `AGENTS.md` の最新方針を優先する。
+
 ## 目的
 - Firestore の read 数最適化に時間を取られず、機能追加へ集中できるようにする
 - 30人規模で使っても、日次 reads を気にし続ける運用から抜ける
@@ -13,9 +19,9 @@
 - 以後の Supabase 操作は Codex 側で進める前提でステップを組む
 - ただし、`project URL / anon key / service role key / dashboard でしか分からない値` は repo に保存しない
 - 秘密値はローカル専用の `C:\Users\frx\.codex\memory.md` へ記録する
-- Firebase はいきなり止めず、`画面単位` で Supabase に切り替える
+- 移行当時は Firebase をいきなり止めず、`画面単位` で Supabase に切り替える方針だった
 
-## 今の Firestore 依存範囲
+## 移行当時の Firestore 依存範囲
 
 ### 共有系
 - `portal/config`
@@ -258,7 +264,7 @@
 - realtime を安易に先に移す
 - Firestore を止めてから移植を始める
 
-## 次の着手点
+## 移行当時の着手点
 1. `Step 0`: Supabase 準備ルールを AGENTS に追記
 2. `Step 1`: 初期 SQL スキーマ草案を `supabase/001_core_schema.sql` として作成
 3. `Step 2`: shared core 用の DB adapter 設計を切る
