@@ -1,5 +1,5 @@
 // ========== タスク割り振り ==========
-import { db, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, collection, query, where, orderBy, serverTimestamp, onSnapshot } from './config.js';
+import { db, doc, getDoc, setDoc, addDoc, deleteDoc, updateDoc, collection, serverTimestamp } from './config.js';
 import {
   isSupabaseSharedCoreEnabled,
   fetchReceivedTasksFromSupabase,
@@ -18,12 +18,6 @@ import {
 } from './supabase.js';
 import { state, TASK_STATUS_LABEL } from './state.js';
 import { esc, getUserAvatarColor, normalizeProjectKey } from './utils.js';
-import {
-  recordGetDocsRead,
-  recordListenerStart,
-  recordListenerSnapshot,
-  wrapTrackedListenerUnsubscribe,
-} from './read-diagnostics.js';
 import { showToast, showConfirm } from './notify.js';
 export const deps = {};
 
@@ -740,43 +734,12 @@ async function _loadTaskHistory(tab, force = false) {
     return;
   }
 
-  // Legacy backend fallback
-  try {
-    let historyQuery = null;
-    if (tab === 'received') {
-      historyQuery = query(collection(db, 'assigned_tasks'), where('assignedTo', '==', state.currentUsername));
-    } else if (tab === 'sent') {
-      historyQuery = query(collection(db, 'assigned_tasks'), where('assignedBy', '==', state.currentUsername));
-    } else if (tab === 'shared') {
-      historyQuery = query(collection(db, 'assigned_tasks'), where('sharedWith', 'array-contains', state.currentUsername));
-    }
-    if (!historyQuery) return;
-
-    const snap = await getDocs(historyQuery);
-    recordGetDocsRead(`task.history.${tab}`, `タスク履歴:${tab}`, `assigned_tasks:${state.currentUsername}`, snap.size, snap.docs);
-    const allTasks = _sortTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    const historyOnly = allTasks.filter(task => {
-      if (tab === 'received') return !_isReceivedTaskLive(task);
-      if (tab === 'sent') return !_isSentTaskLive(task);
-      return !_isSharedTaskLive(task);
-    });
-
-    state.taskHistoryCache = {
-      ...state.taskHistoryCache,
-      [tab]: historyOnly,
-    };
-    state.taskHistoryLoaded = {
-      ...state.taskHistoryLoaded,
-      [tab]: true,
-    };
-    _syncAllTaskLists();
-  } catch (err) {
-    console.error(`task history load error (${tab}):`, err);
-  } finally {
-    state.taskHistoryLoading = { ...state.taskHistoryLoading, [tab]: false };
-    if (state.taskModalOpen && state.activeTaskTab === tab) {
-      renderTaskTabContent();
-    }
+  state.taskHistoryCache = { ...state.taskHistoryCache, [tab]: [] };
+  state.taskHistoryLoaded = { ...state.taskHistoryLoaded, [tab]: true };
+  state.taskHistoryLoading = { ...state.taskHistoryLoading, [tab]: false };
+  _syncAllTaskLists();
+  if (state.taskModalOpen && state.activeTaskTab === tab) {
+    renderTaskTabContent();
   }
 }
 
@@ -793,69 +756,9 @@ export function startTaskListeners(username) {
   if (isSupabaseSharedCoreEnabled()) {
     _bindTaskSupabaseAutoRefresh(username);
     void refreshSupabaseTaskLiveData(username).catch(() => {});
-    return;
+  } else {
+    _refreshTaskUi();
   }
-
-  // Legacy backend fallback（onSnapshot 4つ）
-  // orderBy を外してクライアント側でソート（複合インデックス不要）
-  const rQ = query(
-    collection(db, 'assigned_tasks'),
-    where('assignedTo', '==', username),
-    where('status', 'in', ACTIVE_TASK_STATUSES),
-  );
-  recordListenerStart('task.received', '受け取ったタスク', `assigned_tasks:${username}`);
-  state._receivedTasksUnsub = wrapTrackedListenerUnsubscribe('task.received', onSnapshot(rQ, snap => {
-    recordListenerSnapshot('task.received', snap.size, username, snap.docs);
-    liveReceivedTasks = _sortTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    _syncReceivedTasks();
-    updateTaskBadge();
-    deps.renderTodoSection?.();   // 自分のタスクウィジェットも更新
-    if (state.taskModalOpen && state.activeTaskTab === 'received') renderTaskTabContent();
-  }, err => console.error('receivedTasks listener error:', err)));
-
-  const sQ = query(
-    collection(db, 'assigned_tasks'),
-    where('assignedBy', '==', username),
-    where('status', 'in', ACTIVE_TASK_STATUSES),
-  );
-  recordListenerStart('task.sent', '依頼したタスク', `assigned_tasks:${username}`);
-  state._sentTasksUnsub = wrapTrackedListenerUnsubscribe('task.sent', onSnapshot(sQ, snap => {
-    recordListenerSnapshot('task.sent', snap.size, username, snap.docs);
-    liveSentTasks = _sortTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    _syncSentTasks();
-    updateTaskBadge();
-    if (state.taskModalOpen && state.activeTaskTab === 'sent') renderTaskTabContent();
-  }, err => console.error('sentTasks listener error:', err)));
-
-  // 共有されたタスク（自分が sharedWith に含まれる）
-  const sentDoneNotifyQ = query(
-    collection(db, 'assigned_tasks'),
-    where('assignedBy', '==', username),
-    where('status', '==', 'done'),
-    where('notifiedDone', '==', false),
-  );
-  recordListenerStart('task.sent-done', '未確認の完了タスク', `assigned_tasks:${username}`);
-  state._sentTaskDoneNotifyUnsub = wrapTrackedListenerUnsubscribe('task.sent-done', onSnapshot(sentDoneNotifyQ, snap => {
-    recordListenerSnapshot('task.sent-done', snap.size, username, snap.docs);
-    liveSentDoneNotifyTasks = _sortTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    _syncSentTasks();
-    updateTaskBadge();
-    if (state.taskModalOpen && state.activeTaskTab === 'sent') renderTaskTabContent();
-  }, err => console.error('sentTasks done listener error:', err)));
-
-  const shareQ = query(
-    collection(db, 'assigned_tasks'),
-    where('sharedWith', 'array-contains', username),
-    where(`sharedResponses.${username}`, '==', 'pending'),
-  );
-  recordListenerStart('task.shared', '共有されたタスク', `assigned_tasks:${username}`);
-  state._sharedTasksUnsub = wrapTrackedListenerUnsubscribe('task.shared', onSnapshot(shareQ, snap => {
-    recordListenerSnapshot('task.shared', snap.size, username, snap.docs);
-    liveSharedTasks = _sortTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    _syncSharedTasks();
-    updateTaskBadge();
-    if (state.taskModalOpen && state.activeTaskTab === 'shared') renderTaskTabContent();
-  }, err => console.error('sharedTasks listener error:', err)));
 }
 
 export function updateTaskBadge() {

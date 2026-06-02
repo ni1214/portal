@@ -1231,10 +1231,10 @@ async function loadPersonalData(username, lockOnSwitch = false) {
     if (isSupabaseSharedCoreEnabled()) {
       // Runtime data: 個人データを並行取得
       const [sbOrder, sbPrefs, sbSections, sbCards] = await Promise.all([
-        fetchSectionOrderFromSupabase(username).catch(err => { console.warn('sectionOrder fallback:', err); return null; }),
-        fetchUserPreferencesFromSupabase(username).catch(err => { console.warn('prefs fallback:', err); return undefined; }),
-        fetchPrivateSectionsFromSupabase(username).catch(err => { console.warn('privSections fallback:', err); return null; }),
-        fetchPrivateCardsFromSupabase(username).catch(err => { console.warn('privCards fallback:', err); return null; }),
+        fetchSectionOrderFromSupabase(username).catch(err => { console.warn('sectionOrder load error:', err); return null; }),
+        fetchUserPreferencesFromSupabase(username).catch(err => { console.warn('prefs load error:', err); return undefined; }),
+        fetchPrivateSectionsFromSupabase(username).catch(err => { console.warn('privSections load error:', err); return null; }),
+        fetchPrivateCardsFromSupabase(username).catch(err => { console.warn('privCards load error:', err); return null; }),
       ]);
 
       // section_order
@@ -1266,38 +1266,6 @@ async function loadPersonalData(username, lockOnSwitch = false) {
       if (Array.isArray(sbCards)) {
         state.privateCards = sbCards;
       }
-    } else {
-      // Legacy backend fallback
-      const [orderSnap, prefSnap, privSecSnap, privCardSnap] = await Promise.all([
-        getDoc(doc(db, 'users', username, 'data', 'section_order')),
-        getDoc(doc(db, 'users', username, 'data', 'preferences')),
-        getDocs(collection(db, 'users', username, 'private_sections')),
-        getDocs(collection(db, 'users', username, 'private_cards')),
-      ]);
-
-      state.personalSectionOrder = orderSnap.exists() ? (orderSnap.data().order || []) : [];
-
-      if (prefSnap.exists()) {
-        const p = prefSnap.data();
-        state.personalFavorites   = Array.isArray(p.favorites) ? p.favorites : [];
-        state.favoritesOnlyMode   = !!p.favOnly;
-        state._collapseSeeded     = p.collapseSeeded === true;
-        state.collapsedSections   = Array.isArray(p.collapsedSections) ? p.collapsedSections : [];
-        state.hiddenCards         = Array.isArray(p.hiddenCards) ? p.hiddenCards : [];
-        state.missionBannerHidden = p.missionBannerHidden !== false;
-        if (p.theme)    applyTheme(p.theme, false);
-        if (p.fontSize) applyFontSize(p.fontSize, false);
-        if (p.lastViewedSuggestionsAt) {
-          state.lastViewedSuggestionsAt = p.lastViewedSuggestionsAt.seconds ?? Math.floor(p.lastViewedSuggestionsAt / 1000);
-        }
-      } else {
-        state.personalFavorites = [];
-        state.favoritesOnlyMode = false;
-        schedulePreferenceSave();
-      }
-
-      state.privateCategories = privSecSnap.docs.map(d => ({ docId: d.id, isPrivate: true, ...d.data() }));
-      state.privateCards      = privCardSnap.docs.map(d => ({ id: d.id, isPrivate: true, ...d.data() }));
     }
     await ensureFavoritePublicCardsLoaded();
 
