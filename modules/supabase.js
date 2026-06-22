@@ -590,7 +590,7 @@ export async function deleteUserTodoInSupabase(id) {
 
 // ===== portal_config（管理設定） =====
 
-const PORTAL_CONFIG_SELECT = 'pin_hash,invite_code_hash,invite_code_plain,invite_updated_at,gemini_api_key,departments,suggestion_box_viewers,mission_text,gas_order_url,order_seed_version';
+const PORTAL_CONFIG_SELECT = 'pin_hash,gemini_api_key,departments,suggestion_box_viewers,mission_text,gas_order_url,order_seed_version';
 
 export async function fetchPortalConfigFromSupabase() {
   const rows = await requestSupabase(
@@ -601,9 +601,6 @@ export async function fetchPortalConfigFromSupabase() {
   const r = rows[0];
   return {
     pinHash: r.pin_hash || null,
-    inviteCodeHash: r.invite_code_hash || null,
-    inviteCodePlain: r.invite_code_plain || '',
-    inviteUpdatedAt: r.invite_updated_at || null,
     geminiApiKey: r.gemini_api_key || '',
     departments: Array.isArray(r.departments) ? r.departments : [],
     suggestionBoxViewers: Array.isArray(r.suggestion_box_viewers) ? r.suggestion_box_viewers : [],
@@ -616,9 +613,6 @@ export async function fetchPortalConfigFromSupabase() {
 export async function savePortalConfigToSupabase(fields = {}) {
   const body = {};
   if ('pinHash' in fields)              body.pin_hash = fields.pinHash || null;
-  if ('inviteCodeHash' in fields)       body.invite_code_hash = fields.inviteCodeHash || null;
-  if ('inviteCodePlain' in fields)      body.invite_code_plain = fields.inviteCodePlain || null;
-  if ('inviteUpdatedAt' in fields)      body.invite_updated_at = fields.inviteUpdatedAt || null;
   if ('geminiApiKey' in fields)         body.gemini_api_key = fields.geminiApiKey || '';
   if ('departments' in fields)          body.departments = Array.isArray(fields.departments) ? fields.departments : [];
   if ('suggestionBoxViewers' in fields) body.suggestion_box_viewers = Array.isArray(fields.suggestionBoxViewers) ? fields.suggestionBoxViewers : [];
@@ -943,11 +937,74 @@ export async function checkUserExistsInSupabase(username) {
   return Array.isArray(rows) && rows.length > 0;
 }
 
-export async function registerUserLoginInSupabase(username) {
+function normalizeGoogleEmail(email) {
+  return `${email || ''}`.trim().toLowerCase();
+}
+
+function mapUserAccountRow(row = {}) {
+  return {
+    username: row.username || '',
+    lastLoginAt: row.last_login_at || null,
+    googleAuthId: row.google_auth_id || null,
+    googleEmail: row.google_email || '',
+    googleName: row.google_name || '',
+    googleAvatarUrl: row.google_avatar_url || '',
+    loginProvider: row.login_provider || '',
+    lastGoogleLoginAt: row.last_google_login_at || null,
+  };
+}
+
+function mapGoogleAccountPayload(profile = {}) {
+  const payload = {};
+  if (profile.authId) payload.google_auth_id = profile.authId;
+  if (profile.email) payload.google_email = normalizeGoogleEmail(profile.email);
+  if ('name' in profile) payload.google_name = profile.name || '';
+  if ('avatarUrl' in profile) payload.google_avatar_url = profile.avatarUrl || '';
+  payload.login_provider = 'google';
+  payload.last_google_login_at = new Date().toISOString();
+  payload.last_login_at = new Date().toISOString();
+  return payload;
+}
+
+export async function fetchUserAccountByGoogleAuthId(authId) {
+  const normalized = `${authId || ''}`.trim();
+  if (!normalized) return null;
+  const rows = await requestSupabase(
+    `user_accounts?google_auth_id=eq.${encodeURIComponent(normalized)}&select=*&limit=1`
+  );
+  return Array.isArray(rows) && rows[0] ? mapUserAccountRow(rows[0]) : null;
+}
+
+export async function fetchUserAccountByGoogleEmail(email) {
+  const normalized = normalizeGoogleEmail(email);
+  if (!normalized) return null;
+  const rows = await requestSupabase(
+    `user_accounts?google_email=eq.${encodeURIComponent(normalized)}&select=*&limit=1`
+  );
+  return Array.isArray(rows) && rows[0] ? mapUserAccountRow(rows[0]) : null;
+}
+
+export async function linkGoogleAccountToUsername(username, profile = {}) {
+  const normalizedUsername = `${username || ''}`.trim();
+  if (!normalizedUsername) throw new Error('ユーザー名がありません。');
+  const payload = mapGoogleAccountPayload(profile);
+  await requestSupabase(`user_accounts?username=eq.${encodeURIComponent(normalizedUsername)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
+  });
+}
+
+export async function registerUserLoginInSupabase(username, profile = null) {
+  const body = {
+    username,
+    last_login_at: new Date().toISOString(),
+  };
+  if (profile) Object.assign(body, mapGoogleAccountPayload(profile));
   await requestSupabase('user_accounts', {
     method: 'POST',
     prefer: 'return=minimal,resolution=merge-duplicates',
-    body: { username, last_login_at: new Date().toISOString() },
+    body,
   });
 }
 
@@ -969,9 +1026,9 @@ export async function saveLockPinToSupabase(username, { enabled, hash, autoLockM
 }
 
 export async function fetchAllUserAccountsFromSupabase() {
-  const rows = await requestSupabase('user_accounts?select=username,last_login_at&order=username.asc');
+  const rows = await requestSupabase('user_accounts?select=username,last_login_at,google_email,google_name,login_provider,last_google_login_at&order=username.asc');
   if (!Array.isArray(rows)) return [];
-  return rows.map(r => ({ username: r.username, lastLoginAt: r.last_login_at || null }));
+  return rows.map(mapUserAccountRow);
 }
 
 export async function deleteUserFromSupabase(username) {
@@ -1869,6 +1926,104 @@ export async function updateSuggestionInSupabase(id, data) {
 export async function deleteSuggestionInSupabase(id) {
   await requestSupabase(`suggestion_box?id=eq.${encodeURIComponent(id)}`, {
     method: 'DELETE', prefer: 'return=minimal',
+  });
+}
+
+// ==================== トラブル報告 ====================
+
+function mapTroubleReportRow(row = {}) {
+  return {
+    id: row.id || '',
+    reportDate: row.report_date || '',
+    reporterUsername: row.reporter_username || '',
+    reporterEmail: row.reporter_email || '',
+    department: row.department || '',
+    mistakeType: row.mistake_type || 'その他',
+    title: row.title || '',
+    occurrenceLocation: row.occurrence_location || '',
+    detail: row.detail || '',
+    cause: row.cause || '',
+    correctiveAction: row.corrective_action || '',
+    preventionAction: row.prevention_action || '',
+    keywords: row.keywords || '',
+    status: row.status || 'submitted',
+    assignee: row.assignee || '',
+    adminNote: row.admin_note || '',
+    createdAt: toTimestamp(row.created_at),
+    updatedAt: toTimestamp(row.updated_at),
+  };
+}
+
+function mapTroubleReportPayload(data = {}) {
+  return {
+    report_date: data.reportDate || new Date().toISOString().slice(0, 10),
+    reporter_username: data.reporterUsername || '',
+    reporter_email: normalizeGoogleEmail(data.reporterEmail || ''),
+    department: data.department || '',
+    mistake_type: data.mistakeType || 'その他',
+    title: data.title || '',
+    occurrence_location: data.occurrenceLocation || '',
+    detail: data.detail || '',
+    cause: data.cause || '',
+    corrective_action: data.correctiveAction || '',
+    prevention_action: data.preventionAction || '',
+    keywords: data.keywords || '',
+    status: data.status || 'submitted',
+    assignee: data.assignee || '',
+    admin_note: data.adminNote || '',
+  };
+}
+
+export async function fetchTroubleReportsFromSupabase({ status = 'open', title = '' } = {}) {
+  const filters = ['select=*'];
+  if (status === 'open') {
+    filters.push('status=in.(submitted,reviewing)');
+  } else if (status && status !== 'all') {
+    filters.push(`status=eq.${encodeURIComponent(status)}`);
+  }
+  if (title) filters.push(`title=ilike.*${encodeURIComponent(title)}*`);
+  filters.push('order=created_at.desc');
+  filters.push('limit=200');
+  const rows = await requestSupabase(`trouble_reports?${filters.join('&')}`, {
+    diagKey: 'trouble.reports',
+    diagLabel: 'トラブル報告',
+    diagScope: status || 'all',
+  });
+  return Array.isArray(rows) ? rows.map(mapTroubleReportRow) : [];
+}
+
+export async function createTroubleReportInSupabase(data) {
+  const id = createSupabaseClientId('trouble');
+  await requestSupabase('trouble_reports', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: { id, ...mapTroubleReportPayload(data) },
+  });
+  return id;
+}
+
+export async function updateTroubleReportInSupabase(id, data) {
+  const payload = {};
+  if ('reportDate' in data) payload.report_date = data.reportDate || new Date().toISOString().slice(0, 10);
+  if ('reporterUsername' in data) payload.reporter_username = data.reporterUsername || '';
+  if ('reporterEmail' in data) payload.reporter_email = normalizeGoogleEmail(data.reporterEmail || '');
+  if ('department' in data) payload.department = data.department || '';
+  if ('mistakeType' in data) payload.mistake_type = data.mistakeType || 'その他';
+  if ('title' in data) payload.title = data.title || '';
+  if ('occurrenceLocation' in data) payload.occurrence_location = data.occurrenceLocation || '';
+  if ('detail' in data) payload.detail = data.detail || '';
+  if ('cause' in data) payload.cause = data.cause || '';
+  if ('correctiveAction' in data) payload.corrective_action = data.correctiveAction || '';
+  if ('preventionAction' in data) payload.prevention_action = data.preventionAction || '';
+  if ('keywords' in data) payload.keywords = data.keywords || '';
+  if ('status' in data) payload.status = data.status || 'submitted';
+  if ('assignee' in data) payload.assignee = data.assignee || '';
+  if ('adminNote' in data) payload.admin_note = data.adminNote || '';
+  if (Object.keys(payload).length === 0) return;
+  await requestSupabase(`trouble_reports?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: payload,
   });
 }
 

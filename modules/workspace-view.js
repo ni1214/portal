@@ -23,6 +23,7 @@ const BOTTOM_NAV_BY_SOURCE = {
   'ft-fab': 'bnav-more',
   'btn-calendar': 'bnav-more',
   'btn-reqboard': 'bnav-more',
+  'btn-trouble-report': 'bnav-more',
   'btn-order-launch': 'bnav-more',
   'btn-property-summary': 'bnav-more',
   'btn-email-assist': 'bnav-more',
@@ -121,8 +122,8 @@ function updateWorkspaceChrome(meta) {
 }
 
 function setActiveNavigation(sourceButtonId = HOME_BUTTON_ID) {
-  document
-    .querySelectorAll('.app-sidebar-item.active, .app-sidebar-util.active, .app-sidebar-invite.active, .bottom-nav-item.active')
+    document
+    .querySelectorAll('.app-sidebar-item.active, .app-sidebar-util.active, .bottom-nav-item.active')
     .forEach(element => element.classList.remove('active'));
 
   const source = document.getElementById(sourceButtonId);

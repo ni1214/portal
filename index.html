@@ -159,6 +159,11 @@
             <span class="app-sidebar-label">部署間依頼</span>
           </button>
 
+          <button class="app-sidebar-item" id="btn-trouble-report" data-home-target="trouble" title="トラブル報告">
+            <span class="app-sidebar-icon"><i class="material-symbols-rounded">report</i></span>
+            <span class="app-sidebar-label">トラブル報告</span>
+          </button>
+
           <div class="app-sidebar-divider"></div>
 
           <button class="app-sidebar-item" id="btn-order-launch" data-home-target="order" title="鋼材発注">
@@ -217,11 +222,6 @@
           <button class="app-sidebar-util" id="btn-read-diagnostics" data-home-target="diagnostics" title="転送診断">
             <span class="app-sidebar-icon"><i class="material-symbols-rounded" aria-hidden="true">speed</i></span>
             <span class="app-sidebar-label">転送診断</span>
-          </button>
-          <div class="app-sidebar-divider"></div>
-          <button class="app-sidebar-invite" id="home-invite-btn" data-home-target="invite" type="button" title="招待コードを入力">
-            <span class="app-sidebar-icon"><i class="material-symbols-rounded" aria-hidden="true">person_add</i></span>
-            <span class="app-sidebar-label">招待コードを入力</span>
           </button>
         </div>
 
@@ -926,53 +926,44 @@
     </div>
   </div>
 
-  <!-- ==================== ユーザー名設定モーダル ==================== -->
-  <div class="modal-overlay" id="auth-invite-modal">
-    <div class="modal-glass auth-access-modal">
-      <h3 class="modal-title"><i class="fa-solid fa-user-check"></i> 招待コード</h3>
-      <p class="modal-desc">このポータルは招待制です。未承認端末での初回利用時は、管理者から共有された4桁の招待コードを入力してください。</p>
-      <div class="form-group">
-        <label class="form-label" for="auth-invite-input">招待コード</label>
-        <input type="password" id="auth-invite-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・" autocomplete="off">
-      </div>
-      <div class="security-error" id="auth-invite-error" hidden></div>
-      <div class="modal-actions">
-        <button class="btn-modal-primary" id="auth-invite-submit">
-          <i class="fa-solid fa-spinner fa-spin" id="auth-invite-spinner" hidden></i>
-          <span>コードを確認する</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
   <div class="modal-overlay" id="username-modal">
     <div class="modal-glass">
       <h3 class="modal-title" id="username-modal-title"><i class="material-symbols-rounded" aria-hidden="true">person</i> ユーザーネームを設定</h3>
       <p class="modal-desc" id="username-modal-desc">あなただけの名前（ID）を入力してください。<br><strong>タスク管理・お気に入り・個人メモ・テーマ設定</strong>がこの名前に紐づいて保存されます。<br><small style="color:var(--text-muted)">同じ名前を別の端末で入力すれば設定が引き継がれます。</small></p>
-      <div class="form-group">
-        <label class="form-label">ユーザーネーム</label>
-        <input type="text" id="username-input" class="form-input" placeholder="例：田中" maxlength="20" autocomplete="off">
-      </div>
-      <div class="username-warn-box">
-        <i class="fa-solid fa-triangle-exclamation"></i>
-        <span>この名前はあなたのIDです。<strong>忘れると設定が復元できません。</strong>他の人と重複しない名前を使ってください。</span>
-      </div>
-      <div class="username-error-box" id="username-error-box" hidden>
-        <i class="fa-solid fa-circle-xmark"></i>
-        <span id="username-error-msg">このユーザーネームはすでに使用されています</span>
-        <button class="btn-reclaim" id="username-reclaim" hidden>これは私のアカウント →</button>
-      </div>
-      <div class="modal-actions">
-        <button class="btn-modal-secondary" id="username-skip" title="スキップするとタスク・個人メモなどが使えません">後で設定する</button>
-        <button class="btn-modal-primary" id="username-submit">
-          <i class="fa-solid fa-spinner fa-spin" id="username-submit-spinner" hidden></i>
-          <span id="username-submit-text">設定して始める</span>
+      <div class="auth-google-area" id="auth-google-area" hidden>
+        <button type="button" class="btn-google-login" id="auth-google-signin">
+          <i class="fa-brands fa-google" aria-hidden="true"></i>
+          <span>Googleでログイン</span>
         </button>
+        <p class="auth-google-note">初回だけ、ログイン後にポータル内の表示名を設定します。</p>
       </div>
-      <div class="username-security-row" id="username-security-row" hidden>
-        <button class="btn-open-security" id="btn-open-security">
-          <i class="material-symbols-rounded" aria-hidden="true">lock</i> PINロックを設定する
-        </button>
+      <div id="username-manual-area">
+        <p class="auth-google-account" id="auth-google-account-text"></p>
+        <div class="form-group">
+          <label class="form-label">表示名</label>
+          <input type="text" id="username-input" class="form-input" placeholder="例：田中" maxlength="20" autocomplete="off">
+        </div>
+        <div class="username-warn-box">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>この名前はポータル内のIDです。既存データを引き継ぐ場合は、これまで使っていたユーザーネームを入力してください。</span>
+        </div>
+        <div class="username-error-box" id="username-error-box" hidden>
+          <i class="fa-solid fa-circle-xmark"></i>
+          <span id="username-error-msg">このユーザーネームはすでに使用されています</span>
+          <button class="btn-reclaim" id="username-reclaim" hidden>これは私のアカウント →</button>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal-secondary" id="username-skip" title="キャンセル">キャンセル</button>
+          <button class="btn-modal-primary" id="username-submit">
+            <i class="fa-solid fa-spinner fa-spin" id="username-submit-spinner" hidden></i>
+            <span id="username-submit-text">設定して始める</span>
+          </button>
+        </div>
+        <div class="username-security-row" id="username-security-row" hidden>
+          <button class="btn-open-security" id="btn-open-security">
+            <i class="material-symbols-rounded" aria-hidden="true">lock</i> PINロックを設定する
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -1177,7 +1168,7 @@
         <div class="guide-section">
           <h4 class="guide-section-title"><span class="guide-icon">🖱️</span> 基本操作</h4>
           <ul class="guide-list">
-            <li><strong>最初の利用時</strong>は <strong>招待コード → ユーザーネーム</strong> の順で進みます。一度その端末で通過してユーザーネームを作ると、次回以降は招待コードを省略できます。PINロック済みの名前は、PCでは再読み込み後の復帰時とユーザー切り替え時、スマホではユーザー切り替え時だけログイン前に4桁PINが必要です。</li>
+            <li><strong>最初の利用時</strong>は <strong>Googleログイン → 表示名設定</strong> の順で進みます。既存データを引き継ぐ場合は、これまで使っていたユーザーネームを表示名として入力します。PINロック済みの名前は、ユーザー切り替え時にログイン前PINが必要です。</li>
             <li>カードをクリック（スマホはタップ）すると、登録されたページが<strong>新しいタブ</strong>で開きます。</li>
             <li><strong>PC：</strong>カードを<strong>右クリック</strong>すると「編集」「削除」メニューが表示されます。</li>
             <li><strong>スマホ：</strong>カードを<strong>長押し</strong>すると「編集」「削除」メニューが表示されます。</li>
@@ -1385,6 +1376,10 @@
           </span>
           <span>部署間の依頼</span>
         </button>
+        <button class="more-drawer-item" data-target="btn-trouble-report">
+          <i class="material-symbols-rounded" aria-hidden="true">report</i>
+          <span>トラブル報告</span>
+        </button>
         <button class="more-drawer-item" data-target="btn-email-assist">
           <i class="fa-solid fa-envelope-open-text"></i>
           <span>メール生成AI</span>
@@ -1581,25 +1576,6 @@
           </div>
         </div>
 
-        <div class="admin-section">
-          <span class="admin-panel-subtitle"><i class="fa-solid fa-key"></i> 招待コード設定</span>
-          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">設定すると、未承認端末ではログイン画面へ進む前に4桁の招待コード入力が必要になります。</p>
-          <div class="admin-invite-row">
-            <input type="password" id="admin-invite-input" class="form-input pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="・・・・" autocomplete="off">
-            <button class="btn-modal-primary" id="admin-invite-save-btn">保存</button>
-            <button class="btn-modal-danger" id="admin-invite-clear-btn" hidden>解除</button>
-          </div>
-          <div class="admin-invite-status-row">
-            <span class="admin-invite-status" id="admin-invite-status">未設定</span>
-            <span class="admin-invite-hint" id="admin-invite-hint">未設定の間は招待コードなしでログイン画面へ進みます。</span>
-          </div>
-          <div class="admin-invite-current-wrap" id="admin-invite-current-wrap" hidden>
-            <span class="admin-invite-current-label">現在のコード</span>
-            <span class="admin-invite-current-code" id="admin-invite-current-code">----</span>
-          </div>
-          <div class="security-error" id="admin-invite-error" hidden></div>
-        </div>
-
         <!-- Supabase 接続設定 -->
         <div class="admin-section">
           <span class="admin-panel-subtitle"><i class="fa-solid fa-database"></i> Supabase 接続設定</span>
@@ -1791,6 +1767,12 @@
 
       <div class="profile-modal-body" id="profile-modal-body">
         <div class="ep-profile-summary" id="ep-profile-summary" aria-live="polite"></div>
+        <div class="auth-account-actions">
+          <button type="button" class="btn-modal-secondary" id="auth-google-signout">
+            <i class="fa-brands fa-google" aria-hidden="true"></i>
+            <span>Googleログアウト</span>
+          </button>
+        </div>
 
         <div class="ep-section-title"><i class="fa-solid fa-user"></i> 個人情報（メールの書き出しに使用）</div>
         <p class="ep-profile-note">所属部署・役割はここで設定します。右上の「👤 名前」からいつでも開けます。</p>
@@ -2172,6 +2154,33 @@
   </div>
 
   <!-- ==================== 部門間依頼・目安箱 モーダル ==================== -->
+  <div class="modal-overlay" id="trouble-report-modal">
+    <div class="trouble-report-inner">
+      <div class="trouble-report-header">
+        <div>
+          <p class="trouble-report-kicker">トラブル報告</p>
+          <h2><i class="material-symbols-rounded" aria-hidden="true">report</i> 発生内容の記録</h2>
+        </div>
+        <button class="trouble-report-close" id="trouble-report-close" title="閉じる">
+          <i class="material-symbols-rounded" aria-hidden="true">close</i>
+        </button>
+      </div>
+
+      <div class="trouble-report-actions" aria-label="トラブル報告の操作">
+        <button type="button" class="trouble-report-action active" data-trouble-tab="new">
+          <span class="trouble-report-action-icon"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i></span>
+          <span><strong>報告する</strong><small>フォームに入力して送信</small></span>
+        </button>
+        <button type="button" class="trouble-report-action" data-trouble-tab="list">
+          <span class="trouble-report-action-icon"><i class="fa-solid fa-table-list" aria-hidden="true"></i></span>
+          <span><strong>一覧を見る</strong><small>対応状況を確認</small></span>
+        </button>
+      </div>
+
+      <div class="trouble-report-content" id="trouble-report-content"></div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="reqboard-modal">
     <div class="reqboard-modal-inner">
 

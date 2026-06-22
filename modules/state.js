@@ -96,14 +96,15 @@ export const state = {
   supabaseUrl: '',
   supabaseApiKey: '',
   supabaseConfigured: false,
-  inviteCodeHash: null,
-  inviteCodePlain: '',
-  inviteCodeRequired: false,
-  inviteCodeVerified: sessionStorage.getItem('portal-invite-ok') === '1',
-  adminInviteConfigured: false,
   pendingLoginUsername: '',
   pendingLoginHash: null,
   pendingLoginFromStored: false,
+  googleAuthSession: null,
+  googleAuthUser: null,
+  googleAuthProfile: null,
+  googleAuthLoading: false,
+  googleAuthLinkedUsername: '',
+  googleAuthLinkRequired: false,
   lockRecommendationPending: false,
   lockRecommendationMessage: '',
   personalSectionOrder: [],
@@ -251,6 +252,15 @@ export const state = {
   reqTaskifyAssignee: '',
   _pendingSuggReply: null,
   lastViewedSuggestionsAt: 0,
+
+  // トラブル報告
+  troubleReports: [],
+  troubleReportsLoaded: false,
+  troubleReportsLoading: false,
+  troubleReportActiveTab: 'new',
+  troubleReportStatusFilter: 'open',
+  troubleReportProjectFilter: '',
+  troubleReportEditingId: null,
 
   // タスク・依頼コメント
   taskComments: {},            // {taskId: [{id, username, body, createdAt}]}

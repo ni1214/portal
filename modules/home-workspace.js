@@ -539,9 +539,6 @@ function handleWorkspaceAction(action) {
     case 'open-diagnostics':
       deps.openReadDiagnosticsModal?.();
       return;
-    case 'open-invite':
-      deps.openInviteCodeModal?.();
-      return;
     default:
       return;
   }
@@ -684,7 +681,7 @@ export function renderHomeMySpacePanel(el) {
     { term: '個別チャット', desc: '1対1のチャットです。 (Tin nhan rieng)' },
     { term: '物件No', desc: '現場の番号（コード）。検索や「物件Noまとめ」で使います。 (Ma cong trinh)' },
     { term: 'ファイル転送', desc: 'ファイルを送る機能。P2P=直接送信、Drive=リンク共有。 (Chuyen tep)' },
-    { term: '招待コード', desc: '初回端末の承認に使う4桁コードです。 (Ma moi)' },
+    { term: 'Googleログイン', desc: '個人データと表示名をGoogleアカウントに紐づけます。 (Dang nhap Google)' },
   ];
 
   glossaryItems.forEach(item => {

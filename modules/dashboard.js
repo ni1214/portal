@@ -32,7 +32,6 @@ const DASH_TARGETS = Object.freeze({
   SHARED_LINKS: 'shared-links',
   FAVORITE_LINKS: 'favorite-links',
   FAVORITES: 'favorites',
-  INVITE: 'invite',
 });
 
 export function initTodayDashboard(d = {}) {
@@ -1331,9 +1330,6 @@ async function openDashboardTarget(target) {
       case DASH_TARGETS.FAVORITES:
         focusHomeFavoriteSection();
         return;
-      case DASH_TARGETS.INVITE:
-        await deps.openInviteCode?.();
-        return;
       default:
         return;
     }
@@ -1376,8 +1372,6 @@ function getDashboardActionLabel(target) {
       return 'サービスを追加';
     case DASH_TARGETS.FAVORITES:
       return 'お気に入りを開く';
-    case DASH_TARGETS.INVITE:
-      return '招待コードを開く';
     default:
       return '画面を開く';
   }

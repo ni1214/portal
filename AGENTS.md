@@ -181,10 +181,14 @@ export function xxxFunction() { ... }
 - runtime は `modules/supabase.js` の REST helper を本線で使う。リアルタイム相当が必要な箇所は機能ごとに polling / 再取得で補う
 - **常時編集モード**: `isEditMode = true` 固定（PIN ゲートなし）
 
-## ユーザー識別（ニックネームログイン）
-- ニックネームを `localStorage('portal-username')` に保存（唯一 localStorage に残すもの）
-- 個人データパス: `users/{username}/data/`, `users/{username}/private_sections/`, `users/{username}/private_cards/`
-- `currentUsername` 変数で管理。`loadPersonalData(username)` で個人 Supabase データを読み込む
+## ユーザー識別（Googleログイン + username互換）
+- 2026-06-22 以降の入口は **Supabase Auth の Google OAuth** を基本にする。
+- 既存データ互換のため、runtime の個人データキーは引き続き `state.currentUsername` / `user_accounts.username` を使う。
+- Google アカウント情報は `user_accounts.google_auth_id` / `google_email` / `google_name` / `google_avatar_url` に紐付ける。
+- 初回 Google ログイン時は、ポータル内表示名（`username`）を作成する。既存データを引き継ぐ場合は、これまでの `username` を入力して Google アカウントにリンクする。
+- 旧 `localStorage('portal-username')` は自動ログインの正としない。Google セッションがない場合は復元せず、Googleログインへ誘導する。
+- `currentUsername` 変数で管理。`loadPersonalData(username)` で個人 Supabase データを読み込む。
+- 本番反映前に Supabase Dashboard の Google provider を有効化し、Google Cloud OAuth の Authorized JavaScript origins / redirect URI を設定すること。未設定のまま push するとログインできない。
 
 ## 個人設定の保存先
 - **Supabase が正**: `user_preferences`（theme / fontSize / favOnly / favorites[] / lastViewedSuggestionsAt など）
@@ -206,7 +210,7 @@ export function xxxFunction() { ... }
 | `users/{name}/private_sections/` | マイセクション |
 | `users/{name}/private_cards/` | マイカード |
 | `users_list/{name}` | ログイン記録・ニックネーム重複チェック |
-| `portal/config` | 管理者PIN・招待コード・Gemini APIキー・departments[]・suggestionBoxViewers[] |
+| `portal/config` | 管理者PIN・Gemini APIキー・departments[]・suggestionBoxViewers[] |
 | `cross_dept_requests/` | 部門間依頼（部署→部署の課題・お願い） |
 | `suggestion_box/` | 目安箱（全員投稿可、閲覧は管理者のみ） |
 | `assigned_tasks/` | タスク割り振り（sharedWith/sharedResponses で共有機能あり） |
@@ -270,6 +274,37 @@ export function xxxFunction() { ... }
 | `sourceRequestFromDept` | string\|null | 元依頼の依頼元部署 |
 | `sourceRequestToDept` | string\|null | 元依頼の依頼先部署 |
 
+### Googleログイン追加フィールド（`user_accounts/{username}`）
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `googleAuthId` | string\|null | Supabase Auth の Google ユーザーID（`auth.users.id`） |
+| `googleEmail` | string | Googleアカウントのメールアドレス（小文字） |
+| `googleName` | string | Googleプロフィール名 |
+| `googleAvatarUrl` | string | Googleプロフィール画像URL |
+| `loginProvider` | string | `'google'` / 旧互換 `'nickname'` |
+| `lastGoogleLoginAt` | timestamp\|null | Googleログイン確認日時 |
+
+### トラブル報告フィールド（`trouble_reports/{reportId}`）
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `reportDate` | date | 発生日 |
+| `reporterUsername` | string | 報告者のポータル表示名 |
+| `reporterEmail` | string | Googleまたはプロフィールのメールアドレス |
+| `department` | string | 報告者部署 |
+| `mistakeType` | string | ミス先（`'現場ミス'` / `'設計ミス'` / `'展開ミス'` / `'工場ミス'` / `'工事ミス'` / `'外注ミス'` / `'その他'`） |
+| `title` | string | 件名（現場名） |
+| `occurrenceLocation` | string | 符号と発生場所 |
+| `detail` | string | 事象（何が起きたか） |
+| `cause` | string | 原因分析（なぜ起きたか） |
+| `correctiveAction` | string | 対処策（どう対処したか） |
+| `preventionAction` | string | 再発防止策 |
+| `keywords` | string | 検索・AI参照用キーワード（例: `#焼付 #付枠`） |
+| `status` | string | `'submitted'` / `'reviewing'` / `'done'` / `'archived'` |
+| `assignee` | string | 対応担当者 |
+| `adminNote` | string | 管理・対応メモ |
+| `createdAt` | timestamp | 投稿日時 |
+| `updatedAt` | timestamp | 更新日時 |
+
 ### 個人プロフィールフィールド（`users/{name}/data/email_profile`）
 | フィールド | 型 | 説明 |
 |---|---|---|
@@ -298,8 +333,7 @@ export function xxxFunction() { ... }
 ## セキュリティ
 - runtime は Supabase。本番で Firebase セキュリティルールは使っていない。アクセス制御は Supabase 側の設定を前提に整理する
 - 管理者PIN: `portal/config.pinHash`（SHA-256ハッシュ）
-- 招待コード: `portal/config.inviteCodeHash`（4桁コードの SHA-256 ハッシュ。URL直打ちの覗き見防止用）
-- 管理画面表示用招待コード: `portal/config.inviteCodePlain`（管理者が現在コードを見返すための表示値）
+- 招待コード機能は 2026-06-23 に廃止。入口制御は Supabase Auth の Googleログインに一本化する。
 - 個人PINロック: `users/{name}/data/lock_pin.hash`
 - ログイン前PIN確認: `users/{name}/data/lock_pin.enabled === true` かつ `hash` があるユーザーのみ、ユーザー名入力後にログイン前PINを要求する
 
@@ -307,9 +341,6 @@ export function xxxFunction() { ... }
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `pinHash` | string\|null | 管理者PINの SHA-256 ハッシュ |
-| `inviteCodeHash` | string\|null | 4桁招待コードの SHA-256 ハッシュ |
-| `inviteCodePlain` | string\|null | 管理画面で再表示するための4桁招待コード |
-| `inviteUpdatedAt` | timestamp\|null | 招待コードの更新日時 |
 | `departments` | string[] | 部署一覧 |
 | `suggestionBoxViewers` | string[] | 目安箱の閲覧許可ユーザー |
 | `missionText` | string | トップの方針テキスト |
@@ -482,7 +513,7 @@ export function xxxFunction() { ... }
 - ヘルプガイド (`#guide-modal` in `index.html`) は大きな機能追加時に更新すること
 - 返答は**日本語**で行うこと
 - 「記録して」と言われた場合は **AGENTS.md** に記載する（MEMORY.md はローカル専用のため Git 経由で別 PC に引き継がれない）
-- 実機テスト用の招待コード・PIN など**秘密値そのものは AGENTS.md に書かない**。必要な場合はローカル専用の `C:\Users\frx\.codex\memory.md` を参照し、ここには「ローカル専用メモを使う」という運用ルールだけ残す
+- 実機テスト用のPINなど**秘密値そのものは AGENTS.md に書かない**。必要な場合はローカル専用の `C:\Users\frx\.codex\memory.md` を参照し、ここには「ローカル専用メモを使う」という運用ルールだけ残す
 
 ## 2026-03-18 Supabase runtime config（shared core）
 
@@ -577,7 +608,7 @@ export function xxxFunction() { ... }
 - 以後の Supabase 操作は Codex 側で SQL editor / テーブル作成まで担当する前提でステップを切る
 - ただし `project URL / anon key / service role key / project ref` などの秘密値は repo に書かない
 - 秘密値はローカル専用の `C:\Users\frx\.codex\memory.md` に保存する
-- まずは `DB 置換` を優先し、`ニックネームログイン + 招待コード + ログイン前 PIN` の UX は維持する
+- まずは `DB 置換` を優先し、移行当時は `ニックネームログイン + 招待コード + ログイン前 PIN` の UX を維持していた。現在の入口は Googleログイン。
 
 ### 参照先
 - 詳細な移行順とフェーズは `docs/supabase-migration-plan.md` に履歴として残す。現在の未完了タスク一覧として扱わない。

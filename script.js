@@ -23,8 +23,7 @@ import {
   migrateToNewUsername,
   showUsernameModal, closeUsernameModal, showUsernameError, hideUsernameError,
   applyUsername, saveUsername,
-  ensureInviteAccess, submitInviteCode, loadInviteCodeConfig, saveInviteCode, clearInviteCode, openInviteCodeModal,
-  loginExistingUsername, restoreStoredUsernameSession,
+  loginExistingUsername,
   loadLockSettings, saveLockSettings,
   startActivityTracking, stopActivityTracking, resetActivityTimer, checkAutoLock,
   setLockPin, removeLockPin,
@@ -198,6 +197,17 @@ import {
   closeSharedLinksModal,
 } from './modules/shared-space.js';
 import { initSharedLinkAi } from './modules/shared-link-ai.js';
+import {
+  initGoogleAuth,
+  restoreGoogleAuthSession,
+  signInWithGoogle,
+  signOutGoogle,
+} from './modules/google-auth.js';
+import {
+  initTroubleReport,
+  openTroubleReportModal,
+  closeTroubleReportModal,
+} from './modules/trouble-report.js';
 
 import {
   isSupabaseSharedCoreEnabled,
@@ -250,7 +260,7 @@ const PORTAL_SHARE_BODY = [
   '社内ポータルはこちらです。',
   PORTAL_SHARE_URL,
   '',
-  '初回アクセス時は招待コードを入力してください。'
+  '初回アクセス時はGoogleでログインしてください。'
 ].join('\n');
 
 
@@ -600,6 +610,20 @@ function openFileTransferWorkspace() {
   });
 }
 
+function openTroubleReportWorkspace(initialTab = 'new') {
+  return openPortalWorkspace({
+    elementId: 'trouble-report-modal',
+    openAction: () => openTroubleReportModal(initialTab),
+    closeAction: closeTroubleReportModal,
+    closeSelector: '#trouble-report-close',
+    route: 'trouble',
+    title: 'トラブル報告',
+    subtitle: '報告フォームと対応状況一覧を確認します。',
+    icon: 'report',
+    sourceButtonId: 'btn-trouble-report',
+  });
+}
+
 function focusWeatherWidget() {
   const widget = document.getElementById('weather-widget');
   if (!widget) return;
@@ -700,7 +724,7 @@ function configureSidebarNavigation() {
     anchor = item;
   });
 
-  ['btn-favorites-only', 'btn-my-category', 'btn-read-diagnostics', 'home-invite-btn'].forEach(id => {
+  ['btn-favorites-only', 'btn-my-category', 'btn-read-diagnostics'].forEach(id => {
     const item = get(id);
     if (item) item.hidden = true;
   });
@@ -842,14 +866,6 @@ initTodayDashboard({
     toggleFavorite(cardId || '');
   },
   reorderFavoriteLinks,
-  openInviteCode: async () => {
-    try {
-      await loadInviteCodeConfig();
-    } catch (err) {
-      console.error('招待コード設定の読込に失敗しました:', err);
-    }
-    openInviteCodeModal();
-  },
 });
 initReadDiagnostics();
 
@@ -900,6 +916,9 @@ initSharedLinkAi({
   addCard,
   ensureSharedCardsLoaded,
   renderSharedLinksBrowser,
+});
+initTroubleReport({
+  promptUsernameFor,
 });
 
 initPropertySummary({
@@ -2166,6 +2185,9 @@ function buildLinkCard(card, isFav = false, gradient = '') {
   if (card.url === 'solar:open') {
     a.href = '#';
     a.dataset.solarOpen = '1';
+  } else if (card.url === 'portal:trouble-report' || card.label === 'トラブル報告') {
+    a.href = '#';
+    a.dataset.portalAction = 'trouble-report';
   } else {
     a.href = card.url || '#';
     if (card.url && card.url !== '#') {
@@ -2211,6 +2233,13 @@ function buildLinkCard(card, isFav = false, gradient = '') {
     e.stopPropagation();
     toggleFavorite(card.id);
   });
+
+  if (a.dataset.portalAction === 'trouble-report') {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      void openTroubleReportWorkspace('new');
+    });
+  }
 
   if (!isFav) {
     a.addEventListener('contextmenu', e => {
@@ -3474,9 +3503,6 @@ function closeSettingsPanel() {
 
 // ========== 初期化 ==========
 async function runInitialPortalBootstrap(storedUsername) {
-  const inviteOk = await ensureInviteAccess();
-  if (!inviteOk) return;
-
   try {
     if (!isSupabaseSharedCoreEnabled()) {
       await migrateIfNeeded();
@@ -3491,17 +3517,22 @@ async function runInitialPortalBootstrap(storedUsername) {
     console.error('Runtime data bootstrap error:', err);
   }
 
+  const googleRestored = await restoreGoogleAuthSession();
+  if (googleRestored) {
+    return;
+  }
+
   if (!storedUsername) {
     const hint = document.getElementById('area-personal-hint-floating');
     if (hint) hint.hidden = false;
     renderTodoSection();
+    showUsernameModal(false);
     return;
   }
 
-  const restored = await restoreStoredUsernameSession(storedUsername);
-  if (!restored && !state.currentUsername) {
-    renderTodoSection();
-  }
+  localStorage.removeItem('portal-username');
+  renderTodoSection();
+  showUsernameModal(false);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -3618,6 +3649,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.sharedLinksQuery = '';
     void openSharedLinksWorkspace();
   });
+  document.getElementById('btn-trouble-report')?.addEventListener('click', () => {
+    void openTroubleReportWorkspace('new');
+  });
   false && document.getElementById('btn-my-category').addEventListener('click', () => {
     if (!state.currentUsername) {
       promptUsernameFor('繝槭う繧ｫ繝・ざ繝ｪ繝ｼ');
@@ -3636,20 +3670,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     showUsernameModal(true);
   });
   updateUsernameDisplay();
-
-  document.getElementById('auth-invite-submit').addEventListener('click', async () => {
-    await submitInviteCode(document.getElementById('auth-invite-input').value);
-  });
-  document.getElementById('auth-invite-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('auth-invite-submit').click();
-  });
-  document.getElementById('home-invite-btn')?.addEventListener('click', async () => {
-    try {
-      await loadInviteCodeConfig();
-    } catch (err) {
-      console.error('招待コード設定の読込に失敗しました:', err);
-    }
-    openInviteCodeModal();
+  await initGoogleAuth({
+    applyUsername,
+    showUsernameModal,
+    updateUsernameDisplay,
   });
 
   document.getElementById('auth-prelogin-submit').addEventListener('click', async () => {
@@ -3660,6 +3684,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('auth-prelogin-cancel').addEventListener('click', async () => {
     await cancelPreloginPin();
+  });
+  document.getElementById('auth-google-signin')?.addEventListener('click', async () => {
+    await signInWithGoogle();
+  });
+  document.getElementById('auth-google-signout')?.addEventListener('click', async () => {
+    await signOutGoogle();
   });
 
   document.getElementById('username-submit').addEventListener('click', () => {
@@ -3676,6 +3706,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (name) await loginExistingUsername(name);
   });
   document.getElementById('username-skip').addEventListener('click', () => {
+    if (state.googleAuthLinkRequired) {
+      void signOutGoogle();
+      return;
+    }
     closeUsernameModal();
     // スキップ後：ユーザーネーム未設定バナーを表示
     if (!state.currentUsername) {
@@ -3683,24 +3717,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (hint) hint.hidden = false;
     }
   });
-
-  const inviteOk = await ensureInviteAccess();
-  if (!inviteOk) return;
-
-  // Runtime data bootstrap
-  try {
-    if (!isSupabaseSharedCoreEnabled()) {
-      await migrateIfNeeded();
-      await migrateCategories();
-      await migrateAddBox();
-    }
-    await loadCategories();
-    await subscribeNotices();
-    renderAllSections();
-    renderFavorites();
-  } catch (err) {
-    console.error('Runtime data bootstrap error:', err);
-  }
 
   // お気に入りのみ表示ボタン
   document.getElementById('btn-favorites-only').addEventListener('click', toggleFavoritesOnly);
@@ -3770,7 +3786,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       state.isAdmin = true;
       document.getElementById('admin-auth-area').hidden  = true;
       document.getElementById('admin-panel-area').hidden = false;
-      await loadInviteCodeConfig();
       loadUsersForAdmin();
       renderAdminSuggBoxSection();
       // ミッションテキストを入力欄に反映
@@ -3796,7 +3811,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     await setPIN(pin);
     document.getElementById('admin-setup-area').hidden = true;
     document.getElementById('admin-panel-area').hidden = false;
-    await loadInviteCodeConfig();
     loadUsersForAdmin();
     renderAdminSuggBoxSection();
     const mInput = document.getElementById('admin-mission-input');
@@ -3804,32 +3818,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderSupabaseAdminState();
   });
   document.getElementById('admin-setup-cancel').addEventListener('click', closeAdminModal);
-  document.getElementById('admin-invite-save-btn').addEventListener('click', async () => {
-    const input = document.getElementById('admin-invite-input');
-    const msgEl = document.getElementById('admin-invite-error');
-    msgEl.hidden = true;
-    try {
-      await saveInviteCode(input.value);
-    } catch (err) {
-      msgEl.textContent = err?.message || '招待コードの保存に失敗しました。';
-      msgEl.hidden = false;
-    }
-  });
-  document.getElementById('admin-invite-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('admin-invite-save-btn').click();
-  });
-  document.getElementById('admin-invite-clear-btn').addEventListener('click', async () => {
-    const msgEl = document.getElementById('admin-invite-error');
-    msgEl.hidden = true;
-    if (!await showConfirm('招待コードを解除しますか？', { danger: true })) return;
-    try {
-      await clearInviteCode();
-    } catch (err) {
-      msgEl.textContent = err?.message || '招待コードの解除に失敗しました。';
-      msgEl.hidden = false;
-    }
-  });
-
   // PIN設定
   document.getElementById('admin-supabase-save-btn').addEventListener('click', async () => {
     const btn = document.getElementById('admin-supabase-save-btn');

@@ -1796,6 +1796,49 @@ body::after {
 
 .form-input::placeholder { color: var(--text-muted); }
 
+.auth-google-area {
+  display: grid;
+  gap: 12px;
+}
+
+.btn-google-login {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color var(--transition-base), background var(--transition-base), transform var(--transition-base);
+}
+
+.btn-google-login:hover,
+.btn-google-login:focus-visible {
+  border-color: color-mix(in srgb, var(--accent-blue) 48%, var(--border-glass));
+  background: var(--bg-card-hover);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.auth-google-note,
+.auth-google-account {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.auth-account-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
+
 /* ===========================
  select / option
  color-scheme UI dark
@@ -27168,6 +27211,7 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
 .portal-workspace-mode .reqboard-modal-header,
 .portal-workspace-mode .email-modal-header,
 .portal-workspace-mode .profile-modal-header,
+.portal-workspace-mode .trouble-report-header,
 .portal-workspace-mode .shared-links-head,
 .portal-workspace-mode .notice-center-header,
 .portal-workspace-mode .ft-panel-header,
@@ -27201,6 +27245,17 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   opacity: 1;
   box-shadow: none;
   border-radius: var(--radius-md);
+}
+
+.portal-workspace-mode .trouble-report-inner {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  min-height: calc(100dvh - var(--header-height) - 48px);
+  overflow: visible;
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  transform: none;
 }
 
 .chat-panel.portal-workspace-mode .chat-body,
@@ -29214,5 +29269,321 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   .chat-workspace-action-body small,
   .ft-workspace-action-body small {
     font-size: 0.68rem;
+  }
+}
+
+/* ===== trouble report workspace ===== */
+.trouble-report-inner {
+  width: min(980px, 94vw);
+  max-height: 92vh;
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-lg);
+}
+
+.trouble-report-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.trouble-report-kicker {
+  margin: 0 0 4px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.trouble-report-header h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.15rem;
+}
+
+.trouble-report-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.trouble-report-close:hover,
+.trouble-report-close:focus-visible {
+  color: var(--text-primary);
+  border-color: var(--border-glass-hover);
+  background: var(--bg-card);
+  outline: none;
+}
+
+.trouble-report-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.trouble-report-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 72px;
+  padding: 12px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.trouble-report-action:hover,
+.trouble-report-action:focus-visible,
+.trouble-report-action.active {
+  border-color: color-mix(in srgb, var(--accent-cyan) 48%, var(--border-glass));
+  background: color-mix(in srgb, var(--accent-cyan) 9%, var(--bg-card));
+  outline: none;
+}
+
+.trouble-report-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent-blue) 13%, transparent);
+  color: var(--accent-blue);
+}
+
+.trouble-report-action span:last-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.trouble-report-action strong,
+.trouble-report-action small {
+  overflow-wrap: anywhere;
+}
+
+.trouble-report-action strong {
+  font-size: 0.95rem;
+}
+
+.trouble-report-action small {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.trouble-report-content {
+  min-width: 0;
+}
+
+.trouble-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.trouble-form .form-group {
+  margin-bottom: 0;
+}
+
+.trouble-form-wide {
+  grid-column: 1 / -1;
+}
+
+.trouble-form textarea.form-input {
+  min-height: 92px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.trouble-form-footer,
+.trouble-filter-row,
+.trouble-item-foot,
+.trouble-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.trouble-form-footer {
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-glass);
+}
+
+.trouble-reporter {
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.trouble-filter-row {
+  margin-bottom: 14px;
+}
+
+.trouble-filter-row .form-input {
+  max-width: 220px;
+}
+
+.trouble-filter-row #trouble-project-filter {
+  max-width: 280px;
+}
+
+.trouble-list {
+  display: grid;
+  gap: 12px;
+}
+
+.trouble-item,
+.trouble-empty {
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+}
+
+.trouble-item {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.trouble-item-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trouble-item-title {
+  color: var(--text-primary);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.trouble-item-meta,
+.trouble-item-foot {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.trouble-item-body {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.trouble-item-tags {
+  margin: -2px 0 0;
+  color: var(--accent-cyan);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.trouble-item-foot {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.trouble-item-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.trouble-status {
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border: 1px solid var(--border-glass);
+  border-radius: 999px;
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.trouble-status--submitted {
+  border-color: color-mix(in srgb, var(--accent-orange) 45%, var(--border-glass));
+  color: var(--accent-orange);
+}
+
+.trouble-status--reviewing {
+  border-color: color-mix(in srgb, var(--accent-blue) 45%, var(--border-glass));
+  color: var(--accent-blue);
+}
+
+.trouble-status--done {
+  border-color: color-mix(in srgb, var(--accent-cyan) 45%, var(--border-glass));
+  color: var(--accent-cyan);
+}
+
+.trouble-status--archived {
+  color: var(--text-muted);
+}
+
+.trouble-empty {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  padding: 24px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .trouble-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .trouble-report-inner {
+    width: min(100%, 94vw);
+    padding: 16px;
+  }
+
+  .trouble-report-actions,
+  .trouble-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trouble-form-footer,
+  .trouble-filter-row,
+  .trouble-item-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .trouble-filter-row .form-input,
+  .trouble-filter-row #trouble-project-filter {
+    max-width: none;
+  }
+
+  .trouble-form-footer .btn-modal-primary,
+  .trouble-filter-row .btn-modal-secondary {
+    justify-content: center;
+    width: 100%;
   }
 }

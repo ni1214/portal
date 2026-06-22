@@ -2,9 +2,7 @@
 import { db, doc, getDoc, setDoc, getDocs, updateDoc, collection, query, where, writeBatch, serverTimestamp } from './config.js';
 import { state } from './state.js';
 import {
-  applySupabaseRuntimeConfig,
   isSupabaseSharedCoreEnabled,
-  loadSupabaseConfigFromStorage,
   fetchPortalConfigFromSupabase,
   savePortalConfigToSupabase,
   checkUserExistsInSupabase,
@@ -14,6 +12,7 @@ import {
   fetchAllUserAccountsFromSupabase,
   deleteUserFromSupabase,
   migrateUsernameInSupabase,
+  linkGoogleAccountToUsername,
   fetchPrivateSectionsFromSupabase,
   fetchPrivateCardsFromSupabase,
   createPrivateSectionInSupabase,
@@ -26,13 +25,7 @@ import { showToast, showConfirm } from './notify.js';
 // Cross-module function references (set by script.js after all modules load)
 export const deps = {};
 
-let inviteGateResolver = null;
 let preLoginContext = null;
-const INVITE_SESSION_KEY = 'portal-invite-ok';
-const INVITE_TRUST_KEY = 'portal-invite-trusted';
-// Trusted-device invite access should expire to reduce shared-device risk.
-// Keep UX: once trusted, it stays trusted for a while without re-entering the code.
-const INVITE_TRUST_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 // ========== PIN 認証 ==========
 const PIN_SALT = 'seisan-portal-v1';
@@ -80,250 +73,12 @@ export async function isPINConfigured() {
   return snap.exists() && !!snap.data().pinHash;
 }
 
-export async function loadInviteCodeConfig() {
-  // まずlocalStorageからSupabase接続情報を復元
-  const stored = loadSupabaseConfigFromStorage();
-  if (stored) applySupabaseRuntimeConfig(stored);
-  if (isSupabaseSharedCoreEnabled()) {
-    try {
-      const data = await fetchPortalConfigFromSupabase();
-      state.inviteCodeHash = data.inviteCodeHash || null;
-      state.inviteCodePlain = data.inviteCodePlain || '';
-      state.inviteCodeRequired = !!state.inviteCodeHash;
-      state.adminInviteConfigured = state.inviteCodeRequired;
-      updateInviteAdminState();
-      return data;
-    } catch (err) {
-      console.error('Supabase invite config load error:', err);
-      showToast('招待コード設定を読み込めませんでした。', 'error');
-      return {};
-    }
-  }
-  return {};
-}
-
-function getInviteTrustExpiryMs() {
-  const raw = localStorage.getItem(INVITE_TRUST_KEY);
-  if (!raw) return 0;
-
-  // Back-compat: legacy value was "1" (never expired). Migrate to TTL on first read.
-  if (raw === '1') {
-    const exp = Date.now() + INVITE_TRUST_TTL_MS;
-    localStorage.setItem(INVITE_TRUST_KEY, String(exp));
-    return exp;
-  }
-
-  const exp = Number(raw);
-  return Number.isFinite(exp) ? exp : 0;
-}
-
-function hasTrustedInviteAccess() {
-  const exp = getInviteTrustExpiryMs();
-  if (!exp) return false;
-  if (Date.now() > exp) {
-    localStorage.removeItem(INVITE_TRUST_KEY);
-    return false;
-  }
-  return true;
-}
-
-function markInviteSessionVerified() {
-  state.inviteCodeVerified = true;
-  sessionStorage.setItem(INVITE_SESSION_KEY, '1');
-}
-
-function trustInviteAccessForDevice() {
-  markInviteSessionVerified();
-  localStorage.setItem(INVITE_TRUST_KEY, String(Date.now() + INVITE_TRUST_TTL_MS));
-}
-
-function refreshInviteVerifiedState() {
-  state.inviteCodeVerified = sessionStorage.getItem(INVITE_SESSION_KEY) === '1' || hasTrustedInviteAccess();
-}
-
 function isMobilePreloginExemptDevice() {
   if (typeof window === 'undefined') return false;
   const isNarrowViewport = window.matchMedia?.('(max-width: 768px)')?.matches ?? window.innerWidth <= 768;
   const hasTouchLikeInput = (navigator.maxTouchPoints || 0) > 0
     || (window.matchMedia?.('(pointer: coarse)')?.matches ?? false);
   return isNarrowViewport && hasTouchLikeInput;
-}
-
-function hideInviteError() {
-  const box = document.getElementById('auth-invite-error');
-  if (box) {
-    box.hidden = true;
-    box.textContent = '';
-  }
-}
-
-function showInviteError(message) {
-  const box = document.getElementById('auth-invite-error');
-  if (!box) return;
-  box.textContent = message;
-  box.hidden = false;
-}
-
-function setInviteSubmitBusy(isBusy) {
-  const submitBtn = document.getElementById('auth-invite-submit');
-  const spinner = document.getElementById('auth-invite-spinner');
-  if (submitBtn) submitBtn.disabled = isBusy;
-  if (spinner) spinner.hidden = !isBusy;
-}
-
-function openInviteModal() {
-  const modal = document.getElementById('auth-invite-modal');
-  const input = document.getElementById('auth-invite-input');
-  if (!modal || !input) return;
-  input.value = '';
-  hideInviteError();
-  setInviteSubmitBusy(false);
-  modal.classList.add('visible');
-  setTimeout(() => input.focus(), 80);
-}
-
-export function openInviteCodeModal() {
-  openInviteModal();
-}
-
-export function closeInviteModal() {
-  document.getElementById('auth-invite-modal')?.classList.remove('visible');
-}
-
-export async function ensureInviteAccess() {
-  try {
-    await loadInviteCodeConfig();
-  } catch (err) {
-    console.error('招待コード設定の読込に失敗しました:', err);
-    openInviteModal();
-    showInviteError('招待コード設定を読めませんでした。再読み込みしてください。');
-    setInviteSubmitBusy(true);
-    return false;
-  }
-
-  refreshInviteVerifiedState();
-
-  if (!state.inviteCodeRequired) {
-    state.inviteCodeVerified = true;
-    sessionStorage.removeItem(INVITE_SESSION_KEY);
-    closeInviteModal();
-    return true;
-  }
-
-  if (state.inviteCodeVerified) {
-    markInviteSessionVerified();
-    closeInviteModal();
-    return true;
-  }
-
-  openInviteModal();
-  return new Promise(resolve => {
-    inviteGateResolver = resolve;
-  });
-}
-
-export async function submitInviteCode(code) {
-  const normalized = `${code || ''}`.trim();
-  if (!/^\d{4}$/.test(normalized)) {
-    showInviteError('4桁の招待コードを入力してください。');
-    return false;
-  }
-  if (!state.inviteCodeHash) {
-    showInviteError('招待コード設定が読み込めていません。再読み込みしてください。');
-    return false;
-  }
-
-  setInviteSubmitBusy(true);
-  hideInviteError();
-  try {
-    const hash = await hashPIN(normalized);
-    if (hash !== state.inviteCodeHash) {
-      showInviteError('招待コードが違います。');
-      return false;
-    }
-    markInviteSessionVerified();
-    closeInviteModal();
-    if (inviteGateResolver) {
-      inviteGateResolver(true);
-      inviteGateResolver = null;
-    }
-    return true;
-  } finally {
-    setInviteSubmitBusy(false);
-  }
-}
-
-function updateInviteAdminState(message = '') {
-  const statusEl = document.getElementById('admin-invite-status');
-  const hintEl = document.getElementById('admin-invite-hint');
-  const clearBtn = document.getElementById('admin-invite-clear-btn');
-  const input = document.getElementById('admin-invite-input');
-  const currentWrap = document.getElementById('admin-invite-current-wrap');
-  const currentCode = document.getElementById('admin-invite-current-code');
-  if (statusEl) {
-    statusEl.textContent = state.adminInviteConfigured ? '設定済み' : '未設定';
-    statusEl.classList.toggle('is-configured', state.adminInviteConfigured);
-  }
-  if (hintEl) {
-    hintEl.textContent = message || (state.adminInviteConfigured
-      ? (state.inviteCodePlain
-        ? '現在は未承認端末のみ、最初に招待コード入力後ログイン画面へ進みます。'
-        : '現在のコードは旧設定のため再表示できません。次回保存分からここに表示されます。')
-      : '未設定の間は招待コードなしでログイン画面へ進みます。');
-  }
-  if (clearBtn) clearBtn.hidden = !state.adminInviteConfigured;
-  if (input) input.value = '';
-  if (currentWrap) currentWrap.hidden = !state.adminInviteConfigured;
-  if (currentCode) currentCode.textContent = state.inviteCodePlain || '再表示不可';
-}
-
-export async function saveInviteCode(code) {
-  const normalized = `${code || ''}`.trim();
-  if (!/^\d{4}$/.test(normalized)) {
-    throw new Error('4桁の数字を入力してください。');
-  }
-  const hash = await hashPIN(normalized);
-  if (isSupabaseSharedCoreEnabled()) {
-    await savePortalConfigToSupabase({
-      inviteCodeHash: hash,
-      inviteCodePlain: normalized,
-      inviteUpdatedAt: new Date().toISOString(),
-    });
-  } else {
-    await setDoc(doc(db, 'portal', 'config'), {
-      inviteCodeHash: hash,
-      inviteCodePlain: normalized,
-      inviteUpdatedAt: serverTimestamp(),
-    }, { merge: true });
-  }
-  state.inviteCodeHash = hash;
-  state.inviteCodePlain = normalized;
-  state.inviteCodeRequired = true;
-  state.adminInviteConfigured = true;
-  updateInviteAdminState('招待コードを保存しました。未承認端末の次回アクセスから有効です。');
-}
-
-export async function clearInviteCode() {
-  if (isSupabaseSharedCoreEnabled()) {
-    await savePortalConfigToSupabase({
-      inviteCodeHash: null,
-      inviteCodePlain: null,
-      inviteUpdatedAt: new Date().toISOString(),
-    });
-  } else {
-    await setDoc(doc(db, 'portal', 'config'), {
-      inviteCodeHash: null,
-      inviteCodePlain: null,
-      inviteUpdatedAt: serverTimestamp(),
-    }, { merge: true });
-  }
-  state.inviteCodeHash = null;
-  state.inviteCodePlain = '';
-  state.inviteCodeRequired = false;
-  state.adminInviteConfigured = false;
-  state.inviteCodeVerified = true;
-  sessionStorage.removeItem(INVITE_SESSION_KEY);
-  updateInviteAdminState('招待コードを解除しました。URLを知っていればログイン画面へ進めます。');
 }
 
 // ========== ユーザー（ニックネーム）管理 ==========
@@ -455,6 +210,30 @@ export async function migrateToNewUsername(oldName, newName) {
 
 export function showUsernameModal(isEdit = false) {
   const input = document.getElementById('username-input');
+  const googleArea = document.getElementById('auth-google-area');
+  const manualArea = document.getElementById('username-manual-area');
+  const accountText = document.getElementById('auth-google-account-text');
+  const googleOnly = !state.googleAuthUser;
+  if (googleArea) googleArea.hidden = !googleOnly;
+  if (manualArea) manualArea.hidden = googleOnly;
+  if (accountText) {
+    const profile = state.googleAuthProfile || {};
+    accountText.textContent = profile.email
+      ? `ログイン中: ${profile.email}`
+      : '';
+  }
+
+  if (googleOnly) {
+    input.value = '';
+    document.getElementById('username-modal').classList.add('visible');
+    document.getElementById('username-modal-title').innerHTML =
+      '<i class="fa-brands fa-google"></i> Googleログイン';
+    document.getElementById('username-modal-desc').innerHTML =
+      'Googleアカウントで本人確認してからポータルを利用します。';
+    hideUsernameError();
+    return;
+  }
+
   input.value = (isEdit && state.currentUsername) ? state.currentUsername : '';
   document.getElementById('username-modal').classList.add('visible');
   // セキュリティ設定ボタンはログイン済みのときのみ表示
@@ -468,6 +247,13 @@ export function showUsernameModal(isEdit = false) {
     document.getElementById('username-modal-desc').innerHTML =
       '新しいユーザーネームを入力してください。<br>チャット・タスク・マイカテゴリなどのデータはすべて引き継がれます。';
     document.getElementById('username-submit-text').textContent = '変更する';
+    document.getElementById('username-skip').textContent = 'キャンセル';
+  } else if (state.googleAuthLinkRequired) {
+    document.getElementById('username-modal-title').innerHTML =
+      '<i class="fa-solid fa-user-circle"></i> 表示名を設定';
+    document.getElementById('username-modal-desc').innerHTML =
+      'Googleログインが完了しました。ポータル内で使う表示名を設定してください。既存データを引き継ぐ場合は、これまでのユーザーネームを入力します。';
+    document.getElementById('username-submit-text').textContent = '設定して始める';
     document.getElementById('username-skip').textContent = 'キャンセル';
   } else {
     document.getElementById('username-modal-title').innerHTML =
@@ -502,11 +288,13 @@ export async function applyUsername(name, options = {}) {
   const isSwitch = !!state.currentUsername && state.currentUsername !== name;
   state.currentUsername = name;
   localStorage.setItem('portal-username', name);
-  if (state.inviteCodeRequired && state.inviteCodeVerified) {
-    trustInviteAccessForDevice();
-  }
   updateUsernameDisplay();
   closeUsernameModal();
+  if (state.googleAuthLinkRequired && state.googleAuthProfile && !options.skipGoogleLink) {
+    await linkGoogleAccountToUsername(name, state.googleAuthProfile);
+    state.googleAuthLinkedUsername = name;
+    state.googleAuthLinkRequired = false;
+  }
   await deps.loadPersonalData?.(name, isSwitch); // from personal.js
   deps.renderAllSections?.(); // from render.js
   if (recommendLockSetup) {
@@ -563,7 +351,7 @@ export async function saveUsername(name) {
 
   if (!state.currentUsername) {
     submitText.textContent = 'Saving...';
-    await registerUserLogin(name);
+    await registerUserLogin(name, state.googleAuthProfile || null);
   }
 
   submitBtn.disabled = false;
@@ -704,8 +492,10 @@ export async function loginExistingUsername(name, options = {}) {
   const normalized = `${name || ''}`.trim();
   if (!normalized) return false;
   const requirePreloginPin = options.requirePreloginPin ?? (
-    !!state.currentUsername &&
-    state.currentUsername !== normalized &&
+    (
+      state.googleAuthLinkRequired ||
+      (!!state.currentUsername && state.currentUsername !== normalized)
+    ) &&
     !options.fromStored
   );
   if (isSupabaseSharedCoreEnabled()) {
@@ -1154,9 +944,6 @@ export async function openAdminModal() {
 
 export function closeAdminModal() {
   document.getElementById('admin-modal').classList.remove('visible');
-  state.inviteCodePlain = '';
-  const currentCode = document.getElementById('admin-invite-current-code');
-  if (currentCode) currentCode.textContent = '';
 }
 
 export async function deleteUserData(username) {
@@ -1349,11 +1136,11 @@ export function updateUsernameDisplay() {
 }
 
 // Supabase の users_list にログイン記録（管理者が全員を把握できる）
-export async function registerUserLogin(username) {
+export async function registerUserLogin(username, authProfile = null) {
   if (!username) return false;
   try {
     if (isSupabaseSharedCoreEnabled()) {
-      await registerUserLoginInSupabase(username);
+      await registerUserLoginInSupabase(username, authProfile);
     } else {
       const ref  = doc(db, 'users_list', username);
       const snap = await getDoc(ref);

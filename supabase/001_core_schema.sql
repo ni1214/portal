@@ -20,9 +20,6 @@ $$;
 create table if not exists public.portal_config (
   id integer primary key default 1 check (id = 1),
   pin_hash text,
-  invite_code_hash text,
-  invite_code_plain text,
-  invite_updated_at timestamptz,
   gemini_api_key text,
   departments text[] not null default '{}',
   suggestion_box_viewers text[] not null default '{}',
@@ -39,7 +36,13 @@ create table if not exists public.user_accounts (
   username text primary key,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
-  last_login_at timestamptz
+  last_login_at timestamptz,
+  google_auth_id text,
+  google_email text not null default '',
+  google_name text not null default '',
+  google_avatar_url text not null default '',
+  login_provider text not null default 'nickname',
+  last_google_login_at timestamptz
 );
 
 create table if not exists public.user_profiles (
@@ -209,6 +212,29 @@ create table if not exists public.assigned_tasks (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.trouble_reports (
+  id text primary key,
+  report_date date not null default current_date,
+  reporter_username text not null default '',
+  reporter_email text not null default '',
+  department text not null default '',
+  mistake_type text not null default 'その他'
+    check (mistake_type in ('現場ミス', '設計ミス', '展開ミス', '工場ミス', '工事ミス', '外注ミス', 'その他')),
+  title text not null default '',
+  occurrence_location text not null default '',
+  detail text not null default '',
+  cause text not null default '',
+  corrective_action text not null default '',
+  prevention_action text not null default '',
+  keywords text not null default '',
+  status text not null default 'submitted'
+    check (status in ('submitted', 'reviewing', 'done', 'archived')),
+  assignee text not null default '',
+  admin_note text not null default '',
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
 create table if not exists public.private_sections (
   id text primary key,
   username text not null references public.user_accounts(username) on delete cascade,
@@ -347,6 +373,14 @@ create table if not exists public.public_attendance_months (
 create index if not exists idx_public_categories_order
   on public.public_categories(order_index, label);
 
+create unique index if not exists idx_user_accounts_google_auth_id
+  on public.user_accounts(google_auth_id)
+  where google_auth_id is not null;
+
+create unique index if not exists idx_user_accounts_google_email
+  on public.user_accounts(google_email)
+  where google_email <> '';
+
 create index if not exists idx_public_cards_category_order
   on public.public_cards(category_id, category_order, order_index);
 
@@ -391,6 +425,18 @@ create index if not exists idx_assigned_tasks_source_request
 
 create index if not exists idx_assigned_tasks_shared_with
   on public.assigned_tasks using gin (shared_with);
+
+create index if not exists idx_trouble_reports_status_created
+  on public.trouble_reports(status, created_at desc);
+
+create index if not exists idx_trouble_reports_title_created
+  on public.trouble_reports(title, created_at desc);
+
+create index if not exists idx_trouble_reports_mistake_type_created
+  on public.trouble_reports(mistake_type, created_at desc);
+
+create index if not exists idx_trouble_reports_reporter_created
+  on public.trouble_reports(reporter_username, created_at desc);
 
 create index if not exists idx_user_email_contacts_user_created
   on public.user_email_contacts(username, created_at);
@@ -509,6 +555,12 @@ execute function public.set_updated_at();
 drop trigger if exists trg_assigned_tasks_updated_at on public.assigned_tasks;
 create trigger trg_assigned_tasks_updated_at
 before update on public.assigned_tasks
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists trg_trouble_reports_updated_at on public.trouble_reports;
+create trigger trg_trouble_reports_updated_at
+before update on public.trouble_reports
 for each row
 execute function public.set_updated_at();
 
