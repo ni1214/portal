@@ -4,6 +4,7 @@ import {
   fetchAttendanceSitesFromSupabase,
   createAttendanceSiteInSupabase,
   updateAttendanceSiteInSupabase,
+  fetchPortalConfigFromSupabase,
   fetchTroubleReportsFromSupabase,
   createTroubleReportInSupabase,
   updateTroubleReportInSupabase,
@@ -41,6 +42,33 @@ const KNOWN_KEYWORD_TERMS = [
   '納期', '短納期', '再製作', '差し替え', '外注', '工場', '現場',
   '符号', '取付', '加工', '塗装', '曲げ', '切断', '穴あけ',
 ];
+
+const TROUBLE_NATURAL_EXAMPLES = [
+  {
+    key: 'factory',
+    label: '工場ミス例',
+    text: '物件No 6320、吉野伊勢工網戸。1SD-14A-S棟-1Fの付枠で、焼付色が図面指定と違う状態で製作されていました。原因は変更図の色指定を工場へ伝えた後、製作図の差し替え確認が漏れたためです。現場には再製作で対応予定です。再発防止として変更図受領時に色指定をチェックリスト化し、工場連絡後に製作図の版数確認をします。',
+  },
+  {
+    key: 'design',
+    label: '設計ミス例',
+    text: '物件No 6320、吉野伊勢工場。2F南面のAW-12で、施工図の開口寸法が構造図と合っておらず、現場確認時に納まりが取れないことが分かりました。原因は最新構造図への差し替え後に、展開図側の寸法確認が不足していたためです。対処は設計で施工図を修正し、関係者へ差し替え連絡を行います。再発防止として図面改訂時に開口寸法の突合せ欄を追加します。',
+  },
+  {
+    key: 'site',
+    label: '現場ミス例',
+    text: '物件No 70021、東京第3倉庫。3F北側のSD-08で、取付位置を1スパン間違えて施工してしまいました。原因は現場の墨出し確認と図面照合を作業前に行っていなかったことです。対処として本日中に取付位置を修正し、監督へ報告します。再発防止として施工前に符号、通り芯、階を2名で読み合わせます。',
+  },
+];
+
+const TROUBLE_FIELD_LABELS = [
+  '発生日', '日付', '部署', 'ミス先', '分類', '物件No', '物件Ｎｏ', '物件番号',
+  '現場名', '現場', '件名', '符号', '発生場所', '場所', '事象', '内容',
+  '原因', '原因分析', '対処', '対応', '対処策', '是正', '再発防止', '防止策',
+];
+
+let troubleGeminiLoaded = false;
+let troubleGeminiApiKey = '';
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -139,6 +167,210 @@ function generateKeywords(data = {}) {
   return tags.slice(0, 12).join(' ');
 }
 
+function compactText(value = '') {
+  return `${value || ''}`.replace(/\r\n/g, '\n').replace(/[ \t]+/g, ' ').trim();
+}
+
+function splitSentences(text = '') {
+  return compactText(text)
+    .split(/(?<=[。！？!?])|\n+/)
+    .map(sentence => sentence.trim())
+    .filter(Boolean);
+}
+
+function extractLabeledValue(text, labels) {
+  const labelPattern = labels.map(label => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const allLabelPattern = TROUBLE_FIELD_LABELS.map(label => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const re = new RegExp(`(?:${labelPattern})\\s*[：:]\\s*([\\s\\S]*?)(?=\\n\\s*(?:${allLabelPattern})\\s*[：:]|$)`, 'i');
+  const match = text.match(re);
+  return match ? compactText(match[1]).replace(/[。．.]+$/, '').slice(0, 500) : '';
+}
+
+function findSentence(text, keywords = [], exclude = new Set()) {
+  return splitSentences(text).find(sentence => (
+    !exclude.has(sentence) && keywords.some(keyword => sentence.includes(keyword))
+  )) || '';
+}
+
+function inferMistakeType(text = '') {
+  const rules = [
+    ['設計ミス', ['設計', '構造図', '施工図', '承認図']],
+    ['展開ミス', ['展開', '現寸', 'ばらし']],
+    ['工場ミス', ['工場', '製作', '加工', '焼付', '塗装', '切断', '穴あけ']],
+    ['工事ミス', ['工事', '施工', '取付', '建方']],
+    ['外注ミス', ['外注', '協力会社']],
+    ['現場ミス', ['現場', '墨出し', '搬入', '取付位置']],
+  ];
+  return rules.find(([, terms]) => terms.some(term => text.includes(term)))?.[0] || 'その他';
+}
+
+function findSiteInText(text = '') {
+  const normalizedText = normalizeProjectKey(text);
+  return getActiveSites().find(site => {
+    const code = normalizeProjectKey(site.code || '');
+    const name = `${site.name || ''}`.trim();
+    return (code && normalizedText.includes(code)) || (name && text.includes(name));
+  }) || null;
+}
+
+function inferProjectKey(text = '', site = null) {
+  if (site?.code) return normalizeProjectKey(site.code);
+  const patterns = [
+    /物件\s*(?:No|NO|Ｎｏ|ＮＯ|番号)?[.．]?\s*[：:]?\s*([A-Za-z0-9_-]{3,24})/i,
+    /(?:^|[\s、,])No[.．]?\s*([A-Za-z0-9_-]{3,24})/i,
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) return normalizeProjectKey(match[1]);
+  }
+  return '';
+}
+
+function inferTitle(text = '', projectKey = '', site = null) {
+  if (site?.name) return `${site.name}`.trim();
+  const labeled = extractLabeledValue(text, ['現場名', '現場', '件名']);
+  if (labeled) return labeled.slice(0, 120);
+  if (projectKey) {
+    const escapedKey = projectKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = text.match(new RegExp(`${escapedKey}[、,\\s]+([^。\\n]{2,80})`));
+    if (match?.[1]) return compactText(match[1]).replace(/^(で|にて|の)/, '').slice(0, 120);
+  }
+  return '';
+}
+
+function inferLocation(text = '') {
+  const labeled = extractLabeledValue(text, ['符号', '発生場所', '場所']);
+  if (labeled) return labeled.slice(0, 160);
+  const match = text.match(/(?:[A-Z0-9]*[A-Z][A-Z0-9]*)[-_ ]?\d{1,4}[A-Z]?(?:[-_][A-Z0-9一-龠ぁ-んァ-ヶー]+){0,4}/i);
+  return match?.[0] || '';
+}
+
+function buildHeuristicTroubleAnalysis(text = '') {
+  const source = compactText(text);
+  const site = findSiteInText(source);
+  const projectKey = inferProjectKey(source, site);
+  const title = inferTitle(source, projectKey, site);
+  const occurrenceLocation = inferLocation(source);
+  const used = new Set();
+  const cause = extractLabeledValue(source, ['原因', '原因分析']) || findSentence(source, ['原因', 'ため', '確認不足', '漏れ'], used);
+  if (cause) used.add(cause);
+  const correctiveAction = extractLabeledValue(source, ['対処', '対応', '対処策', '是正'])
+    || findSentence(source, ['対処', '対応', '修正', '再製作', '交換', '差し替え', '報告'], used);
+  if (correctiveAction) used.add(correctiveAction);
+  const preventionAction = extractLabeledValue(source, ['再発防止', '防止策'])
+    || findSentence(source, ['再発防止', '防止', '次回', 'チェックリスト', '読み合わせ', 'ルール'], used);
+  if (preventionAction) used.add(preventionAction);
+  const detail = extractLabeledValue(source, ['事象', '内容'])
+    || findSentence(source, ['違い', '間違', '漏れ', '不足', '合って', '発生', '分かりました', 'できない'], used)
+    || splitSentences(source).find(sentence => !used.has(sentence)) || source;
+
+  return {
+    reportDate: '',
+    department: '',
+    mistakeType: inferMistakeType(source),
+    projectKey,
+    title,
+    occurrenceLocation,
+    detail: detail.slice(0, 800),
+    cause: cause.slice(0, 600),
+    correctiveAction: correctiveAction.slice(0, 600),
+    preventionAction: preventionAction.slice(0, 600),
+  };
+}
+
+async function loadTroubleGeminiApiKey() {
+  if (state.geminiApiKey) return state.geminiApiKey;
+  if (troubleGeminiLoaded) return troubleGeminiApiKey;
+  troubleGeminiLoaded = true;
+  try {
+    const config = await fetchPortalConfigFromSupabase();
+    troubleGeminiApiKey = config.geminiApiKey || '';
+    state.geminiApiKey = troubleGeminiApiKey;
+  } catch (err) {
+    console.error('Trouble Gemini API key load error:', err);
+  }
+  return troubleGeminiApiKey;
+}
+
+function parseJsonFromModel(text) {
+  const cleaned = `${text || ''}`.replace(/```json|```/g, '').trim();
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) throw new Error('AIの応答を読み取れませんでした。');
+  return JSON.parse(cleaned.slice(start, end + 1));
+}
+
+function sanitizeTroubleAnalysis(raw = {}, sourceText = '') {
+  const fallback = buildHeuristicTroubleAnalysis(sourceText);
+  const validTypes = new Set(MISTAKE_TYPE_OPTIONS.map(option => option.value));
+  const pick = (key, max = 600) => compactText(raw?.[key] || fallback[key] || '').slice(0, max);
+  return {
+    reportDate: /^\d{4}-\d{2}-\d{2}$/.test(raw?.reportDate || '') ? raw.reportDate : fallback.reportDate,
+    department: pick('department', 80),
+    mistakeType: validTypes.has(raw?.mistakeType) ? raw.mistakeType : fallback.mistakeType,
+    projectKey: normalizeProjectKey(raw?.projectKey || fallback.projectKey || ''),
+    title: pick('title', 120),
+    occurrenceLocation: pick('occurrenceLocation', 160),
+    detail: pick('detail', 800),
+    cause: pick('cause', 600),
+    correctiveAction: pick('correctiveAction', 600),
+    preventionAction: pick('preventionAction', 600),
+  };
+}
+
+async function buildAiTroubleAnalysis(text) {
+  const key = await loadTroubleGeminiApiKey();
+  if (!key) return null;
+  const sites = getActiveSites().slice(0, 200).map(site => ({
+    code: site.code || '',
+    name: site.name || '',
+  }));
+  const prompt = `トラブル報告フォームへ転記するため、入力文から必要項目を抽出してください。
+
+入力文:
+${text}
+
+既存の物件Noマスタ:
+${JSON.stringify(sites, null, 2)}
+
+必ず次のJSONだけを返してください。分からない項目は空文字にしてください。
+{
+  "reportDate": "YYYY-MM-DD。明記がなければ空文字",
+  "department": "部署。明記がなければ空文字",
+  "mistakeType": "現場ミス / 設計ミス / 展開ミス / 工場ミス / 工事ミス / 外注ミス / その他 のいずれか",
+  "projectKey": "物件No。既存マスタのcodeと合う場合はそれを優先",
+  "title": "現場名または件名。既存マスタのnameと合う場合はそれを優先",
+  "occurrenceLocation": "符号と発生場所",
+  "detail": "事象。何が起きたか",
+  "cause": "原因分析。なぜ起きたか",
+  "correctiveAction": "対処策。どう対処したか",
+  "preventionAction": "再発防止策"
+}
+
+条件:
+- 入力文にない事実は作らないでください。
+- 文章は現場でそのまま読める短い日本語に整えてください。
+- 説明文やMarkdownは不要です。`;
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 1000 },
+      }),
+    }
+  );
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error?.message || `AI解析に失敗しました。HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return sanitizeTroubleAnalysis(parseJsonFromModel(data.candidates?.[0]?.content?.parts?.[0]?.text || ''), text);
+}
+
 function collectFormValues() {
   return {
     reportDate: document.getElementById('trouble-report-date')?.value || todayKey(),
@@ -196,6 +428,78 @@ function updateKeywordsFromForm(force = false) {
   input.value = generateKeywords(collectFormValues());
 }
 
+function setNaturalStatus(message = '', type = 'info') {
+  const el = document.getElementById('trouble-natural-status');
+  if (!el) return;
+  el.textContent = message;
+  el.dataset.type = type;
+}
+
+function setNaturalBusy(isBusy) {
+  const btn = document.getElementById('trouble-ai-fill-btn');
+  const textarea = document.getElementById('trouble-natural-text');
+  if (btn) {
+    btn.disabled = isBusy;
+    btn.innerHTML = isBusy
+      ? '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i><span>解析中</span>'
+      : '<i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><span>AIで項目に反映</span>';
+  }
+  if (textarea) textarea.disabled = isBusy;
+}
+
+function setFormValue(id, value) {
+  const el = document.getElementById(id);
+  if (!el || value == null || value === '') return false;
+  el.value = value;
+  return true;
+}
+
+function applyTroubleAnalysis(analysis = {}) {
+  setFormValue('trouble-report-date', analysis.reportDate);
+  setFormValue('trouble-department', analysis.department);
+  setFormValue('trouble-mistake-type', analysis.mistakeType);
+  setFormValue('trouble-project-key', analysis.projectKey);
+  setFormValue('trouble-title', analysis.title);
+  updateProjectLinkFromKey();
+  updateProjectLinkFromTitle();
+  setFormValue('trouble-location', analysis.occurrenceLocation);
+  setFormValue('trouble-detail', analysis.detail);
+  setFormValue('trouble-cause', analysis.cause);
+  setFormValue('trouble-corrective-action', analysis.correctiveAction);
+  setFormValue('trouble-prevention-action', analysis.preventionAction);
+  const keywordAuto = document.getElementById('trouble-keywords-auto');
+  if (keywordAuto) keywordAuto.checked = true;
+  updateKeywordsFromForm(true);
+}
+
+async function fillTroubleFormFromNaturalText() {
+  const textarea = document.getElementById('trouble-natural-text');
+  const text = textarea?.value.trim() || '';
+  if (!text) {
+    textarea?.focus();
+    setNaturalStatus('まず報告内容を文章で入力してください。', 'error');
+    return;
+  }
+  setNaturalBusy(true);
+  setNaturalStatus('入力文を解析しています...', 'info');
+  try {
+    let usedAi = false;
+    let analysis = null;
+    try {
+      analysis = await buildAiTroubleAnalysis(text);
+      usedAi = !!analysis;
+    } catch (err) {
+      console.warn('Trouble AI analysis fallback:', err);
+    }
+    if (!analysis) analysis = sanitizeTroubleAnalysis({}, text);
+    applyTroubleAnalysis(analysis);
+    setNaturalStatus(usedAi ? 'AI解析で項目へ反映しました。必要なら各欄を修正してください。' : 'AI設定が未使用のため、入力文から分かる範囲で反映しました。', usedAi ? 'success' : 'info');
+    showToast('入力文をトラブル報告へ反映しました。', 'success');
+  } finally {
+    setNaturalBusy(false);
+  }
+}
+
 function setActiveTab(tab) {
   state.troubleReportActiveTab = tab || 'new';
   document.querySelectorAll('[data-trouble-tab]').forEach(btn => {
@@ -213,6 +517,28 @@ function renderForm() {
       <datalist id="trouble-project-options">${projectOptions}</datalist>
       <datalist id="trouble-site-options">${siteOptions}</datalist>
       <input type="hidden" id="trouble-site-id" value="">
+      <section class="trouble-natural-panel">
+        <div class="trouble-natural-head">
+          <div>
+            <label class="form-label" for="trouble-natural-text">まとめて入力</label>
+            <p>文章で書いてから、AIで各項目へ反映できます。</p>
+          </div>
+          <button type="button" class="btn-modal-primary" id="trouble-ai-fill-btn">
+            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+            <span>AIで項目に反映</span>
+          </button>
+        </div>
+        <textarea id="trouble-natural-text" class="form-input" rows="5" placeholder="例：物件No 61065、信越化学S棟。1SD-14A-S棟-1Fの付枠で、焼付色が図面指定と違う状態で製作されていました。原因は変更図の色指定を工場へ伝えた後、製作図の差し替え確認が漏れたためです。現場には再製作で対応予定です。再発防止として変更図受領時に色指定をチェックリスト化します。"></textarea>
+        <div class="trouble-natural-examples">
+          ${TROUBLE_NATURAL_EXAMPLES.map(example => `
+            <button type="button" class="trouble-example-btn" data-trouble-example="${esc(example.key)}">
+              <i class="fa-regular fa-clipboard" aria-hidden="true"></i>
+              <span>${esc(example.label)}</span>
+            </button>
+          `).join('')}
+        </div>
+        <p id="trouble-natural-status" class="trouble-natural-status"></p>
+      </section>
       <div class="trouble-form-grid">
         <div class="form-group form-group-inline">
           <input type="date" id="trouble-report-date" class="date-icon-only" value="${todayKey()}">
@@ -539,6 +865,22 @@ export function initTroubleReport(d = {}) {
       const checkbox = document.getElementById('trouble-keywords-auto');
       if (checkbox) checkbox.checked = true;
       updateKeywordsFromForm(true);
+      return;
+    }
+    const exampleBtn = event.target.closest('[data-trouble-example]');
+    if (exampleBtn) {
+      const example = TROUBLE_NATURAL_EXAMPLES.find(item => item.key === exampleBtn.dataset.troubleExample);
+      const textarea = document.getElementById('trouble-natural-text');
+      if (example && textarea) {
+        textarea.value = example.text;
+        textarea.focus();
+        setNaturalStatus('例文を入れました。必要に応じて書き換えてください。', 'info');
+      }
+      return;
+    }
+    if (event.target.closest('#trouble-ai-fill-btn')) {
+      void fillTroubleFormFromNaturalText();
+      return;
     }
   });
   modal.addEventListener('submit', event => {

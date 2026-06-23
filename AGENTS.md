@@ -309,6 +309,7 @@ export function xxxFunction() { ... }
 
 - トラブル報告の現場名は `attendance_sites` を物件Noマスタとして参照する。未登録の物件Noはトラブル報告画面から `attendance_sites` に登録/更新できる。
 - キーワードはフォーム入力から自動生成し、必要に応じて手入力で上書きできる。
+- 自然言語入力欄は入力補助専用で、入力文そのものは `trouble_reports` に保存しない。Gemini APIキーが設定済みならAI解析で項目へ反映し、未設定または失敗時はフロント側の簡易解析で分かる範囲だけ反映する。
 
 ### 個人プロフィールフィールド（`users/{name}/data/email_profile`）
 | フィールド | 型 | 説明 |
