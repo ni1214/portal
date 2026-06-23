@@ -10,7 +10,7 @@ const DEFAULT_SUPABASE_URL = 'https://ydcxgxzeavumvubrqmlq.supabase.co';
 const DEFAULT_SUPABASE_KEY = 'sb_publishable_TuZiMD49GBC9NMSf-tyWYA_NKq8430v';
 
 const CATEGORY_SELECT = 'id,label,icon,color_index,order_index,is_external';
-const CARD_SELECT = 'id,label,icon,url,category_id,parent_id,order_index,category_order,is_external_tool';
+const CARD_SELECT = 'id,label,icon,url,category_id,parent_id,order_index,category_order,is_external_tool,description,thumbnail_url,link_type,tags,last_opened_at,open_count,updated_by';
 
 function normalizeBackendMode(value) {
   return BACKEND_SUPABASE;
@@ -166,6 +166,13 @@ function mapCardRow(row = {}) {
     order: Number.isFinite(row.order_index) ? row.order_index : 0,
     categoryOrder: Number.isFinite(row.category_order) ? row.category_order : 0,
     isExternalTool: !!row.is_external_tool,
+    description: row.description || '',
+    thumbnailUrl: row.thumbnail_url || '',
+    linkType: row.link_type || 'other',
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    lastOpenedAt: row.last_opened_at || null,
+    openCount: Number.isFinite(row.open_count) ? row.open_count : 0,
+    updatedBy: row.updated_by || '',
   };
 }
 
@@ -201,6 +208,13 @@ function mapCardPayload(data = {}) {
     order_index: Number.isFinite(data.order) ? data.order : 0,
     category_order: Number.isFinite(data.categoryOrder) ? data.categoryOrder : 0,
     is_external_tool: !!data.isExternalTool,
+    description: data.description || '',
+    thumbnail_url: data.thumbnailUrl || '',
+    link_type: data.linkType || 'other',
+    tags: Array.isArray(data.tags) ? data.tags : [],
+    last_opened_at: data.lastOpenedAt || null,
+    open_count: Number.isFinite(data.openCount) ? data.openCount : 0,
+    updated_by: data.updatedBy || '',
   };
 }
 
@@ -214,6 +228,13 @@ function mapCardUpdatePayload(data = {}) {
   if ('order' in data) payload.order_index = Number.isFinite(data.order) ? data.order : 0;
   if ('categoryOrder' in data) payload.category_order = Number.isFinite(data.categoryOrder) ? data.categoryOrder : 0;
   if ('isExternalTool' in data) payload.is_external_tool = !!data.isExternalTool;
+  if ('description' in data) payload.description = data.description || '';
+  if ('thumbnailUrl' in data) payload.thumbnail_url = data.thumbnailUrl || '';
+  if ('linkType' in data) payload.link_type = data.linkType || 'other';
+  if ('tags' in data) payload.tags = Array.isArray(data.tags) ? data.tags : [];
+  if ('lastOpenedAt' in data) payload.last_opened_at = data.lastOpenedAt || null;
+  if ('openCount' in data) payload.open_count = Number.isFinite(data.openCount) ? data.openCount : 0;
+  if ('updatedBy' in data) payload.updated_by = data.updatedBy || '';
   return payload;
 }
 
@@ -423,6 +444,12 @@ function mapPrivateCardRow(row = {}) {
     sectionId: row.section_id || null,
     parentId: row.parent_id || null,
     order: Number.isFinite(row.order_index) ? row.order_index : 0,
+    description: row.description || '',
+    thumbnailUrl: row.thumbnail_url || '',
+    linkType: row.link_type || 'other',
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    lastOpenedAt: row.last_opened_at || null,
+    openCount: Number.isFinite(row.open_count) ? row.open_count : 0,
     isPrivate: true,
   };
 }
@@ -491,7 +518,7 @@ export async function deletePrivateSectionInSupabase(id) {
 export async function fetchPrivateCardsFromSupabase(username) {
   const encoded = encodeEqFilterValue(username);
   const rows = await requestSupabase(
-    `private_cards?username=eq.${encoded}&select=id,label,icon,url,section_id,parent_id,order_index&order=order_index.asc`,
+    `private_cards?username=eq.${encoded}&select=id,label,icon,url,section_id,parent_id,order_index,description,thumbnail_url,link_type,tags,last_opened_at,open_count&order=order_index.asc`,
     {
       diagKey: 'supabase.private_cards',
       diagLabel: 'Supabase マイカード',
@@ -513,6 +540,12 @@ export async function createPrivateCardInSupabase(username, data) {
       section_id: data.sectionId || null,
       parent_id: data.parentId || null,
       order_index: Number.isFinite(data.order) ? data.order : 0,
+      description: data.description || '',
+      thumbnail_url: data.thumbnailUrl || '',
+      link_type: data.linkType || 'other',
+      tags: Array.isArray(data.tags) ? data.tags : [],
+      last_opened_at: data.lastOpenedAt || null,
+      open_count: Number.isFinite(data.openCount) ? data.openCount : 0,
     },
   });
   return Array.isArray(rows) && rows[0] ? String(rows[0].id) : null;
@@ -526,6 +559,12 @@ export async function updatePrivateCardInSupabase(id, data) {
   if ('sectionId' in data) payload.section_id = data.sectionId || null;
   if ('parentId' in data) payload.parent_id = data.parentId || null;
   if ('order' in data) payload.order_index = Number.isFinite(data.order) ? data.order : 0;
+  if ('description' in data) payload.description = data.description || '';
+  if ('thumbnailUrl' in data) payload.thumbnail_url = data.thumbnailUrl || '';
+  if ('linkType' in data) payload.link_type = data.linkType || 'other';
+  if ('tags' in data) payload.tags = Array.isArray(data.tags) ? data.tags : [];
+  if ('lastOpenedAt' in data) payload.last_opened_at = data.lastOpenedAt || null;
+  if ('openCount' in data) payload.open_count = Number.isFinite(data.openCount) ? data.openCount : 0;
   await requestSupabase(`private_cards?id=eq.${encodeURIComponent(id)}`, {
     method: 'PATCH',
     prefer: 'return=minimal',
@@ -640,13 +679,16 @@ function mapPreferencesRow(row = {}) {
   if (Array.isArray(row.hidden_cards)) prefs.hiddenCards = row.hidden_cards;
   if (row.mission_banner_hidden != null) prefs.missionBannerHidden = !!row.mission_banner_hidden;
   if (row.last_viewed_suggestions_at != null) prefs.lastViewedSuggestionsAt = row.last_viewed_suggestions_at;
+  if (row.shared_links_view_mode != null) prefs.sharedLinksViewMode = row.shared_links_view_mode;
+  if (row.shared_links_thumbnail_mode != null) prefs.sharedLinksThumbnailMode = !!row.shared_links_thumbnail_mode;
+  if (row.shared_links_sort_mode != null) prefs.sharedLinksSortMode = row.shared_links_sort_mode;
   return prefs;
 }
 
 export async function fetchUserPreferencesFromSupabase(username) {
   const encoded = encodeEqFilterValue(username);
   const rows = await requestSupabase(
-    `user_preferences?username=eq.${encoded}&select=theme,font_size,fav_only,favorites,collapsed_sections,collapse_seeded,hidden_cards,mission_banner_hidden,last_viewed_suggestions_at&limit=1`,
+    `user_preferences?username=eq.${encoded}&select=theme,font_size,fav_only,favorites,collapsed_sections,collapse_seeded,hidden_cards,mission_banner_hidden,last_viewed_suggestions_at,shared_links_view_mode,shared_links_thumbnail_mode,shared_links_sort_mode&limit=1`,
     {
       diagKey: 'supabase.user_preferences',
       diagLabel: 'Supabase 個人設定',
@@ -668,6 +710,9 @@ export async function saveUserPreferencesToSupabase(username, prefs = {}) {
   if ('hiddenCards' in prefs) payload.hidden_cards = prefs.hiddenCards;
   if ('missionBannerHidden' in prefs) payload.mission_banner_hidden = !!prefs.missionBannerHidden;
   if ('lastViewedSuggestionsAt' in prefs) payload.last_viewed_suggestions_at = prefs.lastViewedSuggestionsAt;
+  if ('sharedLinksViewMode' in prefs) payload.shared_links_view_mode = prefs.sharedLinksViewMode || 'grid';
+  if ('sharedLinksThumbnailMode' in prefs) payload.shared_links_thumbnail_mode = !!prefs.sharedLinksThumbnailMode;
+  if ('sharedLinksSortMode' in prefs) payload.shared_links_sort_mode = prefs.sharedLinksSortMode || 'category';
   const updatePayload = { ...payload };
   delete updatePayload.username;
   if (Object.keys(updatePayload).length === 0) return;
@@ -681,6 +726,9 @@ export async function saveUserPreferencesToSupabase(username, prefs = {}) {
     'collapse_seeded',
     'hidden_cards',
     'mission_banner_hidden',
+    'shared_links_view_mode',
+    'shared_links_thumbnail_mode',
+    'shared_links_sort_mode',
   ];
   const updateKeys = Object.keys(updatePayload);
   const isPartialUpdate = updateKeys.some(key => !allColumns.includes(key))

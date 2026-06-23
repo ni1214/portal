@@ -220,6 +220,20 @@ export function xxxFunction() { ... }
 | `order_items/` | 鋼材マスタ（品名・規格・単位・デフォルト数量） |
 | `orders/` | 発注履歴（明細・送信状態・20日締め管理・ソフト削除復元） |
 
+### 共有リンク追加フィールド（`public_cards` / `private_cards`）
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `description` | string | Drive風カード/リストで表示する短い説明 |
+| `thumbnailUrl` | string | 任意のサムネイル画像URL。未設定時はリンク種別アイコンで代替 |
+| `linkType` | string | `'site'` / `'spreadsheet'` / `'document'` / `'presentation'` / `'form'` / `'pdf'` / `'image'` / `'folder'` / `'other'` |
+| `tags` | string[] | 検索用タグ |
+| `lastOpenedAt` | timestamp\|null | 最後に開いた日時 |
+| `openCount` | number | 開いた回数 |
+| `updatedBy` | string | 公開カードの最終更新者 |
+
+- 共有リンクは Google Drive 風のグリッド/リスト表示を持つ。サムネイル表示はユーザーごとに ON/OFF 保存する。
+- GitHub Pages 運用のため、外部ページのサムネイル自動スクレイピングは本線にしない。任意の `thumbnailUrl` とリンク種別アイコンで代替する。
+
 ### 発注履歴フィールド（`orders/{orderId}`）
 | フィールド | 型 | 説明 |
 |---|---|---|

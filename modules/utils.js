@@ -97,6 +97,36 @@ export function getFileIcon(type) {
   return 'fa-solid fa-file';
 }
 
+export const SHARED_LINK_TYPES = Object.freeze({
+  spreadsheet: { label: 'スプレッドシート', icon: 'fa-solid fa-table', tone: 'green' },
+  document: { label: 'ドキュメント', icon: 'fa-solid fa-file-lines', tone: 'blue' },
+  presentation: { label: 'スライド', icon: 'fa-solid fa-display', tone: 'orange' },
+  form: { label: 'フォーム', icon: 'fa-solid fa-clipboard-list', tone: 'purple' },
+  pdf: { label: 'PDF', icon: 'fa-solid fa-file-pdf', tone: 'red' },
+  image: { label: '画像', icon: 'fa-solid fa-file-image', tone: 'cyan' },
+  folder: { label: 'フォルダ', icon: 'fa-solid fa-folder', tone: 'yellow' },
+  site: { label: 'サイト', icon: 'fa-solid fa-globe', tone: 'blue' },
+  other: { label: 'リンク', icon: 'fa-solid fa-link', tone: 'neutral' },
+});
+
+export function inferSharedLinkType(url = '', label = '') {
+  const source = `${url || ''} ${label || ''}`.toLowerCase();
+  if (!source.trim()) return 'other';
+  if (source.includes('docs.google.com/spreadsheets') || source.includes('スプレッド') || source.includes('sheet')) return 'spreadsheet';
+  if (source.includes('docs.google.com/document') || source.includes('ドキュメント')) return 'document';
+  if (source.includes('docs.google.com/presentation') || source.includes('スライド')) return 'presentation';
+  if (source.includes('docs.google.com/forms') || source.includes('フォーム')) return 'form';
+  if (source.includes('drive.google.com/drive/folders') || source.includes('フォルダ')) return 'folder';
+  if (source.includes('.pdf') || source.includes('pdf')) return 'pdf';
+  if (/\.(png|jpe?g|gif|webp|svg)(\?|#|$)/i.test(source)) return 'image';
+  if (/^https?:\/\//i.test(`${url || ''}`.trim())) return 'site';
+  return 'other';
+}
+
+export function getSharedLinkTypeMeta(type = 'other') {
+  return SHARED_LINK_TYPES[type] || SHARED_LINK_TYPES.other;
+}
+
 // 削除確認モーダル（Promise-based）
 export function confirmDelete(message) {
   return new Promise(resolve => {

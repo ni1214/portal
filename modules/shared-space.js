@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { esc } from './utils.js';
+import { esc, inferSharedLinkType, getSharedLinkTypeMeta } from './utils.js';
 import { CATEGORY_COLORS, SVG_ICONS } from './config.js';
 import { getBrandIconHtmlForCard, shouldPreferBrandIcon } from './brand-icons.js';
 
@@ -444,12 +444,14 @@ function renderSharedLinksOverview(host, options = {}) {
     : selectedCategory
     ? selectedCategory.label
     : 'すべて';
+  const viewLabel = `${state.sharedLinksViewMode === 'list' ? 'リスト' : 'グリッド'} / ${state.sharedLinksThumbnailMode === false ? 'サムネイルなし' : 'サムネイルあり'}`;
 
   const metrics = [
     { icon: 'folder', label: 'カテゴリ', value: state.sharedCardsLoaded ? `${publicCategories.length}件` : '-' },
     { icon: 'link', label: 'リンク', value: state.sharedCardsLoaded ? `${cards.length}件` : '-' },
     { icon: 'star', label: 'お気に入り', value: state.sharedCardsLoaded ? `${favoriteCount}件` : '-' },
     { icon: 'filter_list', label: '表示', value: filterLabel },
+    { icon: 'view_module', label: '形式', value: viewLabel },
     { icon: 'sync', label: '状態', value: loadLabel },
   ];
 
@@ -473,6 +475,9 @@ function collectSharedLinkSearchCards(cards, queryText) {
       card.label,
       card.url,
       card.icon,
+      card.description,
+      card.linkType,
+      ...(Array.isArray(card.tags) ? card.tags : []),
     ].map(value => normalizeSearch(value)).join(' ');
     return haystack.includes(normalizedQuery);
   });
@@ -499,7 +504,121 @@ function hasUsableUrl(card) {
   return rawUrl === 'solar:open' || (!!rawUrl && rawUrl !== '#');
 }
 
-function renderSharedLinkCardIcon(card, tone = '') {
+function getEffectiveLinkType(card) {
+  return card?.linkType && card.linkType !== 'other'
+    ? card.linkType
+    : inferSharedLinkType(card?.url || '', card?.label || '');
+}
+
+function getSharedLinkTypeBadge(card) {
+  const meta = getSharedLinkTypeMeta(getEffectiveLinkType(card));
+  return { ...meta, type: getEffectiveLinkType(card) };
+}
+
+function getSharedLinkDisplayMeta(card) {
+  const typeMeta = getSharedLinkTypeBadge(card);
+  const host = getSharedLinkHost(card);
+  if (card?.url === 'solar:open') return '天気パネル';
+  if (card?.description) return card.description;
+  return host || typeMeta.label || '共有リンク';
+}
+
+function formatSharedLinkDate(value) {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function sortSharedLinkCards(cards = []) {
+  const mode = state.sharedLinksSortMode || 'category';
+  const list = [...cards];
+  if (mode === 'name') {
+    return list.sort((a, b) => `${a.label || ''}`.localeCompare(`${b.label || ''}`, 'ja'));
+  }
+  if (mode === 'recent') {
+    return list.sort((a, b) => {
+      const at = a.lastOpenedAt ? new Date(a.lastOpenedAt).getTime() : 0;
+      const bt = b.lastOpenedAt ? new Date(b.lastOpenedAt).getTime() : 0;
+      return bt - at || `${a.label || ''}`.localeCompare(`${b.label || ''}`, 'ja');
+    });
+  }
+  return list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || `${a.label || ''}`.localeCompare(`${b.label || ''}`, 'ja'));
+}
+
+function renderSharedLinksViewbar() {
+  const host = document.getElementById('shared-links-viewbar');
+  if (!host) return;
+  if (sharedLinksViewMode === 'favorites') {
+    host.hidden = true;
+    host.innerHTML = '';
+    return;
+  }
+  host.hidden = false;
+  const viewMode = state.sharedLinksViewMode || 'grid';
+  const thumbsOn = state.sharedLinksThumbnailMode !== false;
+  const sortMode = state.sharedLinksSortMode || 'category';
+  host.innerHTML = `
+    <div class="shared-links-viewbar-group" role="group" aria-label="表示形式">
+      <button type="button" class="shared-links-view-btn${viewMode === 'grid' ? ' active' : ''}" data-shared-view-mode="grid" title="グリッド表示">
+        ${renderHomeIcon('grid_view')}<span>グリッド</span>
+      </button>
+      <button type="button" class="shared-links-view-btn${viewMode === 'list' ? ' active' : ''}" data-shared-view-mode="list" title="リスト表示">
+        ${renderHomeIcon('view_list')}<span>リスト</span>
+      </button>
+    </div>
+    <button type="button" class="shared-links-view-btn${thumbsOn ? ' active' : ''}" data-shared-thumb-toggle title="サムネイル表示を切り替え">
+      ${renderHomeIcon(thumbsOn ? 'image' : 'hide_image')}<span>${thumbsOn ? 'サムネイルあり' : 'サムネイルなし'}</span>
+    </button>
+    <label class="shared-links-sort-select">
+      <span>並び順</span>
+      <select class="form-input" id="shared-links-sort-mode">
+        <option value="category"${sortMode === 'category' ? ' selected' : ''}>カテゴリ順</option>
+        <option value="name"${sortMode === 'name' ? ' selected' : ''}>名前順</option>
+        <option value="recent"${sortMode === 'recent' ? ' selected' : ''}>最近使用</option>
+      </select>
+    </label>
+  `;
+
+  host.querySelectorAll('[data-shared-view-mode]').forEach(button => {
+    button.addEventListener('click', () => {
+      state.sharedLinksViewMode = button.dataset.sharedViewMode || 'grid';
+      deps.saveSharedLinkPrefs?.();
+      renderSharedLinksBrowser();
+    });
+  });
+  host.querySelector('[data-shared-thumb-toggle]')?.addEventListener('click', () => {
+    state.sharedLinksThumbnailMode = state.sharedLinksThumbnailMode === false;
+    deps.saveSharedLinkPrefs?.();
+    renderSharedLinksBrowser();
+  });
+  host.querySelector('#shared-links-sort-mode')?.addEventListener('change', event => {
+    state.sharedLinksSortMode = event.target.value || 'category';
+    deps.saveSharedLinkPrefs?.();
+    renderSharedLinksBrowser();
+  });
+}
+
+function renderSharedLinkPreview(card, tone = '') {
+  const typeMeta = getSharedLinkTypeBadge(card);
+  const thumbnailUrl = `${card?.thumbnailUrl || ''}`.trim();
+  const showThumbnail = state.sharedLinksThumbnailMode !== false && thumbnailUrl && !card?.url?.startsWith('portal:');
+  if (showThumbnail) {
+    return `
+      <span class="shared-link-app-preview shared-link-app-preview--image">
+        <img src="${esc(thumbnailUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer">
+      </span>
+    `;
+  }
+  return `
+    <span class="shared-link-app-preview shared-link-app-preview--${esc(typeMeta.tone || 'neutral')}">
+      <span class="shared-link-app-type-icon">${renderSharedLinkCardIcon(card, tone, typeMeta.icon)}</span>
+      <span class="shared-link-app-type-label">${esc(typeMeta.label)}</span>
+    </span>
+  `;
+}
+
+function renderSharedLinkCardIcon(card, tone = '', fallbackIcon = 'fa-solid fa-link') {
   if (shouldPreferBrandIcon(card)) {
     const brandIcon = getBrandIconHtmlForCard(card, 'shared-link-app-brand');
     if (brandIcon) return brandIcon;
@@ -511,7 +630,7 @@ function renderSharedLinkCardIcon(card, tone = '') {
 
   const icon = card?.url === 'solar:open'
     ? 'fa-solid fa-solar-panel'
-    : (card?.icon || 'fa-solid fa-link');
+    : (card?.icon || fallbackIcon || 'fa-solid fa-link');
   const style = tone && !icon.startsWith('fa-brands') ? ` style="color: transparent; background: ${tone}; -webkit-background-clip: text; background-clip: text;"` : '';
   return `<i class="${esc(icon)}"${style} aria-hidden="true"></i>`;
 }
@@ -531,13 +650,13 @@ function buildSharedLinkAppTile(card, allCategoryCards, cat, options = {}) {
   const tone = getSharedLinkCategoryTone(cat);
   const isFavorite = Array.isArray(state.personalFavorites) && state.personalFavorites.includes(card.id);
   const favoriteLabel = isFavorite ? 'お気に入り解除' : 'お気に入りに追加';
-  const host = getSharedLinkHost(card);
-  const meta = card.url === 'solar:open'
-    ? '天気パネル'
-    : (host || (urlReady ? '共有リンク' : 'URL未設定'));
+  const typeMeta = getSharedLinkTypeBadge(card);
+  const meta = urlReady ? getSharedLinkDisplayMeta(card) : 'URL未設定';
 
   const link = document.createElement('a');
-  link.className = 'shared-link-app-link' + (!urlReady ? ' shared-link-app-link--empty' : '');
+  link.className = 'shared-link-app-link'
+    + (!urlReady ? ' shared-link-app-link--empty' : '')
+    + (state.sharedLinksThumbnailMode === false ? ' shared-link-app-link--no-thumbnail' : '');
   link.title = card.label || '共有リンク';
   if (card.url === 'solar:open') {
     link.href = '#';
@@ -557,7 +676,8 @@ function buildSharedLinkAppTile(card, allCategoryCards, cat, options = {}) {
   }
 
   link.innerHTML = `
-    <span class="shared-link-app-icon">${renderSharedLinkCardIcon(card, tone)}</span>
+    <span class="shared-link-app-type-badge shared-link-app-type-badge--${esc(typeMeta.tone || 'neutral')}">${renderHomeIcon(typeMeta.icon)}${esc(typeMeta.label)}</span>
+    ${renderSharedLinkPreview(card, tone)}
     <span class="shared-link-app-label">${esc(card.label || '共有リンク')}</span>
     <span class="shared-link-app-meta">${esc(meta)}</span>
   `;
@@ -652,6 +772,94 @@ function buildSharedLinkAppTile(card, allCategoryCards, cat, options = {}) {
   return tile;
 }
 
+function buildSharedLinkListRow(card, allCategoryCards, cat, options = {}) {
+  const readonly = Boolean(options.readonly);
+  const row = document.createElement('div');
+  row.className = 'shared-link-list-row' + (readonly ? ' shared-link-list-row--readonly' : '');
+  row.dataset.docId = card.id || '';
+
+  const children = allCategoryCards
+    .filter(child => child.parentId === card.id && !state.hiddenCards.includes(child.id))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const urlReady = hasUsableUrl(card);
+  const typeMeta = getSharedLinkTypeBadge(card);
+  const isFavorite = Array.isArray(state.personalFavorites) && state.personalFavorites.includes(card.id);
+  const host = getSharedLinkHost(card);
+  const opened = formatSharedLinkDate(card.lastOpenedAt);
+  const metaText = [
+    card.description || host || (urlReady ? typeMeta.label : 'URL未設定'),
+    opened ? `最近使用 ${opened}` : '',
+    Number(card.openCount) > 0 ? `${card.openCount}回` : '',
+  ].filter(Boolean).join(' / ');
+
+  const link = document.createElement('a');
+  link.className = 'shared-link-list-main' + (!urlReady ? ' shared-link-list-main--empty' : '');
+  link.href = urlReady && card.url !== 'solar:open' ? card.url : '#';
+  if (card.url === 'solar:open') link.dataset.solarOpen = '1';
+  if (urlReady && card.url !== 'solar:open') {
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+  }
+  link.innerHTML = `
+    <span class="shared-link-list-icon shared-link-list-icon--${esc(typeMeta.tone || 'neutral')}">${renderHomeIcon(typeMeta.icon)}</span>
+    <span class="shared-link-list-copy">
+      <strong>${esc(card.label || '共有リンク')}</strong>
+      <small>${esc(metaText || typeMeta.label)}</small>
+    </span>
+  `;
+  if (!urlReady) {
+    link.addEventListener('click', event => {
+      event.preventDefault();
+      if (!readonly && state.isEditMode) deps.openCardModal?.(card.id);
+    });
+  }
+  row.appendChild(link);
+
+  const side = document.createElement('div');
+  side.className = 'shared-link-list-side';
+  side.innerHTML = `
+    <span class="shared-link-list-type">${esc(typeMeta.label)}</span>
+    ${children.length ? `<span class="shared-link-list-children">${children.length}件</span>` : ''}
+  `;
+
+  if (!readonly && card.id) {
+    const fav = document.createElement('button');
+    fav.type = 'button';
+    fav.className = `shared-link-list-action${isFavorite ? ' active' : ''}`;
+    fav.title = isFavorite ? 'お気に入り解除' : 'お気に入りに追加';
+    fav.innerHTML = `<i class="fa-${isFavorite ? 'solid' : 'regular'} fa-star" aria-hidden="true"></i>`;
+    fav.addEventListener('click', event => {
+      event.preventDefault();
+      deps.toggleFavorite?.(card.id);
+    });
+    side.appendChild(fav);
+
+    if (state.isEditMode) {
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'shared-link-list-action';
+      edit.title = '編集';
+      edit.innerHTML = '<i class="fa-solid fa-pen" aria-hidden="true"></i>';
+      edit.addEventListener('click', event => {
+        event.preventDefault();
+        deps.openCardModal?.(card.id);
+      });
+      side.appendChild(edit);
+    }
+  }
+  row.appendChild(side);
+
+  if (!readonly) {
+    row.addEventListener('contextmenu', event => {
+      if (typeof deps.showContextMenu !== 'function' || !card.id) return;
+      event.preventDefault();
+      deps.showContextMenu(event, card);
+    });
+  }
+
+  return row;
+}
+
 function buildSharedLinkAddTile(cat, parentId = null, compact = false) {
   const button = document.createElement('button');
   button.type = 'button';
@@ -669,7 +877,10 @@ function buildSharedLinkAddTile(cat, parentId = null, compact = false) {
 function buildSharedLinkAppSection(cat, cards, allCategoryCards, options = {}) {
   const section = document.createElement('section');
   const readonly = Boolean(options.readonly);
-  section.className = 'shared-link-app-section' + (readonly ? ' shared-link-app-section--readonly' : '');
+  const listMode = (state.sharedLinksViewMode || 'grid') === 'list';
+  section.className = 'shared-link-app-section'
+    + (readonly ? ' shared-link-app-section--readonly' : '')
+    + (listMode ? ' shared-link-app-section--list' : '');
   section.dataset.categoryId = cat.id || '';
 
   const tone = getSharedLinkCategoryTone(cat);
@@ -700,7 +911,7 @@ function buildSharedLinkAppSection(cat, cards, allCategoryCards, options = {}) {
         </div>
       `}
     </header>
-    <div class="shared-link-app-grid"></div>
+    <div class="${listMode ? 'shared-link-list' : 'shared-link-app-grid'}"></div>
   `;
 
   if (!readonly) {
@@ -715,7 +926,7 @@ function buildSharedLinkAppSection(cat, cards, allCategoryCards, options = {}) {
     });
   }
 
-  const grid = section.querySelector('.shared-link-app-grid');
+  const grid = section.querySelector(listMode ? '.shared-link-list' : '.shared-link-app-grid');
   if (visibleCards.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'shared-link-app-empty';
@@ -723,10 +934,13 @@ function buildSharedLinkAppSection(cat, cards, allCategoryCards, options = {}) {
     grid.appendChild(empty);
   } else {
     visibleCards.forEach(card => {
-      grid.appendChild(buildSharedLinkAppTile(card, allCategoryCards, cat, { readonly }));
+      grid.appendChild(listMode
+        ? buildSharedLinkListRow(card, allCategoryCards, cat, { readonly })
+        : buildSharedLinkAppTile(card, allCategoryCards, cat, { readonly })
+      );
     });
   }
-  if (state.isEditMode && !options.searchMode && !readonly) {
+  if (state.isEditMode && !options.searchMode && !readonly && !listMode) {
     grid.appendChild(buildSharedLinkAddTile(cat));
   }
 
@@ -747,6 +961,7 @@ export function renderSharedLinksBrowser() {
 
   renderSharedLinkCategoryChips();
   applySharedLinksModalMode();
+  renderSharedLinksViewbar();
   renderSharedLinksOverview(overview);
 
   if (sharedLinksViewMode === 'favorites') {
@@ -800,8 +1015,7 @@ export function renderSharedLinksBrowser() {
     const sourceCards = favoriteOnlyCategory === cat.id
       ? categoryCards.filter(card => favoriteIds.has(card.id))
       : categoryCards;
-    const catCards = collectSharedLinkSearchCards(sourceCards, queryText)
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const catCards = sortSharedLinkCards(collectSharedLinkSearchCards(sourceCards, queryText));
 
     if (queryText && catCards.length === 0) return;
     const section = buildSharedLinkAppSection(cat, catCards, sourceCards, {
@@ -911,9 +1125,7 @@ function renderFavoriteSharedLinksView(body, status) {
 
   publicCategories.forEach(cat => {
     if (selectedCategory && selectedCategory !== cat.id) return;
-    const categoryCards = cards
-      .filter(card => card.category === cat.id)
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const categoryCards = sortSharedLinkCards(cards.filter(card => card.category === cat.id));
     if (!categoryCards.length) return;
     favoriteCount += categoryCards.length;
     sections.push(buildSharedLinkAppSection(cat, categoryCards, categoryCards, {

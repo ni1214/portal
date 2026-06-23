@@ -13,7 +13,10 @@ import {
 
 import { state } from './modules/state.js';
 
-import { esc, escHtml, _fmtTs, getUserAvatarColor, formatFileSize, getFileIcon, confirmDelete } from './modules/utils.js';
+import {
+  esc, escHtml, _fmtTs, getUserAvatarColor, formatFileSize, getFileIcon, confirmDelete,
+  inferSharedLinkType,
+} from './modules/utils.js';
 import { getBrandIconHtmlForCard, shouldPreferBrandIcon } from './modules/brand-icons.js';
 
 // ===== Feature modules =====
@@ -879,6 +882,13 @@ Object.assign(sharedSpaceDeps, {
   showContextMenu,
   openCategoryModal,
   normalizeForSearch,
+  saveSharedLinkPrefs: () => schedulePreferenceSave({
+    fields: [
+      PREF_FIELDS.sharedLinksViewMode,
+      PREF_FIELDS.sharedLinksThumbnailMode,
+      PREF_FIELDS.sharedLinksSortMode,
+    ],
+  }),
   focusNoticeBoard: focusNoticeBoardFromDashboard,
   focusWeatherWidget,
   openCalendarModal: async () => {
@@ -1138,6 +1148,9 @@ const PREF_FIELDS = {
   collapseSeeded: 'collapseSeeded',
   hiddenCards: 'hiddenCards',
   missionBannerHidden: 'missionBannerHidden',
+  sharedLinksViewMode: 'sharedLinksViewMode',
+  sharedLinksThumbnailMode: 'sharedLinksThumbnailMode',
+  sharedLinksSortMode: 'sharedLinksSortMode',
 };
 
 let _prefSaveTimer = null;
@@ -1156,6 +1169,9 @@ function buildPreferencePayload(fields = null) {
     collapseSeeded:    state._collapseSeeded,
     hiddenCards:       state.hiddenCards,
     missionBannerHidden: state.missionBannerHidden,
+    sharedLinksViewMode: state.sharedLinksViewMode,
+    sharedLinksThumbnailMode: state.sharedLinksThumbnailMode,
+    sharedLinksSortMode: state.sharedLinksSortMode,
   };
   if (!Array.isArray(fields) || fields.length === 0) return values;
   return fields.reduce((payload, field) => {
@@ -1273,6 +1289,9 @@ async function loadPersonalData(username, lockOnSwitch = false) {
         state.collapsedSections   = Array.isArray(sbPrefs.collapsedSections) ? sbPrefs.collapsedSections : [];
         state.hiddenCards         = Array.isArray(sbPrefs.hiddenCards) ? sbPrefs.hiddenCards : [];
         state.missionBannerHidden = sbPrefs.missionBannerHidden !== false;
+        state.sharedLinksViewMode = ['grid', 'list'].includes(sbPrefs.sharedLinksViewMode) ? sbPrefs.sharedLinksViewMode : 'grid';
+        state.sharedLinksThumbnailMode = sbPrefs.sharedLinksThumbnailMode !== false;
+        state.sharedLinksSortMode = ['category', 'name', 'recent'].includes(sbPrefs.sharedLinksSortMode) ? sbPrefs.sharedLinksSortMode : 'category';
         if (sbPrefs.theme)    applyTheme(sbPrefs.theme, false);
         if (sbPrefs.fontSize) applyFontSize(sbPrefs.fontSize, false);
         if (sbPrefs.lastViewedSuggestionsAt) {
@@ -2823,6 +2842,11 @@ function openCardModal(docId, categoryId = null, isPrivate = false, privateSecti
   document.getElementById('edit-label').value = card ? card.label : '';
   document.getElementById('edit-icon').value  = currentIcon;
   document.getElementById('edit-url').value   = card ? card.url   : '';
+  document.getElementById('edit-description').value = card ? (card.description || '') : '';
+  document.getElementById('edit-thumbnail-url').value = card ? (card.thumbnailUrl || '') : '';
+  document.getElementById('edit-link-type').value = card
+    ? (card.linkType || inferSharedLinkType(card.url, card.label))
+    : inferSharedLinkType('', '');
   updateIconPreview(currentIcon);
   if (!isSVG) buildIconPicker(currentIcon);
 
@@ -4417,12 +4441,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       btn.classList.toggle('selected', btn.querySelector('i')?.className === val);
     });
   });
+  document.getElementById('edit-url').addEventListener('change', () => {
+    const select = document.getElementById('edit-link-type');
+    if (!select) return;
+    const current = select.value || 'other';
+    const inferred = inferSharedLinkType(
+      document.getElementById('edit-url').value.trim(),
+      document.getElementById('edit-label').value.trim()
+    );
+    if (current === 'other' || !state.editingDocId) select.value = inferred;
+  });
 
   document.getElementById('card-save').addEventListener('click', async () => {
     const label = document.getElementById('edit-label').value.trim();
     const icon  = document.getElementById('edit-icon').value.trim();
     const url   = document.getElementById('edit-url').value.trim();
+    const description = document.getElementById('edit-description').value.trim();
+    const thumbnailUrl = document.getElementById('edit-thumbnail-url').value.trim();
+    const linkType = document.getElementById('edit-link-type').value || inferSharedLinkType(url, label);
     if (!label) { document.getElementById('edit-label').focus(); return; }
+    const sharedMeta = { description, thumbnailUrl, linkType };
 
     const btn = document.getElementById('card-save');
     btn.disabled = true;
@@ -4431,12 +4469,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       if (state.editingIsPrivate) {
         if (state.editingDocId) {
-          await savePrivateCard(state.editingDocId, { label, icon: icon || 'fa-solid fa-star', url: url || '#' });
+          await savePrivateCard(state.editingDocId, { label, icon: icon || 'fa-solid fa-star', url: url || '#', ...sharedMeta });
         } else {
           await addPrivateCard({
             label,
             icon: icon || 'fa-solid fa-star',
             url: url || '#',
+            ...sharedMeta,
             sectionId: state.editingPrivateSectionDocId,
             parentId: state.editingParentId || null,
           });
@@ -4445,7 +4484,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isStatic = !state.editingDocId || state.editingDocId.startsWith('init-');
         if (!isStatic) {
           const card = state.allCards.find(c => c.id === state.editingDocId);
-          const updateData = { label, url };
+          const updateData = { label, url, ...sharedMeta, updatedBy: state.currentUsername || '' };
           if (!card?.isExternalTool) updateData.icon = icon;
           await saveCard(state.editingDocId, updateData);
         } else {
@@ -4453,6 +4492,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             label,
             icon:     icon || 'fa-solid fa-star',
             url:      url  || '#',
+            ...sharedMeta,
+            updatedBy: state.currentUsername || '',
             category: state.editingCategory,
             parentId: state.editingParentId || null,
           });
