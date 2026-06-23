@@ -1,6 +1,9 @@
 import { state } from './state.js';
-import { esc, _fmtTs } from './utils.js';
+import { esc, normalizeProjectKey, _fmtTs } from './utils.js';
 import {
+  fetchAttendanceSitesFromSupabase,
+  createAttendanceSiteInSupabase,
+  updateAttendanceSiteInSupabase,
   fetchTroubleReportsFromSupabase,
   createTroubleReportInSupabase,
   updateTroubleReportInSupabase,
@@ -26,6 +29,19 @@ const STATUS_LABELS = {
   archived: { label: '保管', cls: 'trouble-status--archived' },
 };
 
+const KEYWORD_STOP_WORDS = new Set([
+  'こと', 'ため', 'よう', 'あり', 'なし', 'する', 'した', 'です', 'ます',
+  'これ', 'それ', 'どこ', 'なぜ', 'どう', '対応', '対処', '原因',
+  '確認', '入力', '現場', '発生', 'トラブル',
+]);
+
+const KNOWN_KEYWORD_TERMS = [
+  '焼付', '付枠', '図面', '変更図', '施工図', '製作図', '承認図', '現寸',
+  '色違い', '寸法違い', '数量違い', '手配漏れ', '確認漏れ', '伝達漏れ',
+  '納期', '短納期', '再製作', '差し替え', '外注', '工場', '現場',
+  '符号', '取付', '加工', '塗装', '曲げ', '切断', '穴あけ',
+];
+
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -45,6 +61,141 @@ function mistakeTypeLabel(value) {
   return MISTAKE_TYPE_OPTIONS.find(option => option.value === value)?.label || 'その他';
 }
 
+function getActiveSites() {
+  return [...(state.attendanceSites || [])]
+    .filter(site => site.active !== false)
+    .sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0) || `${a.code || ''}`.localeCompare(`${b.code || ''}`, 'ja'));
+}
+
+function findSiteByProjectKey(projectKey) {
+  const normalized = normalizeProjectKey(projectKey);
+  if (!normalized) return null;
+  return getActiveSites().find(site => normalizeProjectKey(site.code || '') === normalized) || null;
+}
+
+function findSiteByTitle(title) {
+  const normalized = normalizeProjectKey(title);
+  if (!normalized) return null;
+  return getActiveSites().find(site => normalizeProjectKey(site.name || '') === normalized) || null;
+}
+
+async function ensureProjectSites(force = false) {
+  if (state.troubleProjectSitesLoading) return;
+  if (!force && state.troubleProjectSitesLoaded) return;
+  state.troubleProjectSitesLoading = true;
+  try {
+    state.attendanceSites = await fetchAttendanceSitesFromSupabase();
+    state.troubleProjectSitesLoaded = true;
+  } catch (err) {
+    console.error('Trouble project sites load error:', err);
+    showToast('物件Noマスタの読み込みに失敗しました。', 'error');
+  } finally {
+    state.troubleProjectSitesLoading = false;
+  }
+}
+
+function projectOptionMarkup() {
+  return getActiveSites().map(site => (
+    `<option value="${esc(site.code || '')}" label="${esc(site.name || '')}"></option>`
+  )).join('');
+}
+
+function siteNameOptionMarkup() {
+  return getActiveSites().map(site => (
+    `<option value="${esc(site.name || '')}" label="${esc(site.code || '')}"></option>`
+  )).join('');
+}
+
+function keywordTokenize(value) {
+  return `${value || ''}`
+    .replace(/[。、，,;；:：/／|｜()[\]【】「」『』"'!?！？\n\r\t]+/g, ' ')
+    .split(/\s+/)
+    .map(token => token.trim().replace(/^#+/, ''))
+    .filter(token => token.length >= 2 && !KEYWORD_STOP_WORDS.has(token));
+}
+
+function generateKeywords(data = {}) {
+  const priority = [
+    data.projectKey,
+    data.title,
+    data.mistakeType,
+    data.occurrenceLocation,
+    data.department,
+    data.detail,
+    data.cause,
+    data.correctiveAction,
+    data.preventionAction,
+  ];
+  const tags = [];
+  const seen = new Set();
+  const joinedText = priority.filter(Boolean).join(' ');
+  const knownTerms = KNOWN_KEYWORD_TERMS.filter(term => joinedText.includes(term));
+  [...keywordTokenize(data.projectKey), ...keywordTokenize(data.title), ...knownTerms, ...priority.flatMap(keywordTokenize)].forEach(token => {
+    const normalized = token.toLowerCase();
+    if (seen.has(normalized)) return;
+    seen.add(normalized);
+    tags.push(`#${token}`);
+  });
+  return tags.slice(0, 12).join(' ');
+}
+
+function collectFormValues() {
+  return {
+    reportDate: document.getElementById('trouble-report-date')?.value || todayKey(),
+    department: document.getElementById('trouble-department')?.value.trim() || state.userEmailProfile?.department || '',
+    mistakeType: document.getElementById('trouble-mistake-type')?.value || 'その他',
+    projectKey: normalizeProjectKey(document.getElementById('trouble-project-key')?.value || ''),
+    siteId: document.getElementById('trouble-site-id')?.value || '',
+    title: document.getElementById('trouble-title')?.value.trim() || '',
+    occurrenceLocation: document.getElementById('trouble-location')?.value.trim() || '',
+    detail: document.getElementById('trouble-detail')?.value.trim() || '',
+    cause: document.getElementById('trouble-cause')?.value.trim() || '',
+    correctiveAction: document.getElementById('trouble-corrective-action')?.value.trim() || '',
+    preventionAction: document.getElementById('trouble-prevention-action')?.value.trim() || '',
+  };
+}
+
+function setProjectStatus(message = '', type = 'info') {
+  const el = document.getElementById('trouble-project-status');
+  if (!el) return;
+  el.textContent = message;
+  el.dataset.type = type;
+}
+
+function updateProjectLinkFromKey() {
+  const keyInput = document.getElementById('trouble-project-key');
+  const titleInput = document.getElementById('trouble-title');
+  const siteIdInput = document.getElementById('trouble-site-id');
+  const site = findSiteByProjectKey(keyInput?.value || '');
+  if (!site) {
+    if (siteIdInput) siteIdInput.value = '';
+    setProjectStatus(keyInput?.value ? '未登録の物件Noです。現場名を入れて登録できます。' : '', 'info');
+    return;
+  }
+  if (siteIdInput) siteIdInput.value = site.id || '';
+  if (titleInput && !titleInput.value.trim()) titleInput.value = site.name || '';
+  setProjectStatus(`リンク中: ${site.code || ''} / ${site.name || ''}`, 'success');
+}
+
+function updateProjectLinkFromTitle() {
+  const keyInput = document.getElementById('trouble-project-key');
+  const titleInput = document.getElementById('trouble-title');
+  const siteIdInput = document.getElementById('trouble-site-id');
+  const site = findSiteByTitle(titleInput?.value || '');
+  if (!site) return;
+  if (siteIdInput) siteIdInput.value = site.id || '';
+  if (keyInput && !keyInput.value.trim()) keyInput.value = site.code || '';
+  setProjectStatus(`リンク中: ${site.code || ''} / ${site.name || ''}`, 'success');
+}
+
+function updateKeywordsFromForm(force = false) {
+  const checkbox = document.getElementById('trouble-keywords-auto');
+  const input = document.getElementById('trouble-keywords');
+  if (!input) return;
+  if (!force && checkbox && !checkbox.checked) return;
+  input.value = generateKeywords(collectFormValues());
+}
+
 function setActiveTab(tab) {
   state.troubleReportActiveTab = tab || 'new';
   document.querySelectorAll('[data-trouble-tab]').forEach(btn => {
@@ -55,8 +206,13 @@ function setActiveTab(tab) {
 function renderForm() {
   const profile = state.googleAuthProfile || {};
   const department = state.userEmailProfile?.department || '';
+  const projectOptions = projectOptionMarkup();
+  const siteOptions = siteNameOptionMarkup();
   return `
     <form class="trouble-form" id="trouble-report-form">
+      <datalist id="trouble-project-options">${projectOptions}</datalist>
+      <datalist id="trouble-site-options">${siteOptions}</datalist>
+      <input type="hidden" id="trouble-site-id" value="">
       <div class="trouble-form-grid">
         <div class="form-group form-group-inline">
           <input type="date" id="trouble-report-date" class="date-icon-only" value="${todayKey()}">
@@ -70,9 +226,20 @@ function renderForm() {
           <label class="form-label" for="trouble-mistake-type">ミス先</label>
           <select id="trouble-mistake-type" class="form-input">${optionMarkup(MISTAKE_TYPE_OPTIONS, '工場ミス')}</select>
         </div>
+        <div class="form-group">
+          <label class="form-label" for="trouble-project-key">物件No</label>
+          <input type="text" id="trouble-project-key" class="form-input" maxlength="80" list="trouble-project-options" placeholder="例：61065">
+        </div>
         <div class="form-group trouble-form-wide">
-          <label class="form-label" for="trouble-title">件名（現場名）</label>
-          <input type="text" id="trouble-title" class="form-input" maxlength="120" placeholder="例：信越化学S棟">
+          <label class="form-label" for="trouble-title">現場名（件名）</label>
+          <input type="text" id="trouble-title" class="form-input" maxlength="120" list="trouble-site-options" placeholder="例：信越化学S棟">
+        </div>
+        <div class="trouble-project-tools trouble-form-wide">
+          <button type="button" class="btn-modal-secondary" id="trouble-save-project-btn">
+            <i class="fa-solid fa-link" aria-hidden="true"></i>
+            <span>物件Noを登録/更新</span>
+          </button>
+          <span id="trouble-project-status" class="trouble-project-status"></span>
         </div>
         <div class="form-group trouble-form-wide">
           <label class="form-label" for="trouble-location">符号と発生場所</label>
@@ -95,8 +262,20 @@ function renderForm() {
           <textarea id="trouble-prevention-action" class="form-input" rows="3" placeholder="同じミスを防ぐための対策"></textarea>
         </div>
         <div class="form-group trouble-form-wide">
-          <label class="form-label" for="trouble-keywords">キーワード</label>
-          <input type="text" id="trouble-keywords" class="form-input" maxlength="240" placeholder="例：#焼付 #付枠 #図面の整合性 #短納期">
+          <div class="trouble-keyword-label-row">
+            <label class="form-label" for="trouble-keywords">キーワード</label>
+            <label class="trouble-keyword-toggle">
+              <input type="checkbox" id="trouble-keywords-auto" checked>
+              <span>自動生成</span>
+            </label>
+          </div>
+          <div class="trouble-keyword-input-row">
+            <input type="text" id="trouble-keywords" class="form-input" maxlength="240" placeholder="入力内容から自動生成。手入力で編集もできます。">
+            <button type="button" class="btn-modal-secondary" id="trouble-keywords-regenerate">
+              <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+              <span>再生成</span>
+            </button>
+          </div>
         </div>
       </div>
       <div class="trouble-form-footer">
@@ -120,7 +299,7 @@ function renderFilters() {
         <option value="reviewing"${state.troubleReportStatusFilter === 'reviewing' ? ' selected' : ''}>確認中</option>
         <option value="done"${state.troubleReportStatusFilter === 'done' ? ' selected' : ''}>完了</option>
       </select>
-      <input type="text" id="trouble-project-filter" class="form-input" value="${esc(state.troubleReportProjectFilter)}" placeholder="件名（現場名）で絞り込み">
+      <input type="text" id="trouble-project-filter" class="form-input" value="${esc(state.troubleReportProjectFilter)}" placeholder="物件No・現場名で絞り込み">
       <button type="button" class="btn-modal-secondary" id="trouble-refresh-btn">
         <i class="fa-solid fa-rotate" aria-hidden="true"></i>
         <span>更新</span>
@@ -143,6 +322,7 @@ function renderList() {
           <div class="trouble-item-title">${esc(report.title || '件名未設定')}</div>
           <div class="trouble-item-meta">
             ${esc(report.reportDate || '')}
+            ${report.projectKey ? ` / 物件No: ${esc(report.projectKey)}` : ''}
             / ${esc(mistakeTypeLabel(report.mistakeType))}
             ${report.occurrenceLocation ? ` / ${esc(report.occurrenceLocation)}` : ''}
           </div>
@@ -156,6 +336,7 @@ function renderList() {
         <span>${esc(_fmtTs(report.createdAt))}</span>
       </div>
       <div class="trouble-item-actions">
+        ${report.projectKey ? `<button type="button" class="btn-modal-secondary" data-trouble-project="${esc(report.projectKey)}">物件Noまとめ</button>` : ''}
         <button type="button" class="btn-modal-secondary" data-trouble-status="reviewing">確認中</button>
         <button type="button" class="btn-modal-primary" data-trouble-status="done">完了</button>
       </div>
@@ -200,9 +381,11 @@ async function submitReport(event) {
   const title = document.getElementById('trouble-title')?.value.trim();
   const occurrenceLocation = document.getElementById('trouble-location')?.value.trim();
   const detail = document.getElementById('trouble-detail')?.value.trim();
+  const projectKey = normalizeProjectKey(document.getElementById('trouble-project-key')?.value || '');
   if (!title) { document.getElementById('trouble-title')?.focus(); return; }
   if (!occurrenceLocation) { document.getElementById('trouble-location')?.focus(); return; }
   if (!detail) { document.getElementById('trouble-detail')?.focus(); return; }
+  updateKeywordsFromForm(false);
   const btn = document.getElementById('trouble-submit-btn');
   if (btn) {
     btn.disabled = true;
@@ -215,6 +398,8 @@ async function submitReport(event) {
       reporterEmail: state.googleAuthProfile?.email || state.userEmailProfile?.email || '',
       department: document.getElementById('trouble-department')?.value.trim() || state.userEmailProfile?.department || '',
       mistakeType: document.getElementById('trouble-mistake-type')?.value || 'その他',
+      projectKey,
+      siteId: document.getElementById('trouble-site-id')?.value || findSiteByProjectKey(projectKey)?.id || '',
       title,
       occurrenceLocation,
       detail,
@@ -235,6 +420,72 @@ async function submitReport(event) {
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-paper-plane" aria-hidden="true"></i><span>報告を送信</span>';
     }
+  }
+}
+
+async function saveProjectSiteFromForm() {
+  const projectKey = normalizeProjectKey(document.getElementById('trouble-project-key')?.value || '');
+  const title = document.getElementById('trouble-title')?.value.trim() || '';
+  if (!projectKey) {
+    document.getElementById('trouble-project-key')?.focus();
+    setProjectStatus('物件Noを入力してください。', 'error');
+    return;
+  }
+  if (!title) {
+    document.getElementById('trouble-title')?.focus();
+    setProjectStatus('現場名を入力してください。', 'error');
+    return;
+  }
+  const btn = document.getElementById('trouble-save-project-btn');
+  if (btn) btn.disabled = true;
+  try {
+    await ensureProjectSites(true);
+    const existing = findSiteByProjectKey(projectKey);
+    let savedSiteId = '';
+    let savedMessage = '';
+    if (existing) {
+      await updateAttendanceSiteInSupabase(existing.id, {
+        code: projectKey,
+        name: title,
+        active: true,
+        updatedBy: state.currentUsername || '',
+      });
+      state.attendanceSites = (state.attendanceSites || []).map(site =>
+        site.id === existing.id ? { ...site, code: projectKey, name: title, active: true, updatedBy: state.currentUsername || '' } : site
+      );
+      savedSiteId = existing.id;
+      savedMessage = '物件Noと現場名を更新しました。';
+    } else {
+      const sortOrder = (state.attendanceSites || []).reduce((max, site) => Math.max(max, Number(site.sortOrder) || 0), 0) + 10;
+      const id = await createAttendanceSiteInSupabase({
+        code: projectKey,
+        name: title,
+        sortOrder,
+        updatedBy: state.currentUsername || '',
+      });
+      state.attendanceSites = [...(state.attendanceSites || []), { id, code: projectKey, name: title, sortOrder, active: true, updatedBy: state.currentUsername || '' }];
+      savedSiteId = id;
+      savedMessage = '物件Noと現場名を登録しました。';
+    }
+    state.troubleProjectSitesLoaded = true;
+    const projectOptionsEl = document.getElementById('trouble-project-options');
+    const siteOptionsEl = document.getElementById('trouble-site-options');
+    if (projectOptionsEl) projectOptionsEl.innerHTML = projectOptionMarkup();
+    if (siteOptionsEl) siteOptionsEl.innerHTML = siteNameOptionMarkup();
+    const keyInput = document.getElementById('trouble-project-key');
+    const titleInput = document.getElementById('trouble-title');
+    const siteIdInput = document.getElementById('trouble-site-id');
+    if (keyInput) keyInput.value = projectKey;
+    if (titleInput) titleInput.value = title;
+    if (siteIdInput) siteIdInput.value = savedSiteId;
+    setProjectStatus(savedMessage, 'success');
+    updateKeywordsFromForm(true);
+  } catch (err) {
+    console.error('Trouble project site save error:', err);
+    setProjectStatus('物件Noの登録に失敗しました。', 'error');
+    showToast('物件Noの登録に失敗しました。', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -273,6 +524,21 @@ export function initTroubleReport(d = {}) {
     if (statusBtn) {
       const item = statusBtn.closest('[data-trouble-id]');
       void updateStatus(item?.dataset.troubleId, statusBtn.dataset.troubleStatus);
+      return;
+    }
+    const projectBtn = event.target.closest('[data-trouble-project]');
+    if (projectBtn) {
+      deps.openPropertySummary?.(projectBtn.dataset.troubleProject || '');
+      return;
+    }
+    if (event.target.closest('#trouble-save-project-btn')) {
+      void saveProjectSiteFromForm();
+      return;
+    }
+    if (event.target.closest('#trouble-keywords-regenerate')) {
+      const checkbox = document.getElementById('trouble-keywords-auto');
+      if (checkbox) checkbox.checked = true;
+      updateKeywordsFromForm(true);
     }
   });
   modal.addEventListener('submit', event => {
@@ -283,6 +549,32 @@ export function initTroubleReport(d = {}) {
       state.troubleReportStatusFilter = event.target.value || 'open';
       state.troubleReportsLoaded = false;
       void loadReports(true);
+      return;
+    }
+    if (event.target?.id === 'trouble-project-key') {
+      updateProjectLinkFromKey();
+      updateKeywordsFromForm(false);
+      return;
+    }
+    if (event.target?.id === 'trouble-title') {
+      updateProjectLinkFromTitle();
+      updateKeywordsFromForm(false);
+      return;
+    }
+    if (event.target?.id === 'trouble-keywords-auto') {
+      updateKeywordsFromForm(true);
+    }
+  });
+  modal.addEventListener('input', event => {
+    if (event.target?.id === 'trouble-keywords') {
+      const checkbox = document.getElementById('trouble-keywords-auto');
+      if (checkbox) checkbox.checked = false;
+      return;
+    }
+    if (event.target?.closest('#trouble-report-form')) {
+      if (event.target?.id === 'trouble-project-key') updateProjectLinkFromKey();
+      if (event.target?.id === 'trouble-title') updateProjectLinkFromTitle();
+      updateKeywordsFromForm(false);
     }
   });
   modal.addEventListener('click', event => {
@@ -298,6 +590,9 @@ export function openTroubleReportModal(initialTab = 'new') {
   state.troubleReportActiveTab = initialTab || 'new';
   document.getElementById('trouble-report-modal')?.classList.add('visible');
   renderContent();
+  void ensureProjectSites().then(() => {
+    if (state.troubleReportActiveTab === 'new') renderContent();
+  });
   if (state.troubleReportActiveTab === 'list') void loadReports();
 }
 

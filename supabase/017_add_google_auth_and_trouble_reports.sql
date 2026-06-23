@@ -25,6 +25,8 @@ create table if not exists public.trouble_reports (
   department text not null default '',
   mistake_type text not null default 'その他'
     check (mistake_type in ('現場ミス', '設計ミス', '展開ミス', '工場ミス', '工事ミス', '外注ミス', 'その他')),
+  project_key text not null default '',
+  site_id text,
   title text not null default '',
   occurrence_location text not null default '',
   detail text not null default '',
@@ -45,6 +47,9 @@ create index if not exists idx_trouble_reports_status_created
 
 create index if not exists idx_trouble_reports_title_created
   on public.trouble_reports(title, created_at desc);
+
+create index if not exists idx_trouble_reports_project_key_created
+  on public.trouble_reports(project_key, created_at desc);
 
 create index if not exists idx_trouble_reports_mistake_type_created
   on public.trouble_reports(mistake_type, created_at desc);

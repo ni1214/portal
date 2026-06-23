@@ -292,6 +292,8 @@ export function xxxFunction() { ... }
 | `reporterEmail` | string | Googleまたはプロフィールのメールアドレス |
 | `department` | string | 報告者部署 |
 | `mistakeType` | string | ミス先（`'現場ミス'` / `'設計ミス'` / `'展開ミス'` / `'工場ミス'` / `'工事ミス'` / `'外注ミス'` / `'その他'`） |
+| `projectKey` | string | 物件No（現場コード）。`attendance_sites.code` と同じキー |
+| `siteId` | string\|null | `attendance_sites.id`。物件Noマスタとリンクできた場合に保存 |
 | `title` | string | 件名（現場名） |
 | `occurrenceLocation` | string | 符号と発生場所 |
 | `detail` | string | 事象（何が起きたか） |
@@ -304,6 +306,9 @@ export function xxxFunction() { ... }
 | `adminNote` | string | 管理・対応メモ |
 | `createdAt` | timestamp | 投稿日時 |
 | `updatedAt` | timestamp | 更新日時 |
+
+- トラブル報告の現場名は `attendance_sites` を物件Noマスタとして参照する。未登録の物件Noはトラブル報告画面から `attendance_sites` に登録/更新できる。
+- キーワードはフォーム入力から自動生成し、必要に応じて手入力で上書きできる。
 
 ### 個人プロフィールフィールド（`users/{name}/data/email_profile`）
 | フィールド | 型 | 説明 |

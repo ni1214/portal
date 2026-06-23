@@ -260,6 +260,8 @@ export const state = {
   troubleReportActiveTab: 'new',
   troubleReportStatusFilter: 'open',
   troubleReportProjectFilter: '',
+  troubleProjectSitesLoaded: false,
+  troubleProjectSitesLoading: false,
   troubleReportEditingId: null,
 
   // タスク・依頼コメント

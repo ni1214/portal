@@ -5,6 +5,7 @@ import {
   fetchRequestsByProjectKeyFromSupabase,
   fetchTasksByProjectKeyFromSupabase,
   fetchOrdersByProjectKeyFromSupabase,
+  fetchTroubleReportsFromSupabase,
 } from './supabase.js';
 import { state, REQ_STATUS_LABEL, TASK_STATUS_LABEL } from './state.js';
 import { esc, normalizeProjectKey, _fmtTs } from './utils.js';
@@ -99,10 +100,11 @@ async function searchPropertySummary(rawValue = null, options = {}) {
     const currentUser = state.currentUsername || '';
     const myDept = state.userEmailProfile?.department || '';
 
-    const [rawReqs, rawTasks, rawOrders] = await Promise.all([
+    const [rawReqs, rawTasks, rawOrders, rawTroubles] = await Promise.all([
       fetchRequestsByProjectKeyFromSupabase(projectKey),
       fetchTasksByProjectKeyFromSupabase(projectKey),
       fetchOrdersByProjectKeyFromSupabase(projectKey),
+      fetchTroubleReportsFromSupabase({ status: 'all', projectKey }),
     ]);
     const requests = rawReqs
       .filter(item => item.createdBy === currentUser || (myDept && item.toDept === myDept))
@@ -117,6 +119,8 @@ async function searchPropertySummary(rawValue = null, options = {}) {
     const orders = rawOrders
       .filter(item => state.isAdmin || item.orderedBy === currentUser)
       .sort((a, b) => getDateValue(b.orderedAt) - getDateValue(a.orderedAt));
+    const troubles = rawTroubles
+      .sort((a, b) => getDateValue(b.updatedAt || b.createdAt) - getDateValue(a.updatedAt || a.createdAt));
 
     const siteMatch = resolution.siteMatch
       || [...siteMap.values()].find(site => normalizeProjectKey(site.code || '') === projectKey)
@@ -129,12 +133,14 @@ async function searchPropertySummary(rawValue = null, options = {}) {
       requests,
       tasks,
       orders,
+      troubles,
       attendance: attendanceRecords,
       attendanceFallbackUsed,
       counts: {
         requests: requests.length,
         tasks: tasks.length,
         orders: orders.length,
+        troubles: troubles.length,
         attendance: attendanceRecords.length,
       },
       searchedAt: new Date(),
@@ -593,6 +599,7 @@ function renderPropertySummary() {
         ${renderStatCard('部署間依頼', results.counts.requests, 'fa-solid fa-clipboard-list')}
         ${renderStatCard('タスク', results.counts.tasks, 'fa-solid fa-list-check')}
         ${renderStatCard('鋼材発注', results.counts.orders, 'fa-solid fa-boxes-stacked')}
+        ${renderStatCard('トラブル報告', results.counts.troubles, 'fa-solid fa-triangle-exclamation')}
         ${renderStatCard('作業記録', results.counts.attendance, 'fa-regular fa-calendar')}
       </div>
     </div>
@@ -601,6 +608,7 @@ function renderPropertySummary() {
       ${renderRequestSection(results.requests)}
       ${renderTaskSection(results.tasks)}
       ${renderOrderSection(results.orders)}
+      ${renderTroubleSection(results.troubles)}
       ${renderAttendanceSection(results.attendance)}
     </div>
   `;
@@ -708,6 +716,36 @@ function renderOrderSection(orders) {
   return renderSection('鋼材発注', `${orders.length}件`, 'orders', 'fa-solid fa-boxes-stacked', items);
 }
 
+function renderTroubleSection(troubles) {
+  const statusLabels = {
+    submitted: '受付',
+    reviewing: '確認中',
+    done: '完了',
+    archived: '保管',
+  };
+  const items = troubles.length > 0
+    ? troubles.map(report => {
+      const status = statusLabels[report.status] || report.status || '不明';
+      return `
+        <article class="prop-summary-item">
+          <div class="prop-summary-item-head">
+            <div class="prop-summary-item-title">${esc(report.title || '（現場名なし）')}</div>
+            <div class="prop-summary-item-date">${esc(report.reportDate || '')}</div>
+          </div>
+          <div class="prop-summary-item-meta">${esc(report.mistakeType || 'その他')} / ${esc(status)} / 報告者 ${esc(report.reporterUsername || '不明')}</div>
+          ${report.detail ? `<div class="prop-summary-item-body">${esc(report.detail)}</div>` : ''}
+          <div class="prop-summary-item-tags">
+            ${report.occurrenceLocation ? `<span class="prop-summary-mini-badge"><i class="fa-solid fa-location-dot"></i> ${esc(report.occurrenceLocation)}</span>` : ''}
+            ${report.keywords ? `<span class="prop-summary-mini-badge"><i class="fa-solid fa-tags"></i> ${esc(report.keywords)}</span>` : ''}
+          </div>
+        </article>
+      `;
+    }).join('')
+    : '<div class="prop-summary-empty prop-summary-empty--section"><p>一致するトラブル報告はありません。</p></div>';
+
+  return renderSection('トラブル報告', `${troubles.length}件`, 'troubles', 'fa-solid fa-triangle-exclamation', items);
+}
+
 function renderAttendanceSection(attendance) {
   const userCount = new Set(attendance.map(item => item.username)).size;
   const countText = attendance.length > 0 ? `${attendance.length}日 / ${userCount}人` : '0件';
@@ -778,6 +816,7 @@ function getActionLabel(actionType) {
     case 'requests': return '依頼画面へ';
     case 'tasks': return 'タスク画面へ';
     case 'orders': return '履歴へ';
+    case 'troubles': return '報告一覧へ';
     case 'work': return '勤務内容表へ';
     default: return '開く';
   }
@@ -852,6 +891,8 @@ function bindPropertySummaryEvents() {
       deps.openTasks?.(queryValue);
     } else if (actionType === 'orders') {
       deps.openOrders?.(queryValue);
+    } else if (actionType === 'troubles') {
+      deps.openTroubles?.(queryValue);
     } else if (actionType === 'work') {
       deps.openWork?.(queryValue);
     }

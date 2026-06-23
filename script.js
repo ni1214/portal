@@ -919,6 +919,7 @@ initSharedLinkAi({
 });
 initTroubleReport({
   promptUsernameFor,
+  openPropertySummary: projectKey => openPropertySummaryWorkspace(projectKey || ''),
 });
 
 initPropertySummary({
@@ -935,6 +936,11 @@ initPropertySummary({
   },
   openOrders: async projectKey => {
     await openOrderHistoryModal(projectKey);
+  },
+  openTroubles: projectKey => {
+    state.troubleReportProjectFilter = projectKey || '';
+    state.troubleReportsLoaded = false;
+    void openTroubleReportWorkspace('list');
   },
   openWork: async projectKey => {
     state.attendanceWorkProjectKeyFilter = projectKey;

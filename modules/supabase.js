@@ -1939,6 +1939,8 @@ function mapTroubleReportRow(row = {}) {
     reporterEmail: row.reporter_email || '',
     department: row.department || '',
     mistakeType: row.mistake_type || 'その他',
+    projectKey: row.project_key || '',
+    siteId: row.site_id || '',
     title: row.title || '',
     occurrenceLocation: row.occurrence_location || '',
     detail: row.detail || '',
@@ -1961,6 +1963,8 @@ function mapTroubleReportPayload(data = {}) {
     reporter_email: normalizeGoogleEmail(data.reporterEmail || ''),
     department: data.department || '',
     mistake_type: data.mistakeType || 'その他',
+    project_key: data.projectKey || '',
+    site_id: data.siteId || '',
     title: data.title || '',
     occurrence_location: data.occurrenceLocation || '',
     detail: data.detail || '',
@@ -1974,14 +1978,15 @@ function mapTroubleReportPayload(data = {}) {
   };
 }
 
-export async function fetchTroubleReportsFromSupabase({ status = 'open', title = '' } = {}) {
+export async function fetchTroubleReportsFromSupabase({ status = 'open', title = '', projectKey = '' } = {}) {
   const filters = ['select=*'];
   if (status === 'open') {
     filters.push('status=in.(submitted,reviewing)');
   } else if (status && status !== 'all') {
     filters.push(`status=eq.${encodeURIComponent(status)}`);
   }
-  if (title) filters.push(`title=ilike.*${encodeURIComponent(title)}*`);
+  if (title) filters.push(`or=(title.ilike.*${encodeURIComponent(title)}*,project_key.ilike.*${encodeURIComponent(title)}*)`);
+  if (projectKey) filters.push(`project_key=eq.${encodeURIComponent(projectKey)}`);
   filters.push('order=created_at.desc');
   filters.push('limit=200');
   const rows = await requestSupabase(`trouble_reports?${filters.join('&')}`, {
@@ -2009,6 +2014,8 @@ export async function updateTroubleReportInSupabase(id, data) {
   if ('reporterEmail' in data) payload.reporter_email = normalizeGoogleEmail(data.reporterEmail || '');
   if ('department' in data) payload.department = data.department || '';
   if ('mistakeType' in data) payload.mistake_type = data.mistakeType || 'その他';
+  if ('projectKey' in data) payload.project_key = data.projectKey || '';
+  if ('siteId' in data) payload.site_id = data.siteId || '';
   if ('title' in data) payload.title = data.title || '';
   if ('occurrenceLocation' in data) payload.occurrence_location = data.occurrenceLocation || '';
   if ('detail' in data) payload.detail = data.detail || '';
