@@ -35,6 +35,10 @@ const ATTENDANCE_CLEANUP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 週1回
 const ATTENDANCE_CLEANUP_KEY_PREFIX = 'portal-attendance-cleanup-last:';
 
 let attendanceCleanupRunning = false;
+let workAttendanceLoadSeq = 0;
+let workAttendanceCacheKey = '';
+let workAttendancePendingKey = '';
+let workAttendanceLoadPromise = null;
 
 export function initAttendanceWork(d) {
   deps = d || {};
@@ -113,6 +117,10 @@ function resetWorkSummaryState(period = getWorkPeriod()) {
 
 export function markWorkSummaryStale() {
   const period = getWorkPeriod();
+  workAttendanceLoadSeq += 1;
+  workAttendanceCacheKey = '';
+  workAttendancePendingKey = '';
+  workAttendanceLoadPromise = null;
   resetWorkSummaryState(period);
   updateSummaryActionButtons(period);
   if (state.calTab === 'personal' && state.calPersonalTab === 'summary') {
@@ -533,9 +541,35 @@ async function loadUserPeriodAttendance(username, period) {
 async function loadCurrentUserPeriodAttendance(period) {
   if (!state.currentUsername) {
     state.workPeriodAttendance = {};
-    return;
+    workAttendanceCacheKey = '';
+    return false;
   }
-  state.workPeriodAttendance = await loadUserPeriodAttendance(state.currentUsername, period);
+  const username = state.currentUsername;
+  const cacheKey = `${username}:${period.startStr}:${period.endStr}`;
+  if (workAttendanceCacheKey === cacheKey) return true;
+  if (workAttendancePendingKey === cacheKey && workAttendanceLoadPromise) {
+    return workAttendanceLoadPromise;
+  }
+
+  const loadSeq = ++workAttendanceLoadSeq;
+  workAttendancePendingKey = cacheKey;
+  const promise = (async () => {
+    const attendance = await loadUserPeriodAttendance(username, period);
+    if (loadSeq !== workAttendanceLoadSeq || state.currentUsername !== username) return false;
+    state.workPeriodAttendance = attendance;
+    workAttendanceCacheKey = cacheKey;
+    return true;
+  })();
+  workAttendanceLoadPromise = promise;
+
+  try {
+    return await promise;
+  } finally {
+    if (workAttendanceLoadPromise === promise) {
+      workAttendancePendingKey = '';
+      workAttendanceLoadPromise = null;
+    }
+  }
 }
 
 function getAttendanceCleanupStorageKey() {
@@ -649,10 +683,14 @@ async function renderWorkTable() {
     return;
   }
 
-  container.innerHTML = '<div class="calw-loading">勤務内容表を読み込み中...</div>';
+  const periodCacheKey = `${state.currentUsername}:${period.startStr}:${period.endStr}`;
+  if (workAttendanceCacheKey !== periodCacheKey) {
+    container.innerHTML = '<div class="calw-loading">勤務内容表を読み込み中...</div>';
+  }
 
   try {
-    await loadCurrentUserPeriodAttendance(period);
+    const loaded = await loadCurrentUserPeriodAttendance(period);
+    if (!loaded) return;
   } catch (err) {
     updateWorkProjectFilterUi(0, 0);
     console.error('勤務内容表データ読み込みエラー:', err);
@@ -1454,13 +1492,15 @@ async function addAttendanceSiteFromForm() {
   btn.disabled = true;
   try {
     if (isSupabaseSharedCoreEnabled()) {
-      const newSite = await createAttendanceSiteInSupabase({
+      const sitePayload = {
         code: code || '',
         name,
         active: true,
         sortOrder: maxOrder + 1,
         updatedBy: state.currentUsername || '',
-      });
+      };
+      const siteId = await createAttendanceSiteInSupabase(sitePayload);
+      const newSite = { id: siteId, ...sitePayload };
       state.attendanceSites = [...(state.attendanceSites || []), newSite];
       renderAttendanceSiteTable();
     } else {
@@ -1593,9 +1633,14 @@ function unsubscribeAttendanceSites() {
 
 function updatePersonalTabUi(tab) {
   PERSONAL_TABS.forEach(name => {
-    document.getElementById(`calw-tab-${name}`)?.classList.toggle('active', tab === name);
+    const tabButton = document.getElementById(`calw-tab-${name}`);
+    tabButton?.classList.toggle('active', tab === name);
+    tabButton?.setAttribute('aria-selected', String(tab === name));
     const view = document.getElementById(`calw-view-${name}`);
-    if (view) view.style.display = tab === name ? '' : 'none';
+    if (view) {
+      view.hidden = tab !== name;
+      view.style.removeProperty('display');
+    }
   });
   document.querySelectorAll('[data-cal-workspace-action]').forEach(btn => {
     const action = btn.dataset.calWorkspaceAction;

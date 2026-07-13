@@ -314,7 +314,7 @@ export async function renderSharedCalendar() {
     }
     info.events.forEach(ev => {
       const color = ev.color || 'var(--accent-cyan)';
-      companyBadges += `<span class="cal-company-badge event-badge" style="background:${color}20;color:${color}" title="${esc(ev.label)}">${esc(ev.label)}</span>`;
+      companyBadges += `<span class="cal-company-badge event-badge" style="--cal-event-color:${color}" title="${esc(ev.label)}">${esc(ev.label)}</span>`;
     });
 
     let userBadges = '';

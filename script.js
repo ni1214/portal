@@ -127,7 +127,6 @@ import {
 import {
   initCalendar,
   openCalendarModal, closeCalendarModal,
-  openCalendarWorkspace,
   calPrevMonth, calNextMonth, calGoToday,
   openDayPanel, closeDayPanel, saveDayAttendance, deleteAttendance,
   switchCalTab, renderCalendar, updateCalendarSummary,
@@ -364,10 +363,6 @@ initCalendar({
   subscribeCompanyCalConfig,
   unsubscribeCompanyCalConfig,
   getDateInfo,
-  onCalendarWorkspaceClose: () => {
-    onCalendarModalClose();
-    resetWorkspaceNavigationState();
-  },
 });
 
 initAttendanceWork({
@@ -407,23 +402,30 @@ function focusNoticeBoardFromDashboard() {
 function closeCalendarWorkspaceIfOpen() {
   const modal = document.getElementById('cal-modal');
   if (!modal?.classList.contains('cal-workspace-mode')) return false;
+  if (modal.classList.contains('portal-workspace-mode')) {
+    return closeActiveWorkspaceView();
+  }
   closeCalendarModal();
   onCalendarModalClose();
   return true;
 }
 
 async function openCalendarWorkspaceView() {
-  clearHeaderSearch();
-  await openCalendarWorkspace();
-  if (!document.getElementById('cal-modal')?.classList.contains('visible')) return false;
-  setWorkspaceNavigationState({
+  return openPortalWorkspace({
+    elementId: 'cal-modal',
+    openAction: openCalendarModal,
+    closeAction: () => {
+      closeCalendarModal();
+      onCalendarModalClose();
+    },
+    closeSelector: '#cal-close-btn',
+    extraClass: 'cal-workspace-mode',
     route: 'calendar',
     title: 'カレンダー・勤怠',
-    subtitle: '個人勤怠、共有カレンダー、勤務内容を確認します。',
+    subtitle: '今日の勤怠と現場工数を記録し、必要な勤務内容を確認します。',
     icon: 'calendar_month',
     sourceButtonId: 'btn-calendar',
   });
-  return true;
 }
 
 function returnToHomeWorkspace() {
@@ -453,8 +455,9 @@ async function openPortalWorkspace({
   closeSettingsPanel();
   closeCalendarWorkspaceIfOpen();
   closeActiveWorkspaceView();
-  await openAction?.();
-  openWorkspaceView({
+  const opened = await openAction?.();
+  if (opened === false) return false;
+  return openWorkspaceView({
     elementId,
     closeAction,
     closeSelector,
@@ -4298,9 +4301,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('cal-day-cancel-btn').addEventListener('click', closeDayPanel);
   document.getElementById('cal-day-save-btn').addEventListener('click', saveDayAttendance);
-  document.getElementById('cal-day-delete-btn').addEventListener('click', () => {
+  document.getElementById('cal-day-delete-btn').addEventListener('click', async () => {
     const { calendarSelectedDate } = state;
-    if (calendarSelectedDate) deleteAttendance(calendarSelectedDate);
+    if (!calendarSelectedDate) return;
+    const dayLabel = document.getElementById('cal-day-title')?.textContent?.trim() || calendarSelectedDate;
+    const confirmed = await showConfirm(
+      `${dayLabel}の勤怠記録を削除しますか？\n現場工数・物件No・メモも削除されます。`,
+      { okLabel: '記録を削除', danger: true },
+    );
+    if (!confirmed) return;
+
+    const deleteButton = document.getElementById('cal-day-delete-btn');
+    if (deleteButton) {
+      deleteButton.disabled = true;
+      deleteButton.textContent = '削除中…';
+    }
+    const deleted = await deleteAttendance(calendarSelectedDate);
+    if (deleteButton) {
+      deleteButton.disabled = false;
+      deleteButton.textContent = 'この日の記録を削除';
+    }
+    if (deleted) {
+      closeDayPanel();
+      showToast(`${dayLabel}の勤怠記録を削除しました。`, 'success');
+    }
   });
   // タブ切替
   document.getElementById('cal-tab-personal').addEventListener('click', async () => {

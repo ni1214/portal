@@ -43,11 +43,6 @@ let attendanceLoadSeq = 0;
 let todayAttendanceLoadSeq = 0;
 let prevMonthAttendanceLoadSeq = 0;
 let fiscalYearLoadSeq = 0;
-let calendarOriginalParent = null;
-let calendarOriginalNextSibling = null;
-let calendarCloseIconText = '';
-let calendarCloseTitle = '';
-let calendarCloseAriaLabel = '';
 export function initCalendar(d) { deps = d; }
 
 // ===== Supabase helpers =====
@@ -147,13 +142,15 @@ export function unsubscribeTodayAttendance() {
 }
 
 export async function saveAttendance(dateStr, data) {
-  if (!state.currentUsername) return;
+  const username = state.currentUsername;
+  if (!username) return false;
   const yearMonth = dateStr.slice(0, 7);
   const todayStr = getTodayDateStr();
   const isToday = dateStr === todayStr;
 
   const applyLocalSave = async () => {
-    const publicSyncOk = await syncPublicAttendanceForDate(dateStr, state.currentUsername, data.type);
+    const publicSyncOk = await syncPublicAttendanceForDate(dateStr, username, data.type);
+    if (state.currentUsername !== username) return true;
     deps.markWorkSummaryStale?.();
     state.attendanceData[dateStr] = { ...data, yearMonth };
     if (isToday) {
@@ -163,7 +160,7 @@ export async function saveAttendance(dateStr, data) {
     updateCalendarSummary();
     refreshTodayDashboard();
     if (!publicSyncOk) {
-      showToast('Shared calendar sync failed. Personal attendance was saved.', 'warning');
+      showToast('個人勤怠は保存しましたが、共有カレンダーへ反映できませんでした。', 'warning');
     }
     await fetchFiscalYearPaidLeave();
     return true;
@@ -174,7 +171,7 @@ export async function saveAttendance(dateStr, data) {
       const map = data.workSiteHours;
       const workSiteHours = (map && typeof map === 'object' && Object.keys(map).length > 0) ? map : {};
       const projectKeys = normalizeProjectKeys(data.projectKeys || []);
-      await upsertAttendanceEntryInSupabase(state.currentUsername, dateStr, {
+      await upsertAttendanceEntryInSupabase(username, dateStr, {
         type: data.type ?? null,
         hayade: data.hayade ?? null,
         zangyo: data.zangyo ?? null,
@@ -207,7 +204,7 @@ export async function saveAttendance(dateStr, data) {
       const keys = normalizeProjectKeys(payload.projectKeys);
       payload.projectKeys = keys.length > 0 ? keys : deleteField();
     }
-    await setDoc(attendancePath(state.currentUsername, dateStr), payload, { merge: true });
+    await setDoc(attendancePath(username, dateStr), payload, { merge: true });
     return await applyLocalSave();
   } catch (err) {
     console.error('Attendance save failed:', err);
@@ -217,42 +214,46 @@ export async function saveAttendance(dateStr, data) {
 }
 
 export async function deleteAttendance(dateStr) {
-  if (!state.currentUsername) return;
+  const username = state.currentUsername;
+  if (!username) return false;
   const todayStr = getTodayDateStr();
   const isToday = dateStr === todayStr;
 
   const applyLocalDelete = async () => {
+    const publicSyncOk = await syncPublicAttendanceForDate(dateStr, username, null);
+    if (state.currentUsername !== username) return true;
     delete state.attendanceData[dateStr];
     if (isToday) {
       syncTodayAttendanceState(dateStr, null);
     }
-    const publicSyncOk = await syncPublicAttendanceForDate(dateStr, state.currentUsername, null);
     deps.markWorkSummaryStale?.();
     renderCalendar();
     refreshTodayDashboard();
     if (!publicSyncOk) {
-      showToast('Shared calendar sync failed. Personal attendance was deleted.', 'warning');
+      showToast('個人勤怠は削除しましたが、共有カレンダーへ反映できませんでした。', 'warning');
     }
     await fetchFiscalYearPaidLeave();
+    return true;
   };
 
   if (isSupabaseSharedCoreEnabled()) {
     try {
-      await deleteAttendanceEntryInSupabase(state.currentUsername, dateStr);
-      await applyLocalDelete();
+      await deleteAttendanceEntryInSupabase(username, dateStr);
+      return await applyLocalDelete();
     } catch (err) {
       console.error('Attendance delete failed (Supabase):', err);
       showToast('勤怠の削除に失敗しました。', 'error');
+      return false;
     }
-    return;
   }
 
   try {
-    await deleteDoc(attendancePath(state.currentUsername, dateStr));
-    await applyLocalDelete();
+    await deleteDoc(attendancePath(username, dateStr));
+    return await applyLocalDelete();
   } catch (err) {
     console.error('Attendance delete failed:', err);
     showToast('勤怠の削除に失敗しました。', 'error');
+    return false;
   }
 }
 
@@ -432,6 +433,16 @@ function _updateFiscalDisplay() {
     : `${state.fiscalYearPaidLeave}日`;
 }
 
+function getRecordedWorkHours(attendance) {
+  if (!attendance?.workSiteHours || typeof attendance.workSiteHours !== 'object') return 0;
+  return Object.values(attendance.workSiteHours)
+    .reduce((sum, hours) => sum + (Number(hours) || 0), 0);
+}
+
+function formatRecordedHours(hours) {
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace(/\.0$/, '');
+}
+
 // ===== カレンダー描画 =====
 export function renderCalendar() {
   const el = document.getElementById('cal-grid-container');
@@ -475,6 +486,7 @@ export function renderCalendar() {
     const isToday = (year === today.getFullYear() && month === today.getMonth() && d === today.getDate());
     const att     = state.attendanceData[dateStr];
     const tasks   = taskMap[dateStr] || [];
+    const recordedWorkHours = getRecordedWorkHours(att);
 
     // 会社カレンダー情報
     const info = deps.getDateInfo
@@ -488,6 +500,7 @@ export function renderCalendar() {
     if (dow === 6 && !info.isWorkSaturday) cellCls += ' cal-sat';
     if (info.jpHolidayName && dow !== 0) cellCls += ' cal-jp-holiday';
     if (info.isHoliday) cellCls += ' cal-company-holiday';
+    if (att) cellCls += ' cal-recorded';
 
     // 勤怠タイプ背景色
     if (att?.type && att.type !== 'normal') cellCls += ` cal-att-${att.type === '有給' ? 'yukyu' : att.type.startsWith('半休') ? 'hankyu' : 'kekkin'}`;
@@ -507,12 +520,16 @@ export function renderCalendar() {
     }
     info.events.forEach(ev => {
       const color = ev.color || 'var(--accent-cyan)';
-      companyBadges += `<span class="cal-company-badge event-badge" style="background:${color}20;color:${color}">${esc(ev.label)}</span>`;
+      companyBadges += `<span class="cal-company-badge event-badge" style="--cal-event-color:${color}">${esc(ev.label)}</span>`;
     });
 
     // 勤怠バッジ
     let attHtml = '';
     if (att) {
+      const recordedLabel = recordedWorkHours > 0
+        ? `${formatRecordedHours(recordedWorkHours)}h`
+        : '入力済み';
+      attHtml += `<div class="cal-att-recorded"><i class="fa-solid fa-check" aria-hidden="true"></i><span>${recordedLabel}</span></div>`;
       if (att.type && att.type !== 'normal') {
         attHtml += `<div class="cal-att-badge cal-att-${att.type === '有給' ? 'yukyu' : att.type.startsWith('半休') ? 'hankyu' : 'kekkin'}">${att.type}</div>`;
       }
@@ -530,9 +547,16 @@ export function renderCalendar() {
     }
 
     const dayLabelParts = [`${month + 1}月${d}日`];
+    if (att) dayLabelParts.push('勤怠入力済み');
+    if (recordedWorkHours > 0) dayLabelParts.push(`現場工数 ${formatRecordedHours(recordedWorkHours)}時間`);
     if (att?.type && att.type !== 'normal') dayLabelParts.push(att.type);
     if (att?.hayade) dayLabelParts.push(`早出 ${att.hayade}時間`);
     if (att?.zangyo) dayLabelParts.push(`残業 ${att.zangyo}時間`);
+    if (info.jpHolidayName) dayLabelParts.push(info.jpHolidayName);
+    if (info.isPlannedLeave) dayLabelParts.push('計画付与');
+    if (info.isWorkSaturday) dayLabelParts.push('会社出勤日');
+    if (info.isHoliday && info.holidayLabel) dayLabelParts.push(info.holidayLabel);
+    info.events.forEach(event => dayLabelParts.push(event.label));
     if (tasks.length > 0) dayLabelParts.push(`タスク ${tasks.length}件`);
 
     html += `<div class="${cellCls}" data-date="${dateStr}" role="button" tabindex="0" aria-label="${esc(dayLabelParts.join('、'))}">
@@ -638,12 +662,16 @@ export async function updateCalendarSummary() {
 // ===== タブ切替 =====
 export function switchCalTab(tab) {
   state.calTab = tab;
-  document.getElementById('cal-tab-personal')?.classList.toggle('active', tab === 'personal');
-  document.getElementById('cal-tab-shared')?.classList.toggle('active', tab === 'shared');
+  const personalTab = document.getElementById('cal-tab-personal');
+  const sharedTab = document.getElementById('cal-tab-shared');
+  personalTab?.classList.toggle('active', tab === 'personal');
+  sharedTab?.classList.toggle('active', tab === 'shared');
+  personalTab?.setAttribute('aria-selected', String(tab === 'personal'));
+  sharedTab?.setAttribute('aria-selected', String(tab === 'shared'));
   const personalEl = document.getElementById('cal-personal-container');
   const sharedEl   = document.getElementById('cal-shared-container');
-  if (personalEl) personalEl.style.display = tab === 'personal' ? '' : 'none';
-  if (sharedEl)   sharedEl.style.display   = tab === 'shared'   ? '' : 'none';
+  if (personalEl) personalEl.hidden = tab !== 'personal';
+  if (sharedEl) sharedEl.hidden = tab !== 'shared';
   if (tab === 'shared') {
     deps.renderSharedCalendar?.();
   } else {
@@ -653,12 +681,16 @@ export function switchCalTab(tab) {
 
 function resetCalendarViewState() {
   state.calTab = 'personal';
-  document.getElementById('cal-tab-personal')?.classList.add('active');
-  document.getElementById('cal-tab-shared')?.classList.remove('active');
+  const personalTab = document.getElementById('cal-tab-personal');
+  const sharedTab = document.getElementById('cal-tab-shared');
+  personalTab?.classList.add('active');
+  sharedTab?.classList.remove('active');
+  personalTab?.setAttribute('aria-selected', 'true');
+  sharedTab?.setAttribute('aria-selected', 'false');
   const personalEl = document.getElementById('cal-personal-container');
   const sharedEl   = document.getElementById('cal-shared-container');
-  if (personalEl) personalEl.style.display = '';
-  if (sharedEl)   sharedEl.style.display   = 'none';
+  if (personalEl) personalEl.hidden = false;
+  if (sharedEl) sharedEl.hidden = true;
 }
 
 function startCalendarRuntime() {
@@ -668,12 +700,6 @@ function startCalendarRuntime() {
   renderCalendar();
   void loadRecentWorkSites(true);
   fetchFiscalYearPaidLeave();
-}
-
-function scrollCalendarWorkspaceToTop() {
-  const appMain = document.getElementById('app-main');
-  appMain?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
 }
 
 function scrollCalendarDayPanelIntoView(panel) {
@@ -737,110 +763,20 @@ function mountDayPanelAfterSelectedWeek(dateStr) {
   panel.classList.add('cal-day-panel-inline');
 }
 
-function mountCalendarWorkspace() {
-  const modal = document.getElementById('cal-modal');
-  const dashboard = document.getElementById('home-dashboard');
-  const appMain = document.getElementById('app-main');
-  if (!modal || !dashboard || !appMain) return false;
-  if (modal.classList.contains('cal-workspace-mode')) {
-    modal.classList.add('visible');
-    appMain?.classList.add('calendar-workspace-active', 'home-compact');
-    scrollCalendarWorkspaceToTop();
-    return true;
-  }
-
-  if (!calendarOriginalParent) {
-    calendarOriginalParent = modal.parentNode;
-    calendarOriginalNextSibling = modal.nextSibling;
-  }
-
-  let workspaceHost = document.getElementById('calendar-workspace-host');
-  if (!workspaceHost) {
-    workspaceHost = document.createElement('section');
-    workspaceHost.id = 'calendar-workspace-host';
-    workspaceHost.className = 'cal-workspace-shell';
-    workspaceHost.setAttribute('aria-label', 'カレンダー勤怠');
-    dashboard.after(workspaceHost);
-  }
-  workspaceHost.hidden = false;
-  workspaceHost.innerHTML = '<div class="cal-workspace-mount" id="cal-workspace-mount"></div>';
-  workspaceHost.querySelector('#cal-workspace-mount')?.appendChild(modal);
-  modal.classList.add('cal-workspace-mode', 'visible');
-  appMain?.classList.add('calendar-workspace-active', 'home-compact');
-  scrollCalendarWorkspaceToTop();
-
-  const closeBtn = document.getElementById('cal-close-btn');
-  const closeIcon = closeBtn?.querySelector('.material-symbols-rounded');
-  if (closeBtn && !calendarCloseTitle) calendarCloseTitle = closeBtn.getAttribute('title') || '';
-  if (closeBtn && !calendarCloseAriaLabel) calendarCloseAriaLabel = closeBtn.getAttribute('aria-label') || '';
-  if (closeIcon && !calendarCloseIconText) calendarCloseIconText = closeIcon.textContent || 'close';
-  if (closeBtn) {
-    closeBtn.setAttribute('title', 'ホームへ戻る');
-    closeBtn.setAttribute('aria-label', 'ホームへ戻る');
-  }
-  if (closeIcon) closeIcon.textContent = 'home';
-  if (closeBtn && closeBtn.dataset.calendarWorkspaceCloseBound !== '1') {
-    closeBtn.dataset.calendarWorkspaceCloseBound = '1';
-    closeBtn.addEventListener('click', event => {
-      const currentModal = document.getElementById('cal-modal');
-      if (!currentModal?.classList.contains('cal-workspace-mode')) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      closeCalendarModal();
-      deps.onCalendarWorkspaceClose?.();
-    });
-  }
-  return true;
-}
-
-function unmountCalendarWorkspace() {
-  const modal = document.getElementById('cal-modal');
-  if (!modal?.classList.contains('cal-workspace-mode')) return;
-
-  modal.classList.remove('cal-workspace-mode', 'visible');
-  if (calendarOriginalParent) {
-    calendarOriginalParent.insertBefore(modal, calendarOriginalNextSibling);
-  }
-  document.getElementById('app-main')?.classList.remove('calendar-workspace-active');
-  const workspaceHost = document.getElementById('calendar-workspace-host');
-  if (workspaceHost) {
-    workspaceHost.innerHTML = '';
-    workspaceHost.hidden = true;
-  }
-
-  const closeBtn = document.getElementById('cal-close-btn');
-  const closeIcon = closeBtn?.querySelector('.material-symbols-rounded');
-  if (closeBtn) closeBtn.setAttribute('title', calendarCloseTitle || '閉じる');
-  if (closeBtn) {
-    if (calendarCloseAriaLabel) closeBtn.setAttribute('aria-label', calendarCloseAriaLabel);
-    else closeBtn.removeAttribute('aria-label');
-  }
-  if (closeIcon) closeIcon.textContent = calendarCloseIconText || 'close';
-
-  deps.renderTodayDashboard?.();
-}
-
-// ===== モーダル / ホームビュー開閉 =====
+// ===== モーダル開閉 =====
 export async function openCalendarModal() {
-  if (!state.currentUsername) { showToast('ユーザーネームを設定してください', 'warning'); return; }
+  if (!state.currentUsername) { showToast('ユーザーネームを設定してください', 'warning'); return false; }
   document.getElementById('cal-modal').classList.add('visible');
   startCalendarRuntime();
-}
-
-export async function openCalendarWorkspace() {
-  if (!state.currentUsername) { showToast('ユーザーネームを設定してください', 'warning'); return; }
-  if (!mountCalendarWorkspace()) return;
-  startCalendarRuntime();
+  return true;
 }
 
 export function closeCalendarModal() {
   const modal = document.getElementById('cal-modal');
-  const isWorkspace = modal?.classList.contains('cal-workspace-mode');
   modal?.classList.remove('visible');
   closeDayPanel();
   unsubscribeAttendance();
   deps.unsubscribeCompanyCalConfig?.();
-  if (isWorkspace) unmountCalendarWorkspace();
 }
 
 // ===== 前月・次月 =====
@@ -1566,7 +1502,15 @@ export function openDayPanel(dateStr) {
 
   // 削除ボタン（記録がある場合のみ表示）
   const delBtn = document.getElementById('cal-day-delete-btn');
-  if (delBtn) delBtn.hidden = Object.keys(att).length === 0;
+  if (delBtn) {
+    delBtn.hidden = Object.keys(att).length === 0;
+    delBtn.textContent = 'この日の記録を削除';
+  }
+
+  const moreDetails = document.getElementById('cal-day-more');
+  if (moreDetails) {
+    moreDetails.open = Boolean(att.type || att.hayade || att.zangyo || att.note);
+  }
 
   // タスク一覧
   renderDayTasks(dateStr);
