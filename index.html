@@ -42,7 +42,7 @@
   </script>
 </head>
 
-<body>
+<body class="portal-ui-v2">
 
   <!-- ============================================================
        アプリヘッダー
@@ -57,7 +57,7 @@
         </button>
         <div class="app-brand">
           <div class="app-brand-icon"><img src="assets/icons/icon-192.png" alt="" width="32" height="32"></div>
-          <span class="app-brand-name">社内ポータル</span>
+          <span class="app-brand-name">生産管理課</span>
         </div>
       </div>
 
@@ -66,8 +66,8 @@
         <div class="app-search-wrap">
           <i class="material-symbols-rounded app-search-icon">search</i>
           <input type="text" id="search-input" class="app-search-input"
-                 placeholder="リソース・タスク・お知らせを検索..." autocomplete="off">
-          <button class="app-search-clear" id="app-search-clear" title="クリア" hidden>
+                 placeholder="共有リンクを検索" aria-label="共有リンクを検索" autocomplete="off">
+          <button class="app-search-clear" id="app-search-clear" title="検索をクリア" aria-label="検索をクリア" hidden>
             <i class="material-symbols-rounded">close</i>
           </button>
         </div>
@@ -78,10 +78,10 @@
         <button class="app-header-btn" id="header-site-share-btn" title="サイトを共有" aria-label="サイトを共有">
           <i class="material-symbols-rounded">ios_share</i>
         </button>
-        <button class="app-header-btn" id="header-help-btn" title="使い方ガイド">
+        <button class="app-header-btn" id="header-help-btn" title="使い方ガイド" aria-label="使い方ガイド">
           <i class="material-symbols-rounded">help</i>
         </button>
-        <button class="app-header-btn" id="header-notice-btn" title="お知らせ">
+        <button class="app-header-btn" id="header-notice-btn" title="お知らせ" aria-label="お知らせ">
           <i class="material-symbols-rounded">notifications</i>
         </button>
         <button class="app-user-btn" id="btn-user" title="ユーザー設定">

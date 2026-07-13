@@ -5,7 +5,7 @@
 export function initBottomNav() {
   const bnavHome = document.getElementById('bnav-home');
   const bnavTask = document.getElementById('bnav-task');
-  const bnavShared = document.getElementById('bnav-shared') || document.getElementById('bnav-chat');
+  const bnavRequest = document.getElementById('bnav-request') || document.getElementById('bnav-chat');
   const bnavNotice = document.getElementById('bnav-notice');
   const bnavMore = document.getElementById('bnav-more');
 
@@ -15,10 +15,11 @@ export function initBottomNav() {
 
   if (!bnavHome) return;
 
-  normalizeBottomNav(bnavShared, bnavNotice, bnavTask);
+  normalizeBottomNav(bnavRequest, bnavNotice, bnavTask);
   configureMoreDrawerItems();
 
   bnavHome.addEventListener('click', () => {
+    document.getElementById('sidebar-home-btn')?.click();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setActive(bnavHome);
   });
@@ -30,11 +31,11 @@ export function initBottomNav() {
     });
   }
 
-  if (bnavShared) {
-    bnavShared.addEventListener('click', event => {
+  if (bnavRequest) {
+    bnavRequest.addEventListener('click', event => {
       event?.stopPropagation?.();
-      document.getElementById('btn-shared-links')?.click();
-      setActive(bnavShared);
+      document.getElementById('btn-reqboard')?.click();
+      setActive(bnavRequest);
     });
   }
 
@@ -81,15 +82,18 @@ export function initBottomNav() {
   }
 }
 
-function normalizeBottomNav(bnavShared, bnavNotice, bnavTask) {
-  if (bnavShared) {
-    bnavShared.id = 'bnav-shared';
-    bnavShared.setAttribute('aria-label', '共有を開く');
-    bnavShared.innerHTML = `
-      <i class="fa-solid fa-share-nodes"></i>
-      <span>共有</span>
+function normalizeBottomNav(bnavRequest, bnavNotice, bnavTask) {
+  if (bnavRequest) {
+    bnavRequest.id = 'bnav-request';
+    bnavRequest.setAttribute('aria-label', '部門間依頼を開く');
+    bnavRequest.innerHTML = `
+      <span class="bnav-icon-wrap">
+        <i class="material-symbols-rounded" aria-hidden="true">swap_horiz</i>
+        <span id="bnav-request-badge" class="bnav-badge" hidden></span>
+      </span>
+      <span>依頼</span>
     `;
-    bnavTask?.after(bnavShared);
+    bnavTask?.after(bnavRequest);
   }
 
   if (bnavNotice) {
@@ -104,6 +108,8 @@ function configureMoreDrawerItems() {
 
   const favoritesItem = grid.querySelector('.more-drawer-item[data-target="btn-favorites-only"]');
   if (favoritesItem) favoritesItem.hidden = true;
+  const requestItem = grid.querySelector('.more-drawer-item[data-target="btn-reqboard"]');
+  if (requestItem) requestItem.hidden = true;
 
   const firstItem = grid.querySelector('.more-drawer-item');
   ensureDrawerItem(grid, {
@@ -142,6 +148,7 @@ function syncBadges() {
   syncBadge('notice-unread-badge', 'mdr-notice-badge');
   syncBadge('task-badge', 'bnav-task-badge');
   syncBadge('task-badge', 'mdr-task-badge');
+  syncBadge('req-badge', 'bnav-request-badge');
   syncBadge('req-badge', 'mdr-req-badge');
   syncLockItem();
 }

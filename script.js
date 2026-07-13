@@ -386,6 +386,20 @@ function buildTodayDateKey() {
   return `${year}-${month}-${day}`;
 }
 
+function clearHeaderSearch() {
+  const input = document.getElementById('search-input');
+  const clearButton = document.getElementById('app-search-clear');
+  document.getElementById('app-main')?.classList.remove('search-active');
+  if (clearButton) clearButton.hidden = true;
+  if (!input) return;
+  if (!input.value) {
+    _clearSearchResults();
+    return;
+  }
+  input.value = '';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 function focusNoticeBoardFromDashboard() {
   openNoticeWorkspace();
 }
@@ -399,6 +413,7 @@ function closeCalendarWorkspaceIfOpen() {
 }
 
 async function openCalendarWorkspaceView() {
+  clearHeaderSearch();
   await openCalendarWorkspace();
   if (!document.getElementById('cal-modal')?.classList.contains('visible')) return false;
   setWorkspaceNavigationState({
@@ -412,6 +427,7 @@ async function openCalendarWorkspaceView() {
 }
 
 function returnToHomeWorkspace() {
+  clearHeaderSearch();
   closeSettingsPanel();
   closeActiveWorkspaceView();
   closeCalendarWorkspaceIfOpen();
@@ -433,6 +449,7 @@ async function openPortalWorkspace({
   icon = '',
   sourceButtonId = '',
 }) {
+  clearHeaderSearch();
   closeSettingsPanel();
   closeCalendarWorkspaceIfOpen();
   closeActiveWorkspaceView();
@@ -679,58 +696,53 @@ function configureSidebarNavigation() {
   const nav = document.querySelector('.app-sidebar-nav');
   if (!nav || nav.dataset.navigationConfigured === 'true') return;
   nav.dataset.navigationConfigured = 'true';
-
-  let divider = nav.querySelector('.app-sidebar-divider');
-  if (!divider) {
-    divider = document.createElement('div');
-    divider.className = 'app-sidebar-divider';
-    nav.appendChild(divider);
-  }
-
   const get = id => document.getElementById(id);
-  const primaryIds = [
-    'sidebar-home-btn',
-    'btn-task',
-    'btn-calendar',
-    'btn-notice-bell',
-    'chat-fab',
-    'btn-shared-links',
-    'ft-fab',
+  const groups = [
+    { label: '', ids: ['sidebar-home-btn'] },
+    {
+      label: '今日の業務',
+      ids: ['btn-task', 'btn-calendar', 'btn-reqboard', 'btn-notice-bell'],
+    },
+    {
+      label: '共有・連絡',
+      ids: ['btn-shared-links', 'chat-fab', 'ft-fab'],
+    },
+    {
+      label: '業務ツール',
+      ids: ['btn-trouble-report', 'btn-order-launch', 'btn-property-summary', 'btn-email-assist'],
+    },
   ];
+  const fragment = document.createDocumentFragment();
 
-  primaryIds.forEach(id => {
-    const item = get(id);
-    if (!item) return;
-    item.hidden = false;
-    if (id === 'ft-fab') {
-      item.classList.remove('app-sidebar-util');
-      item.classList.add('app-sidebar-item', 'app-sidebar-primary-tool');
+  groups.forEach((group, groupIndex) => {
+    if (group.label) {
+      const label = document.createElement('div');
+      label.className = 'app-sidebar-section-label';
+      label.dataset.sidebarSection = `group-${groupIndex}`;
+      label.textContent = group.label;
+      fragment.appendChild(label);
     }
-    nav.insertBefore(item, divider);
+
+    group.ids.forEach(id => {
+      const item = get(id);
+      if (!item) return;
+      item.hidden = false;
+      item.classList.remove('app-sidebar-util');
+      item.classList.add('app-sidebar-item');
+      fragment.appendChild(item);
+    });
   });
 
-  let businessLabel = nav.querySelector('[data-sidebar-section="business"]');
-  if (!businessLabel) {
-    businessLabel = document.createElement('div');
-    businessLabel.className = 'app-sidebar-section-label';
-    businessLabel.dataset.sidebarSection = 'business';
-    businessLabel.textContent = '業務ツール';
-  }
-  divider.after(businessLabel);
-
-  let anchor = businessLabel;
-  ['btn-reqboard', 'btn-order-launch', 'btn-property-summary', 'btn-email-assist'].forEach(id => {
+  ['btn-favorites-only', 'btn-my-category'].forEach(id => {
     const item = get(id);
     if (!item) return;
-    item.hidden = false;
-    anchor.after(item);
-    anchor = item;
+    item.hidden = true;
+    fragment.appendChild(item);
   });
 
-  ['btn-favorites-only', 'btn-my-category', 'btn-read-diagnostics'].forEach(id => {
-    const item = get(id);
-    if (item) item.hidden = true;
-  });
+  nav.replaceChildren(fragment);
+  const diagnostics = get('btn-read-diagnostics');
+  if (diagnostics) diagnostics.hidden = true;
 }
 
 function promptUsernameFor(featureLabel) {
@@ -3322,6 +3334,8 @@ function initSearch() {
                         || searchInput.parentElement;
   const noResults      = document.getElementById('no-results');
   const resultsSection = document.getElementById('search-results-section');
+  const clearButton    = document.getElementById('app-search-clear');
+  const appMain        = document.getElementById('app-main');
 
   if (!container || !noResults || !resultsSection) {
     console.warn('initSearch: search UI elements are missing');
@@ -3329,6 +3343,13 @@ function initSearch() {
   }
 
   container.addEventListener('click', () => searchInput.focus());
+
+  clearButton?.addEventListener('click', event => {
+    event.stopPropagation();
+    searchInput.value = '';
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    searchInput.focus();
+  });
 
   searchInput.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
@@ -3342,6 +3363,8 @@ function initSearch() {
     const raw = searchInput.value.trim();
     const q   = normalizeForSearch(raw);
     container.classList.toggle('has-value', raw.length > 0);
+    if (clearButton) clearButton.hidden = raw.length === 0;
+    appMain?.classList.toggle('search-active', raw.length > 0);
 
     if (!q) {
       _clearSearchResults();
@@ -3367,6 +3390,8 @@ function initSearch() {
         console.error('共有リンク検索の読み込みエラー:', err);
       }
     }
+
+    if (normalizeForSearch(searchInput.value.trim()) !== q) return;
 
     // 全カードからマッチするものを直接探す（非表示カードは除く）
     const allData = [...(state.allCards || []), ...(state.privateCards || [])];

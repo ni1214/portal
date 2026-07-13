@@ -303,324 +303,217 @@ function renderHomeHero(host, {
 }) {
   if (!host) return;
 
-  const publicLinkCount = Array.isArray(state.allCategories)
-    ? state.allCategories.filter(category => !category?.isPrivate).length
-    : 0;
   const favoriteLinks = getFavoriteSharedLinks();
-  const favoriteCountLabel = state.currentUsername ? `${favoriteCount}件` : '設定してください';
   const favoriteActionTarget = state.currentUsername ? DASH_TARGETS.SHARED_LINKS : DASH_TARGETS.PROFILE;
   const primaryTarget = state.currentUsername ? (focusCard.target || DASH_TARGETS.PROFILE) : DASH_TARGETS.PROFILE;
-  const primaryLabel = state.currentUsername ? '今日の優先事項へ' : 'プロフィールを設定';
-  const summaryCopy = state.currentUsername
-    ? (focusCard.meta || '今日の優先度が高い導線をここから開けます。')
-    : 'ユーザーネームを設定すると、個人スペースと保存系の機能が使えるようになります。';
-  const chips = [
-    formatDateLabel(today),
-    profile.department || 'プロフィール未設定',
-    profile.roleLabel || (state.currentUsername ? '共通ビュー' : '設定が必要です'),
-  ];
-  const stats = [
-    {
-      target: DASH_TARGETS.NOTICE,
-      tone: noticeCard.tone || 'clear',
-      symbol: 'notifications',
-      label: 'お知らせ',
-      value: noticeCard.value || '0件',
-      meta: noticeCard.meta || '確認事項はありません',
-    },
+  const openRequestCount = getOpenDepartmentRequests().length;
+  const routineActions = [
     {
       target: state.currentUsername ? DASH_TARGETS.TASK_RECEIVED : DASH_TARGETS.PROFILE,
       tone: taskCard.tone || 'clear',
       symbol: 'task_alt',
-      label: 'タスク',
-      value: state.currentUsername ? taskCard.value : '設定待ち',
-      meta: state.currentUsername ? (taskCard.meta || '今日のタスクを確認') : 'プロフィール設定後に有効になります',
-    },
-    {
-      target: DASH_TARGETS.SHARED_LINKS,
-      tone: 'clear',
-      symbol: 'dashboard_customize',
-      label: '共有リンク',
-      value: `${publicLinkCount}カテゴリ`,
-      meta: publicLinkCount > 0 ? '必要なリンクへすぐ移動できます' : '共有カテゴリを準備中です',
-    },
-    {
-      target: state.currentUsername ? DASH_TARGETS.FAVORITES : DASH_TARGETS.PROFILE,
-      tone: favoriteCount > 0 ? 'active' : 'idle',
-      symbol: 'star',
-      label: 'お気に入り',
-      value: state.currentUsername ? `${favoriteCount}件` : '設定待ち',
-      meta: state.currentUsername ? 'よく使う導線をまとめて開けます' : '個人設定後に保存されます',
-    },
-  ];
-  const quickActions = [
-    {
-      target: state.currentUsername ? DASH_TARGETS.TASK_RECEIVED : DASH_TARGETS.PROFILE,
-      tone: taskCard.tone || 'clear',
-      symbol: 'task_alt',
-      label: 'タスク',
-      value: state.currentUsername ? taskCard.value : '設定',
-      meta: state.currentUsername ? (taskCard.meta || '受信タスク') : 'プロフィール',
+      label: '自分のタスク',
+      value: state.currentUsername ? taskCard.value : '要設定',
+      meta: state.currentUsername ? (taskCard.meta || '受信タスクを確認') : 'プロフィール設定後に利用できます',
     },
     {
       target: state.currentUsername ? DASH_TARGETS.ATTENDANCE : DASH_TARGETS.PROFILE,
       tone: attendanceCard.tone || 'clear',
       symbol: 'calendar_month',
-      label: '勤怠',
+      label: '今日の勤怠',
       value: buildAttendanceValueLabel(attendanceCard, Boolean(state.currentUsername)),
-      meta: attendanceCard.meta || '今日の勤怠',
+      meta: attendanceCard.meta || '出退勤と工数を入力',
     },
     {
-      target: DASH_TARGETS.NOTICE,
-      tone: noticeCard.tone || 'clear',
-      symbol: 'notifications',
-      label: 'お知らせ',
-      value: noticeCard.value || '0件',
-      meta: noticeCard.meta || '未読なし',
-    },
-    {
-      target: DASH_TARGETS.SHARED_LINKS,
-      tone: 'clear',
-      symbol: 'grid_view',
-      label: '共有リンク',
-      value: `${publicLinkCount}カテゴリ`,
-      meta: 'リンク集',
-    },
-    {
-      target: favoriteActionTarget,
-      tone: favoriteLinks.length > 0 ? 'active' : 'idle',
-      symbol: 'star',
-      label: 'お気に入り',
-      value: favoriteCountLabel,
-      meta: favoriteLinks.length > 0 ? 'すぐ開く' : '未登録',
-    },
-    {
-      target: DASH_TARGETS.PROFILE,
-      tone: state.currentUsername ? 'clear' : 'active',
-      symbol: 'person',
-      label: 'プロフィール',
-      value: profile.department || (state.currentUsername ? '共通' : '未設定'),
-      meta: profile.roleLabel || 'ユーザー設定',
+      target: state.currentUsername ? DASH_TARGETS.REQUEST_RECEIVED : DASH_TARGETS.PROFILE,
+      tone: openRequestCount > 0 ? 'active' : 'clear',
+      symbol: 'swap_horiz',
+      label: '部門間依頼',
+      value: state.currentUsername ? `${openRequestCount}件` : '要設定',
+      meta: openRequestCount > 0 ? '対応が必要な依頼があります' : '新しい依頼はありません',
     },
   ];
   const latestNoticeCard = buildLatestNoticeHomeCard();
+  const focusItems = Array.isArray(focusCard.items) ? focusCard.items.slice(0, DASH_LIST_LIMIT) : [];
+  const homeSubtitle = state.currentUsername
+    ? `${profile.department || '所属未設定'}${profile.roleLabel ? ` / ${profile.roleLabel}` : ''}`
+    : 'Googleログイン後に個人の業務状況を表示します';
+
   host.innerHTML = `
-    <section class="home-simple-shell" aria-label="ホーム">
-      <header class="home-simple-header">
-        <div class="home-simple-heading">
-          <p class="home-simple-kicker">HOME</p>
-          <h1 class="home-simple-title">${esc(state.currentUsername ? `${username} さん` : 'ホーム')}</h1>
+    <section class="portal-home" aria-labelledby="portal-home-title">
+      <header class="portal-home-header">
+        <div>
+          <p class="portal-home-date">${esc(formatDateLabel(today))}</p>
+          <h1 class="portal-home-title" id="portal-home-title">今日の仕事</h1>
+          <p class="portal-home-subtitle">${esc(state.currentUsername ? `${username}さんの業務を、優先順にまとめています。` : 'ログインすると、自分に必要な業務をここにまとめて表示します。')}</p>
         </div>
-        <div class="home-simple-chip-row">
-          ${chips.map(chip => `<span class="home-simple-chip">${esc(chip)}</span>`).join('')}
+        <div class="portal-home-profile-meta">
+          <span class="material-symbols-rounded" aria-hidden="true">badge</span>
+          <span>${esc(homeSubtitle)}</span>
         </div>
       </header>
 
-      <div class="home-simple-main">
-        <button
-          type="button"
-          class="home-simple-focus home-simple-focus--${esc(focusCard.tone || 'idle')}"
-          data-dash-target="${esc(primaryTarget)}"
-        >
-          <span class="home-simple-focus__icon">
-            <span class="material-symbols-rounded" aria-hidden="true">flag</span>
-          </span>
-          <span class="home-simple-focus__body">
-            <span class="home-simple-label">${esc(focusCard.title || '今日の確認')}</span>
-            <strong class="home-simple-focus__value">${esc(state.currentUsername ? (focusCard.value || '確認') : 'プロフィール設定')}</strong>
-            <span class="home-simple-meta">${esc(state.currentUsername ? (focusCard.meta || '最初に見る内容') : '個人スペースを有効にします')}</span>
-            ${renderHomeSimpleList(focusCard.items, focusCard.emptyText)}
-          </span>
-          <span class="material-symbols-rounded home-simple-arrow" aria-hidden="true">arrow_forward</span>
-        </button>
-
-        ${renderLatestNoticeHomeCard(latestNoticeCard)}
-
-        <div class="home-simple-actions" aria-label="主要メニュー">
-          ${quickActions.map(action => `
-            <button
-              type="button"
-              class="home-simple-action home-simple-action--${esc(action.tone || 'clear')}"
-              data-dash-target="${esc(action.target)}"
-            >
-              <span class="home-simple-action__icon">
-                <span class="material-symbols-rounded" aria-hidden="true">${esc(action.symbol)}</span>
-              </span>
-              <span class="home-simple-action__body">
-                <span class="home-simple-action__label">${esc(action.label)}</span>
-                <strong class="home-simple-action__value">${esc(action.value)}</strong>
-                <span class="home-simple-action__meta">${esc(action.meta)}</span>
-              </span>
-            </button>
-          `).join('')}
-        </div>
-
-        <section class="home-simple-favorites" aria-label="お気に入り共有リンク">
-          <div class="home-simple-section-head">
-            <div>
-              <p class="home-simple-section-kicker">SHORTCUTS</p>
-              <h2 class="home-simple-section-title">お気に入り共有リンク</h2>
-            </div>
-            <button
-              type="button"
-              class="home-simple-text-action"
-              data-dash-target="${esc(favoriteActionTarget)}"
-            >
-              <span>${esc(state.currentUsername ? '設定' : '設定')}</span>
-              <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
-            </button>
-          </div>
-
-          <div class="home-simple-favorite-grid${favoriteLinks.length === 0 ? ' home-simple-favorite-grid--empty' : ''}">
-            ${renderHomeSimpleFavoriteLinks(favoriteLinks, Boolean(state.currentUsername))}
-          </div>
-        </section>
-      </div>
-    </section>
-  `;
-  return;
-
-  host.innerHTML = `
-    <section class="home-m3-hero">
-      <div class="home-m3-hero__top">
-        <div class="home-m3-hero__copy">
-          <p class="home-m3-hero__eyebrow">Portal Home</p>
-          <h1 class="home-m3-hero__title">${esc(state.currentUsername ? `${username} さんのホーム` : 'ホームを整える')}</h1>
-          <p class="home-m3-hero__subtitle">${esc(state.currentUsername ? 'Material You の落ち着いた面構成で、次に見るべき導線をすぐ判断できるホームです。' : 'プロフィールを設定すると個人向けの保存や優先事項が使えるようになります。')}</p>
-        </div>
-
-        <div class="home-m3-hero__actions">
-          <button
-            type="button"
-            class="home-m3-button home-m3-button--primary"
-            data-dash-target="${esc(primaryTarget)}"
-          >
-            <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
-            <span>${esc(state.currentUsername ? '今日の優先事項へ' : 'プロフィールを設定')}</span>
-          </button>
-          <button
-            type="button"
-            class="home-m3-button"
-            data-dash-target="${esc(DASH_TARGETS.SHARED_LINKS)}"
-          >
-            <span class="material-symbols-rounded" aria-hidden="true">grid_view</span>
-            <span>共有リンクを見る</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="home-m3-chip-row">
-        ${chips.map(chip => `<span class="home-m3-chip">${esc(chip)}</span>`).join('')}
-      </div>
-
-      <div class="home-m3-overview-grid">
-        <button
-          type="button"
-          class="home-m3-overview-card home-m3-overview-card--wide home-m3-overview-card--accent"
-          data-dash-target="${esc(primaryTarget)}"
-        >
-          <div class="home-m3-overview-card__head">
-            <span class="home-m3-overview-card__icon">
-              <span class="material-symbols-rounded" aria-hidden="true">explore</span>
-            </span>
-            <div>
-              <span class="home-m3-overview-card__label">${esc(focusCard.title || '今日の優先事項')}</span>
-              <strong class="home-m3-overview-card__value">${esc(state.currentUsername ? (focusCard.value || '確認') : '設定から開始')}</strong>
-            </div>
-          </div>
-          <p class="home-m3-overview-card__meta">${esc(state.currentUsername ? (focusCard.meta || '優先事項からすぐに作業を始められます。') : '個人スペースの設定を済ませると、ここに最初の導線が表示されます。')}</p>
-          ${renderPersonalList(focusCard.items, focusCard.emptyText)}
-        </button>
-
-        ${stats.map(stat => `
-          <button
-            type="button"
-            class="home-m3-overview-card home-m3-overview-card--${esc(stat.tone || 'soft')}"
-            data-dash-target="${esc(stat.target)}"
-          >
-            <div class="home-m3-overview-card__head">
-              <span class="home-m3-overview-card__icon">
-                <span class="material-symbols-rounded" aria-hidden="true">${esc(stat.symbol)}</span>
-              </span>
+      <div class="portal-home-layout">
+        <div class="portal-home-column portal-home-column--main">
+          <section class="portal-home-panel portal-home-panel--focus" aria-labelledby="portal-home-focus-title">
+            <div class="portal-home-section-head">
               <div>
-                <span class="home-m3-overview-card__label">${esc(stat.label)}</span>
-                <strong class="home-m3-overview-card__value">${esc(stat.value)}</strong>
+                <h2 id="portal-home-focus-title">今やること</h2>
+                <p>${esc(focusCard.meta || '優先して確認したい項目を表示します。')}</p>
+              </div>
+              <span class="portal-home-count">${esc(state.currentUsername ? (focusCard.value || '0件') : '未設定')}</span>
+            </div>
+
+            <div class="portal-home-priority-list">
+              ${focusItems.length > 0 ? focusItems.map(item => `
+                <button type="button" class="portal-home-priority-item portal-home-priority-item--${esc(focusCard.tone || 'clear')}" data-dash-target="${esc(item.target || primaryTarget)}">
+                  <span class="portal-home-priority-icon"><span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span></span>
+                  <span class="portal-home-priority-copy">
+                    <strong>${esc(item.title || '確認する')}</strong>
+                    ${item.meta ? `<span>${esc(item.meta)}</span>` : ''}
+                  </span>
+                  <span class="material-symbols-rounded portal-home-row-arrow" aria-hidden="true">chevron_right</span>
+                </button>
+              `).join('') : `
+                <button type="button" class="portal-home-empty-action" data-dash-target="${esc(primaryTarget)}">
+                  <span class="material-symbols-rounded" aria-hidden="true">${state.currentUsername ? 'check_circle' : 'person'}</span>
+                  <span>
+                    <strong>${esc(state.currentUsername ? '急ぎの対応はありません' : 'プロフィールを設定')}</strong>
+                    <small>${esc(state.currentUsername ? '下の業務一覧から必要な画面を開けます。' : '所属部署と役割を設定すると、優先業務を表示します。')}</small>
+                  </span>
+                </button>
+              `}
+            </div>
+          </section>
+
+          <section class="portal-home-panel" aria-labelledby="portal-home-routine-title">
+            <div class="portal-home-section-head portal-home-section-head--compact">
+              <div>
+                <h2 id="portal-home-routine-title">今日の業務</h2>
+                <p>日常的に使う画面へ移動します。</p>
               </div>
             </div>
-            <p class="home-m3-overview-card__meta">${esc(stat.meta)}</p>
-          </button>
-        `).join('')}
+            <div class="portal-home-routine-list">
+              ${routineActions.map(action => `
+                <button type="button" class="portal-home-routine-item portal-home-routine-item--${esc(action.tone || 'clear')}" data-dash-target="${esc(action.target)}">
+                  <span class="portal-home-routine-icon"><span class="material-symbols-rounded" aria-hidden="true">${esc(action.symbol)}</span></span>
+                  <span class="portal-home-routine-copy">
+                    <strong>${esc(action.label)}</strong>
+                    <span>${esc(action.meta)}</span>
+                  </span>
+                  <span class="portal-home-routine-value">${esc(action.value)}</span>
+                </button>
+              `).join('')}
+            </div>
+          </section>
+        </div>
+
+        <div class="portal-home-column portal-home-column--side">
+          <section class="portal-home-panel" aria-labelledby="portal-home-notice-title">
+            <div class="portal-home-section-head portal-home-section-head--compact">
+              <div>
+                <h2 id="portal-home-notice-title">最新のお知らせ</h2>
+                <p>${esc(noticeCard.meta || '社内のお知らせを確認します。')}</p>
+              </div>
+            </div>
+            ${renderPortalHomeNotice(latestNoticeCard)}
+          </section>
+
+          <section class="portal-home-panel" aria-labelledby="portal-home-favorites-title">
+            <div class="portal-home-section-head portal-home-section-head--compact">
+              <div>
+                <h2 id="portal-home-favorites-title">よく使うリンク</h2>
+                <p>${esc(state.currentUsername ? `お気に入り ${favoriteCount}件` : 'ログイン後に表示します。')}</p>
+              </div>
+              <button type="button" class="portal-home-text-action" data-dash-target="${esc(favoriteActionTarget)}">
+                <span>共有リンク</span>
+                <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
+              </button>
+            </div>
+            <div class="portal-home-favorite-list">
+              ${renderPortalHomeFavorites(favoriteLinks, Boolean(state.currentUsername))}
+            </div>
+          </section>
+        </div>
       </div>
     </section>
   `;
+}
 
-  const overviewCards = host.querySelectorAll('.home-m3-overview-card:not(.home-m3-overview-card--wide)');
-  const favoriteCard = overviewCards[overviewCards.length - 1];
-  if (favoriteCard) {
-    favoriteCard.replaceWith(buildFavoriteOverviewCard({
-      favoriteLinks,
-      favoriteCountLabel,
-      favoriteActionTarget,
-      isProfileReady: Boolean(state.currentUsername),
-    }));
+function renderPortalHomeNotice(card) {
+  if (!card) {
+    return `
+      <button type="button" class="portal-home-empty-action" data-dash-target="${esc(DASH_TARGETS.NOTICE)}">
+        <span class="material-symbols-rounded" aria-hidden="true">notifications_none</span>
+        <span>
+          <strong>新しいお知らせはありません</strong>
+          <small>お知らせ一覧を開いて過去の内容を確認できます。</small>
+        </span>
+      </button>
+    `;
   }
-  return;
 
-  host.innerHTML = `
-    <section class="portal-home-command-surface">
-      <div class="portal-home-command-top">
-        <div class="portal-home-command-copy">
-          <p class="portal-home-command-kicker">Portal Home</p>
-          <h1 class="portal-home-command-title">${esc(state.currentUsername ? `${username} さんのホーム` : 'ホームを整える')}</h1>
-          <p class="portal-home-command-subtitle">${esc(summaryCopy)}</p>
-        </div>
-
-        <div class="portal-home-command-actions">
-          <button
-            type="button"
-            class="portal-home-command-btn portal-home-command-btn--primary"
-            data-dash-target="${esc(primaryTarget)}"
-          >
-            <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
-            <span>${esc(primaryLabel)}</span>
-          </button>
-          <button
-            type="button"
-            class="portal-home-command-btn"
-            data-dash-target="${esc(DASH_TARGETS.SHARED_LINKS)}"
-          >
-            <span class="material-symbols-rounded" aria-hidden="true">grid_view</span>
-            <span>共有リンクを見る</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="portal-home-command-chip-row">
-        ${chips.map(chip => `
-          <span class="portal-home-command-chip">${esc(chip)}</span>
-        `).join('')}
-      </div>
-
-      <div class="portal-home-command-grid">
-        ${stats.map(stat => `
-          <button
-            type="button"
-            class="portal-home-command-stat portal-home-command-stat--${esc(stat.tone || 'clear')}"
-            data-dash-target="${esc(stat.target)}"
-          >
-            <span class="portal-home-command-stat-icon">
-              <span class="material-symbols-rounded" aria-hidden="true">${esc(stat.symbol)}</span>
-            </span>
-            <span class="portal-home-command-stat-copy">
-              <span class="portal-home-command-stat-label">${esc(stat.label)}</span>
-              <strong class="portal-home-command-stat-value">${esc(stat.value)}</strong>
-              <span class="portal-home-command-stat-meta">${esc(stat.meta)}</span>
-            </span>
-          </button>
-        `).join('')}
-      </div>
-    </section>
+  return `
+    <button type="button" class="portal-home-notice portal-home-notice--${esc(card.tone || 'clear')}" data-dash-target="${esc(DASH_TARGETS.NOTICE)}">
+      <span class="portal-home-notice-icon"><span class="material-symbols-rounded" aria-hidden="true">campaign</span></span>
+      <span class="portal-home-notice-copy">
+        <span class="portal-home-notice-chips">
+          ${card.chips.slice(0, 2).map(chip => `<span class="portal-home-notice-chip portal-home-notice-chip--${esc(chip.tone)}">${esc(chip.text)}</span>`).join('')}
+        </span>
+        <strong>${esc(card.title)}</strong>
+        ${card.body ? `<span>${esc(card.body)}</span>` : ''}
+        ${card.meta ? `<small>${esc(card.meta)}</small>` : ''}
+      </span>
+      <span class="material-symbols-rounded portal-home-row-arrow" aria-hidden="true">chevron_right</span>
+    </button>
   `;
+}
+
+function renderPortalHomeFavorites(links, isProfileReady) {
+  if (!isProfileReady) {
+    return `
+      <button type="button" class="portal-home-empty-action" data-dash-target="${esc(DASH_TARGETS.PROFILE)}">
+        <span class="material-symbols-rounded" aria-hidden="true">person</span>
+        <span>
+          <strong>プロフィールを設定</strong>
+          <small>設定すると、よく使うリンクをここから開けます。</small>
+        </span>
+      </button>
+    `;
+  }
+
+  if (!Array.isArray(links) || links.length === 0) {
+    return `
+      <button type="button" class="portal-home-empty-action" data-dash-target="${esc(DASH_TARGETS.SHARED_LINKS)}">
+        <span class="material-symbols-rounded" aria-hidden="true">star</span>
+        <span>
+          <strong>お気に入りはまだありません</strong>
+          <small>共有リンクで星を付けると、ここに表示されます。</small>
+        </span>
+      </button>
+    `;
+  }
+
+  return links.slice(0, 6).map(link => {
+    const isCategory = link.type === 'category';
+    const actionAttribute = isCategory
+      ? `data-favorite-category-open-id="${esc(link.categoryId || '')}"`
+      : `data-favorite-card-id="${esc(link.id)}"`;
+    const icon = isCategory
+      ? '<span class="material-symbols-rounded" aria-hidden="true">folder</span>'
+      : (link.brandIconHtml || `<span class="material-symbols-rounded" aria-hidden="true">${esc(link.symbol || 'link')}</span>`);
+
+    return `
+      <button type="button" class="portal-home-favorite-item" ${actionAttribute} aria-label="${esc(`${link.label}を開く`)}">
+        <span class="portal-home-favorite-icon">${icon}</span>
+        <span class="portal-home-favorite-copy">
+          <strong>${esc(link.label || '共有リンク')}</strong>
+          <span>${esc(link.meta || '共有リンク')}</span>
+        </span>
+        <span class="material-symbols-rounded portal-home-row-arrow" aria-hidden="true">${isCategory ? 'chevron_right' : 'open_in_new'}</span>
+      </button>
+    `;
+  }).join('');
 }
 
 function getHomeNoticeSource() {
@@ -1105,6 +998,12 @@ function bindDashboardEvents(section) {
       toggleFavoriteCategoryAccordion(favoriteCategory.dataset.favoriteCategoryId || '', favoriteCategory);
       return;
     }
+    const favoriteCategoryOpen = event.target.closest('[data-favorite-category-open-id]');
+    if (favoriteCategoryOpen && section.contains(favoriteCategoryOpen)) {
+      event.preventDefault();
+      void deps.openFavoriteCategory?.(favoriteCategoryOpen.dataset.favoriteCategoryOpenId || '');
+      return;
+    }
     const card = event.target.closest('[data-dash-target]');
     if (!card || !section.contains(card)) return;
     void openDashboardTarget(card.dataset.dashTarget || '');
@@ -1587,6 +1486,7 @@ function buildFocusCard(todayKey) {
     items: candidates.slice(0, DASH_LIST_LIMIT).map(item => ({
       title: item.title,
       meta: item.meta,
+      target: item.target,
     })),
     emptyText: '今日の優先事項はありません',
     target: focusTarget,
