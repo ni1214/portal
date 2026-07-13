@@ -490,8 +490,8 @@ function openReqWorkspace(initialTab) {
     closeAction: closeReqModal,
     closeSelector: '#reqboard-modal-close',
     route: 'request',
-    title: '部署間依頼',
-    subtitle: '部署間の依頼、対応状況、目安箱をまとめて扱います。',
+    title: '部門間依頼',
+    subtitle: '受信した依頼への対応と、自分が送った依頼の確認を行います。',
     icon: 'swap_horiz',
     sourceButtonId: 'btn-reqboard',
   });

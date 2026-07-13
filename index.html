@@ -151,12 +151,12 @@
             <span class="app-sidebar-label">チャット</span>
           </button>
 
-          <button class="app-sidebar-item" id="btn-reqboard" data-home-target="request" title="部署間依頼・目安箱">
+          <button class="app-sidebar-item" id="btn-reqboard" data-home-target="request" title="部門間依頼・目安箱">
             <span class="app-sidebar-icon">
               <i class="material-symbols-rounded">swap_horiz</i>
               <span class="app-sidebar-badge req-badge" id="req-badge" hidden></span>
             </span>
-            <span class="app-sidebar-label">部署間依頼</span>
+            <span class="app-sidebar-label">部門間依頼</span>
           </button>
 
           <button class="app-sidebar-item" id="btn-trouble-report" data-home-target="trouble" title="トラブル報告">
@@ -2209,7 +2209,7 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="reqboard-modal">
+  <div class="modal-overlay reqboard-ui-v2" id="reqboard-modal">
     <div class="reqboard-modal-inner">
 
       <div class="reqboard-modal-header">
@@ -2219,38 +2219,46 @@
         </button>
       </div>
 
-      <!-- メインタブ -->
+      <!-- ワークスペース用ナビゲーション -->
       <div class="reqboard-workspace-intro" aria-label="部門間依頼の主要導線">
-        <button type="button" class="reqboard-workspace-action" data-req-workspace-action="received">
-          <span class="reqboard-workspace-action-icon"><i class="fa-solid fa-inbox"></i></span>
-          <span class="reqboard-workspace-action-body">
-            <strong>受け取った依頼</strong>
-            <small>対応が必要な部署間依頼を確認</small>
-          </span>
-        </button>
-        <button type="button" class="reqboard-workspace-action" data-req-workspace-action="new">
-          <span class="reqboard-workspace-action-icon"><i class="fa-solid fa-paper-plane"></i></span>
-          <span class="reqboard-workspace-action-body">
-            <strong>新規投稿</strong>
-            <small>物件Noや依頼先を指定して送信</small>
-          </span>
-        </button>
-        <button type="button" class="reqboard-workspace-action" data-req-workspace-action="sent">
-          <span class="reqboard-workspace-action-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
-          <span class="reqboard-workspace-action-body">
-            <strong>自分の依頼</strong>
-            <small>送信後の状況と返信を追跡</small>
-          </span>
-        </button>
-        <button type="button" class="reqboard-workspace-action" data-req-workspace-action="suggestion">
-          <span class="reqboard-workspace-action-icon"><i class="fa-solid fa-box-open"></i></span>
-          <span class="reqboard-workspace-action-body">
-            <strong>目安箱</strong>
-            <small>匿名相談や改善提案を投稿</small>
-          </span>
-        </button>
+        <div class="reqboard-workspace-nav" aria-label="依頼の表示切り替え">
+          <button type="button" class="reqboard-workspace-action" data-req-workspace-action="received">
+            <i class="fa-solid fa-inbox" aria-hidden="true"></i>
+            <span>受信</span>
+            <span class="reqboard-workspace-badge" id="req-workspace-received-badge" hidden></span>
+          </button>
+          <button type="button" class="reqboard-workspace-action" data-req-workspace-action="sent">
+            <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+            <span>自分の依頼</span>
+            <span class="reqboard-workspace-badge" id="req-workspace-sent-badge" hidden></span>
+          </button>
+        </div>
+        <div class="reqboard-workspace-tools" aria-label="依頼の補助操作">
+          <button type="button" class="reqboard-workspace-action reqboard-workspace-action--primary" data-req-workspace-action="new">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            <span>依頼を作成</span>
+          </button>
+          <button type="button" class="reqboard-workspace-action reqboard-workspace-action--quiet" data-req-workspace-action="archived">
+            <i class="fa-solid fa-box-archive" aria-hidden="true"></i>
+            <span>アーカイブ</span>
+          </button>
+          <button type="button" class="reqboard-workspace-action reqboard-workspace-action--quiet" data-req-workspace-action="suggestion">
+            <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+            <span>目安箱</span>
+            <span class="reqboard-workspace-badge" id="req-workspace-suggestion-badge" hidden></span>
+          </button>
+        </div>
       </div>
 
+      <div class="reqboard-view-context" aria-live="polite">
+        <div class="reqboard-view-copy">
+          <h2 id="req-view-title">受け取った依頼</h2>
+          <p id="req-view-description">自部署に届いた依頼を確認し、対応状況を更新します。</p>
+        </div>
+        <span class="reqboard-view-count" id="req-view-count">0件</span>
+      </div>
+
+      <!-- モーダル表示時の互換ナビゲーション -->
       <div class="reqboard-tabs">
         <button class="reqboard-tab active" data-tab="request">
           <i class="fa-solid fa-arrows-left-right-to-line"></i> 部門間依頼
@@ -2755,7 +2763,7 @@
         </button>
       </div>
       <div id="prop-summary-candidates" class="prop-summary-candidates" hidden></div>
-      <div class="prop-summary-help">物件Noまたは現場名で、部署間依頼・タスク・鋼材発注・作業記録をまとめて確認できます。</div>
+      <div class="prop-summary-help">物件Noまたは現場名で、部門間依頼・タスク・鋼材発注・作業記録をまとめて確認できます。</div>
       <div id="prop-summary-content" class="prop-summary-content">
         <div class="prop-summary-empty">
           <i class="fa-solid fa-magnifying-glass-chart"></i>

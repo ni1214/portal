@@ -28772,7 +28772,7 @@ body:has(#home-dashboard) .app-main.portal-workspace-active #home-dashboard,
   border-radius: 14px;
   color: var(--text-primary);
   background: color-mix(in srgb, var(--bg-card) 78%, transparent);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-sm);
   text-align: left;
   cursor: pointer;
 }
@@ -30069,7 +30069,12 @@ body.portal-ui-v2 {
   --portal-ui-muted: var(--text-secondary);
   --portal-ui-subtle: var(--text-secondary);
   --portal-ui-accent: var(--accent-blue);
+  --portal-ui-on-accent: var(--bg-primary);
   background: var(--portal-ui-canvas);
+}
+
+body.portal-ui-v2[data-theme="light"] {
+  --portal-ui-on-accent: var(--text-on-accent);
 }
 
 body.portal-ui-v2 .app-header {
@@ -30844,5 +30849,609 @@ body.portal-ui-v2 .portal-workspace-kicker {
   body.portal-ui-v2 .portal-home-routine-value {
     min-width: 46px;
     font-size: 0.76rem;
+  }
+}
+
+/* ===== Portal UI v2: reqboard workspace ===== */
+.reqboard-ui-v2 .reqboard-view-context {
+  display: none;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-modal-inner {
+  width: 100%;
+  max-width: 100%;
+  padding: 0 0 24px;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-modal-header,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-tabs,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-subtabs {
+  display: none;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-intro,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-view-context,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 #reqboard-request-area,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 #reqboard-suggestion-area {
+  width: min(100%, 960px);
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 0;
+  padding: 4px 0 16px;
+  border-bottom: 1px solid var(--portal-ui-line);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-nav,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-nav {
+  padding: 3px;
+  border: 1px solid var(--portal-ui-line);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--portal-ui-surface) 78%, var(--portal-ui-canvas));
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-tools {
+  gap: 6px;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-action {
+  display: inline-flex;
+  grid-template-columns: none;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--portal-ui-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-action:hover {
+  border-color: transparent;
+  background: var(--portal-ui-surface-hover);
+  color: var(--portal-ui-text);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-action:focus-visible,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item-actions button:focus-visible,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .tc-toggle:focus-visible,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-project-filter-clear:focus-visible,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-optional-section > summary:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--portal-ui-accent) 72%, transparent);
+  outline-offset: 2px;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-nav .reqboard-workspace-action.active {
+  border-color: transparent;
+  background: var(--portal-ui-surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--portal-ui-accent);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-action--quiet.active {
+  border-color: var(--portal-ui-line-strong);
+  background: var(--portal-ui-surface-hover);
+  color: var(--portal-ui-text);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-action--primary,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-action--primary:hover,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-action--primary.active {
+  border-color: var(--portal-ui-accent);
+  background: var(--portal-ui-accent);
+  color: var(--portal-ui-on-accent);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding-inline: 5px;
+  border-radius: 999px;
+  background: var(--state-danger);
+  color: var(--text-on-accent);
+  font-size: 0.65rem;
+  font-weight: 750;
+  line-height: 1;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-badge[hidden] {
+  display: none;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-view-context {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 2px 14px;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-view-copy {
+  min-width: 0;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-view-copy h2,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-view-copy p {
+  margin: 0;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-view-copy h2 {
+  color: var(--portal-ui-text);
+  font-size: 1.12rem;
+  font-weight: 720;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-view-copy p {
+  margin-top: 5px;
+  color: var(--portal-ui-subtle);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-view-count {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--portal-ui-accent) 10%, var(--portal-ui-surface));
+  color: var(--portal-ui-accent);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-view-count[hidden] {
+  display: none;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-content {
+  display: flex;
+  gap: 0;
+  overflow: hidden;
+  padding: 0 0 20px;
+  border: 1px solid var(--portal-ui-line);
+  border-radius: 16px;
+  background: var(--portal-ui-surface);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-project-filter-row {
+  width: 100%;
+  margin: 0;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--portal-ui-line);
+  background: color-mix(in srgb, var(--portal-ui-surface) 88%, var(--portal-ui-canvas));
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-project-filter-input-wrap {
+  max-width: 420px;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-empty {
+  width: 100%;
+  min-height: 240px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .sugg-item {
+  width: 100%;
+  gap: 9px;
+  padding: 18px 20px;
+  border: 0;
+  border-bottom: 1px solid var(--portal-ui-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item:last-child,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .sugg-item:last-child {
+  border-bottom: 0;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item:hover,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .sugg-item:hover {
+  background: var(--portal-ui-surface-hover);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item--notify {
+  border-left: 3px solid var(--portal-ui-accent);
+  background: color-mix(in srgb, var(--portal-ui-accent) 5%, transparent);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item--archived {
+  background: color-mix(in srgb, var(--portal-ui-canvas) 55%, var(--portal-ui-surface));
+  color: var(--portal-ui-muted);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item-header,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-linked-task-header {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item-title {
+  color: var(--portal-ui-text);
+  font-size: 0.96rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item-body,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item-sub,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-linked-task-header,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .tc-author,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .tc-body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item-body {
+  color: var(--portal-ui-muted);
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item-actions {
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  padding-top: 4px;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item-actions button,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .tc-toggle {
+  min-height: 38px;
+  padding: 0 12px;
+  border-color: var(--portal-ui-line);
+  border-radius: 19px;
+  background: transparent;
+  color: var(--portal-ui-muted);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item-actions button:hover,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .tc-toggle:hover,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .tc-toggle--open {
+  border-color: var(--portal-ui-line-strong);
+  background: var(--portal-ui-surface-hover);
+  color: var(--portal-ui-text);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .btn-req-taskify,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .btn-req-status {
+  color: var(--portal-ui-accent);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .btn-req-delete:hover {
+  border-color: color-mix(in srgb, var(--state-danger) 42%, var(--portal-ui-line));
+  background: color-mix(in srgb, var(--state-danger) 9%, transparent);
+  color: var(--state-danger);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-archive-note {
+  width: 100%;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--portal-ui-line);
+  background: color-mix(in srgb, var(--portal-ui-canvas) 56%, var(--portal-ui-surface));
+  color: var(--portal-ui-muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-archived-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--portal-ui-line);
+  border-radius: 999px;
+  color: var(--portal-ui-muted);
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-status-badge {
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-status-badge.status-submitted {
+  background: color-mix(in srgb, var(--state-warning-soft) 12%, transparent);
+  color: var(--state-warning-soft);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-status-badge.status-reviewing {
+  background: color-mix(in srgb, var(--portal-ui-accent) 11%, transparent);
+  color: var(--portal-ui-accent);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-status-badge.status-accepted {
+  background: color-mix(in srgb, var(--state-success-mint) 11%, transparent);
+  color: var(--state-success-mint);
+}
+
+body.portal-ui-v2[data-theme="light"] #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-status-badge.status-submitted {
+  color: color-mix(in srgb, var(--state-warning-deeper) 70%, var(--text-primary));
+}
+
+body.portal-ui-v2[data-theme="light"] #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-status-badge.status-accepted {
+  color: color-mix(in srgb, var(--state-success-strong) 70%, var(--text-primary));
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-status-badge.status-rejected {
+  background: color-mix(in srgb, var(--portal-ui-muted) 8%, transparent);
+  color: var(--portal-ui-muted);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .tc-count {
+  background: var(--portal-ui-accent);
+  color: var(--portal-ui-on-accent);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .tc-area {
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--portal-ui-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--portal-ui-canvas) 48%, var(--portal-ui-surface));
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form {
+  display: flex;
+  gap: 0;
+  width: 100%;
+  padding: 0;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px;
+  border-bottom: 1px solid var(--portal-ui-line);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-head h3,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-head p {
+  margin: 0;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-head h3 {
+  color: var(--portal-ui-text);
+  font-size: 0.96rem;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-head p {
+  margin-top: 5px;
+  color: var(--portal-ui-subtle);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 20px;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-field--wide {
+  grid-column: 1 / -1;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form .form-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-optional {
+  color: var(--portal-ui-subtle);
+  font-size: 0.68rem;
+  font-weight: 550;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-optional-section {
+  border-top: 1px solid var(--portal-ui-line);
+  padding-top: 14px;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-optional-section > summary {
+  width: fit-content;
+  padding: 7px 10px;
+  border-radius: 8px;
+  color: var(--portal-ui-accent);
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-optional-section > summary:hover {
+  background: var(--portal-ui-surface-hover);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-optional-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding-top: 14px;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-optional-grid > .form-group {
+  grid-column: auto;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+  padding: 16px 20px 20px;
+  border-top: 1px solid var(--portal-ui-line);
+  color: var(--portal-ui-subtle);
+  font-size: 0.74rem;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-footer .btn-modal-primary {
+  min-height: 44px;
+  padding-inline: 18px;
+  border-radius: 21px;
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .btn-modal-primary,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .btn-modal-primary:hover {
+  border-color: var(--portal-ui-accent);
+  background: var(--portal-ui-accent);
+  box-shadow: none;
+  color: var(--portal-ui-on-accent);
+}
+
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .sugg-form-section,
+body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .sugg-list-section {
+  width: 100%;
+  margin: 0;
+  padding: 20px;
+  border: 0;
+  border-bottom: 1px solid var(--portal-ui-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+@media (max-width: 840px) {
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-intro {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-nav,
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-tools {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-tools {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-action {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-modal-inner {
+    padding: 0 0 16px;
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-tools {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-workspace-action--primary {
+    grid-column: 1 / -1;
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-view-context {
+    align-items: flex-start;
+    padding: 18px 2px 12px;
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-view-copy p {
+    font-size: 0.74rem;
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .reqboard-content {
+    border-radius: 12px;
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-project-filter-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-project-filter-input-wrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item,
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .sugg-item {
+    padding: 16px 14px;
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-item-actions button,
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .tc-toggle {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    justify-content: center;
+    white-space: normal;
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-head,
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-footer {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-grid,
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-optional-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-grid {
+    gap: 14px;
+    padding: 16px;
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-field--wide {
+    grid-column: auto;
+  }
+
+  body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .req-form-footer .btn-modal-primary {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
   }
 }

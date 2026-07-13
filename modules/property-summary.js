@@ -596,7 +596,7 @@ function renderPropertySummary() {
       </div>
       ${fallbackNote}
       <div class="prop-summary-stats">
-        ${renderStatCard('部署間依頼', results.counts.requests, 'fa-solid fa-clipboard-list')}
+        ${renderStatCard('部門間依頼', results.counts.requests, 'fa-solid fa-clipboard-list')}
         ${renderStatCard('タスク', results.counts.tasks, 'fa-solid fa-list-check')}
         ${renderStatCard('鋼材発注', results.counts.orders, 'fa-solid fa-boxes-stacked')}
         ${renderStatCard('トラブル報告', results.counts.troubles, 'fa-solid fa-triangle-exclamation')}
@@ -649,9 +649,9 @@ function renderRequestSection(requests) {
         </article>
       `;
     }).join('')
-    : '<div class="prop-summary-empty prop-summary-empty--section"><p>一致する部署間依頼はありません。</p></div>';
+    : '<div class="prop-summary-empty prop-summary-empty--section"><p>一致する部門間依頼はありません。</p></div>';
 
-  return renderSection('部署間依頼', `${requests.length}件`, 'requests', 'fa-solid fa-clipboard-list', items);
+  return renderSection('部門間依頼', `${requests.length}件`, 'requests', 'fa-solid fa-clipboard-list', items);
 }
 
 function renderTaskSection(tasks) {
