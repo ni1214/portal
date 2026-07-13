@@ -199,6 +199,12 @@ export const state = {
   taskModalOpen: false,
   activeTaskTab: 'received',
   taskProjectKeyFilter: '',
+  newTaskDraft: {
+    title: '',
+    projectKey: '',
+    dueDate: '',
+    description: '',
+  },
   orderHistoryProjectKeyFilter: '',
   propertySummaryModalOpen: false,
   propertySummaryQuery: '',

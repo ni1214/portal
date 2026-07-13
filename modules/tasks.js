@@ -25,26 +25,26 @@ const ACTIVE_TASK_STATUSES = ['pending', 'accepted'];
 const TASK_TAB_META = Object.freeze({
   received: {
     label: '受信',
-    title: '自分が判断するタスク',
-    description: 'まず承諾待ち、次に進行中を確認します。',
+    title: '受け取ったタスク',
+    description: '自分に届いたタスクを確認し、承諾・完了報告します。',
     icon: 'move_to_inbox',
   },
   sent: {
-    label: '依頼',
-    title: '相手の進み具合を見る',
-    description: '完了確認、承諾待ち、進行中だけを追います。',
+    label: '自分の依頼',
+    title: '自分の依頼',
+    description: '依頼したタスクの進み具合と完了報告を確認します。',
     icon: 'outbox',
   },
   shared: {
     label: '共有',
-    title: '共有依頼に返事する',
-    description: '受け取るか断るかを判断します。',
+    title: '共有されたタスク',
+    description: '共有依頼に返事し、必要な内容を確認します。',
     icon: 'groups',
   },
   new: {
-    label: '新規',
-    title: '新しいタスクを依頼',
-    description: '担当者とタスク名だけ先に決めれば作成できます。',
+    label: 'タスクを作成',
+    title: 'タスクを作成',
+    description: 'タスク名と担当者を決めて依頼します。',
     icon: 'edit_square',
   },
 });
@@ -62,6 +62,18 @@ let taskSupabaseRefreshVersion = 0;
 let taskSupabaseRefreshUsername = '';
 let taskSupabaseFocusHandler = null;
 let taskSupabaseVisibilityHandler = null;
+let taskDraftUsername = '';
+const taskHistoryMutationRevision = {
+  received: 0,
+  sent: 0,
+  shared: 0,
+};
+const taskUiRenderPending = {
+  received: false,
+  sent: false,
+  shared: false,
+  new: false,
+};
 
 function getTaskListForTab(tab) {
   if (tab === 'received') return state.receivedTasks || [];
@@ -160,6 +172,8 @@ function _taskCommentSectionHtml(taskId) {
   const comments   = state.taskComments[taskId] || [];
   const isLoading  = state.taskCommentsLoading[taskId] || false;
   const count      = comments.length;
+  const safeTaskId = String(taskId || '').replace(/[^a-zA-Z0-9_-]/g, '-');
+  const areaId = `task-comment-area-${safeTaskId}`;
 
   let inner = '';
   if (isExpanded) {
@@ -171,7 +185,7 @@ function _taskCommentSectionHtml(taskId) {
           <span class="tc-author" style="color:${getUserAvatarColor(c.username)}">${esc(c.username)}</span>
           <span class="tc-body">${esc(c.body)}</span>
           ${c.username === state.currentUsername
-            ? `<button class="tc-del" data-cid="${c.id}" data-task-id="${taskId}" title="削除"><i class="fa-solid fa-trash-can"></i></button>`
+            ? `<button type="button" class="tc-del" data-cid="${c.id}" data-task-id="${taskId}" title="コメントを削除" aria-label="コメントを削除"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></button>`
             : ''}
         </div>
       `).join('');
@@ -179,7 +193,7 @@ function _taskCommentSectionHtml(taskId) {
         <div class="tc-list">${list || '<div class="tc-empty">コメントはまだありません</div>'}</div>
         <div class="tc-input-row">
           <input type="text" class="tc-input form-input" placeholder="コメントを入力…" data-task-id="${taskId}" autocomplete="off">
-          <button class="tc-send btn-modal-primary" data-task-id="${taskId}"><i class="fa-solid fa-paper-plane"></i></button>
+          <button type="button" class="tc-send btn-modal-primary" data-task-id="${taskId}" aria-label="コメントを送信"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i></button>
         </div>
       `;
     }
@@ -187,11 +201,11 @@ function _taskCommentSectionHtml(taskId) {
 
   return `
     <div class="tc-wrapper">
-      <button class="tc-toggle${isExpanded ? ' tc-toggle--open' : ''}" data-task-id="${taskId}">
-        <i class="fa-regular fa-comment${isExpanded ? '-dots' : ''}"></i>
+      <button type="button" class="tc-toggle${isExpanded ? ' tc-toggle--open' : ''}" data-task-id="${taskId}" aria-expanded="${isExpanded ? 'true' : 'false'}" aria-controls="${areaId}">
+        <i class="fa-regular fa-comment${isExpanded ? '-dots' : ''}" aria-hidden="true"></i>
         コメント${count ? ` <span class="tc-count">${count}</span>` : ''}
       </button>
-      ${isExpanded ? `<div class="tc-area">${inner}</div>` : ''}
+      ${isExpanded ? `<div class="tc-area" id="${areaId}">${inner}</div>` : ''}
     </div>
   `;
 }
@@ -238,7 +252,7 @@ function _bindTaskCommentEvents(container) {
       if (!body) return;
       input.value = '';
       try {
-        const comment = await addTaskCommentInSupabase(id, state.currentUsername, body);
+        const comment = await addTaskCommentInSupabase({ taskId: id, username: state.currentUsername, body });
         state.taskComments = {
           ...state.taskComments,
           [id]: [...(state.taskComments[id] || []), comment],
@@ -315,8 +329,16 @@ function _bindTaskProjectFilterEvents() {
   if (input) {
     if (input._taskFilterHandler) input.removeEventListener('input', input._taskFilterHandler);
     input._taskFilterHandler = e => {
+      const caret = e.target.selectionStart ?? e.target.value.length;
       state.taskProjectKeyFilter = normalizeProjectKey(e.target.value || '');
       renderTaskTabContent();
+      requestAnimationFrame(() => {
+        const nextInput = document.getElementById('task-project-filter-input');
+        if (!nextInput) return;
+        nextInput.focus();
+        const nextCaret = Math.min(caret, nextInput.value.length);
+        nextInput.setSelectionRange?.(nextCaret, nextCaret);
+      });
     };
     input.addEventListener('input', input._taskFilterHandler);
   }
@@ -328,49 +350,6 @@ function _bindTaskProjectFilterEvents() {
     };
     clearBtn.addEventListener('click', clearBtn._taskFilterClearHandler);
   }
-}
-
-function _taskWorkspaceShellHtml({ tone = 'default', kicker, title, description, stats = [], body = '' }) {
-  return `
-    <div class="task-workspace task-workspace--${esc(tone)}">
-      <section class="task-workspace-hero">
-        <div class="task-workspace-copy">
-          <p class="task-workspace-kicker">${esc(kicker)}</p>
-          <h3 class="task-workspace-title">${esc(title)}</h3>
-          <p class="task-workspace-desc">${esc(description)}</p>
-        </div>
-        <div class="task-workspace-stats">
-          ${stats.map(stat => `
-            <article class="task-workspace-stat task-workspace-stat--${esc(stat.tone || 'default')}">
-              <div class="task-workspace-stat-top">
-                <span class="material-symbols-rounded" aria-hidden="true">${esc(stat.icon || 'overview')}</span>
-                <span class="task-workspace-stat-label">${esc(stat.label)}</span>
-              </div>
-              <strong class="task-workspace-stat-value">${esc(stat.value)}</strong>
-              <p class="task-workspace-stat-meta">${esc(stat.meta || '')}</p>
-            </article>
-          `).join('')}
-        </div>
-      </section>
-      <section class="task-workspace-surface">
-        ${body}
-      </section>
-    </div>
-  `;
-}
-
-function _taskEmptyStateHtml(icon, title, description) {
-  return `
-    <div class="task-empty task-empty--md3">
-      <div class="task-empty-icon-wrap">
-        <span class="material-symbols-rounded" aria-hidden="true">${esc(icon)}</span>
-      </div>
-      <div class="task-empty-copy">
-        <strong>${esc(title)}</strong>
-        <p>${esc(description)}</p>
-      </div>
-    </div>
-  `;
 }
 
 function _todayTaskDateKey() {
@@ -537,11 +516,60 @@ function _syncAllTaskLists() {
   _syncSharedTasks();
 }
 
+function _taskListRenderSignature(tab) {
+  return JSON.stringify(getTaskListForTab(tab).map(task => ({
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    assignedBy: task.assignedBy,
+    assignedTo: task.assignedTo,
+    status: task.status,
+    dueDate: task.dueDate,
+    projectKey: task.projectKey,
+    notifiedDone: task.notifiedDone,
+    sharedWith: task.sharedWith,
+    sharedResponses: task.sharedResponses,
+  })));
+}
+
+function _taskWorkspaceInteractionInProgress() {
+  const modal = document.getElementById('task-modal');
+  if (!modal) return false;
+  const activeElement = document.activeElement;
+  const isEditingField = activeElement
+    && modal.contains(activeElement)
+    && activeElement.matches('input, textarea, select, [contenteditable="true"]');
+  const hasUnsentComment = Array.from(modal.querySelectorAll('.tc-input'))
+    .some(input => input.value.trim());
+  const hasOpenDetails = !!modal.querySelector('.task-item-details[open]');
+  return !!(isEditingField || hasUnsentComment || hasOpenDetails);
+}
+
+function _renderTaskTabContentWhenSafe(tab) {
+  if (!state.taskModalOpen || state.activeTaskTab !== tab) return;
+  if (_taskWorkspaceInteractionInProgress()) {
+    taskUiRenderPending[tab] = true;
+    return;
+  }
+  taskUiRenderPending[tab] = false;
+  renderTaskTabContent();
+}
+
 function _refreshTaskUi({ renderIfOpen = true } = {}) {
+  const activeTab = state.activeTaskTab || 'received';
+  const beforeSignature = activeTab === 'new' ? '' : _taskListRenderSignature(activeTab);
   _syncAllTaskLists();
+  const afterSignature = activeTab === 'new' ? '' : _taskListRenderSignature(activeTab);
   updateTaskBadge();
   deps.renderTodoSection?.();
-  if (renderIfOpen && state.taskModalOpen) renderTaskTabContent();
+  const contentChanged = beforeSignature !== afterSignature || taskUiRenderPending[activeTab];
+  if (!renderIfOpen || !state.taskModalOpen || activeTab === 'new' || !contentChanged) return;
+  if (_taskWorkspaceInteractionInProgress()) {
+    taskUiRenderPending[activeTab] = true;
+  } else {
+    taskUiRenderPending[activeTab] = false;
+    renderTaskTabContent();
+  }
 }
 
 function _getTaskSupabaseRefreshDelay() {
@@ -655,6 +683,12 @@ function _resetTaskHistoryState() {
   liveSentTasks = [];
   liveSentDoneNotifyTasks = [];
   liveSharedTasks = [];
+  Object.keys(taskHistoryMutationRevision).forEach(tab => {
+    taskHistoryMutationRevision[tab] += 1;
+  });
+  Object.keys(taskUiRenderPending).forEach(tab => {
+    taskUiRenderPending[tab] = false;
+  });
   state.taskHistoryCache = {
     received: [],
     sent: [],
@@ -675,6 +709,7 @@ function _resetTaskHistoryState() {
 
 function _upsertTaskHistory(tab, task) {
   if (!task?.id) return;
+  taskHistoryMutationRevision[tab] += 1;
   const current = Array.isArray(state.taskHistoryCache[tab]) ? state.taskHistoryCache[tab] : [];
   const withoutCurrent = current.filter(item => item.id !== task.id);
   const shouldStayInHistory =
@@ -691,6 +726,9 @@ function _upsertTaskHistory(tab, task) {
 
 function _removeTaskFromAllCaches(taskId) {
   if (!taskId) return;
+  Object.keys(taskHistoryMutationRevision).forEach(tab => {
+    taskHistoryMutationRevision[tab] += 1;
+  });
   liveReceivedTasks = liveReceivedTasks.filter(task => task.id !== taskId);
   liveSentTasks = liveSentTasks.filter(task => task.id !== taskId);
   liveSentDoneNotifyTasks = liveSentDoneNotifyTasks.filter(task => task.id !== taskId);
@@ -709,8 +747,11 @@ async function _loadTaskHistory(tab, force = false) {
   if (state.taskHistoryLoading[tab]) return;
 
   state.taskHistoryLoading = { ...state.taskHistoryLoading, [tab]: true };
+  const requestMutationRevision = taskHistoryMutationRevision[tab];
+  const requestUsername = state.currentUsername;
+  let shouldRetry = false;
   if (state.taskModalOpen && state.activeTaskTab === tab) {
-    renderTaskTabContent();
+    _renderTaskTabContentWhenSafe(tab);
   }
 
   if (isSupabaseSharedCoreEnabled()) {
@@ -722,14 +763,19 @@ async function _loadTaskHistory(tab, force = false) {
         tab === 'sent'     ? !_isSentTaskLive(t) :
         !_isSharedTaskLive(t)
       );
-      state.taskHistoryCache = { ...state.taskHistoryCache, [tab]: historyOnly };
-      state.taskHistoryLoaded = { ...state.taskHistoryLoaded, [tab]: true };
-      _syncAllTaskLists();
+      if (requestUsername !== state.currentUsername || requestMutationRevision !== taskHistoryMutationRevision[tab]) {
+        shouldRetry = true;
+      } else {
+        state.taskHistoryCache = { ...state.taskHistoryCache, [tab]: historyOnly };
+        state.taskHistoryLoaded = { ...state.taskHistoryLoaded, [tab]: true };
+        _syncAllTaskLists();
+      }
     } catch (err) {
       console.error(`Supabase task history error (${tab}):`, err);
     } finally {
       state.taskHistoryLoading = { ...state.taskHistoryLoading, [tab]: false };
-      if (state.taskModalOpen) renderTaskTabContent();
+      _renderTaskTabContentWhenSafe(tab);
+      if (shouldRetry) void _loadTaskHistory(tab, true);
     }
     return;
   }
@@ -738,9 +784,7 @@ async function _loadTaskHistory(tab, force = false) {
   state.taskHistoryLoaded = { ...state.taskHistoryLoaded, [tab]: true };
   state.taskHistoryLoading = { ...state.taskHistoryLoading, [tab]: false };
   _syncAllTaskLists();
-  if (state.taskModalOpen && state.activeTaskTab === tab) {
-    renderTaskTabContent();
-  }
+  _renderTaskTabContentWhenSafe(tab);
 }
 
 function _ensureTaskHistoryForActiveTab() {
@@ -750,6 +794,16 @@ function _ensureTaskHistoryForActiveTab() {
 }
 
 export function startTaskListeners(username) {
+  if (taskDraftUsername !== username) {
+    state.newTaskAssignee = '';
+    state.newTaskDraft = {
+      title: '',
+      projectKey: '',
+      dueDate: '',
+      description: '',
+    };
+  }
+  taskDraftUsername = username || '';
   if (!username) return;
   _resetTaskHistoryState();
 
@@ -795,37 +849,9 @@ export function updateTaskBadge() {
 
 function ensureTaskModalScaffold() {
   const modalInner = document.querySelector('#task-modal .task-modal-inner');
-  const header = document.querySelector('#task-modal .task-modal-header');
-  const legacyCopy = header?.querySelector('.task-modal-header-copy');
-  const headerTitle = header?.querySelector(':scope > span');
-  const closeButton = header?.querySelector('.task-modal-close');
-  const existingHeading = document.querySelector('#task-modal .task-modal-heading');
-
-  if (legacyCopy) legacyCopy.remove();
-  if (!existingHeading && header && !document.getElementById('task-modal-title-text')) {
-    const heading = document.createElement('div');
-    heading.className = 'task-modal-heading';
-    heading.innerHTML = `
-      <p class="task-modal-kicker">タスクワークスペース</p>
-      <div class="task-modal-title-row">
-        <span class="material-symbols-rounded task-modal-title-icon" aria-hidden="true">task_alt</span>
-        <div class="task-modal-title-copy">
-          <h2 class="task-modal-title-text" id="task-modal-title-text">タスク管理</h2>
-          <p class="task-modal-subtitle" id="task-modal-subtitle">受信・依頼・共有・新規作成を一つのワークスペースで切り替えます。</p>
-        </div>
-      </div>
-    `;
-    if (headerTitle) {
-      headerTitle.replaceWith(heading);
-    } else if (closeButton) {
-      header.insertBefore(heading, closeButton);
-    } else {
-      header.prepend(heading);
-    }
-  }
 
   if (modalInner) {
-    modalInner.setAttribute('aria-labelledby', 'task-modal-title-text');
+    modalInner.setAttribute('aria-labelledby', 'task-modal-title');
   }
 
   const tabList = document.querySelector('#task-modal .task-tabs');
@@ -851,6 +877,21 @@ function ensureTaskModalScaffold() {
     button.setAttribute('role', 'tab');
     button.setAttribute('aria-selected', button.classList.contains('active') ? 'true' : 'false');
     button.setAttribute('tabindex', button.classList.contains('active') ? '0' : '-1');
+    button.addEventListener('keydown', event => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      const tabs = Array.from(document.querySelectorAll('#task-modal .task-tab'));
+      const currentIndex = tabs.indexOf(button);
+      if (currentIndex < 0) return;
+      let nextIndex = currentIndex;
+      if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
+      if (event.key === 'Home') nextIndex = 0;
+      if (event.key === 'End') nextIndex = tabs.length - 1;
+      event.preventDefault();
+      const nextTab = tabs[nextIndex];
+      switchTaskTab(nextTab.dataset.tab || 'received');
+      nextTab.focus();
+    });
   });
 }
 
@@ -859,94 +900,31 @@ function renderTaskModalChrome() {
 
   const activeTab = state.activeTaskTab || 'received';
   const activeMeta = TASK_TAB_META[activeTab] || TASK_TAB_META.received;
-  const titleEl = document.getElementById('task-modal-title-text');
-  const subtitleEl = document.getElementById('task-modal-subtitle');
+  const modal = document.getElementById('task-modal');
   const metricsEl = document.getElementById('task-modal-metrics');
   const contextEl = document.getElementById('task-tab-context');
+  const viewTitleEl = document.getElementById('task-view-title');
+  const viewDescriptionEl = document.getElementById('task-view-description');
+  const viewCountEl = document.getElementById('task-view-count');
   const total = getTaskListForTab(activeTab).length;
   const filtered = activeTab === 'new' ? 0 : _filterTasksByProjectKey(getTaskListForTab(activeTab)).length;
-  const pendingReceived = (state.receivedTasks || []).filter(task => task.status === 'pending').length;
-  const acceptedReceived = (state.receivedTasks || []).filter(task => task.status === 'accepted').length;
-  const doneToAck = (state.sentTasks || []).filter(task => task.status === 'done' && !task.notifiedDone).length;
-  const sharedPending = (state.sharedTasks || []).filter(task => (task.sharedResponses?.[state.currentUsername] || 'pending') === 'pending').length;
-  const allVisibleTasks = [
-    ...(state.receivedTasks || []),
-    ...(state.sentTasks || []),
-    ...(state.sharedTasks || []),
-  ];
-  const urgentDueCount = allVisibleTasks.filter(task => {
-    const tone = _taskDueTone(task);
-    return tone === 'overdue' || tone === 'today';
-  }).length;
-  const needsActionCount = pendingReceived + doneToAck + sharedPending;
-
-  if (titleEl) titleEl.textContent = 'タスク管理';
-  if (subtitleEl) subtitleEl.textContent = activeMeta.description;
 
   if (metricsEl) {
-    const shouldShowMetrics = activeTab !== 'new';
-    metricsEl.hidden = !shouldShowMetrics;
-    if (shouldShowMetrics) {
-      const metricItems = [
-        { tab: pendingReceived > 0 ? 'received' : doneToAck > 0 ? 'sent' : sharedPending > 0 ? 'shared' : activeTab, label: '要判断', icon: 'priority_high', value: `${needsActionCount}件`, note: needsActionCount > 0 ? 'まずここを処理' : '今すぐ判断なし' },
-        { tab: 'received', label: '自分の進行中', icon: 'flag', value: `${acceptedReceived}件`, note: acceptedReceived > 0 ? '完了時に報告' : '進行中なし' },
-        { tab: urgentDueCount > 0 ? activeTab : 'received', label: '期限注意', icon: 'event_busy', value: `${urgentDueCount}件`, note: urgentDueCount > 0 ? '今日まで/超過' : '期限注意なし' },
-        { tab: 'new', label: '新規依頼', icon: TASK_TAB_META.new.icon, value: '作成', note: '担当者へ送る' },
-      ];
-      metricsEl.innerHTML = metricItems.map((item, index) => {
-        const isActiveMetric = item.tab === activeTab
-          && !metricItems.slice(0, index).some(prev => prev.tab === activeTab);
-        return `
-          <button
-            type="button"
-            class="task-modal-metric${isActiveMetric ? ' active' : ''}"
-            data-task-metric-tab="${item.tab}"
-            aria-pressed="${isActiveMetric ? 'true' : 'false'}"
-          >
-            <span class="material-symbols-rounded task-modal-metric__icon" aria-hidden="true">${item.icon}</span>
-            <span class="task-modal-metric__copy">
-              <span class="task-modal-metric__label">${esc(item.label)}</span>
-              <strong class="task-modal-metric__value">${esc(item.value)}</strong>
-              <span class="task-modal-metric__note">${esc(item.note)}</span>
-            </span>
-          </button>
-        `;
-      }).join('');
-      metricsEl.querySelectorAll('[data-task-metric-tab]').forEach(button => {
-        button.addEventListener('click', () => switchTaskTab(button.dataset.taskMetricTab || 'received'));
-      });
-    } else {
-      metricsEl.innerHTML = '';
-    }
+    metricsEl.hidden = true;
+    metricsEl.innerHTML = '';
   }
 
+  if (modal) modal.dataset.taskWorkspaceView = activeTab;
+  if (viewTitleEl) viewTitleEl.textContent = activeMeta.title;
+  if (viewDescriptionEl) viewDescriptionEl.textContent = activeMeta.description;
+  if (viewCountEl) {
+    viewCountEl.hidden = activeTab === 'new';
+    viewCountEl.textContent = state.taskProjectKeyFilter && filtered !== total
+      ? `${filtered} / ${total}件`
+      : `${total}件`;
+  }
   if (contextEl) {
-    const shouldShowContext = activeTab !== 'new';
-    contextEl.hidden = !shouldShowContext;
-    const chips = [];
-    if (shouldShowContext) {
-      chips.push(`${total}件`);
-      if (state.taskProjectKeyFilter) chips.push(`物件No: ${state.taskProjectKeyFilter}`);
-      if (filtered !== total) chips.push(`表示 ${filtered}件`);
-    }
-    if (shouldShowContext) {
-      contextEl.innerHTML = `
-        <div class="task-tab-context__surface">
-          <div class="task-tab-context__copy">
-            <span class="task-tab-context__eyebrow">
-              <span class="material-symbols-rounded" aria-hidden="true">${activeMeta.icon}</span>
-              ${esc(activeMeta.label)}
-            </span>
-            <strong class="task-tab-context__title">${esc(activeMeta.title)}</strong>
-          </div>
-          <div class="task-tab-context__chips">
-            ${chips.map(chip => `<span class="task-tab-context__chip">${esc(chip)}</span>`).join('')}
-          </div>
-        </div>
-      `;
-    } else {
-      contextEl.innerHTML = '';
-    }
+    contextEl.hidden = false;
   }
 }
 
@@ -993,6 +971,7 @@ export function switchTaskTab(tab) {
 export function renderTaskTabContent() {
   const content = document.getElementById('task-tab-content');
   if (!content) return;
+  taskUiRenderPending[state.activeTaskTab] = false;
   renderTaskModalChrome();
   content.dataset.taskView = state.activeTaskTab;
   content.setAttribute('role', 'tabpanel');
@@ -1036,8 +1015,7 @@ export function _renderReceivedTasks(container) {
     } else if (t.status === 'accepted') {
       actions = `<button class="task-action-btn task-action-done" data-id="${t.id}"><i class="fa-solid fa-flag-checkered"></i> 完了報告</button>`;
     } else {
-      actions = `<span class="task-done-stamp"><i class="fa-solid fa-circle-check"></i> 完了済み</span>
-        <button class="task-action-btn task-action-delete" data-id="${t.id}" title="削除"><i class="fa-solid fa-trash"></i> 削除</button>`;
+      actions = `<span class="task-done-stamp"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> 完了済み</span>`;
     }
     return _taskItemHtml(t, {
       view: 'received',
@@ -1054,8 +1032,6 @@ export function _renderReceivedTasks(container) {
     btn.addEventListener('click', () => acceptTask(btn.dataset.id)));
   container.querySelectorAll('.task-action-done').forEach(btn =>
     btn.addEventListener('click', () => completeTask(btn.dataset.id)));
-  container.querySelectorAll('.task-action-delete').forEach(btn =>
-    btn.addEventListener('click', () => deleteTask(btn.dataset.id, 'この完了タスクを削除しますか？')));
 }
 
 export function _renderSentTasks(container) {
@@ -1184,81 +1160,72 @@ export function _renderSharedTasks(container) {
 }
 
 export function _renderNewTaskForm(container) {
-  state.newTaskAssignee = '';
+  const draft = state.newTaskDraft || {
+    title: '',
+    projectKey: '',
+    dueDate: '',
+    description: '',
+  };
+  state.newTaskDraft = draft;
+  const assigneeName = state.newTaskAssignee || '';
   container.innerHTML = `
     <div class="task-composer-shell">
-      <div class="task-new-form">
+      <form class="task-new-form" id="task-new-form">
         <div class="form-group">
-          <label class="form-label">担当者 <span class="required-mark">*</span></label>
-          <div class="task-assignee-row">
-            <span class="task-assignee-display" id="new-task-assignee-display">未選択</span>
-            <button class="task-pick-btn" id="task-pick-user"><i class="fa-solid fa-user-plus"></i> 選択</button>
+          <label class="form-label" for="new-task-title">タスク名 <span class="required-mark">*</span></label>
+          <input type="text" id="new-task-title" class="form-input" placeholder="例：見積資料を確認する" maxlength="60" autocomplete="off" value="${esc(draft.title)}" required aria-required="true">
+        </div>
+        <div class="form-group">
+          <span class="form-label" id="new-task-assignee-label">担当者 <span class="required-mark">*</span></span>
+          <div class="task-assignee-row" aria-labelledby="new-task-assignee-label">
+            <span class="task-assignee-display${assigneeName ? ' selected' : ''}" id="new-task-assignee-display">${assigneeName ? esc(assigneeName) : '未選択'}</span>
+            <button type="button" class="task-pick-btn" id="task-pick-user"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> 担当者を選ぶ</button>
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">タスク名 <span class="required-mark">*</span></label>
-          <input type="text" id="new-task-title" class="form-input" placeholder="例：〇〇の資料作成" maxlength="60" autocomplete="off">
+          <label class="form-label" for="new-task-project-key">物件No（省略可）</label>
+          <input type="text" id="new-task-project-key" class="form-input" placeholder="例：61065" maxlength="80" autocomplete="off" value="${esc(draft.projectKey)}">
         </div>
-        <div class="form-group">
-          <label class="form-label">物件No（任意）</label>
-          <input type="text" id="new-task-project-key" class="form-input" placeholder="物件No（現場コード） 例：61065" maxlength="80" autocomplete="off">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="new-task-due">期限入力（省略可）</label>
-          <button type="button" class="task-date-picker" id="new-task-due-trigger" aria-label="カレンダーから期限を選択">
-            <span class="material-symbols-rounded task-date-picker__icon" aria-hidden="true">calendar_month</span>
-            <span class="task-date-picker__copy">
-              <span class="task-date-picker__label">カレンダー</span>
-              <span class="task-date-picker__value" id="new-task-due-display">アイコンを押して選択</span>
-            </span>
-            <span class="material-symbols-rounded task-date-picker__chevron" aria-hidden="true">arrow_drop_down</span>
-          </button>
-          <input type="date" id="new-task-due" class="task-date-native" tabindex="-1" aria-hidden="true">
-        </div>
-        <div class="form-group">
-          <label class="form-label">詳細（省略可）</label>
-          <textarea id="new-task-desc" class="form-input" rows="3" placeholder="詳しい説明や注意点..."></textarea>
-        </div>
-        <button class="btn-modal-primary" id="new-task-submit" style="width:100%;margin-top:4px">
-          <i class="fa-solid fa-paper-plane"></i> タスクを依頼する
+        <details class="task-new-options"${draft.dueDate || draft.description ? ' open' : ''}>
+          <summary>期限・詳細を追加</summary>
+          <div class="task-new-options-body">
+            <div class="form-group form-group-inline task-new-due-field">
+              <input type="date" id="new-task-due" class="date-icon-only" value="${esc(draft.dueDate)}">
+              <label class="form-label" for="new-task-due">期限入力（省略可）</label>
+              <button type="button" id="new-task-due-trigger" hidden tabindex="-1" aria-hidden="true"></button>
+              <span id="new-task-due-display" hidden></span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="new-task-desc">詳細（省略可）</label>
+              <textarea id="new-task-desc" class="form-input" rows="3" placeholder="補足や注意点を入力">${esc(draft.description)}</textarea>
+            </div>
+          </div>
+        </details>
+        <button type="submit" class="btn-modal-primary" id="new-task-submit">
+          <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> タスクを依頼する
         </button>
-      </div>
+      </form>
     </div>`;
 
-  document.getElementById('task-pick-user').addEventListener('click', openTaskUserPicker);
-  document.getElementById('new-task-submit').addEventListener('click', submitNewTask);
-  const dueInput = document.getElementById('new-task-due');
-  const dueTrigger = document.getElementById('new-task-due-trigger');
-  const dueDisplay = document.getElementById('new-task-due-display');
-  const formatDueDate = value => {
-    if (!value) return 'アイコンを押して選択';
-    const [year, month, day] = value.split('-');
-    if (!year || !month || !day) return value;
-    return `${year}/${month}/${day}`;
+  document.getElementById('task-pick-user')?.addEventListener('click', openTaskUserPicker);
+  document.getElementById('task-new-form')?.addEventListener('submit', submitNewTask);
+  const draftFields = {
+    'new-task-title': 'title',
+    'new-task-project-key': 'projectKey',
+    'new-task-due': 'dueDate',
+    'new-task-desc': 'description',
   };
-  const syncDueDisplay = () => {
-    if (!dueDisplay || !dueInput) return;
-    const hasValue = !!dueInput.value;
-    dueDisplay.textContent = formatDueDate(dueInput.value);
-    dueTrigger?.classList.toggle('has-value', hasValue);
-  };
-  const openDuePicker = () => {
-    if (!dueInput) return;
-    if (typeof dueInput.showPicker === 'function') {
-      dueInput.showPicker();
-      return;
-    }
-    dueInput.focus();
-    dueInput.click();
-  };
-  dueInput?.addEventListener('change', syncDueDisplay);
-  dueTrigger?.addEventListener('click', openDuePicker);
-  dueTrigger?.addEventListener('keydown', event => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    openDuePicker();
+  Object.entries(draftFields).forEach(([id, key]) => {
+    const input = document.getElementById(id);
+    const saveDraft = () => {
+      state.newTaskDraft = {
+        ...(state.newTaskDraft || {}),
+        [key]: input?.value || '',
+      };
+    };
+    input?.addEventListener('input', saveDraft);
+    input?.addEventListener('change', saveDraft);
   });
-  syncDueDisplay();
 }
 
 export async function openTaskUserPicker() {
@@ -1272,10 +1239,15 @@ export async function openTaskUserPicker() {
   }, true);
 }
 
-export async function submitNewTask() {
+export async function submitNewTask(event) {
+  event?.preventDefault?.();
   if (!state.newTaskAssignee) { showToast('担当者を選択してください。', 'warning'); return; }
   const title = document.getElementById('new-task-title')?.value.trim();
-  if (!title) { document.getElementById('new-task-title')?.focus(); return; }
+  if (!title) {
+    showToast('タスク名を入力してください。', 'warning');
+    document.getElementById('new-task-title')?.focus();
+    return;
+  }
   const description = document.getElementById('new-task-desc')?.value.trim() || '';
   const dueDate = document.getElementById('new-task-due')?.value || '';
   const projectKey = normalizeProjectKey(document.getElementById('new-task-project-key')?.value || '');
@@ -1298,6 +1270,12 @@ export async function submitNewTask() {
     }
     showToast('タスクを送信しました', 'success');
     state.newTaskAssignee = '';
+    state.newTaskDraft = {
+      title: '',
+      projectKey: '',
+      dueDate: '',
+      description: '',
+    };
     const titleEl = document.getElementById('new-task-title');
     const projectKeyEl = document.getElementById('new-task-project-key');
     const descEl  = document.getElementById('new-task-desc');

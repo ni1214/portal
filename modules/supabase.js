@@ -1395,10 +1395,19 @@ export async function fetchTaskCommentsFromSupabase(taskId) {
 }
 
 export async function addTaskCommentInSupabase(data) {
-  await requestSupabase('task_comments', {
-    method: 'POST', prefer: 'return=minimal',
+  const rows = await requestSupabase('task_comments', {
+    method: 'POST', prefer: 'return=representation',
     body: { task_id: data.taskId, username: data.username || '', body: data.body || '' },
   });
+  const row = Array.isArray(rows) ? rows[0] : null;
+  if (!row) throw new Error('作成したコメントを取得できませんでした。');
+  return {
+    id: row.id,
+    taskId: row.task_id,
+    username: row.username || '',
+    body: row.body || '',
+    createdAt: toTimestamp(row.created_at),
+  };
 }
 
 export async function deleteTaskCommentInSupabase(id) {

@@ -194,6 +194,34 @@ function setCloseButtonMode(element, meta, toWorkspace) {
   }
 }
 
+function setWorkspaceSemantics(element, meta, toWorkspace) {
+  if (toWorkspace) {
+    const surface = element.matches('[role="dialog"]')
+      ? element
+      : element.querySelector('[role="dialog"]');
+    if (!surface) return;
+    if (!meta.semanticSurface) {
+      meta.semanticSurface = surface;
+      meta.semanticRole = surface.getAttribute('role');
+      meta.semanticAriaModal = surface.getAttribute('aria-modal');
+      meta.semanticAriaLabelledby = surface.getAttribute('aria-labelledby');
+    }
+    surface.setAttribute('role', 'region');
+    surface.removeAttribute('aria-modal');
+    surface.setAttribute('aria-labelledby', 'portal-workspace-title');
+    return;
+  }
+
+  const surface = meta.semanticSurface;
+  if (!surface) return;
+  if (meta.semanticRole === null || meta.semanticRole === undefined) surface.removeAttribute('role');
+  else surface.setAttribute('role', meta.semanticRole);
+  if (meta.semanticAriaModal === null || meta.semanticAriaModal === undefined) surface.removeAttribute('aria-modal');
+  else surface.setAttribute('aria-modal', meta.semanticAriaModal);
+  if (meta.semanticAriaLabelledby === null || meta.semanticAriaLabelledby === undefined) surface.removeAttribute('aria-labelledby');
+  else surface.setAttribute('aria-labelledby', meta.semanticAriaLabelledby);
+}
+
 function attachCloseInterceptor(element, meta) {
   if (meta.clickHandler) return;
   meta.clickHandler = event => {
@@ -276,6 +304,7 @@ export function openWorkspaceView(options = {}) {
   setWorkspaceNavigationState(options);
 
   setCloseButtonMode(element, meta, true);
+  setWorkspaceSemantics(element, meta, true);
   attachCloseInterceptor(element, meta);
 
   scrollAppMainToTop('auto');
@@ -295,6 +324,7 @@ export function closeWorkspaceView(target = activeWorkspaceElement) {
 
   detachCloseInterceptor(element, meta);
   setCloseButtonMode(element, meta, false);
+  setWorkspaceSemantics(element, meta, false);
   element.classList.remove('portal-workspace-mode');
   if (meta.extraClass) element.classList.remove(...meta.extraClass.split(/\s+/).filter(Boolean));
   element.classList.remove('visible');

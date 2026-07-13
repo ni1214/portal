@@ -477,7 +477,7 @@ function openTaskWorkspace() {
     closeSelector: '#task-modal-close',
     route: 'task',
     title: 'タスク管理',
-    subtitle: '受信・送信・共有タスクを本体ビューで確認します。',
+    subtitle: '受け取ったタスクへの対応と、自分が依頼したタスクの確認を行います。',
     icon: 'checklist',
     sourceButtonId: 'btn-task',
   });

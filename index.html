@@ -2146,16 +2146,16 @@
   </div>
 
   <!-- ==================== タスク管理モーダル ==================== -->
-  <div class="modal-overlay" id="task-modal">
+  <div class="modal-overlay task-ui-v2" id="task-modal">
     <div class="task-modal-inner" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
 
       <div class="task-modal-header">
-        <span><i class="fa-solid fa-list-check"></i> タスク管理</span>
-        <button class="task-modal-close" id="task-modal-close" title="閉じる">
+        <span id="task-modal-title"><i class="fa-solid fa-list-check" aria-hidden="true"></i> タスク管理</span>
+        <button type="button" class="task-modal-close" id="task-modal-close" title="閉じる" aria-label="タスク管理を閉じる">
           <i class="material-symbols-rounded" aria-hidden="true">close</i>
         </button>
       </div>
-      <div class="task-modal-metrics" id="task-modal-metrics" aria-live="polite"></div>
+      <div class="task-modal-metrics" id="task-modal-metrics" aria-live="polite" hidden></div>
 
       <div class="task-tabs">
         <button class="task-tab active" data-tab="received">
@@ -2171,11 +2171,17 @@
           <span class="task-tab-badge" id="task-tab-shared-badge" hidden></span>
         </button>
         <button class="task-tab" data-tab="new">
-          <i class="fa-solid fa-plus"></i> 新規依頼
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> タスクを作成
         </button>
       </div>
 
-      <div id="task-tab-context" class="task-tab-context" aria-live="polite"></div>
+      <div id="task-tab-context" class="task-tab-context" aria-live="polite">
+        <div class="task-view-copy">
+          <h2 id="task-view-title">受け取ったタスク</h2>
+          <p id="task-view-description">自分に届いたタスクを確認し、承諾・完了報告します。</p>
+        </div>
+        <span id="task-view-count" class="task-view-count">0件</span>
+      </div>
       <div id="task-tab-content" class="task-tab-content"></div>
 
     </div>

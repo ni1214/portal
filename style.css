@@ -31455,3 +31455,653 @@ body.portal-ui-v2 #reqboard-modal.portal-workspace-mode.reqboard-ui-v2 .sugg-lis
     justify-content: center;
   }
 }
+
+/* ===== Portal UI v2: task workspace ===== */
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-modal-inner,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab-content,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item-actions,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-assignee-row,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-shared-with-list,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .tc-wrapper,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .tc-input-row,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .form-input {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-modal-inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-modal-header,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-modal-metrics {
+  display: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tabs {
+  position: static;
+  z-index: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  padding: 0 0 12px;
+  overflow: visible;
+  border: 0;
+  border-bottom: 1px solid var(--portal-ui-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--portal-ui-muted);
+  box-shadow: none;
+  transform: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab:hover {
+  border-color: var(--portal-ui-line);
+  background: var(--portal-ui-surface-hover);
+  color: var(--portal-ui-text);
+  transform: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab.active {
+  border-color: var(--portal-ui-line-strong);
+  background: var(--portal-ui-surface);
+  color: var(--portal-ui-text);
+  box-shadow: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab[data-tab="new"] {
+  margin-left: auto;
+  border-color: var(--portal-ui-accent);
+  background: var(--portal-ui-accent);
+  color: var(--portal-ui-on-accent);
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab[data-tab="new"]:hover,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab[data-tab="new"].active {
+  border-color: var(--portal-ui-accent);
+  background: color-mix(in srgb, var(--portal-ui-accent) 88%, var(--portal-ui-text));
+  color: var(--portal-ui-on-accent);
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 19px;
+  box-shadow: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab-badge {
+  position: static;
+  inset: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  min-height: 19px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--state-danger) 16%, transparent);
+  color: color-mix(in srgb, var(--state-danger-strong) 72%, var(--portal-ui-text));
+  font-size: 11px;
+  font-weight: 700;
+  transform: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab[data-tab="new"] .task-tab-badge {
+  background: color-mix(in srgb, var(--portal-ui-on-accent) 22%, transparent);
+  color: var(--portal-ui-on-accent);
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab-context {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  min-width: 0;
+  margin: 0;
+  padding: 24px 4px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--portal-ui-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-view-copy {
+  min-width: 0;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-view-copy h2 {
+  margin: 0;
+  color: var(--portal-ui-text);
+  font-size: clamp(20px, 2.2vw, 26px);
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-view-copy p {
+  margin: 6px 0 0;
+  color: var(--portal-ui-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-view-count {
+  flex: 0 0 auto;
+  color: var(--portal-ui-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab-content {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: 12px 4px 40px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-project-filter-row {
+  position: static;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 12px;
+  border: 0;
+  background: transparent;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-project-filter-input-wrap {
+  flex: 1 1 320px;
+  width: min(380px, 100%);
+  min-width: 0;
+  max-width: 380px;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-project-filter-input {
+  min-height: 42px;
+  padding-block: 8px;
+  border-color: var(--portal-ui-line-strong);
+  border-radius: 8px;
+  background: var(--portal-ui-surface);
+  color: var(--portal-ui-text);
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-project-filter-count {
+  display: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px 20px;
+  width: 100%;
+  margin: 0;
+  padding: 20px 4px;
+  overflow: visible;
+  border: 0;
+  border-bottom: 1px solid var(--portal-ui-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item:hover {
+  border-color: var(--portal-ui-line-strong);
+  background: color-mix(in srgb, var(--portal-ui-surface-hover) 45%, transparent);
+  box-shadow: none;
+  transform: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item-main {
+  min-width: 0;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item-topline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-status-badge {
+  display: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-next-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--portal-ui-surface-hover);
+  color: var(--portal-ui-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-next-chip--warning {
+  background: color-mix(in srgb, var(--state-warning) 13%, transparent);
+  color: color-mix(in srgb, var(--state-warning-deeper) 76%, var(--portal-ui-text));
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-next-chip--info {
+  background: color-mix(in srgb, var(--state-info) 13%, transparent);
+  color: color-mix(in srgb, var(--state-info-strong) 76%, var(--portal-ui-text));
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-next-chip--success {
+  background: color-mix(in srgb, var(--state-success) 13%, transparent);
+  color: color-mix(in srgb, var(--state-success-strong) 76%, var(--portal-ui-text));
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 14px;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item-title {
+  min-width: 0;
+  margin: 0;
+  color: var(--portal-ui-text);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-due,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item-facts,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-partner,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-project-key-chip {
+  color: var(--portal-ui-muted);
+  font-size: 12px;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 8px;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-project-key-chip {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item-details {
+  margin-top: 10px;
+  color: var(--portal-ui-muted);
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item-details summary {
+  color: var(--portal-ui-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  align-self: center;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-action-btn,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-pick-btn,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 #new-task-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid var(--portal-ui-line-strong);
+  border-radius: 8px;
+  background: var(--portal-ui-surface);
+  color: var(--portal-ui-text);
+  box-shadow: none;
+  transform: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-action-btn:hover,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-pick-btn:hover {
+  background: var(--portal-ui-surface-hover);
+  box-shadow: none;
+  transform: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-action-accept,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-action-done,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-action-ack,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 #new-task-submit {
+  border-color: var(--portal-ui-accent);
+  background: var(--portal-ui-accent);
+  color: var(--portal-ui-on-accent);
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-action-delete,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-action-cancel,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-action-share-decline {
+  border-color: color-mix(in srgb, var(--state-danger) 35%, var(--portal-ui-line));
+  background: transparent;
+  color: color-mix(in srgb, var(--state-danger-strong) 72%, var(--portal-ui-text));
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .tc-wrapper {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding-top: 2px;
+  border: 0;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .tc-toggle {
+  min-height: 36px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--portal-ui-muted);
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .tc-area {
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--portal-ui-line);
+  border-radius: 8px;
+  background: var(--portal-ui-surface);
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .tc-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  gap: 8px;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .tc-send {
+  width: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-empty {
+  min-height: 180px;
+  margin: 0;
+  padding: 40px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--portal-ui-muted);
+  box-shadow: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-composer-shell {
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: 8px 0 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-new-form {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+  padding: 24px;
+  border: 1px solid var(--portal-ui-line);
+  border-radius: 10px;
+  background: var(--portal-ui-surface);
+  box-shadow: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-new-form .form-group {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-new-form .form-label {
+  display: block;
+  margin: 0 0 7px;
+  color: var(--portal-ui-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-new-form .form-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--portal-ui-line-strong);
+  border-radius: 8px;
+  background: var(--portal-ui-canvas);
+  color: var(--portal-ui-text);
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-new-form textarea.form-input {
+  min-height: 96px;
+  resize: vertical;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-assignee-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid var(--portal-ui-line-strong);
+  border-radius: 8px;
+  background: var(--portal-ui-canvas);
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-assignee-display {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--portal-ui-muted);
+  box-shadow: none;
+  overflow-wrap: anywhere;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-assignee-display.selected {
+  color: var(--portal-ui-text);
+  font-weight: 600;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-new-options {
+  border-top: 1px solid var(--portal-ui-line);
+  border-bottom: 1px solid var(--portal-ui-line);
+  background: transparent;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-new-options > summary {
+  padding: 13px 0;
+  color: var(--portal-ui-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-new-options-body {
+  display: grid;
+  gap: 16px;
+  padding: 2px 0 16px;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-new-form .task-new-due-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-new-form .task-new-due-field .date-icon-only {
+  flex: 0 0 34px;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 1px solid var(--portal-ui-line-strong);
+  border-radius: 8px;
+  background: var(--portal-ui-canvas);
+  box-shadow: none;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-new-form .task-new-due-field .form-label {
+  margin: 0;
+  color: var(--portal-ui-muted);
+  font-weight: 500;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 #new-task-submit {
+  justify-self: start;
+  width: auto;
+  min-width: 180px;
+  min-height: 44px;
+  margin: 0;
+  padding-inline: 18px;
+}
+
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-done-stamp,
+body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-shared-response-label {
+  color: var(--portal-ui-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab-label {
+    font-size: 12px;
+  }
+
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 520px) {
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab {
+    width: 100%;
+    min-height: 44px;
+    padding-inline: 7px;
+  }
+
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab[data-tab="new"] {
+    grid-column: 1 / -1;
+    margin-left: 0;
+  }
+
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-tab-context {
+    align-items: flex-start;
+    padding-top: 18px;
+  }
+
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-view-copy p {
+    max-width: 31ch;
+  }
+
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-project-filter-row,
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-assignee-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-project-filter-input-wrap,
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-pick-btn,
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-action-btn,
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 #new-task-submit {
+    width: 100%;
+    max-width: none;
+    min-height: 44px;
+  }
+
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-project-filter-input-wrap {
+    flex: 0 0 auto;
+  }
+
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-project-filter-count {
+    display: none;
+  }
+
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-item-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  body.portal-ui-v2 #task-modal.portal-workspace-mode.task-ui-v2 .task-new-form {
+    gap: 16px;
+    padding: 18px 14px;
+  }
+}
