@@ -246,6 +246,8 @@ document.addEventListener('keydown', event => {
   if (event.key !== 'Escape') return;
   if (!activeWorkspaceElement) return;
   if (!isWorkspaceViewOpen(activeWorkspaceElement)) return;
+  const sharedLinksSearch = event.target?.closest?.('#shared-links-search');
+  if (sharedLinksSearch?.value) return;
   const secondaryModalOpen = Array.from(document.querySelectorAll('.modal-overlay.visible'))
     .some(modal => modal !== activeWorkspaceElement && !activeWorkspaceElement.contains(modal));
   if (secondaryModalOpen) return;

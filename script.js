@@ -15,7 +15,7 @@ import { state } from './modules/state.js';
 
 import {
   esc, escHtml, _fmtTs, getUserAvatarColor, formatFileSize, getFileIcon, confirmDelete,
-  inferSharedLinkType,
+  inferSharedLinkType, isSafeSharedLinkUrl, isSafeWebUrl, sanitizeIconIdentifier,
 } from './modules/utils.js';
 import { getBrandIconHtmlForCard, shouldPreferBrandIcon } from './modules/brand-icons.js';
 
@@ -579,7 +579,7 @@ function openSharedLinksWorkspace(options = {}) {
     closeSelector: '#shared-links-close',
     route: 'shared-links',
     title: '共有リンク',
-    subtitle: '共有カードとカテゴリを必要な時だけ読み込みます。',
+    subtitle: '必要なリンクを検索し、カテゴリやお気に入りから開きます。',
     icon: 'share',
     sourceButtonId: 'btn-shared-links',
   });
@@ -592,8 +592,8 @@ function openFavoriteSharedLinksWorkspace(categoryId = '') {
     closeAction: closeSharedLinksModal,
     closeSelector: '#shared-links-close',
     route: 'shared-links',
-    title: 'お気に入り共有リンク',
-    subtitle: 'よく使う共有リンクに絞って確認します。',
+    title: '共有リンク',
+    subtitle: 'お気に入りに登録したリンクをまとめて確認します。',
     icon: 'star',
     sourceButtonId: 'btn-shared-links',
   });
@@ -840,7 +840,6 @@ initTodayDashboard({
   },
   openSharedLinks: async () => {
     state.sharedLinksCategory = 'all';
-    state.sharedLinksFavoritesOnlyCategory = '';
     state.sharedLinksQuery = '';
     await openSharedLinksWorkspace();
   },
@@ -918,12 +917,14 @@ Object.assign(sharedSpaceDeps, {
   },
   openSharedLinksView: async () => {
     state.sharedLinksCategory = 'all';
-    state.sharedLinksFavoritesOnlyCategory = '';
     state.sharedLinksQuery = '';
     await openSharedLinksWorkspace();
   },
   openFavoriteSharedLinksView: async categoryId => {
     await openFavoriteSharedLinksWorkspace(categoryId || '');
+  },
+  openPortalAction: action => {
+    if (action === 'trouble-report') void openTroubleReportWorkspace('new');
   },
   openPropertySummary: () => openPropertySummaryWorkspace(),
   openOrderModal: openOrderWorkspace,
@@ -1171,6 +1172,7 @@ const PREF_FIELDS = {
 let _prefSaveTimer = null;
 let _prefSavePendingFields = new Set();
 let _prefSavePendingFull = false;
+let _prefSaveWriteChain = Promise.resolve();
 
 function buildPreferencePayload(fields = null) {
   const theme    = localStorage.getItem('portal-theme')     || 'dark';
@@ -1239,6 +1241,14 @@ async function persistPreferencesForUser(targetUsername, options = {}) {
   }
 }
 
+function enqueuePreferencePersist(targetUsername, fields) {
+  const write = _prefSaveWriteChain
+    .catch(() => {})
+    .then(() => persistPreferencesForUser(targetUsername, { fields }));
+  _prefSaveWriteChain = write;
+  return write;
+}
+
 function schedulePreferenceSave(options = {}) {
   const targetUsername = state.currentUsername;
   if (!targetUsername) return;
@@ -1246,7 +1256,7 @@ function schedulePreferenceSave(options = {}) {
   clearTimeout(_prefSaveTimer);
   if (options.immediate) {
     const fields = takeQueuedPreferenceFields();
-    void persistPreferencesForUser(targetUsername, { fields }).catch(err => {
+    void enqueuePreferencePersist(targetUsername, fields).catch(err => {
       console.error('設定保存エラー:', err);
     });
     return;
@@ -1254,7 +1264,7 @@ function schedulePreferenceSave(options = {}) {
   _prefSaveTimer = setTimeout(async () => {
     const fields = takeQueuedPreferenceFields();
     try {
-      await persistPreferencesForUser(targetUsername, { fields });
+      await enqueuePreferencePersist(targetUsername, fields);
     } catch (err) {
       console.error('設定保存エラー:', err);
     }
@@ -1306,7 +1316,7 @@ async function loadPersonalData(username, lockOnSwitch = false) {
         state.missionBannerHidden = sbPrefs.missionBannerHidden !== false;
         state.sharedLinksViewMode = ['grid', 'list'].includes(sbPrefs.sharedLinksViewMode) ? sbPrefs.sharedLinksViewMode : 'grid';
         state.sharedLinksThumbnailMode = sbPrefs.sharedLinksThumbnailMode !== false;
-        state.sharedLinksSortMode = ['category', 'name', 'recent'].includes(sbPrefs.sharedLinksSortMode) ? sbPrefs.sharedLinksSortMode : 'category';
+        state.sharedLinksSortMode = ['category', 'name'].includes(sbPrefs.sharedLinksSortMode) ? sbPrefs.sharedLinksSortMode : 'category';
         if (sbPrefs.theme)    applyTheme(sbPrefs.theme, false);
         if (sbPrefs.fontSize) applyFontSize(sbPrefs.fontSize, false);
         if (sbPrefs.lastViewedSuggestionsAt) {
@@ -1638,6 +1648,7 @@ function sortCards(cards = []) {
 }
 
 let _sharedCardsLoadPromise = null;
+let _sharedCardsLoadSeq = 0;
 let _cardRerenderTimer = null;
 
 function rerenderCards() {
@@ -1658,7 +1669,7 @@ async function reloadSharedCoreData() {
   const hadSharedCards = state.sharedCardsLoaded || (state.allCards || []).length > 0;
   state.sharedCardsLoaded = false;
   state.sharedCardsLoading = false;
-  state.allCards = [];
+  state.sharedCardsLoadError = '';
   await loadCategories();
   if (hadSharedCards) {
     await ensureSharedCardsLoaded(true);
@@ -1678,42 +1689,49 @@ async function ensureSharedCardsLoaded(force = false) {
   }
   if (_sharedCardsLoadPromise && !force) return _sharedCardsLoadPromise;
 
+  const loadSeq = ++_sharedCardsLoadSeq;
   state.sharedCardsLoading = true;
+  state.sharedCardsLoadError = '';
   renderSharedHome();
   renderSharedLinksBrowser();
 
-  _sharedCardsLoadPromise = (async () => {
+  const loadPromise = (async () => {
+    let cards;
     if (isSupabaseSharedCoreEnabled()) {
-      try {
-        const cards = await fetchSharedCardsFromSupabase();
-        state.allCards = sortCards(cards);
-      } catch (err) {
-        console.error('Supabase shared card load error:', err);
-        state.allCards = [];
-      }
-      state.sharedCardsLoaded = true;
-      rerenderCards();
-      renderSharedHome();
-      return state.allCards;
+      cards = await fetchSharedCardsFromSupabase();
+    } else {
+      const q = query(collection(db, 'cards'), orderBy('categoryOrder'));
+      const snap = await getDocs(q);
+      recordGetDocsRead('cards.all', '公開カード一覧', 'cards', snap.size, snap.docs);
+      cards = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     }
 
-    const q = query(collection(db, 'cards'), orderBy('categoryOrder'));
-    const snap = await getDocs(q);
-    recordGetDocsRead('cards.all', '公開カード一覧', 'cards', snap.size, snap.docs);
-    state.allCards = sortCards(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    if (loadSeq !== _sharedCardsLoadSeq) return state.allCards;
+    state.allCards = sortCards(cards);
     state.sharedCardsLoaded = true;
+    state.sharedCardsLoadError = '';
     rerenderCards();
     renderSharedHome();
     return state.allCards;
   })();
+  _sharedCardsLoadPromise = loadPromise;
 
   try {
-    return await _sharedCardsLoadPromise;
+    return await loadPromise;
+  } catch (err) {
+    if (loadSeq === _sharedCardsLoadSeq) {
+      console.error('Shared card load error:', err);
+      state.sharedCardsLoaded = false;
+      state.sharedCardsLoadError = '通信状況を確認して、もう一度お試しください。';
+    }
+    throw err;
   } finally {
-    state.sharedCardsLoading = false;
-    _sharedCardsLoadPromise = null;
-    renderSharedHome();
-    renderSharedLinksBrowser();
+    if (_sharedCardsLoadPromise === loadPromise) {
+      state.sharedCardsLoading = false;
+      _sharedCardsLoadPromise = null;
+      renderSharedHome();
+      renderSharedLinksBrowser();
+    }
   }
 }
 
@@ -1794,7 +1812,9 @@ async function deleteCard(docId) {
   } else {
     await deleteDoc(doc(db, 'cards', docId));
   }
-  state.allCards = state.allCards.filter(c => c.id !== docId);
+  state.allCards = state.allCards
+    .filter(c => c.id !== docId)
+    .map(c => c.parentId === docId ? { ...c, parentId: null } : c);
   scheduleCardRerender();
 }
 
@@ -2212,30 +2232,33 @@ function renderCardIconHtml(card, fallbackIcon = 'fa-solid fa-link', iconStyle =
     if (brandIcon) return brandIcon;
   }
 
-  if (card.icon && card.icon.startsWith('svg:')) {
-    return SVG_ICONS[card.icon] || '';
+  const safeIcon = sanitizeIconIdentifier(card.icon, fallbackIcon);
+  if (safeIcon.startsWith('svg:')) {
+    return SVG_ICONS[safeIcon] || `<i class="${esc(fallbackIcon)}"></i>`;
   }
 
   const styleAttr = iconStyle ? ` style="${iconStyle}"` : '';
-  return `<i class="${card.icon || fallbackIcon}"${styleAttr}></i>`;
+  return `<i class="${esc(safeIcon)}"${styleAttr}></i>`;
 }
 
 function buildLinkCard(card, isFav = false, gradient = '') {
   const a = document.createElement('a');
-  if (card.url === 'solar:open') {
+  const rawUrl = `${card.url || ''}`.trim();
+  const isSafeUrl = isSafeSharedLinkUrl(rawUrl, { allowEmpty: false });
+  if (rawUrl === 'solar:open') {
     a.href = '#';
     a.dataset.solarOpen = '1';
-  } else if (card.url === 'portal:trouble-report' || card.label === 'トラブル報告') {
+  } else if (rawUrl === 'portal:trouble-report') {
     a.href = '#';
     a.dataset.portalAction = 'trouble-report';
+  } else if (isSafeUrl) {
+    a.href = rawUrl;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
   } else {
-    a.href = card.url || '#';
-    if (card.url && card.url !== '#') {
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-    }
+    a.href = '#';
   }
-  const hasNoUrl = card.url !== 'solar:open' && (!card.url || card.url.trim() === '' || card.url === '#');
+  const hasNoUrl = !isSafeUrl && !a.dataset.portalAction;
   a.className = 'link-card' + (hasNoUrl ? ' link-card--no-url' : '');
   a.dataset.docId = card.id;
 
@@ -2281,6 +2304,10 @@ function buildLinkCard(card, isFav = false, gradient = '') {
     });
   }
 
+  if (hasNoUrl) {
+    a.addEventListener('click', e => e.preventDefault());
+  }
+
   if (!isFav) {
     a.addEventListener('contextmenu', e => {
       e.preventDefault();
@@ -2318,10 +2345,13 @@ function buildExternalCard(card) {
   if (card.url === 'solar:open') {
     a.href = '#';
     a.dataset.solarOpen = '1';
-  } else {
-    a.href = card.url || '#';
+  } else if (isSafeWebUrl(card.url)) {
+    a.href = card.url;
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
+  } else {
+    a.href = '#';
+    a.addEventListener('click', e => e.preventDefault());
   }
 
   const iconHtml = renderCardIconHtml(card, 'fa-solid fa-link', 'font-size:2rem;color:var(--accent-cyan)');
@@ -2623,7 +2653,7 @@ async function reorderFavoriteLinks(orderedKeys = []) {
   renderSharedLinksBrowser();
 
   try {
-    await persistPreferencesForUser(state.currentUsername, { fields: [PREF_FIELDS.favorites] });
+    await enqueuePreferencePersist(state.currentUsername, [PREF_FIELDS.favorites]);
     showToast('お気に入りの並び順を保存しました。', 'success');
   } catch (err) {
     console.error('お気に入り順の保存に失敗しました:', err);
@@ -2712,7 +2742,11 @@ function closeCategoryModal() {
 function updateCatIconPreview(iconClass) {
   const el = document.getElementById('cat-icon-preview');
   if (!el) return;
-  el.innerHTML = iconClass ? `<i class="${iconClass}"></i>` : '';
+  const safeIcon = sanitizeIconIdentifier(iconClass, '');
+  if (!safeIcon) { el.innerHTML = ''; return; }
+  el.innerHTML = safeIcon.startsWith('svg:')
+    ? (SVG_ICONS[safeIcon] || '')
+    : `<i class="${esc(safeIcon)}"></i>`;
 }
 
 function buildColorPicker() {
@@ -2881,13 +2915,28 @@ function closeCardModal() {
 function updateIconPreview(iconClass) {
   const el = document.getElementById('icon-preview');
   if (!iconClass) { el.innerHTML = ''; return; }
-  if (iconClass.startsWith('svg:')) {
-    const imgHtml = SVG_ICONS[iconClass] || '';
+  const safeIcon = sanitizeIconIdentifier(iconClass, '');
+  if (!safeIcon) { el.innerHTML = ''; return; }
+  if (safeIcon.startsWith('svg:')) {
+    const imgHtml = SVG_ICONS[safeIcon] || '';
     el.innerHTML = imgHtml
       ? `<div style="width:32px;height:32px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.15)">${imgHtml}</div>`
       : '<span style="font-size:0.65rem;opacity:0.5">SVG</span>';
   } else {
-    el.innerHTML = `<i class="${iconClass}"></i>`;
+    el.innerHTML = `<i class="${esc(safeIcon)}"></i>`;
+  }
+}
+
+function normalizeSharedLinkUrlForComparison(value) {
+  const raw = `${value || ''}`.trim();
+  if (!isSafeWebUrl(raw)) return raw;
+  try {
+    const parsed = new URL(raw);
+    parsed.hash = '';
+    parsed.pathname = parsed.pathname.replace(/\/+$/, '') || '/';
+    return parsed.toString();
+  } catch (_) {
+    return raw;
   }
 }
 
@@ -3658,7 +3707,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('header-shared-btn').addEventListener('click', () => {
     state.sharedLinksCategory = 'all';
-    state.sharedLinksFavoritesOnlyCategory = '';
     state.sharedLinksQuery = '';
     void openSharedLinksWorkspace();
   });
@@ -3703,7 +3751,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('btn-shared-links').addEventListener('click', () => {
     state.sharedLinksCategory = 'all';
-    state.sharedLinksFavoritesOnlyCategory = '';
     state.sharedLinksQuery = '';
     void openSharedLinksWorkspace();
   });
@@ -4503,12 +4550,39 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('card-save').addEventListener('click', async () => {
     const label = document.getElementById('edit-label').value.trim();
-    const icon  = document.getElementById('edit-icon').value.trim();
+    const iconInput = document.getElementById('edit-icon').value.trim();
     const url   = document.getElementById('edit-url').value.trim();
     const description = document.getElementById('edit-description').value.trim();
     const thumbnailUrl = document.getElementById('edit-thumbnail-url').value.trim();
     const linkType = document.getElementById('edit-link-type').value || inferSharedLinkType(url, label);
     if (!label) { document.getElementById('edit-label').focus(); return; }
+    if (!isSafeSharedLinkUrl(url, { allowEmpty: false })) {
+      showToast('URLは http:// または https:// で始まる安全なURLを入力してください。', 'warning');
+      document.getElementById('edit-url').focus();
+      return;
+    }
+    if (thumbnailUrl && !isSafeWebUrl(thumbnailUrl)) {
+      showToast('サムネイルURLは http:// または https:// で始まるURLを入力してください。', 'warning');
+      document.getElementById('edit-thumbnail-url').focus();
+      return;
+    }
+    const icon = sanitizeIconIdentifier(iconInput || 'fa-solid fa-star', '');
+    if (!icon || (icon.startsWith('svg:') && !SVG_ICONS[icon])) {
+      showToast('アイコン指定を確認してください。候補から選ぶと確実です。', 'warning');
+      document.getElementById('edit-icon').focus();
+      return;
+    }
+    const comparableUrl = normalizeSharedLinkUrlForComparison(url);
+    const sourceCards = state.editingIsPrivate ? state.privateCards : state.allCards;
+    const duplicate = (sourceCards || []).find(card =>
+      card.id !== state.editingDocId
+      && normalizeSharedLinkUrlForComparison(card.url) === comparableUrl
+    );
+    if (duplicate) {
+      showToast(`同じURLは「${duplicate.label || '別のリンク'}」に登録済みです。`, 'warning');
+      document.getElementById('edit-url').focus();
+      return;
+    }
     const sharedMeta = { description, thumbnailUrl, linkType };
 
     const btn = document.getElementById('card-save');
@@ -4518,12 +4592,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       if (state.editingIsPrivate) {
         if (state.editingDocId) {
-          await savePrivateCard(state.editingDocId, { label, icon: icon || 'fa-solid fa-star', url: url || '#', ...sharedMeta });
+          await savePrivateCard(state.editingDocId, { label, icon, url, ...sharedMeta });
         } else {
           await addPrivateCard({
             label,
-            icon: icon || 'fa-solid fa-star',
-            url: url || '#',
+            icon,
+            url,
             ...sharedMeta,
             sectionId: state.editingPrivateSectionDocId,
             parentId: state.editingParentId || null,
@@ -4539,8 +4613,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
           await addCard({
             label,
-            icon:     icon || 'fa-solid fa-star',
-            url:      url  || '#',
+            icon,
+            url,
             ...sharedMeta,
             updatedBy: state.currentUsername || '',
             category: state.editingCategory,
@@ -4640,8 +4714,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('cat-save').addEventListener('click', async () => {
     const label = document.getElementById('cat-label').value.trim();
-    const icon  = document.getElementById('cat-icon').value.trim() || 'fa-solid fa-star';
+    const iconInput = document.getElementById('cat-icon').value.trim();
     if (!label) { document.getElementById('cat-label').focus(); return; }
+    const icon = sanitizeIconIdentifier(iconInput || 'fa-solid fa-star', '');
+    if (!icon || (icon.startsWith('svg:') && !SVG_ICONS[icon])) {
+      showToast('アイコン指定を確認してください。候補から選ぶと確実です。', 'warning');
+      document.getElementById('cat-icon').focus();
+      return;
+    }
 
     const btn = document.getElementById('cat-save');
     btn.disabled = true;

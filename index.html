@@ -389,64 +389,99 @@
     </div>
   </div>
 
-  <!-- ==================== 共有リンクモーダル ==================== -->
-  <div class="modal-overlay" id="shared-links-modal">
-    <div class="modal-glass shared-links-glass">
-      <div class="shared-links-header">
+  <!-- ==================== 共有リンクワークスペース ==================== -->
+  <div class="modal-overlay shared-links-ui-v2" id="shared-links-modal">
+    <div class="modal-glass shared-links-glass" role="dialog" aria-modal="true" aria-labelledby="shared-links-title" tabindex="-1">
+      <header class="shared-links-header">
         <div>
-          <div class="shared-links-kicker">共有リンクワークスペース</div>
-          <h3 class="shared-links-title"><i class="material-symbols-rounded" aria-hidden="true">grid_view</i> 共有リンク</h3>
-          <p class="shared-links-desc">カテゴリごとに探す、追加する、よく使うリンクに星を付ける操作をここでまとめて行います。</p>
+          <h2 class="shared-links-title" id="shared-links-title">共有リンク</h2>
+          <p class="shared-links-desc">必要なリンクを検索して、そのまま開けます。</p>
         </div>
-        <button type="button" class="shared-links-close" id="shared-links-close" title="閉じる">
+        <button type="button" class="shared-links-close" id="shared-links-close" title="閉じる" aria-label="閉じる">
           <i class="material-symbols-rounded" aria-hidden="true">close</i>
         </button>
-      </div>
+      </header>
 
       <div class="shared-links-toolbar">
-        <input
-          type="text"
-          id="shared-links-search"
-          class="form-input shared-links-search"
-          aria-label="共有リンクを検索"
-          placeholder="共有リンク名で検索"
-          autocomplete="off"
-        >
-        <button type="button" class="shared-links-toolbar-action" id="shared-links-add-category-top">
-          <i class="material-symbols-rounded" aria-hidden="true">create_new_folder</i>
-          <span>カテゴリ追加</span>
-        </button>
-        <div class="shared-links-status" id="shared-links-status"></div>
-      </div>
-
-      <div class="shared-links-viewbar" id="shared-links-viewbar" aria-label="共有リンクの表示設定"></div>
-
-      <div class="shared-links-overview" id="shared-links-overview" aria-live="polite"></div>
-
-      <div class="shared-link-ai-box" id="shared-link-ai-box">
-        <div class="shared-link-ai-copy">
-          <span class="shared-link-ai-icon"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i></span>
-          <div>
-            <strong>AIでリンク追加</strong>
-            <span>例: ChatGPTのリンクを作成して</span>
-          </div>
-        </div>
-        <div class="shared-link-ai-controls">
-          <input
-            type="text"
-            id="shared-link-ai-input"
-            class="form-input shared-link-ai-input"
-            placeholder="追加したいリンクを文章で入力"
-            autocomplete="off"
-          >
-          <button type="button" class="shared-link-ai-button" id="shared-link-ai-button">
-            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><span>AIで追加</span>
+        <div class="shared-links-scope" role="group" aria-label="リンクの表示範囲">
+          <button type="button" class="shared-links-scope-btn active" id="shared-links-scope-all" aria-pressed="true" data-shared-links-scope="manage">
+            すべて
+          </button>
+          <button type="button" class="shared-links-scope-btn" id="shared-links-scope-favorites" aria-pressed="false" data-shared-links-scope="favorites">
+            <i class="fa-regular fa-star" aria-hidden="true"></i> お気に入り
           </button>
         </div>
-        <div class="shared-link-ai-status" id="shared-link-ai-status" aria-live="polite"></div>
+
+        <div class="shared-links-search-shell">
+          <i class="material-symbols-rounded" aria-hidden="true">search</i>
+          <input
+            type="search"
+            id="shared-links-search"
+            class="shared-links-search"
+            aria-label="共有リンクを検索"
+            placeholder="リンク名、説明、URLで検索"
+            autocomplete="off"
+          >
+          <button type="button" class="shared-links-search-clear" id="shared-links-search-clear" title="検索をクリア" aria-label="検索をクリア" hidden>
+            <i class="material-symbols-rounded" aria-hidden="true">close</i>
+          </button>
+        </div>
+
+        <details class="shared-links-create-menu" id="shared-links-create-menu">
+          <summary><i class="material-symbols-rounded" aria-hidden="true">add</i><span>新規</span></summary>
+          <div class="shared-links-create-panel">
+            <div class="shared-links-create-label">追加先のカテゴリ</div>
+            <div class="shared-links-create-category-list" id="shared-links-create-category-list"></div>
+            <div class="shared-links-create-divider"></div>
+            <button type="button" class="shared-links-create-action" id="shared-links-add-category-top">
+              <i class="material-symbols-rounded" aria-hidden="true">create_new_folder</i>
+              <span>カテゴリを追加</span>
+            </button>
+            <button type="button" class="shared-links-create-action" id="shared-links-open-ai">
+              <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+              <span>AIでリンクを追加</span>
+            </button>
+          </div>
+        </details>
       </div>
 
-      <div class="shared-links-chip-list" id="shared-links-chip-list"></div>
+      <div class="shared-links-filter-row">
+        <div class="shared-links-chip-list" id="shared-links-chip-list" aria-label="カテゴリで絞り込み"></div>
+        <div class="shared-links-viewbar" id="shared-links-viewbar" aria-label="共有リンクの表示設定"></div>
+      </div>
+
+      <div class="shared-links-result-row">
+        <div class="shared-links-status" id="shared-links-status" aria-live="polite"></div>
+        <div class="shared-links-overview" id="shared-links-overview"></div>
+      </div>
+
+      <details class="shared-link-ai-box" id="shared-link-ai-box">
+        <summary class="shared-link-ai-copy">
+          <span class="shared-link-ai-icon"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i></span>
+          <span>
+            <strong>AIでリンクを追加</strong>
+            <small>サービス名やURLを文章で入力</small>
+          </span>
+          <i class="material-symbols-rounded shared-link-ai-expand" aria-hidden="true">expand_more</i>
+        </summary>
+        <div class="shared-link-ai-body">
+          <div class="shared-link-ai-controls">
+            <input
+              type="text"
+              id="shared-link-ai-input"
+              class="form-input shared-link-ai-input"
+              aria-label="追加したいリンク"
+              placeholder="例：ChatGPTのリンクを追加して"
+              autocomplete="off"
+            >
+            <button type="button" class="shared-link-ai-button" id="shared-link-ai-button">
+              <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><span>追加</span>
+            </button>
+          </div>
+          <div class="shared-link-ai-status" id="shared-link-ai-status" aria-live="polite"></div>
+        </div>
+      </details>
+
       <div class="shared-links-browser-body" id="shared-links-browser-body"></div>
     </div>
   </div>
@@ -1197,32 +1232,30 @@
           <h4 class="guide-section-title"><span class="guide-icon">🖱️</span> 基本操作</h4>
           <ul class="guide-list">
             <li><strong>最初の利用時</strong>は <strong>Googleログイン → 表示名設定</strong> の順で進みます。既存データを引き継ぐ場合は、これまで使っていたユーザーネームを表示名として入力します。PINロック済みの名前は、ユーザー切り替え時にログイン前PINが必要です。</li>
-            <li>カードをクリック（スマホはタップ）すると、登録されたページが<strong>新しいタブ</strong>で開きます。</li>
-            <li><strong>PC：</strong>カードを<strong>右クリック</strong>すると「編集」「削除」メニューが表示されます。</li>
-            <li><strong>スマホ：</strong>カードを<strong>長押し</strong>すると「編集」「削除」メニューが表示されます。</li>
-            <li>画面上部の<strong>検索バー</strong>にキーワードを入力すると、カード名でリアルタイム検索できます。</li>
-            <li>オレンジの破線枠＋「URL未設定」バッジのカードは、まだリンク先が登録されていません。右クリック（長押し）→「編集」でURLを設定できます。</li>
+            <li>サイドバーの<strong>共有リンク</strong>を開き、リンク名・説明・URLを検索すると目的のリンクだけに絞れます。</li>
+            <li><strong>すべて／お気に入り</strong>を同じ画面で切り替え、カテゴリでも絞り込めます。</li>
+            <li>リンクをクリック（スマホはタップ）すると、登録されたページが<strong>新しいタブ</strong>で開きます。</li>
+            <li>表示は<strong>グリッド／一覧</strong>を切り替えられます。関連リンクがある場合は、ツリー表示のボタンから展開できます。</li>
+            <li><strong>URL未設定</strong>のリンクは移動せず、編集画面が開きます。</li>
           </ul>
         </div>
 
         <div class="guide-section">
           <h4 class="guide-section-title"><span class="guide-icon">⭐</span> お気に入り</h4>
           <ul class="guide-list">
-            <li><strong>PC：</strong>カードにカーソルを合わせると右上に<strong>☆ボタン</strong>が現れます。クリックでお気に入り登録/解除。</li>
-            <li><strong>スマホ：</strong>カードを長押し → 「お気に入り登録/解除」を選択します。</li>
-            <li>カテゴリ名の右端にある<strong>☆ボタン</strong>でそのセクション全体をまとめてお気に入り登録/解除できます。</li>
-            <li><strong>共有リンク一覧：</strong>各アイコン下の<strong>星アイコン</strong>で登録/解除、<strong>ツリーアイコン</strong>で関連アイコンを作成できます。</li>
-            <li>サイドバー（PCは左端）の<strong>「お気に入りのみ」</strong>をクリックすると、登録済みのカードだけを表示します。もう一度クリックで全表示に戻ります。</li>
+            <li>各リンクの<strong>星</strong>を押すと、お気に入りへ登録・解除できます。</li>
+            <li>共有リンク上部の<strong>お気に入り</strong>を選ぶと、登録済みリンクだけを表示します。</li>
+            <li>お気に入りはユーザーごとに保存され、表示方法や並び順の設定も次回に引き継がれます。</li>
           </ul>
         </div>
 
         <div class="guide-section">
           <h4 class="guide-section-title"><span class="guide-icon">✏️</span> カードの編集</h4>
           <ul class="guide-list">
-            <li>カードを<strong>右クリック → 「編集」</strong>でカード名・アイコン・URLを変更できます。</li>
-            <li>カードを<strong>右クリック → 「削除」</strong>でカードを削除できます。</li>
-            <li>カードをドラッグ＆ドロップすると<strong>同一カテゴリ内の並び順</strong>を変更できます。</li>
-            <li>カテゴリ末尾の<strong>「＋ カードを追加」</strong>ボタンで新しいカードを追加できます。</li>
+            <li>共有リンク右上の<strong>新規</strong>からカテゴリを選ぶと、新しいリンクを追加できます。</li>
+            <li>各リンクの<strong>その他メニュー</strong>から、編集または関連リンクの追加ができます。</li>
+            <li>削除は編集画面から行えます。親リンクを削除しても、関連リンクは同じカテゴリの通常リンクとして残ります。</li>
+            <li>新しいカテゴリやAI入力によるリンク追加も、<strong>新規</strong>メニューにまとめています。</li>
           </ul>
         </div>
 

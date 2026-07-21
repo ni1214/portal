@@ -16,6 +16,39 @@ export function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+const SAFE_SHARED_LINK_ACTIONS = new Set(['solar:open', 'portal:trouble-report']);
+
+export function isSafeWebUrl(value) {
+  const raw = `${value || ''}`.trim();
+  if (!raw) return false;
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch (_) {
+    return false;
+  }
+}
+
+export function isSafeSharedLinkUrl(value, { allowEmpty = true } = {}) {
+  const raw = `${value || ''}`.trim();
+  if (!raw || raw === '#') return allowEmpty;
+  return SAFE_SHARED_LINK_ACTIONS.has(raw) || isSafeWebUrl(raw);
+}
+
+export function sanitizeIconIdentifier(value, fallback = 'fa-solid fa-link') {
+  const raw = `${value || ''}`.trim().replace(/\s+/g, ' ');
+  if (!raw) return fallback;
+  if (/^svg:[a-z0-9_-]+$/i.test(raw)) return raw;
+  if (/^[a-z0-9_]+$/i.test(raw)) return raw;
+
+  const tokens = raw.split(' ');
+  const validFamily = ['fa-solid', 'fa-regular', 'fa-brands'].includes(tokens[0]);
+  const validTokens = tokens.length >= 2
+    && tokens.length <= 5
+    && tokens.every(token => /^fa-[a-z0-9-]+$/i.test(token));
+  return validFamily && validTokens ? raw : fallback;
+}
+
 // 案件キー入力を軽く正規化（前後空白除去 + 連続空白を1つに統一）
 export function normalizeProjectKey(value) {
   if (value === null || value === undefined) return '';

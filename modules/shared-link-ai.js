@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { showToast } from './notify.js';
 import { fetchPortalConfigFromSupabase, isSupabaseSharedCoreEnabled } from './supabase.js';
 import { db, doc, getDoc } from './config.js';
+import { isSafeWebUrl, sanitizeIconIdentifier } from './utils.js';
 
 let deps = {};
 let geminiApiKey = '';
@@ -178,9 +179,9 @@ function sanitizeSuggestion(raw, sourceText) {
   const normalizedUrl = url && /^https?:\/\//i.test(url) ? url : (url ? `https://${url}` : '');
   const label = `${raw?.label || fallback?.label || guessLabelFromUrl(normalizedUrl)}`.trim().slice(0, 48);
   const category = categoryIds.has(raw?.category) ? raw.category : (fallback?.category || getDefaultCategoryId());
-  const icon = `${raw?.icon || fallback?.icon || 'fa-solid fa-link'}`.trim();
+  const icon = sanitizeIconIdentifier(raw?.icon || fallback?.icon || 'fa-solid fa-link', 'fa-solid fa-link');
 
-  if (!label || !normalizedUrl) {
+  if (!label || !isSafeWebUrl(normalizedUrl)) {
     throw new Error('リンク名またはURLを推定できませんでした。例: 「ChatGPTのリンクを作成して」');
   }
 
@@ -255,7 +256,6 @@ async function createSharedLinkFromAi() {
     });
 
     state.sharedLinksCategory = suggestion.category || 'all';
-    state.sharedLinksFavoritesOnlyCategory = '';
     state.sharedLinksQuery = suggestion.label;
     deps.renderSharedLinksBrowser?.();
     if (input) input.value = '';
