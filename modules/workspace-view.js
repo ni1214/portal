@@ -248,6 +248,14 @@ document.addEventListener('keydown', event => {
   if (!isWorkspaceViewOpen(activeWorkspaceElement)) return;
   const sharedLinksSearch = event.target?.closest?.('#shared-links-search');
   if (sharedLinksSearch?.value) return;
+  const activeSubview = activeWorkspaceElement.querySelector('[data-workspace-subview]:not([hidden])');
+  const subviewBack = activeSubview?.querySelector('[data-workspace-back]');
+  if (subviewBack) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    subviewBack.click();
+    return;
+  }
   const secondaryModalOpen = Array.from(document.querySelectorAll('.modal-overlay.visible'))
     .some(modal => modal !== activeWorkspaceElement && !activeWorkspaceElement.contains(modal));
   if (secondaryModalOpen) return;

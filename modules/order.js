@@ -34,10 +34,51 @@ let _showSelectedOnly = false;  // 選択済みのみ表示
 let _pins = [];                 // ピン留め品目ID（localStorage）
 let _recent = [];               // 最近使った品目ID（localStorage、最大10件）
 let _checkedItems = new Map();  // itemId → {checked, qty, length, finish}
-let _historyOrders = [];     // 履歴モーダルで読み込んだ発注データ
+let _customItems = [];          // 今回の発注だけで使うマスタ外品目
+let _customItemSeq = 0;
+let _activeOrderView = 'compose';
+let _historyOrders = [];     // 履歴画面で読み込んだ発注データ
 let _deletedHistoryOrders = []; // 削除済み履歴
 let _editingItemId = null;
 let _editingSupplierId = null;
+
+const ORDER_VIEWS = new Set(['compose', 'preview', 'history', 'detail', 'admin']);
+
+function setOrderWorkspaceView(view, { focus = true } = {}) {
+  const nextView = ORDER_VIEWS.has(view) ? view : 'compose';
+  const modal = document.getElementById('ord-modal');
+  if (!modal) return;
+  _activeOrderView = nextView;
+  modal.dataset.orderView = nextView;
+
+  modal.querySelectorAll('[data-ord-view]').forEach(section => {
+    section.hidden = section.dataset.ordView !== nextView;
+  });
+
+  const composeActive = nextView === 'compose' || nextView === 'preview';
+  const historyActive = nextView === 'history' || nextView === 'detail';
+  const composeButton = document.getElementById('ord-nav-compose');
+  const historyButton = document.getElementById('ord-btn-history');
+  const settingsButton = document.getElementById('ord-open-admin-btn');
+  [
+    [composeButton, composeActive],
+    [historyButton, historyActive],
+  ].forEach(([button, active]) => {
+    if (!button) return;
+    button.classList.toggle('active', active);
+    if (active) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
+  settingsButton?.classList.toggle('active', nextView === 'admin');
+  settingsButton?.setAttribute('aria-pressed', String(nextView === 'admin'));
+
+  if (!focus) return;
+  requestAnimationFrame(() => {
+    const activeSection = modal.querySelector(`[data-ord-view="${nextView}"]`);
+    const focusTarget = activeSection?.querySelector('[data-workspace-back], input:not([type="hidden"]), button, select, textarea');
+    focusTarget?.focus({ preventScroll: true });
+  });
+}
 
 // ===== マスタ読み込み =====
 function normalizeSharedOrderItem(item = {}) {
@@ -454,7 +495,9 @@ function printOrder(orderData) {
 function switchOrderType(type) {
   _orderType = type;
   ['factory', 'site'].forEach(t => {
-    document.getElementById(`ord-type-${t}`)?.classList.toggle('active', t === type);
+    const button = document.getElementById(`ord-type-${t}`);
+    button?.classList.toggle('active', t === type);
+    button?.setAttribute('aria-pressed', String(t === type));
   });
   const siteGroup = document.getElementById('ord-site-name-group');
   if (siteGroup) siteGroup.hidden = (type !== 'site');
@@ -508,18 +551,42 @@ function renderSelectedSummary() {
     selected.push({ item, saved });
   });
   el.hidden = false;
-  if (!selected.length) {
+  const totalItems = selected.length + _customItems.length;
+  if (!totalItems) {
     el.innerHTML = `
-      <div class="ord-sum-header"><i class="fa-solid fa-cart-shopping"></i> 選択中 <strong>0</strong>品目</div>
-      <div class="ord-sum-empty">左の一覧から発注する鋼材を選択してください。</div>`;
+      <div class="ord-sum-header"><span>選択中</span><strong>0品目</strong></div>
+      <div class="ord-sum-empty">
+        <i class="material-symbols-rounded" aria-hidden="true">playlist_add</i>
+        <strong>品目はまだ選択されていません</strong>
+        <span>品目一覧のチェックを入れると、ここに発注内容が表示されます。</span>
+      </div>`;
     return;
   }
-  const chips = selected.map(({ item, saved }) => {
-    const fin = saved.finish ? ` <span class="ord-sum-fin">${esc(saved.finish)}</span>` : '';
-    const len = saved.length ? ` <span class="ord-sum-len">${esc(saved.length)}</span>` : '';
-    return `<span class="ord-sum-chip">${esc(item.spec)}${fin}${len} <strong>×${saved.qty}本</strong></span>`;
+  const masterRows = selected.map(({ item, saved }) => {
+    const detail = [item.itemCategory || item.name || '鋼材', saved.length, saved.finish].filter(Boolean).join(' / ');
+    return `
+      <div class="ord-selected-item" data-selected-id="${esc(item.id)}">
+        <div class="ord-selected-item-copy">
+          <strong>${esc(item.spec || item.itemCategory || '品目')}</strong>
+          <span>${esc(detail)}</span>
+        </div>
+        <label class="ord-selected-qty"><span>数量</span><input type="number" min="1" step="1" value="${Number(saved.qty) || 1}" data-ord-selected-qty="${esc(item.id)}" aria-label="${esc(item.spec || '品目')}の数量"></label>
+        <button type="button" class="ord-selected-remove" data-ord-remove-item="${esc(item.id)}" title="品目から外す" aria-label="${esc(item.spec || '品目')}を発注から外す"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
+      </div>`;
   }).join('');
-  el.innerHTML = `<div class="ord-sum-header"><i class="fa-solid fa-cart-shopping"></i> 選択中 <strong>${selected.length}</strong>品目</div><div class="ord-sum-chips">${chips}</div>`;
+  const customRows = _customItems.map(item => `
+    <div class="ord-selected-item ord-selected-item--custom" data-custom-id="${esc(item.id)}">
+      <div class="ord-custom-fields">
+        <input type="text" class="form-input" value="${esc(item.name)}" placeholder="品名" maxlength="40" data-ord-custom-field="name" aria-label="追加品目の品名">
+        <input type="text" class="form-input" value="${esc(item.spec)}" placeholder="規格" maxlength="40" data-ord-custom-field="spec" aria-label="追加品目の規格">
+        <input type="text" class="form-input ord-custom-unit" value="${esc(item.unit)}" placeholder="単位" maxlength="10" data-ord-custom-field="unit" aria-label="追加品目の単位">
+      </div>
+      <label class="ord-selected-qty"><span>数量</span><input type="number" min="1" step="1" value="${Number(item.qty) || 1}" data-ord-custom-field="qty" aria-label="追加品目の数量"></label>
+      <button type="button" class="ord-selected-remove" data-ord-remove-custom="${esc(item.id)}" title="品目を削除" aria-label="追加品目を削除"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
+    </div>`).join('');
+  el.innerHTML = `
+    <div class="ord-sum-header"><span>選択中</span><strong>${totalItems}品目</strong></div>
+    <div class="ord-selected-items">${masterRows}${customRows}</div>`;
 }
 
 // ===== カテゴリフィルタドロップダウン =====
@@ -548,25 +615,26 @@ function buildItemRow(item) {
   const id = item.id;
   const lengths = item.availableLengths || [];
   const lengthHtml = lengths.length > 1
-    ? `<select class="ord-length-select form-input">${lengths.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('')}</select>`
+    ? `<select class="ord-length-select form-input" aria-label="${esc(item.spec || '品目')}の長さ">${lengths.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('')}</select>`
     : `<span class="ord-item-fixed-length">${esc(lengths[0] || '')}</span>`;
   const isStainless = (item.materialType || 'steel') === 'stainless';
   const finishHtml = isStainless
-    ? `<select class="ord-finish-select form-input"><option value="HL">HL</option><option value="#400">#400</option><option value="未研">未研</option></select>`
+    ? `<select class="ord-finish-select form-input" aria-label="${esc(item.spec || '品目')}の仕上げ"><option value="HL">HL</option><option value="#400">#400</option><option value="未研">未研</option></select>`
     : '';
   const isPinned = _pins.includes(id);
   return `
     <div class="ord-item-row" data-id="${esc(id)}">
-      <button class="ord-pin-btn${isPinned ? ' pinned' : ''}" title="${isPinned ? 'ピン解除' : 'よく使う品目に登録'}">
+      <button type="button" class="ord-pin-btn${isPinned ? ' pinned' : ''}" title="${isPinned ? 'よく使う品目から外す' : 'よく使う品目に登録'}" aria-label="${isPinned ? 'よく使う品目から外す' : 'よく使う品目に登録'}">
         <i class="${isPinned ? 'fa-solid' : 'fa-regular'} fa-star"></i>
       </button>
       <input type="checkbox" class="ord-item-check" id="ord-chk-${esc(id)}">
       <label for="ord-chk-${esc(id)}" class="ord-item-label">
-        <span class="ord-item-spec">${esc(item.spec)}</span>
+        <span class="ord-item-name">${esc(item.itemCategory || item.name || '鋼材')}</span>
+        <span class="ord-item-spec">${esc(item.spec || '規格なし')}</span>
       </label>
       ${finishHtml}
       ${lengthHtml}
-      <input type="number" class="ord-qty-input form-input" value="${item.defaultQty || 1}" min="1" step="1">
+      <label class="ord-item-qty"><span>数量</span><input type="number" class="ord-qty-input form-input" value="${item.defaultQty || 1}" min="1" step="1" aria-label="${esc(item.spec || '品目')}の数量"></label>
     </div>`;
 }
 
@@ -574,7 +642,9 @@ function switchMaterialFilter(type) {
   _materialFilter = type;
   _categoryFilter = 'all';
   document.querySelectorAll('#ord-material-tabs .ord-material-tab').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.type === type);
+    const active = btn.dataset.type === type;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', String(active));
   });
   renderCategoryTabs();
   renderOrderItemList();
@@ -600,7 +670,9 @@ function resetOrderItemFilters() {
   const selectedToggle = document.getElementById('ord-show-selected');
   if (selectedToggle) selectedToggle.checked = false;
   document.querySelectorAll('#ord-material-tabs .ord-material-tab').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.type === 'all');
+    const active = btn.dataset.type === 'all';
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', String(active));
   });
   renderCategoryTabs();
   const catSel = document.getElementById('ord-cat-select');
@@ -647,12 +719,11 @@ function buildOrderFilteredList(filtered, q) {
   });
   return Object.entries(grouped).map(([cat, items]) => `
     <div class="ord-cat-group">
-      <div class="ord-cat-header" data-cat="${esc(cat)}">
-        <i class="fa-solid fa-chevron-down ord-cat-chevron" style="transform:rotate(-90deg)"></i>
+      <div class="ord-cat-header">
         <span class="ord-cat-name">${esc(cat)}</span>
         <span class="ord-cat-count">${items.length}種</span>
       </div>
-      <div class="ord-cat-items collapsed">
+      <div class="ord-cat-items">
         ${items.map(buildItemRow).join('')}
       </div>
     </div>`).join('');
@@ -721,16 +792,6 @@ function renderOrderItemList() {
   }
   listEl.innerHTML = html;
 
-  // カテゴリ折りたたみイベント
-  listEl.querySelectorAll('.ord-cat-header').forEach(header => {
-    header.addEventListener('click', () => {
-      const itemsEl = header.nextElementSibling;
-      const chevron = header.querySelector('.ord-cat-chevron');
-      const collapsed = itemsEl.classList.toggle('collapsed');
-      chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
-    });
-  });
-
   // チェック状態復元 + 変更イベント
   listEl.querySelectorAll('.ord-item-row[data-id]').forEach(row => {
     const id = row.dataset.id;
@@ -797,13 +858,16 @@ export async function openOrderModal() {
   _searchQuery = '';
   _showSelectedOnly = false;
   _checkedItems.clear();
+  _customItems = [];
   const searchEl = document.getElementById('ord-search-input');
   if (searchEl) searchEl.value = '';
   document.getElementById('ord-search-clear')?.toggleAttribute('hidden', true);
   const selectedToggle = document.getElementById('ord-show-selected');
   if (selectedToggle) selectedToggle.checked = false;
   document.querySelectorAll('#ord-material-tabs .ord-material-tab').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.type === 'all');
+    const active = btn.dataset.type === 'all';
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', String(active));
   });
   renderCategoryTabs();
   const catSel = document.getElementById('ord-cat-select');
@@ -820,6 +884,8 @@ export async function openOrderModal() {
   if (noteEl) noteEl.value = '';
 
   modal.classList.add('visible');
+  setOrderWorkspaceView('compose', { focus: false });
+  renderSelectedSummary();
 }
 
 export function closeOrderModal() {
@@ -852,15 +918,23 @@ function collectOrderData() {
     });
   });
 
-  // DOM上のカスタム品目を収集
-  document.querySelectorAll('#ord-item-list .ord-item-row--custom').forEach(row => {
-    const chk = row.querySelector('.ord-item-check');
-    if (!chk?.checked) return;
-    const name = row.querySelector('.ord-custom-name')?.value.trim();
-    const spec = row.querySelector('.ord-custom-spec')?.value.trim() || '';
-    const unit = row.querySelector('.ord-custom-unit')?.value.trim() || '本';
-    const qty  = parseInt(row.querySelector('.ord-qty-input')?.value, 10) || 1;
-    if (name) selectedItems.push({ itemId: null, category: name, spec, unit, qty, length: '', finish: '' });
+  const invalidCustom = _customItems.find(item => !`${item.name || ''}`.trim());
+  if (invalidCustom) {
+    alert('追加した品目の品名を入力してください。');
+    setOrderWorkspaceView('compose', { focus: false });
+    document.querySelector(`[data-custom-id="${invalidCustom.id}"] [data-ord-custom-field="name"]`)?.focus();
+    return null;
+  }
+  _customItems.forEach(item => {
+    selectedItems.push({
+      itemId: null,
+      category: `${item.name || ''}`.trim(),
+      spec: `${item.spec || ''}`.trim(),
+      unit: `${item.unit || ''}`.trim() || '本',
+      qty: Number.parseInt(item.qty, 10) || 1,
+      length: '',
+      finish: '',
+    });
   });
 
   if (selectedItems.length === 0) {
@@ -887,7 +961,7 @@ function collectOrderData() {
   };
 }
 
-// プレビューモーダルを開く
+// 送信内容の確認画面を開く
 function buildOrderPreviewSummary(data) {
   const totalQty = data.items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
   const destination = data.orderType === 'site' ? `現場名発注: ${data.siteName || '-'}` : '工場在庫';
@@ -925,13 +999,11 @@ async function openPreviewModal() {
   document.getElementById('ord-preview-summary').innerHTML = buildOrderPreviewSummary(data);
   document.getElementById('ord-preview-body').textContent = body;
 
-  document.getElementById('ord-modal').classList.remove('visible');
-  document.getElementById('ord-preview-modal').classList.add('visible');
+  setOrderWorkspaceView('preview');
 }
 
 function closePreviewModal() {
-  document.getElementById('ord-preview-modal').classList.remove('visible');
-  document.getElementById('ord-modal').classList.add('visible');
+  setOrderWorkspaceView('compose');
 }
 
 // プレビューから実際に送信
@@ -960,11 +1032,10 @@ async function submitFromPreview() {
     const usedIds = data.items.filter(it => it.itemId).map(it => it.itemId);
     if (usedIds.length) saveRecent(usedIds);
     alert('メールを送信しました。');
-    document.getElementById('ord-preview-modal').classList.remove('visible');
     _pendingOrderData = null;
+    await openOrderHistoryModal();
   } catch (err) {
     console.error('order: submitFromPreview error', err);
-    document.getElementById('ord-preview-modal')?.classList.remove('visible');
     _pendingOrderData = null;
     alert('メール送信後の履歴保存に失敗しました。\n履歴に残っていない可能性があります。\n' + err.message);
   } finally {
@@ -979,7 +1050,6 @@ function printDraftOrder() {
   const data = collectOrderData();
   if (!data) return;
   printOrder({ ...data, orderedAt: data._localNow });
-  closeOrderModal();
 }
 
 // ===== 履歴モーダル =====
@@ -1010,17 +1080,17 @@ export async function openOrderHistoryModal(initialProjectKey = '') {
   _historyOffset = 0;
   state.orderHistoryProjectKeyFilter = normalizeProjectKey(initialProjectKey || '');
   await loadMasters();
-  const modal = document.getElementById('ord-history-modal');
+  const modal = document.getElementById('ord-modal');
   if (!modal) return;
   modal.classList.add('visible');
+  setOrderWorkspaceView('history', { focus: false });
   updateOrderHistoryFilterUi(0, 0);
   purgeOldOrders(); // バックグラウンドで古いデータを削除（完了を待たない）
   await renderHistory();
 }
 
 export function closeOrderHistoryModal() {
-  const modal = document.getElementById('ord-history-modal');
-  if (modal) modal.classList.remove('visible');
+  setOrderWorkspaceView('compose');
 }
 
 async function renderHistory() {
@@ -1229,7 +1299,7 @@ function openOrderDetailModal(orderId) {
       <div class="ord-detail-footer">日建フレメックス株式会社 生産管理課</div>
     </div>`;
 
-  modal.classList.add('visible');
+  setOrderWorkspaceView('detail');
   document.getElementById('ord-detail-print-btn')?.setAttribute('data-id', orderId);
   const deleteBtn = document.getElementById('ord-detail-delete-btn');
   const restoreBtn = document.getElementById('ord-detail-restore-btn');
@@ -1244,7 +1314,7 @@ function openOrderDetailModal(orderId) {
 }
 
 function closeOrderDetailModal() {
-  document.getElementById('ord-detail-modal')?.classList.remove('visible');
+  setOrderWorkspaceView('history');
 }
 
 async function deleteOrderHistory(orderId) {
@@ -1304,12 +1374,12 @@ export async function openOrderAdminModal() {
   await loadMasters();
   resetSupplierForm();
   switchOrderAdminTab('items');
-  modal.classList.add('visible');
+  document.getElementById('ord-modal')?.classList.add('visible');
+  setOrderWorkspaceView('admin');
 }
 
 export function closeOrderAdminModal() {
-  const modal = document.getElementById('ord-admin-modal');
-  if (modal) modal.classList.remove('visible');
+  setOrderWorkspaceView('compose');
 }
 
 async function openOrderAdminPanel() {
@@ -1323,6 +1393,7 @@ export function switchOrderAdminTab(tab) {
     const btn = document.getElementById(`ord-admin-tab-${t}`);
     const panel = document.getElementById(`ord-admin-panel-${t}`);
     if (btn) btn.classList.toggle('active', t === tab);
+    if (btn) btn.setAttribute('aria-selected', String(t === tab));
     if (panel) panel.hidden = (t !== tab);
   });
   if (tab === 'items') renderAdminItems();
@@ -1528,36 +1599,19 @@ function bindOrderEvents() {
   document.getElementById('ord-modal-close')?.addEventListener('click', closeOrderModal);
   document.getElementById('ord-btn-cancel')?.addEventListener('click', closeOrderModal);
   document.getElementById('ord-btn-history')?.addEventListener('click', () => {
-    closeOrderModal();
-    openOrderHistoryModal();
+    void openOrderHistoryModal();
   });
+  document.getElementById('ord-nav-compose')?.addEventListener('click', () => setOrderWorkspaceView('compose'));
   document.getElementById('ord-btn-email')?.addEventListener('click', openPreviewModal);
   document.getElementById('ord-btn-print')?.addEventListener('click', printDraftOrder);
   document.getElementById('ord-modal')?.addEventListener('click', e => {
     if (e.target === document.getElementById('ord-modal')) closeOrderModal();
   });
-  document.getElementById('ord-modal')?.addEventListener('click', e => {
-    const action = e.target instanceof Element
-      ? e.target.closest('[data-ord-workspace-action]')
-      : null;
-    if (!action) return;
-    const target = action.dataset.ordWorkspaceAction;
-    const targetButton = {
-      history: 'ord-btn-history',
-      custom: 'ord-add-custom-btn',
-      print: 'ord-btn-print',
-      preview: 'ord-btn-email',
-    }[target];
-    if (targetButton) document.getElementById(targetButton)?.click();
-  });
 
-  // プレビューモーダル
+  // 送信内容の確認
   document.getElementById('ord-preview-close')?.addEventListener('click', closePreviewModal);
   document.getElementById('ord-preview-back')?.addEventListener('click', closePreviewModal);
   document.getElementById('ord-preview-send')?.addEventListener('click', submitFromPreview);
-  document.getElementById('ord-preview-modal')?.addEventListener('click', e => {
-    if (e.target === document.getElementById('ord-preview-modal')) closePreviewModal();
-  });
 
   // 検索バー
   document.getElementById('ord-search-input')?.addEventListener('input', e => {
@@ -1633,25 +1687,43 @@ function bindOrderEvents() {
   document.getElementById('ord-type-factory')?.addEventListener('click', () => switchOrderType('factory'));
   document.getElementById('ord-type-site')?.addEventListener('click', () => switchOrderType('site'));
 
-  // この発注に品目追加
+  // マスタにない品目を今回の発注へ追加
   document.getElementById('ord-add-custom-btn')?.addEventListener('click', () => {
-    const listEl = document.getElementById('ord-item-list');
-    if (!listEl) return;
-    const row = document.createElement('div');
-    row.className = 'ord-item-row ord-item-row--custom';
-    row.innerHTML = `
-      <input type="checkbox" class="ord-item-check" checked>
-      <div class="ord-custom-inputs">
-        <input type="text" class="form-input ord-custom-name" placeholder="品名" maxlength="40">
-        <input type="text" class="form-input ord-custom-spec" placeholder="規格" maxlength="40">
-        <input type="text" class="form-input ord-custom-unit" placeholder="単位" maxlength="10" style="width:60px">
-      </div>
-      <input type="number" class="ord-qty-input form-input" value="1" min="1" step="1">
-      <button class="ord-custom-del-btn" title="削除"><i class="fa-solid fa-xmark"></i></button>
-    `;
-    row.querySelector('.ord-custom-del-btn').addEventListener('click', () => row.remove());
-    listEl.appendChild(row);
-    row.querySelector('.ord-custom-name').focus();
+    const item = { id: `custom-${Date.now()}-${++_customItemSeq}`, name: '', spec: '', unit: '本', qty: 1 };
+    _customItems.push(item);
+    renderSelectedSummary();
+    document.querySelector(`[data-custom-id="${item.id}"] [data-ord-custom-field="name"]`)?.focus();
+  });
+
+  document.getElementById('ord-selected-summary')?.addEventListener('click', event => {
+    const removeMaster = event.target.closest('[data-ord-remove-item]');
+    if (removeMaster) {
+      const id = removeMaster.dataset.ordRemoveItem;
+      const saved = _checkedItems.get(id);
+      if (saved) _checkedItems.set(id, { ...saved, checked: false });
+      renderOrderItemList();
+      return;
+    }
+    const removeCustom = event.target.closest('[data-ord-remove-custom]');
+    if (removeCustom) {
+      _customItems = _customItems.filter(item => item.id !== removeCustom.dataset.ordRemoveCustom);
+      renderSelectedSummary();
+    }
+  });
+
+  document.getElementById('ord-selected-summary')?.addEventListener('input', event => {
+    const masterId = event.target.dataset.ordSelectedQty;
+    if (masterId) {
+      const saved = _checkedItems.get(masterId);
+      if (saved) _checkedItems.set(masterId, { ...saved, qty: Number.parseInt(event.target.value, 10) || 1 });
+      return;
+    }
+    const field = event.target.dataset.ordCustomField;
+    const customRow = event.target.closest('[data-custom-id]');
+    if (!field || !customRow) return;
+    const item = _customItems.find(entry => entry.id === customRow.dataset.customId);
+    if (!item) return;
+    item[field] = field === 'qty' ? (Number.parseInt(event.target.value, 10) || 1) : event.target.value;
   });
 
   // 履歴詳細
@@ -1684,9 +1756,6 @@ function bindOrderEvents() {
     }
     renderHistoryList();
   });
-  document.getElementById('ord-detail-modal')?.addEventListener('click', e => {
-    if (e.target === document.getElementById('ord-detail-modal')) closeOrderDetailModal();
-  });
   document.getElementById('ord-detail-close')?.addEventListener('click', closeOrderDetailModal);
   document.getElementById('ord-detail-close2')?.addEventListener('click', closeOrderDetailModal);
   document.getElementById('ord-detail-print-btn')?.addEventListener('click', () => {
@@ -1706,13 +1775,8 @@ function bindOrderEvents() {
     if (orderId) restoreOrderHistory(orderId);
   });
 
-  // 履歴モーダル
-  const backToOrder = () => { closeOrderHistoryModal(); openOrderModal(); };
-  document.getElementById('ord-history-close')?.addEventListener('click', backToOrder);
-  document.getElementById('ord-history-cancel')?.addEventListener('click', backToOrder);
-  document.getElementById('ord-history-modal')?.addEventListener('click', e => {
-    if (e.target === document.getElementById('ord-history-modal')) backToOrder();
-  });
+  // 履歴画面
+  document.getElementById('ord-history-close')?.addEventListener('click', closeOrderHistoryModal);
   document.getElementById('ord-period-prev')?.addEventListener('click', async () => {
     _historyOffset--;
     await renderHistory();
@@ -1722,11 +1786,8 @@ function bindOrderEvents() {
     await renderHistory();
   });
 
-  // 管理モーダル
+  // 管理画面
   document.getElementById('ord-admin-close')?.addEventListener('click', closeOrderAdminModal);
-  document.getElementById('ord-admin-modal')?.addEventListener('click', e => {
-    if (e.target === document.getElementById('ord-admin-modal')) closeOrderAdminModal();
-  });
 
   // タブ切替
   ['items', 'suppliers', 'gas'].forEach(tab => {

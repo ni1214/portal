@@ -24,7 +24,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260723a">
 
   <!-- テーマ・文字サイズをCSSロード直後に即時適用（フラッシュ防止） -->
   <script>
@@ -2466,287 +2466,218 @@
     </div>
   </div>
 
-  <!-- ===== 鋼材発注モーダル ===== -->
-  <div class="modal-overlay" id="ord-modal">
-    <div class="modal-glass ord-modal-inner">
-      <div class="modal-header">
-        <h2 class="modal-title"><i class="fa-solid fa-boxes-stacked"></i> 鋼材発注</h2>
-        <div class="ord-header-actions">
-          <button class="btn-modal-secondary ord-admin-open-btn" id="ord-open-admin-btn" title="発注先・鋼材・GAS設定"><i class="material-symbols-rounded" aria-hidden="true">settings</i> 設定</button>
-          <button class="modal-close" id="ord-modal-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
-        </div>
-      </div>
-
-      <div class="ord-workspace-actions" aria-label="発注ワークスペースの主要操作">
-        <button type="button" class="ord-workspace-action" data-ord-workspace-action="history">
-          <span class="ord-workspace-action-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
-          <span class="ord-workspace-action-body">
-            <strong>履歴を見る</strong>
-            <small>20日締め期間ごとの発注を確認</small>
-          </span>
+  <!-- ===== 鋼材発注ワークスペース ===== -->
+  <div class="modal-overlay order-ui-v2" id="ord-modal">
+    <div class="modal-glass ord-modal-inner" tabindex="-1">
+      <nav class="ord-primary-nav" aria-label="鋼材発注の画面">
+        <button type="button" class="ord-primary-nav-btn active" id="ord-nav-compose" data-ord-main-view="compose" aria-current="page">
+          <i class="material-symbols-rounded" aria-hidden="true">edit_square</i><span>発注を作成</span>
         </button>
-        <button type="button" class="ord-workspace-action" data-ord-workspace-action="custom">
-          <span class="ord-workspace-action-icon"><i class="fa-solid fa-plus"></i></span>
-          <span class="ord-workspace-action-body">
-            <strong>品目を追加</strong>
-            <small>マスタにない鋼材を今回だけ追加</small>
-          </span>
+        <button type="button" class="ord-primary-nav-btn" id="ord-btn-history" data-ord-main-view="history">
+          <i class="material-symbols-rounded" aria-hidden="true">history</i><span>発注履歴</span>
         </button>
-        <button type="button" class="ord-workspace-action" data-ord-workspace-action="print">
-          <span class="ord-workspace-action-icon"><i class="fa-solid fa-print"></i></span>
-          <span class="ord-workspace-action-body">
-            <strong>印刷/PDF</strong>
-            <small>選択内容を発注書として出力</small>
-          </span>
+        <button type="button" class="ord-primary-nav-btn" id="ord-open-admin-btn" title="発注設定" aria-label="発注設定を開く" aria-pressed="false">
+          <i class="material-symbols-rounded" aria-hidden="true">settings</i><span>設定</span>
         </button>
-        <button type="button" class="ord-workspace-action" data-ord-workspace-action="preview">
-          <span class="ord-workspace-action-icon"><i class="fa-solid fa-eye"></i></span>
-          <span class="ord-workspace-action-body">
-            <strong>プレビュー</strong>
-            <small>送信前に件名・宛先・本文を確認</small>
-          </span>
-        </button>
-      </div>
+      </nav>
+      <button type="button" id="ord-modal-close" aria-label="鋼材発注を閉じる" hidden></button>
 
-      <!-- 発注区分トグル -->
-      <div class="ord-flow-shell">
-        <section class="ord-order-setup" aria-label="発注条件">
-      <div class="ord-type-toggle">
-        <button class="ord-type-btn active" id="ord-type-factory" data-type="factory">
-          <i class="fa-solid fa-warehouse"></i> 工場在庫
-        </button>
-        <button class="ord-type-btn" id="ord-type-site" data-type="site">
-          <i class="fa-solid fa-helmet-safety"></i> 現場名発注
-        </button>
-      </div>
-
-      <!-- 現場名（現場名発注のみ表示） -->
-      <div class="form-group" id="ord-site-name-group" hidden>
-        <label class="form-label" for="ord-site-name">現場名 <span class="required-mark">*</span></label>
-        <input type="text" id="ord-site-name" class="form-input" placeholder="例：〇〇マンション新築工事" maxlength="60" autocomplete="off">
-      </div>
-
-      <div class="form-group ord-project-key-group">
-        <label class="form-label" for="ord-project-key">物件No（任意）</label>
-        <input type="text" id="ord-project-key" class="form-input" placeholder="物件No（現場コード） 例：61065" maxlength="80" autocomplete="off">
-      </div>
-
-      <!-- 発注先プルダウン -->
-      <div class="ord-supplier-info">
-        <div class="ord-supplier-label">発注先</div>
-        <select id="ord-supplier-select" class="form-input ord-supplier-select"></select>
-      </div>
-        </section>
-
-        <div class="ord-order-workgrid">
-
-      <!-- 鋼材チェックリスト -->
-          <section class="form-group ord-order-items-panel" aria-label="発注品目">
-        <div class="ord-item-list-header">
-          <label class="form-label">発注品目</label>
-          <div class="ord-material-tabs" id="ord-material-tabs">
-            <button class="ord-material-tab active" data-type="all">すべて</button>
-            <button class="ord-material-tab" data-type="steel">スチール</button>
-            <button class="ord-material-tab" data-type="stainless">ステンレス</button>
-          </div>
-        </div>
-        <!-- 検索バー -->
-        <div class="ord-search-bar-wrap">
-          <i class="fa-solid fa-magnifying-glass ord-search-icon"></i>
-          <input type="text" id="ord-search-input" class="form-input ord-search-input" placeholder="品種・サイズで検索（例：アングル、25×25）" autocomplete="off">
-          <button class="ord-search-clear" id="ord-search-clear" hidden><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
-        </div>
-        <!-- カテゴリ絞り込み（ドロップダウン） -->
-        <select id="ord-cat-select" class="form-input ord-cat-select"></select>
-        <!-- 選択中サマリー -->
-        <!-- 選択済みのみ表示 -->
-        <div class="ord-filter-row">
-          <label class="ord-selected-toggle">
-            <input type="checkbox" id="ord-show-selected">
-            <span>選択済みのみ表示</span>
-          </label>
-        </div>
-        <div id="ord-item-list" class="ord-item-list"></div>
-        <button class="ord-add-custom-btn" id="ord-add-custom-btn">
-          <i class="fa-solid fa-plus"></i> この発注に品目を追加
-        </button>
-
-      <!-- 備考 -->
-      <div class="form-group">
-        <label class="form-label" for="ord-note">備考（省略可）</label>
-        <textarea id="ord-note" class="form-input ord-note-textarea" placeholder="特記事項があれば入力してください" rows="3"></textarea>
-      </div>
-
+      <main class="ord-workspace-body">
+        <section class="ord-workspace-view ord-compose-view" id="ord-compose-view" data-ord-view="compose">
+          <section class="ord-order-setup" aria-labelledby="ord-setup-title">
+            <div class="ord-section-heading">
+              <span class="ord-section-number">1</span>
+              <div><h3 id="ord-setup-title">発注条件</h3><p>用途と発注先を指定します。</p></div>
+            </div>
+            <div class="ord-order-setup-grid">
+              <div class="ord-type-toggle" role="group" aria-label="発注区分">
+                <button type="button" class="ord-type-btn active" id="ord-type-factory" data-type="factory" aria-pressed="true">
+                  <i class="fa-solid fa-warehouse" aria-hidden="true"></i><span>工場在庫</span>
+                </button>
+                <button type="button" class="ord-type-btn" id="ord-type-site" data-type="site" aria-pressed="false">
+                  <i class="fa-solid fa-helmet-safety" aria-hidden="true"></i><span>現場名発注</span>
+                </button>
+              </div>
+              <div class="form-group ord-supplier-info">
+                <label class="form-label" for="ord-supplier-select">発注先</label>
+                <select id="ord-supplier-select" class="form-input ord-supplier-select"></select>
+              </div>
+              <div class="form-group ord-project-key-group">
+                <label class="form-label" for="ord-project-key">物件No <span>任意</span></label>
+                <input type="text" id="ord-project-key" class="form-input" placeholder="例：61065" maxlength="80" autocomplete="off">
+              </div>
+              <div class="form-group" id="ord-site-name-group" hidden>
+                <label class="form-label" for="ord-site-name">現場名 <span class="required-mark">必須</span></label>
+                <input type="text" id="ord-site-name" class="form-input" placeholder="例：〇〇マンション新築工事" maxlength="60" autocomplete="off">
+              </div>
+            </div>
           </section>
 
-          <aside class="ord-order-review-panel" aria-label="&#30330;&#27880;&#20869;&#23481;&#12398;&#30906;&#35469;">
-            <div class="ord-review-panel-head">
-              <span>&#30330;&#27880;&#20869;&#23481;</span>
-              <strong>&#36865;&#20449;&#21069;&#30906;&#35469;</strong>
+          <div class="ord-order-workgrid">
+            <section class="ord-order-items-panel" aria-labelledby="ord-items-title">
+              <div class="ord-section-heading ord-items-heading">
+                <span class="ord-section-number">2</span>
+                <div><h3 id="ord-items-title">品目を選ぶ</h3><p>検索または絞り込みから必要な鋼材を選択します。</p></div>
+              </div>
+              <div class="ord-catalog-toolbar">
+                <div class="ord-search-bar-wrap">
+                  <i class="fa-solid fa-magnifying-glass ord-search-icon" aria-hidden="true"></i>
+                  <input type="search" id="ord-search-input" class="form-input ord-search-input" placeholder="品種・サイズを検索" autocomplete="off">
+                  <button type="button" class="ord-search-clear" id="ord-search-clear" title="検索をクリア" aria-label="検索をクリア" hidden>
+                    <i class="material-symbols-rounded" aria-hidden="true">close</i>
+                  </button>
+                </div>
+                <div class="ord-material-tabs" id="ord-material-tabs" role="group" aria-label="素材で絞り込む">
+                  <button type="button" class="ord-material-tab active" data-type="all" aria-pressed="true">すべて</button>
+                  <button type="button" class="ord-material-tab" data-type="steel" aria-pressed="false">スチール</button>
+                  <button type="button" class="ord-material-tab" data-type="stainless" aria-pressed="false">ステンレス</button>
+                </div>
+                <select id="ord-cat-select" class="form-input ord-cat-select" aria-label="品種で絞り込む"></select>
+                <label class="ord-selected-toggle">
+                  <input type="checkbox" id="ord-show-selected"><span>選択中のみ</span>
+                </label>
+              </div>
+              <div id="ord-item-list" class="ord-item-list" aria-live="polite"></div>
+            </section>
+
+            <aside class="ord-order-review-panel" aria-labelledby="ord-review-title">
+              <div class="ord-section-heading ord-review-panel-head">
+                <span class="ord-section-number">3</span>
+                <div><h3 id="ord-review-title">発注内容</h3><p>数量を確認して送信へ進みます。</p></div>
+              </div>
+              <div id="ord-selected-summary" class="ord-selected-summary"></div>
+              <button type="button" class="ord-add-custom-btn" id="ord-add-custom-btn">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i><span>マスタにない品目を追加</span>
+              </button>
+              <div class="form-group ord-note-group">
+                <label class="form-label" for="ord-note">備考 <span>任意</span></label>
+                <textarea id="ord-note" class="form-input ord-note-textarea" placeholder="納期や加工などの連絡事項" rows="3"></textarea>
+              </div>
+              <div class="ord-review-actions">
+                <button type="button" class="btn-modal-primary" id="ord-btn-email">
+                  <span>内容を確認</span><i class="material-symbols-rounded" aria-hidden="true">arrow_forward</i>
+                </button>
+                <button type="button" class="btn-modal-secondary" id="ord-btn-print"><i class="fa-solid fa-print" aria-hidden="true"></i> 印刷・PDF</button>
+                <button type="button" class="ord-close-draft" id="ord-btn-cancel">閉じる</button>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="ord-workspace-view ord-preview-view" id="ord-preview-modal" data-ord-view="preview" data-workspace-subview hidden>
+          <div class="ord-subview-header">
+            <button type="button" class="ord-back-btn" id="ord-preview-close" data-workspace-back>
+              <i class="material-symbols-rounded" aria-hidden="true">arrow_back</i><span>発注内容へ戻る</span>
+            </button>
+            <div><h3>送信内容の確認</h3><p>宛先と品目を確認してから送信します。</p></div>
+          </div>
+          <div class="ord-preview-layout">
+            <section class="ord-preview-card">
+              <div class="ord-preview-meta-row"><span class="ord-preview-label">宛先</span><strong class="ord-preview-to" id="ord-preview-to"></strong></div>
+              <div class="ord-preview-meta-row"><span class="ord-preview-label">件名</span><strong class="ord-preview-subject" id="ord-preview-subject"></strong></div>
+              <div class="ord-preview-summary" id="ord-preview-summary"></div>
+            </section>
+            <section class="ord-preview-message" aria-label="送信するメール本文">
+              <div class="ord-preview-message-label">メール本文</div>
+              <pre class="ord-preview-body" id="ord-preview-body"></pre>
+            </section>
+          </div>
+          <div class="ord-subview-actions">
+            <button type="button" class="btn-modal-secondary" id="ord-preview-back"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> 修正する</button>
+            <button type="button" class="btn-modal-primary" id="ord-preview-send"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> この内容で送信</button>
+          </div>
+        </section>
+
+        <section class="ord-workspace-view ord-history-view" id="ord-history-modal" data-ord-view="history" data-workspace-subview hidden>
+          <div class="ord-history-toolbar">
+            <div class="ord-period-nav" aria-label="履歴期間">
+              <button type="button" class="ord-period-btn" id="ord-period-prev" title="前の期間" aria-label="前の期間"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+              <strong class="ord-period-label" id="ord-period-label">読み込み中...</strong>
+              <button type="button" class="ord-period-btn" id="ord-period-next" title="次の期間" aria-label="次の期間"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
             </div>
-            <div id="ord-selected-summary" class="ord-selected-summary" hidden></div>
+            <div class="ord-history-filter-input-wrap">
+              <i class="fa-solid fa-magnifying-glass ord-history-filter-icon" aria-hidden="true"></i>
+              <input type="search" id="ord-history-project-filter" class="form-input ord-history-filter-input" placeholder="物件Noで検索" autocomplete="off">
+              <button type="button" class="ord-history-filter-clear" id="ord-history-project-filter-clear" title="検索をクリア" aria-label="検索をクリア" hidden><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
+            </div>
+            <div class="ord-history-filter-count" id="ord-history-project-filter-count">-</div>
+          </div>
+          <div id="ord-history-list" class="ord-history-list" aria-live="polite"></div>
+          <button type="button" class="ord-history-back" id="ord-history-close" data-workspace-back>新しい発注を作成</button>
+        </section>
 
-      <div class="modal-actions ord-review-actions">
-        <button class="btn-modal-secondary" id="ord-btn-cancel">キャンセル</button>
-        <button class="btn-modal-secondary" id="ord-btn-history"><i class="fa-solid fa-clock-rotate-left"></i> 履歴</button>
-        <button class="btn-modal-secondary" id="ord-btn-print"><i class="fa-solid fa-print"></i> 印刷/PDF</button>
-        <button class="btn-modal-primary" id="ord-btn-email"><i class="fa-solid fa-eye"></i> プレビュー・送信</button>
-      </div>
-          </aside>
-        </div>
-      </div>
-    </div>
-  </div>
+        <section class="ord-workspace-view ord-detail-view" id="ord-detail-modal" data-ord-view="detail" data-workspace-subview hidden>
+          <div class="ord-subview-header">
+            <button type="button" class="ord-back-btn" id="ord-detail-close" data-workspace-back>
+              <i class="material-symbols-rounded" aria-hidden="true">arrow_back</i><span>履歴へ戻る</span>
+            </button>
+            <div><h3>発注詳細</h3><p>送信内容と処理状況を確認します。</p></div>
+          </div>
+          <div id="ord-detail-content" class="ord-detail-content"></div>
+          <div class="ord-subview-actions">
+            <button type="button" class="btn-modal-secondary" id="ord-detail-close2">履歴へ戻る</button>
+            <button type="button" class="btn-modal-danger" id="ord-detail-delete-btn"><i class="fa-solid fa-trash" aria-hidden="true"></i> 履歴を削除</button>
+            <button type="button" class="btn-modal-secondary" id="ord-detail-restore-btn" hidden><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> 元に戻す</button>
+            <button type="button" class="btn-modal-primary" id="ord-detail-print-btn"><i class="fa-solid fa-print" aria-hidden="true"></i> 印刷・PDF</button>
+          </div>
+        </section>
 
-  <!-- ===== メールプレビューモーダル ===== -->
-  <div class="modal-overlay" id="ord-preview-modal">
-    <div class="modal-glass ord-modal-inner ord-preview-inner">
-      <div class="modal-header">
-        <h2 class="modal-title"><i class="fa-solid fa-envelope-open-text"></i> メール送信プレビュー</h2>
-        <button class="modal-close" id="ord-preview-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
-      </div>
-      <div class="ord-preview-subject-row">
-        <span class="ord-preview-label">件名</span>
-        <span class="ord-preview-subject" id="ord-preview-subject"></span>
-      </div>
-      <div class="ord-preview-to-row">
-        <span class="ord-preview-label">宛先</span>
-        <span class="ord-preview-to" id="ord-preview-to"></span>
-      </div>
-      <div class="ord-preview-summary" id="ord-preview-summary"></div>
-      <pre class="ord-preview-body" id="ord-preview-body"></pre>
-      <div class="modal-actions">
-        <button class="btn-modal-secondary" id="ord-preview-back"><i class="fa-solid fa-arrow-left"></i> 戻る</button>
-        <button class="btn-modal-primary" id="ord-preview-send"><i class="fa-solid fa-paper-plane"></i> この内容で送信</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== 発注履歴モーダル ===== -->
-  <div class="modal-overlay" id="ord-history-modal">
-    <div class="modal-glass ord-modal-inner">
-      <div class="modal-header">
-        <h2 class="modal-title"><i class="fa-solid fa-clock-rotate-left"></i> 発注履歴</h2>
-        <button class="modal-close" id="ord-history-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
-      </div>
-
-      <!-- 期間ナビゲーション -->
-      <div class="ord-period-nav">
-        <button class="btn-modal-secondary ord-period-btn" id="ord-period-prev"><i class="fa-solid fa-chevron-left"></i></button>
-        <span class="ord-period-label" id="ord-period-label">読み込み中...</span>
-        <button class="btn-modal-secondary ord-period-btn" id="ord-period-next"><i class="fa-solid fa-chevron-right"></i></button>
-      </div>
-
-      <div class="ord-history-filter-row">
-        <div class="ord-history-filter-input-wrap">
-          <i class="fa-solid fa-magnifying-glass ord-history-filter-icon"></i>
-          <input type="text" id="ord-history-project-filter" class="form-input ord-history-filter-input" placeholder="物件Noで絞り込み" autocomplete="off">
-          <button type="button" class="ord-history-filter-clear" id="ord-history-project-filter-clear" hidden><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
-        </div>
-        <div class="ord-history-filter-count" id="ord-history-project-filter-count">-</div>
-      </div>
-
-      <div id="ord-history-list" class="ord-history-list"></div>
-
-      <div class="modal-actions">
-        <button class="btn-modal-secondary" id="ord-history-cancel">閉じる</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== 発注詳細モーダル ===== -->
-  <div class="modal-overlay" id="ord-detail-modal">
-    <div class="modal-glass ord-modal-inner ord-detail-inner">
-      <div class="modal-header">
-        <h2 class="modal-title"><i class="fa-solid fa-file-lines"></i> 発注詳細</h2>
-        <button class="modal-close" id="ord-detail-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
-      </div>
-      <div id="ord-detail-content" class="ord-detail-content"></div>
-      <div class="modal-actions">
-        <button class="btn-modal-secondary" id="ord-detail-close2">閉じる</button>
-        <button class="btn-modal-danger" id="ord-detail-delete-btn"><i class="fa-solid fa-trash"></i> 履歴を削除</button>
-        <button class="btn-modal-secondary" id="ord-detail-restore-btn" hidden><i class="fa-solid fa-rotate-left"></i> 元に戻す</button>
-        <button class="btn-modal-primary" id="ord-detail-print-btn"><i class="fa-solid fa-print"></i> 印刷/PDF</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== 発注管理モーダル（管理者用） ===== -->
-  <div class="modal-overlay" id="ord-admin-modal">
-    <div class="modal-glass ord-modal-inner">
-      <div class="modal-header">
-        <h2 class="modal-title"><i class="fa-solid fa-screwdriver-wrench"></i> 発注管理</h2>
-        <button class="modal-close" id="ord-admin-close" title="閉じる"><i class="material-symbols-rounded" aria-hidden="true">close</i></button>
-      </div>
-
-      <!-- 管理パネル -->
-      <div id="ord-admin-panel-area">
-        <!-- タブ -->
-        <div class="ord-admin-tabs">
-          <button class="ord-admin-tab active" id="ord-admin-tab-items">鋼材マスタ</button>
-          <button class="ord-admin-tab" id="ord-admin-tab-suppliers">発注先</button>
-          <button class="ord-admin-tab" id="ord-admin-tab-gas">GAS設定</button>
-        </div>
-
-        <!-- 鋼材マスタ -->
-        <div id="ord-admin-panel-items" class="ord-admin-panel">
-          <div id="ord-admin-items-list" class="ord-admin-list"></div>
-          <div class="ord-admin-add-form">
-            <h4 class="ord-admin-add-title" id="ord-item-form-title">新規追加</h4>
-            <p class="ord-admin-edit-note" id="ord-item-edit-note" hidden></p>
-            <div class="ord-admin-form-row">
-              <input type="text" id="ord-item-add-category" class="form-input" placeholder="品種 (例: 平鋼, アングル)" style="min-width:120px">
-              <input type="text" id="ord-item-add-spec" class="form-input" placeholder="サイズ (例: 6×30)">
-              <select id="ord-item-add-material" class="form-input" style="min-width:110px">
-                <option value="steel">スチール</option>
-                <option value="stainless">ステンレス</option>
-              </select>
-              <input type="text" id="ord-item-add-lengths" class="form-input" placeholder="定尺 (例: 5.5m,6m)" style="min-width:130px">
-              <select id="ord-item-add-type" class="form-input" style="min-width:100px">
-                <option value="both">工場・現場</option>
-                <option value="factory">工場在庫</option>
-                <option value="site">現場名発注</option>
-              </select>
-              <button class="btn-modal-primary" id="ord-item-add-btn">追加</button>
-              <button class="btn-modal-secondary" id="ord-item-edit-cancel" hidden>編集をやめる</button>
+        <section class="ord-workspace-view ord-admin-view" id="ord-admin-modal" data-ord-view="admin" data-workspace-subview hidden>
+          <div class="ord-subview-header">
+            <button type="button" class="ord-back-btn" id="ord-admin-close" data-workspace-back>
+              <i class="material-symbols-rounded" aria-hidden="true">arrow_back</i><span>発注へ戻る</span>
+            </button>
+            <div><h3>発注設定</h3><p>鋼材マスタ・発注先・メール送信を管理します。</p></div>
+          </div>
+          <div id="ord-admin-panel-area">
+            <div class="ord-admin-tabs" role="tablist" aria-label="発注設定">
+              <button type="button" role="tab" aria-selected="true" class="ord-admin-tab active" id="ord-admin-tab-items">鋼材マスタ</button>
+              <button type="button" role="tab" aria-selected="false" class="ord-admin-tab" id="ord-admin-tab-suppliers">発注先</button>
+              <button type="button" role="tab" aria-selected="false" class="ord-admin-tab" id="ord-admin-tab-gas">メール送信</button>
+            </div>
+            <div id="ord-admin-panel-items" class="ord-admin-panel" role="tabpanel">
+              <div class="ord-admin-add-form">
+                <h4 class="ord-admin-add-title" id="ord-item-form-title">鋼材を追加</h4>
+                <p class="ord-admin-edit-note" id="ord-item-edit-note" hidden></p>
+                <div class="ord-admin-form-row">
+                  <input type="text" id="ord-item-add-category" class="form-input" placeholder="品種（例：平鋼）">
+                  <input type="text" id="ord-item-add-spec" class="form-input" placeholder="サイズ（例：6×30）">
+                  <select id="ord-item-add-material" class="form-input" aria-label="素材"><option value="steel">スチール</option><option value="stainless">ステンレス</option></select>
+                  <input type="text" id="ord-item-add-lengths" class="form-input" placeholder="定尺（例：5.5m, 6m）">
+                  <select id="ord-item-add-type" class="form-input" aria-label="利用する発注区分"><option value="both">工場・現場</option><option value="factory">工場在庫</option><option value="site">現場名発注</option></select>
+                  <button type="button" class="btn-modal-primary" id="ord-item-add-btn">保存</button>
+                  <button type="button" class="btn-modal-secondary" id="ord-item-edit-cancel" hidden>編集をやめる</button>
+                </div>
+              </div>
+              <div id="ord-admin-items-list" class="ord-admin-list"></div>
+            </div>
+            <div id="ord-admin-panel-suppliers" class="ord-admin-panel" role="tabpanel" hidden>
+              <div class="ord-admin-add-form">
+                <h4 class="ord-admin-add-title" id="ord-supp-form-title">発注先を追加</h4>
+                <p class="ord-admin-edit-note" id="ord-supp-edit-note" hidden></p>
+                <div class="ord-admin-form-row">
+                  <input type="text" id="ord-supp-add-name" class="form-input" placeholder="会社名">
+                  <input type="email" id="ord-supp-add-email" class="form-input" placeholder="メールアドレス">
+                  <input type="text" id="ord-supp-add-tel" class="form-input" placeholder="電話番号">
+                  <input type="text" id="ord-supp-add-addr" class="form-input" placeholder="住所">
+                  <button type="button" class="btn-modal-primary" id="ord-supp-add-btn">保存</button>
+                  <button type="button" class="btn-modal-secondary" id="ord-supp-edit-cancel" hidden>編集をやめる</button>
+                </div>
+              </div>
+              <div id="ord-admin-suppliers-list" class="ord-admin-list"></div>
+            </div>
+            <div id="ord-admin-panel-gas" class="ord-admin-panel" role="tabpanel" hidden>
+              <div class="ord-gas-status" id="ord-gas-status"></div>
+              <p class="ord-gas-desc">発注メールの送信先として使用するGAS Webアプリを設定します。通常の発注作業では変更しません。</p>
+              <div class="form-group">
+                <label class="form-label" for="ord-gas-url-input">GAS Webアプリ URL</label>
+                <input type="url" id="ord-gas-url-input" class="form-input" placeholder="https://script.google.com/macros/s/...">
+              </div>
+              <button type="button" class="btn-modal-primary" id="ord-gas-save-btn">設定を保存</button>
             </div>
           </div>
-        </div>
-
-        <!-- 発注先 -->
-        <div id="ord-admin-panel-suppliers" class="ord-admin-panel" hidden>
-          <div id="ord-admin-suppliers-list" class="ord-admin-list"></div>
-          <div class="ord-admin-add-form">
-            <h4 class="ord-admin-add-title" id="ord-supp-form-title">新規追加</h4>
-            <p class="ord-admin-edit-note" id="ord-supp-edit-note" hidden></p>
-            <div class="ord-admin-form-row">
-              <input type="text" id="ord-supp-add-name"  class="form-input" placeholder="会社名">
-              <input type="email" id="ord-supp-add-email" class="form-input" placeholder="メールアドレス">
-              <input type="text" id="ord-supp-add-tel"   class="form-input" placeholder="TEL">
-              <input type="text" id="ord-supp-add-addr"  class="form-input" placeholder="住所">
-              <button class="btn-modal-primary" id="ord-supp-add-btn">追加</button>
-              <button class="btn-modal-secondary" id="ord-supp-edit-cancel" hidden>編集をやめる</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- GAS設定 -->
-        <div id="ord-admin-panel-gas" class="ord-admin-panel" hidden>
-          <div class="ord-gas-status" id="ord-gas-status"></div>
-          <p class="ord-gas-desc">GAS WebアプリのURLを入力してください。このURLにPOSTリクエストでメールが送信されます。通常の発注担当者は触らない管理用設定です。</p>
-          <div class="form-group">
-            <label class="form-label" for="ord-gas-url-input">GAS Webアプリ URL</label>
-            <input type="url" id="ord-gas-url-input" class="form-input" placeholder="https://script.google.com/macros/s/...">
-          </div>
-          <div class="modal-actions">
-            <button class="btn-modal-primary" id="ord-gas-save-btn">保存</button>
-          </div>
-        </div>
-
-        <div class="modal-actions ord-admin-footer">
-          <button class="btn-modal-secondary" id="ord-admin-cancel-footer" onclick="document.getElementById('ord-admin-modal').classList.remove('visible')">閉じる</button>
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   </div>
 
@@ -2820,7 +2751,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Script (type="module") -->
-  <script type="module" src="script.js?v=20260519a"></script>
+  <script type="module" src="script.js?v=20260723a"></script>
 </body>
 
 </html>

@@ -161,14 +161,14 @@ import {
   isWorkspaceViewOpen,
   resetWorkspaceNavigationState,
   setWorkspaceNavigationState,
-} from './modules/workspace-view.js';
+} from './modules/workspace-view.js?v=20260723a';
 
 import {
   initOrder,
   openOrderModal, closeOrderModal,
   openOrderHistoryModal, closeOrderHistoryModal,
   openOrderAdminModal, closeOrderAdminModal
-} from './modules/order.js';
+} from './modules/order.js?v=20260723a';
 
 import {
   initPropertySummary,
@@ -961,6 +961,7 @@ initPropertySummary({
     openTaskWorkspace();
   },
   openOrders: async projectKey => {
+    await openOrderWorkspace();
     await openOrderHistoryModal(projectKey);
   },
   openTroubles: projectKey => {
