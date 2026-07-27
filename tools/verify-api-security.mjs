@@ -501,7 +501,13 @@ const vercelConfig = JSON.parse(await readFile(new URL('../vercel.json', import.
 assert.match(vercelConfig.buildCommand, /npm run check/);
 assert.equal(vercelConfig.functions['api/ai.mjs'].maxDuration, 60);
 assert.equal(vercelConfig.functions['api/weather.mjs'].maxDuration, 45);
-assert.equal(vercelConfig.functions['api/order-email.mjs'].maxDuration, 90);
+assert.equal(vercelConfig.functions['api/order-email.mjs'].maxDuration, 60);
 assert.equal(vercelConfig.functions['api/order-email-reconcile.mjs'].maxDuration, 45);
+for (const [pathname, functionConfig] of Object.entries(vercelConfig.functions)) {
+  assert.ok(
+    Number(functionConfig.maxDuration) <= 60,
+    `${pathname} exceeds the Vercel Hobby legacy duration limit.`,
+  );
+}
 
 console.log('API authentication, origin, service-role, rate-limit, and secret-boundary checks passed.');

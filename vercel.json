@@ -13,7 +13,7 @@
       "memory": 1024
     },
     "api/order-email.mjs": {
-      "maxDuration": 90,
+      "maxDuration": 60,
       "memory": 1024
     },
     "api/order-email-reconcile.mjs": {

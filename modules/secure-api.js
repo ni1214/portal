@@ -4,7 +4,7 @@ const DEFAULT_TIMEOUT_MS = 20000;
 const API_TIMEOUT_MS = Object.freeze({
   ai: 70_000,
   weather: 55_000,
-  orderEmail: 105_000,
+  orderEmail: 75_000,
   orderEmailReconcile: 55_000,
 });
 const API_PATHS = Object.freeze({

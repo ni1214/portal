@@ -9,6 +9,7 @@
 
 ## 開発方針（重要）
 - **基本方針**: Vercel + Supabase を本番構成とする
+- 現在は個人・非商用利用として **Vercel Hobby（無料）** を使う。有料機能を前提にせず、商用・組織利用へ変わる時点でPro以上を再検討する
 - ブラウザへ置けないAPIキー・メール送信・認証済みAI処理は Vercel Functions に限定する
 - 静的ファイルは allowlist ビルドした `dist/` だけを公開し、SQL・運用文書・ツールを配信しない
 - Supabase Data API は Google セッションJWT + RLSを必須とし、publishable keyだけの匿名業務アクセスを許可しない

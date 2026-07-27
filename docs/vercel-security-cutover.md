@@ -4,7 +4,7 @@
 
 ## 切替前の必須条件
 
-- 業務利用のため、VercelチームをPro以上にする。
+- 個人・非商用利用として、Vercel Hobby（無料）を使用する。商用・組織利用へ変わる場合は公開前にPro以上へ切り替える。
 - 本番SupabaseプロジェクトへSQLを適用できる管理アクセスを用意する。
 - 本番URLを確定し、`SITE_ORIGIN` とGoogle OAuthの許可URLを一致させる。
 - 過去にGitへ入ったGoogle / Gemini / OpenWeather / GAS関連のキーを失効・再発行する。
@@ -19,7 +19,7 @@
 3. 管理者を含む利用者を `user_accounts` へ事前登録し、会社メール、部署、`is_active`、`is_admin` を確認する。
 4. Supabase AuthでGoogle providerを有効にし、Site URL / Redirect URLsへVercel本番URLを設定する。Google Cloud側は、Authorized JavaScript originsへ本番originを、Authorized redirect URIへSupabaseが表示する `https://<project-ref>.supabase.co/auth/v1/callback` を設定する。
 5. GAS最新版をデプロイし、`PORTAL_ORDER_TOKEN` をVercelの `GAS_ORDER_TOKEN` と同じ新規値にする。
-6. Vercel ProチームにPortalプロジェクトを作成し、GitHubの `master` をProductionへ接続する。
+6. Vercel HobbyチームにPortalプロジェクトを作成し、GitHubの `master` をProductionへ接続する。
 7. `.env.example` に列挙した値をVercel Productionへ設定する。秘密値はSensitiveとして登録する。
 8. Productionをデプロイし、下記の受入確認をすべて完了する。
 9. 合格後にGitHub Pagesを停止する。必要ならリポジトリをPrivateへ変更する。
@@ -40,6 +40,7 @@
 - CSP、HSTS、`X-Content-Type-Options`、`Referrer-Policy`、`Permissions-Policy` が付与される。
 - 1440px、PC半幅、390px、およびlight/darkで横スクロールとコンソールエラーがない。
 - `npm run check` と `npm audit --audit-level=high` が成功する。
+- HobbyのUsage画面を確認し、無料枠超過による一時停止が業務影響にならない個人利用であることを維持する。
 
 ## Preview方針
 
@@ -53,5 +54,5 @@ Previewは本番ポータルを起動せず、ネットワークアクセスの�
 - Google OAuth未設定
 - 過去キーの失効・再発行未完了
 - GAS最新版と新規トークン未設定
-- Vercel Pro未契約
+- 個人・非商用利用の範囲を超えている
 - 認証済みの本番E2E未完了
