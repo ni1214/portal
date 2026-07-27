@@ -8,15 +8,12 @@ import {
 } from './read-diagnostics.js';
 import {
   fetchChatRoomsFromSupabase,
-  getChatRoomFromSupabase,
-  upsertDmRoomInSupabase,
-  ensureDmMembersInSupabase,
-  removeSelfFromDmRoomInSupabase,
+  ensureDmRoomInSupabase,
+  leaveChatRoomInSupabase,
   createGroupRoomInSupabase,
-  updateChatRoomLastInSupabase,
   fetchChatMessagesFromSupabase,
   addChatMessageInSupabase,
-  deleteOldestChatMessageInSupabase,
+  pruneOldestChatMessageInSupabase,
   deleteChatMessageInSupabase,
   fetchChatReadTimesFromSupabase,
   markChatRoomReadInSupabase,
@@ -548,7 +545,7 @@ export async function sendChatMessage() {
 
   try {
     if (state.currentRoomMessages.length >= CHAT_MSG_MAX) {
-      await deleteOldestChatMessageInSupabase(state.currentRoomId);
+      await pruneOldestChatMessageInSupabase(state.currentRoomId);
     }
     const lastAt = new Date().toISOString();
     const msg = await addChatMessageInSupabase({
@@ -559,11 +556,6 @@ export async function sendChatMessage() {
     if (msg) {
       state.currentRoomMessages = [...state.currentRoomMessages.slice(-(CHAT_MSG_MAX - 1)), msg];
     }
-    await updateChatRoomLastInSupabase(state.currentRoomId, {
-      lastMessage: text,
-      lastAt,
-      lastSender: state.currentUsername,
-    });
     // ローカル状態に即時反映
     const room = [...state.dmRooms, ...state.groupRooms].find(r => r.id === state.currentRoomId);
     if (room) { room.lastMessage = text; room.lastAt = lastAt; room.lastSender = state.currentUsername; }
@@ -649,8 +641,7 @@ export async function deleteDmRoom(roomId) {
   if (!state.currentUsername || !roomId) return;
   if (!await showConfirm('このチャットを削除しますか？（自分の一覧からのみ消えます）', { danger: true })) return;
   try {
-    const room = state.dmRooms.find(r => r.id === roomId);
-    await removeSelfFromDmRoomInSupabase(roomId, state.currentUsername, room?.members || []);
+    await leaveChatRoomInSupabase(roomId);
     state.dmRooms = state.dmRooms.filter(r => r.id !== roomId);
     if (state.currentRoomId === roomId) {
       state.currentRoomId = null;
@@ -681,30 +672,8 @@ export async function openOrCreateDm(targetUser) {
     roomId = existingRoom.id;
   } else {
     roomId = getDmRoomId(state.currentUsername, targetUser);
-    const existing = await getChatRoomFromSupabase(roomId);
-    if (!existing) {
-      await upsertDmRoomInSupabase(roomId, {
-        members: [state.currentUsername, targetUser].sort(),
-        createdBy: state.currentUsername,
-        lastMessage: '',
-        lastAt: null,
-        lastSender: '',
-      });
-      roomForLocalState = {
-        id: roomId,
-        type: 'dm',
-        members: [state.currentUsername, targetUser].sort(),
-        createdBy: state.currentUsername,
-        lastMessage: '',
-        lastAt: null,
-        lastSender: '',
-      };
-    } else {
-      // どちらかが削除していた場合は再追加
-      const members = [...new Set([...existing.members, state.currentUsername, targetUser])];
-      await ensureDmMembersInSupabase(roomId, members);
-      roomForLocalState = { ...existing, id: existing.id || roomId, type: 'dm', members };
-    }
+    roomForLocalState = await ensureDmRoomInSupabase(roomId, targetUser);
+    if (!roomForLocalState) throw new Error('個別チャットを作成できませんでした。');
   }
   if (roomForLocalState && !state.dmRooms.some(r => r.id === roomId)) {
     state.dmRooms = [roomForLocalState, ...state.dmRooms];
@@ -759,21 +728,8 @@ export async function createGroupRoom() {
   try {
     let roomId;
     let roomForLocalState = null;
-    roomId = await createGroupRoomInSupabase({
-      name,
-      members,
-      createdBy: state.currentUsername,
-    });
-    roomForLocalState = {
-      id: roomId,
-      type: 'group',
-      name,
-      members,
-      createdBy: state.currentUsername,
-      lastMessage: '',
-      lastAt: null,
-      lastSender: '',
-    };
+    roomForLocalState = await createGroupRoomInSupabase(name, members);
+    roomId = roomForLocalState.id;
     if (roomForLocalState && !state.groupRooms.some(r => r.id === roomId)) {
       state.groupRooms = [roomForLocalState, ...state.groupRooms];
     }

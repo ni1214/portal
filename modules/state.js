@@ -93,7 +93,8 @@ export const state = {
   activeWorkspaceButtonId: 'sidebar-home-btn',
   activeWorkspaceTitle: 'ホーム',
   activeWorkspaceSubtitle: '',
-  currentUsername: localStorage.getItem('portal-username') || null,
+  // 表示名はGoogleセッションとDBの紐付けからのみ確定する。
+  currentUsername: null,
   dataBackendMode: 'supabase',
   supabaseUrl: '',
   supabaseApiKey: '',
@@ -107,6 +108,7 @@ export const state = {
   googleAuthLoading: false,
   googleAuthLinkedUsername: '',
   googleAuthLinkRequired: false,
+  isAccountActive: false,
   lockRecommendationPending: false,
   lockRecommendationMessage: '',
   personalSectionOrder: [],
@@ -284,7 +286,6 @@ export const state = {
   DEFAULT_EMAIL_PROFILES: null,  // emailモジュールで初期化
   emailProfiles: [],
   selectedEmailProfileId: null,
-  geminiApiKey: '',
   userEmailProfile: {
     name: '',
     realName: '',
@@ -334,8 +335,8 @@ export const state = {
   workSummaryRows: [],             // 集計表表示用キャッシュ
   workSummaryUsers: [],            // 集計表ユーザー列
 
-  // 管理者認証
-  isAdmin: false,   // 管理者PIN認証済みフラグ
+  // サーバー管理の権限（user_accounts.is_admin が正）
+  isAdmin: false,
 
   // PIN ロック
   lockPinHash: null,

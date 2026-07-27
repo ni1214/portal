@@ -3,16 +3,14 @@ import { db, doc, getDoc, setDoc, getDocs, updateDoc, collection, query, where, 
 import { state } from './state.js';
 import {
   isSupabaseSharedCoreEnabled,
-  fetchPortalConfigFromSupabase,
-  savePortalConfigToSupabase,
   checkUserExistsInSupabase,
   registerUserLoginInSupabase,
   getUserLockPinFromSupabase,
   saveLockPinToSupabase,
+  resetUserLockPinAsAdminInSupabase,
   fetchAllUserAccountsFromSupabase,
   deleteUserFromSupabase,
   migrateUsernameInSupabase,
-  linkGoogleAccountToUsername,
   fetchPrivateSectionsFromSupabase,
   fetchPrivateCardsFromSupabase,
   createPrivateSectionInSupabase,
@@ -37,40 +35,17 @@ export async function hashPIN(pin) {
 }
 
 export async function verifyPIN(pin) {
-  if (isSupabaseSharedCoreEnabled()) {
-    try {
-      const data = await fetchPortalConfigFromSupabase();
-      if (!data.pinHash) return false;
-      return (await hashPIN(pin)) === data.pinHash;
-    } catch (_) {
-      return false;
-    }
-  }
-  const snap = await getDoc(doc(db, 'portal', 'config'));
-  if (!snap.exists() || !snap.data().pinHash) return false;
-  return (await hashPIN(pin)) === snap.data().pinHash;
+  void pin;
+  return false;
 }
 
 export async function setPIN(pin) {
-  const hash = await hashPIN(pin);
-  if (isSupabaseSharedCoreEnabled()) {
-    await savePortalConfigToSupabase({ pinHash: hash });
-    return;
-  }
-  await setDoc(doc(db, 'portal', 'config'), { pinHash: hash }, { merge: true });
+  void pin;
+  throw new Error('管理者PINは廃止されました。管理権限はGoogleアカウントで管理します。');
 }
 
 export async function isPINConfigured() {
-  if (isSupabaseSharedCoreEnabled()) {
-    try {
-      const data = await fetchPortalConfigFromSupabase();
-      return !!data.pinHash;
-    } catch (_) {
-      return false;
-    }
-  }
-  const snap = await getDoc(doc(db, 'portal', 'config'));
-  return snap.exists() && !!snap.data().pinHash;
+  return false;
 }
 
 function isMobilePreloginExemptDevice() {
@@ -250,11 +225,11 @@ export function showUsernameModal(isEdit = false) {
     document.getElementById('username-skip').textContent = 'キャンセル';
   } else if (state.googleAuthLinkRequired) {
     document.getElementById('username-modal-title').innerHTML =
-      '<i class="fa-solid fa-user-circle"></i> 表示名を設定';
+      '<i class="fa-solid fa-user-circle"></i> 利用登録を確認';
     document.getElementById('username-modal-desc').innerHTML =
-      'Googleログインが完了しました。ポータル内で使う表示名を設定してください。既存データを引き継ぐ場合は、これまでのユーザーネームを入力します。';
-    document.getElementById('username-submit-text').textContent = '設定して始める';
-    document.getElementById('username-skip').textContent = 'キャンセル';
+      'このGoogleアカウントはまだポータル利用者として登録されていません。管理者へ登録を依頼してください。';
+    document.getElementById('username-submit-text').textContent = '登録済み情報を確認';
+    document.getElementById('username-skip').textContent = 'ログアウト';
   } else {
     document.getElementById('username-modal-title').innerHTML =
       '<i class="fa-solid fa-user-circle"></i> ユーザーネームを設定';
@@ -283,19 +258,21 @@ export function hideUsernameError() {
 }
 
 export async function applyUsername(name, options = {}) {
+  const normalized = `${name || ''}`.trim();
+  if (!state.googleAuthSession?.user || state.googleAuthLinkRequired) {
+    throw new Error('登録済みのGoogleアカウントでログインしてください。');
+  }
+  if (!state.googleAuthLinkedUsername || normalized !== state.googleAuthLinkedUsername) {
+    throw new Error('表示名の変更は管理者へ依頼してください。');
+  }
   const recommendLockSetup = !!options.recommendLockSetup;
   const lockPromptMessage = options.lockPromptMessage || 'なりすまし防止のため、PINロック設定をおすすめします。';
-  const isSwitch = !!state.currentUsername && state.currentUsername !== name;
-  state.currentUsername = name;
-  localStorage.setItem('portal-username', name);
+  const isSwitch = !!state.currentUsername && state.currentUsername !== normalized;
+  state.currentUsername = normalized;
+  localStorage.setItem('portal-username', normalized);
   updateUsernameDisplay();
   closeUsernameModal();
-  if (state.googleAuthLinkRequired && state.googleAuthProfile && !options.skipGoogleLink) {
-    await linkGoogleAccountToUsername(name, state.googleAuthProfile);
-    state.googleAuthLinkedUsername = name;
-    state.googleAuthLinkRequired = false;
-  }
-  await deps.loadPersonalData?.(name, isSwitch); // from personal.js
+  await deps.loadPersonalData?.(normalized, isSwitch); // from personal.js
   deps.renderAllSections?.(); // from render.js
   if (recommendLockSetup) {
     state.lockRecommendationPending = true;
@@ -305,6 +282,10 @@ export async function applyUsername(name, options = {}) {
 }
 
 export async function saveUsername(name) {
+  if (!state.googleAuthLinkedUsername || name !== state.googleAuthLinkedUsername) {
+    showUsernameError('表示名の登録・変更は管理者へ依頼してください。');
+    return;
+  }
   // 変更なしはそのまま閉じる
   if (name === state.currentUsername) { closeUsernameModal(); return; }
 
@@ -491,6 +472,10 @@ export async function submitPreloginPin(pin) {
 export async function loginExistingUsername(name, options = {}) {
   const normalized = `${name || ''}`.trim();
   if (!normalized) return false;
+  if (!state.googleAuthSession?.user || normalized !== state.googleAuthLinkedUsername) {
+    showUsernameError('このGoogleアカウントには表示名が紐付いていません。管理者へ登録を依頼してください。');
+    return false;
+  }
   const requirePreloginPin = options.requirePreloginPin ?? (
     (
       state.googleAuthLinkRequired ||
@@ -921,25 +906,18 @@ export function openSecurityModal() {
 }
 
 export async function openAdminModal() {
-  document.getElementById('admin-auth-area').hidden  = false;
-  document.getElementById('admin-panel-area').hidden = true;
+  if (!state.isAdmin) {
+    showToast('管理者権限が必要です。', 'error');
+    return false;
+  }
+  document.getElementById('admin-auth-area').hidden  = true;
+  document.getElementById('admin-panel-area').hidden = false;
   document.getElementById('admin-setup-area').hidden = true;
   document.getElementById('admin-pin-input').value   = '';
   document.getElementById('admin-auth-error').hidden = true;
   document.getElementById('admin-modal').classList.add('visible');
 
-  // PIN未設定なら設定モードで開く
-  const configured = await isPINConfigured();
-  if (!configured) {
-    document.getElementById('admin-auth-area').hidden  = true;
-    document.getElementById('admin-setup-area').hidden = false;
-    document.getElementById('admin-new-pin').value         = '';
-    document.getElementById('admin-new-pin-confirm').value = '';
-    document.getElementById('admin-setup-error').hidden    = true;
-    setTimeout(() => document.getElementById('admin-new-pin').focus(), 100);
-  } else {
-    setTimeout(() => document.getElementById('admin-pin-input').focus(), 100);
-  }
+  return true;
 }
 
 export function closeAdminModal() {
@@ -947,6 +925,7 @@ export function closeAdminModal() {
 }
 
 export async function deleteUserData(username) {
+  if (!state.isAdmin) throw new Error('管理者権限が必要です。');
   if (isSupabaseSharedCoreEnabled()) {
     await deleteUserFromSupabase(username);
     return;
@@ -1006,6 +985,10 @@ export async function deleteUserData(username) {
 
 export async function loadUsersForAdmin() {
   const listEl = document.getElementById('admin-user-list');
+  if (!state.isAdmin) {
+    if (listEl) listEl.textContent = '管理者権限が必要です。';
+    return;
+  }
   listEl.innerHTML = '<div class="admin-loading">読み込み中...</div>';
   try {
     let users = [];
@@ -1022,14 +1005,16 @@ export async function loadUsersForAdmin() {
       item.className = 'admin-user-item';
       item.innerHTML = `
         <div class="admin-user-info">
-          <span class="admin-user-avatar">${name.charAt(0).toUpperCase()}</span>
-          <span class="admin-user-name">${deps.esc?.(name) ?? name}</span>
+          <span class="admin-user-avatar"></span>
+          <span class="admin-user-name"></span>
         </div>
         <div class="admin-user-actions">
-          <button class="btn-admin-reset-pin" data-username="${deps.esc?.(name) ?? name}">PINリセット</button>
-          <button class="btn-admin-delete-user" data-username="${deps.esc?.(name) ?? name}"><i class="fa-solid fa-trash-can"></i> 削除</button>
+          <button class="btn-admin-reset-pin">PINリセット</button>
+          <button class="btn-admin-delete-user"><i class="fa-solid fa-trash-can"></i> 削除</button>
         </div>
       `;
+      item.querySelector('.admin-user-avatar').textContent = name.charAt(0).toUpperCase();
+      item.querySelector('.admin-user-name').textContent = name;
 
       // PINリセット
       item.querySelector('.btn-admin-reset-pin').addEventListener('click', async (e) => {
@@ -1039,7 +1024,7 @@ export async function loadUsersForAdmin() {
         btn.textContent = '処理中...';
         try {
           if (isSupabaseSharedCoreEnabled()) {
-            await saveLockPinToSupabase(name, { hash: null, enabled: false, autoLockMinutes: 5 });
+            await resetUserLockPinAsAdminInSupabase(name);
           } else {
             await setDoc(doc(db, 'users', name, 'data', 'lock_pin'), { hash: null, enabled: false }, { merge: true });
           }
@@ -1052,30 +1037,32 @@ export async function loadUsersForAdmin() {
         } catch (_) { btn.disabled = false; btn.textContent = 'エラー'; }
       });
 
-      // ユーザー削除
-      item.querySelector('.btn-admin-delete-user').addEventListener('click', async (e) => {
+      const deactivateButton = item.querySelector('.btn-admin-delete-user');
+      const isCurrentUser = name === state.currentUsername;
+      deactivateButton.innerHTML = '<i class="fa-solid fa-user-slash"></i> 利用停止';
+      deactivateButton.disabled = isCurrentUser;
+      if (isCurrentUser) {
+        deactivateButton.title = '自分自身の利用は停止できません';
+      }
+
+      // ユーザー利用停止
+      deactivateButton.addEventListener('click', async (e) => {
         const btn = e.currentTarget;
-        if (!await showConfirm(`「${name}」のアカウントとすべての個人データを削除しますか？\nこの操作は取り消せません。`, { danger: true })) return;
+        if (!await showConfirm(`「${name}」のポータル利用を停止しますか？\n業務データは削除せず保持され、以後ログインできなくなります。`, { danger: true })) return;
         btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 削除中...';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 停止中...';
         try {
           await deleteUserData(name);
           item.remove();
-          // 自分自身を削除した場合はログアウト
-          if (name === state.currentUsername) {
-            state.currentUsername = null;
-            localStorage.removeItem('portal-username');
-            location.reload();
-          }
           // リストが空になったか確認
           if (!listEl.querySelector('.admin-user-item')) {
             listEl.innerHTML = '<div class="admin-loading">ユーザーなし</div>';
           }
         } catch (err) {
-          console.error('ユーザー削除エラー:', err);
+          console.error('ユーザー利用停止エラー:', err);
           btn.disabled = false;
-          btn.innerHTML = '<i class="fa-solid fa-trash-can"></i> 削除';
-          showToast('削除に失敗しました。', 'error');
+          btn.innerHTML = '<i class="fa-solid fa-user-slash"></i> 利用停止';
+          showToast('利用停止に失敗しました。', 'error');
         }
       });
 
@@ -1114,6 +1101,8 @@ export function updateUsernameDisplay() {
   const greetEl   = document.getElementById('user-greeting');
   const avatarEl  = document.getElementById('user-avatar');
   const btnEl     = document.getElementById('btn-user');
+  const adminSection = document.querySelector('.settings-section-admin');
+  if (adminSection) adminSection.hidden = !state.isAdmin;
 
   if (state.currentUsername) {
     const initial = state.currentUsername.charAt(0).toUpperCase();
@@ -1138,6 +1127,7 @@ export function updateUsernameDisplay() {
 // Supabase の users_list にログイン記録（管理者が全員を把握できる）
 export async function registerUserLogin(username, authProfile = null) {
   if (!username) return false;
+  if (!state.googleAuthSession?.user || username !== state.googleAuthLinkedUsername) return false;
   try {
     if (isSupabaseSharedCoreEnabled()) {
       await registerUserLoginInSupabase(username, authProfile);

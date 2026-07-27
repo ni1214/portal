@@ -2,91 +2,78 @@ const BRAND_ICON_SERVICES = Object.freeze([
   {
     key: 'notebooklm',
     label: 'NotebookLM',
-    faviconDomain: 'notebooklm.google.com',
     domains: ['notebooklm.google.com', 'notebooklm.google'],
     keywords: ['notebooklm', 'notebook lm', 'notebook-lm'],
   },
   {
     key: 'claude',
     label: 'Claude',
-    faviconDomain: 'claude.ai',
     domains: ['claude.ai', 'claude.com', 'anthropic.com'],
     keywords: ['claude', 'anthropic', '\u30af\u30ed\u30fc\u30c9'],
   },
   {
     key: 'gemini',
     label: 'Gemini',
-    faviconDomain: 'gemini.google.com',
     domains: ['gemini.google.com', 'gemini.google', 'bard.google.com', 'ai.google.dev'],
     keywords: ['gemini', '\u30b8\u30a7\u30df\u30cb'],
   },
   {
     key: 'manus',
     label: 'Manus',
-    faviconDomain: 'manus.im',
     domains: ['manus.im', 'manus.is'],
     keywords: ['manus', '\u30de\u30ca\u30b9'],
   },
   {
     key: 'genspark',
     label: 'Genspark',
-    faviconDomain: 'genspark.ai',
     domains: ['genspark.ai', 'genspark.im'],
     keywords: ['genspark', 'gen spark'],
   },
   {
     key: 'ledge-ai',
     label: 'Ledge.ai',
-    faviconDomain: 'ledge.ai',
     domains: ['ledge.ai'],
     keywords: ['ledge.ai', 'ledge ai'],
   },
   {
     key: 'chatgpt',
     label: 'ChatGPT',
-    faviconDomain: 'chatgpt.com',
     domains: ['chatgpt.com', 'chat.openai.com', 'openai.com'],
     keywords: ['chatgpt', 'chat gpt', 'openai'],
   },
   {
     key: 'github',
     label: 'GitHub',
-    faviconDomain: 'github.com',
     domains: ['github.com'],
     keywords: ['github', 'git hub', '\u30ae\u30c3\u30c8\u30cf\u30d6'],
   },
   {
     key: 'slack',
     label: 'Slack',
-    faviconDomain: 'slack.com',
     domains: ['slack.com'],
     keywords: ['slack', '\u30b9\u30e9\u30c3\u30af'],
   },
   {
     key: 'google-drive',
     label: 'Google Drive',
-    faviconDomain: 'drive.google.com',
     domains: ['drive.google.com'],
     keywords: ['google drive', '\u30b0\u30fc\u30b0\u30eb\u30c9\u30e9\u30a4\u30d6'],
   },
   {
     key: 'box',
     label: 'Box',
-    faviconDomain: 'box.com',
     domains: ['box.com'],
     keywords: ['box', '\u30dc\u30c3\u30af\u30b9'],
   },
   {
     key: 'perplexity',
     label: 'Perplexity',
-    faviconDomain: 'perplexity.ai',
     domains: ['perplexity.ai'],
     keywords: ['perplexity', '\u30d1\u30fc\u30d7\u30ec\u30ad\u30b7\u30c6\u30a3'],
   },
   {
     key: 'copilot',
     label: 'Copilot',
-    faviconDomain: 'copilot.microsoft.com',
     domains: ['copilot.microsoft.com', 'bing.com'],
     keywords: ['copilot', 'microsoft copilot'],
   },
@@ -100,6 +87,23 @@ const GENERIC_ICON_CLASSES = new Set([
   'fa-solid fa-globe',
   'fa-solid fa-arrow-up-right-from-square',
 ]);
+
+// 外部favicon APIへリンク先ドメインを送らず、同梱済みアイコンだけで表示する。
+const BRAND_ICON_CLASSES = Object.freeze({
+  notebooklm: 'fa-solid fa-book-open',
+  claude: 'fa-solid fa-wand-magic-sparkles',
+  gemini: 'fa-solid fa-gem',
+  manus: 'fa-solid fa-bolt',
+  genspark: 'fa-solid fa-bolt',
+  'ledge-ai': 'fa-solid fa-chart-line',
+  chatgpt: 'fa-solid fa-comment-dots',
+  github: 'fa-brands fa-github',
+  slack: 'fa-brands fa-slack',
+  'google-drive': 'fa-brands fa-google-drive',
+  box: 'fa-solid fa-box',
+  perplexity: 'fa-solid fa-magnifying-glass',
+  copilot: 'fa-solid fa-compass',
+});
 
 function escapeAttr(value) {
   return `${value ?? ''}`.replace(/[&<>"']/g, ch => ({
@@ -170,10 +174,10 @@ export function shouldPreferBrandIcon(card) {
 
 export function buildBrandIconHtml(service, className = 'brand-icon-img') {
   if (!service) return '';
-  const domain = escapeAttr(service.faviconDomain);
   const label = escapeAttr(service.label);
   const cls = escapeAttr(className);
-  return `<img class="${cls}" src="https://www.google.com/s2/favicons?domain=${domain}&sz=128" loading="lazy" alt="${label}">`;
+  const iconClass = escapeAttr(BRAND_ICON_CLASSES[service.key] || 'fa-solid fa-link');
+  return `<i class="${cls} ${iconClass}" role="img" aria-label="${label}"></i>`;
 }
 
 export function getBrandIconHtmlForCard(card, className = 'brand-icon-img') {

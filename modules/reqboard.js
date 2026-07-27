@@ -13,6 +13,7 @@ import {
   fetchRequestHistoryFromSupabase,
   createCrossDeptRequestInSupabase,
   updateCrossDeptRequestInSupabase,
+  syncRequestTaskLinkInSupabase,
   deleteCrossDeptRequestInSupabase,
   fetchSuggestionsFromSupabase,
   createSuggestionInSupabase,
@@ -1054,17 +1055,7 @@ export async function submitRequestTaskify() {
         });
 
     if (isSupabaseSharedCoreEnabled()) {
-      await updateCrossDeptRequestInSupabase(req.id, {
-        status: 'accepted',
-        statusUpdatedBy: state.currentUsername,
-        notifyCreator: true,
-        linkedTaskId: taskRef.id,
-        linkedTaskStatus: 'pending',
-        linkedTaskAssignedTo: state.reqTaskifyAssignee,
-        linkedTaskLinkedAt: new Date().toISOString(),
-        linkedTaskLinkedBy: state.currentUsername,
-        linkedTaskClosedAt: null,
-      });
+      await syncRequestTaskLinkInSupabase(req.id, taskRef.id, 'link');
     } else {
       await updateDoc(doc(db, 'cross_dept_requests', req.id), {
         status: 'accepted',

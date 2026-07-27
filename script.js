@@ -6,7 +6,7 @@ import {
   db, doc, documentId, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc,
   collection, query, where, orderBy, limit, writeBatch, serverTimestamp, onSnapshot,
   arrayUnion, arrayRemove,
-  WEATHER_API_KEY, WEATHER_LAT, WEATHER_LON,
+  WEATHER_LAT, WEATHER_LON,
   SVG_ICONS, PRESET_SERVICES, CATEGORY_COLORS, ICON_PICKER_LIST,
   DEFAULT_CATEGORIES, INITIAL_CARDS
 } from './modules/config.js';
@@ -22,7 +22,7 @@ import { getBrandIconHtmlForCard, shouldPreferBrandIcon } from './modules/brand-
 // ===== Feature modules =====
 import {
   deps as authDeps,
-  hashPIN, verifyPIN, setPIN, isPINConfigured,
+  hashPIN,
   migrateToNewUsername,
   showUsernameModal, closeUsernameModal, showUsernameError, hideUsernameError,
   applyUsername, saveUsername,
@@ -116,7 +116,7 @@ import {
 import {
   initEmail,
   loadUserEmailProfile,
-  saveGeminiApiKey, saveNewContact,
+  saveNewContact,
   generateEmail, copyEmailOutput, resetEmailOutput,
   setEmailMode, resetEmailMode, selectTone,
   saveUserEmailProfile, resetSignatureTemplate, updateSignaturePreview,
@@ -210,6 +210,7 @@ import {
   openTroubleReportModal,
   closeTroubleReportModal,
 } from './modules/trouble-report.js';
+import { fetchWeatherFromApi } from './modules/secure-api.js';
 
 import {
   isSupabaseSharedCoreEnabled,
@@ -256,7 +257,7 @@ if (initialSupabaseConfig) {
 }
 import { showToast, showConfirm } from './modules/notify.js';
 
-const PORTAL_SHARE_URL = 'https://ni1214.github.io/portal/';
+const PORTAL_SHARE_URL = new URL('/', window.location.origin).toString();
 const PORTAL_SHARE_SUBJECT = '社内ポータルの共有';
 const PORTAL_SHARE_BODY = [
   '社内ポータルはこちらです。',
@@ -338,9 +339,6 @@ initEmail({
     renderTodayDashboard();
   },
 });
-
-// 鋼材発注モジュール初期化
-initOrder({});
 
 // ボトムナビ初期化（スマホ用）
 initBottomNav();
@@ -794,7 +792,7 @@ function openPortalShareInGmail() {
 
   navigator.clipboard?.writeText(PORTAL_SHARE_URL).catch(() => {});
 
-  const opened = window.open(gmailUrl.toString(), '_blank');
+  const opened = window.open(gmailUrl.toString(), '_blank', 'noopener,noreferrer');
   if (opened) opened.opener = null;
   if (!opened) {
     window.location.href = `mailto:?subject=${encodeURIComponent(PORTAL_SHARE_SUBJECT)}&body=${encodeURIComponent(PORTAL_SHARE_BODY)}`;
@@ -1532,6 +1530,15 @@ function setupSectionDraggable(section, sectionId) {
 
 
 // ========== プライベートセクション管理モーダル ==========
+function renderPrivateSectionIconPreview(value) {
+  const preview = document.getElementById('private-section-icon-preview');
+  if (!preview) return;
+  const icon = sanitizeIconIdentifier(value || 'fa-solid fa-star', 'fa-solid fa-star');
+  const node = document.createElement('i');
+  node.className = icon;
+  preview.replaceChildren(node);
+}
+
 function openPrivateSectionModal(cat) {
   state.editingPrivateSectionId = cat?.docId || null;
   state.privateSectionColorIndex = cat?.colorIndex || 1;
@@ -1541,8 +1548,7 @@ function openPrivateSectionModal(cat) {
   document.getElementById('private-section-label').value = cat?.label || '';
   document.getElementById('private-section-icon').value = cat?.icon || 'fa-solid fa-star';
   document.getElementById('private-section-delete').style.display = cat ? 'inline-flex' : 'none';
-  const prev = document.getElementById('private-section-icon-preview');
-  if (prev) prev.innerHTML = `<i class="${cat?.icon || 'fa-solid fa-star'}"></i>`;
+  renderPrivateSectionIconPreview(cat?.icon || 'fa-solid fa-star');
   const grid = document.getElementById('private-section-color-grid');
   grid.innerHTML = '';
   CATEGORY_COLORS.forEach(({ index, label, gradient }) => {
@@ -2036,10 +2042,11 @@ function _renderHiddenCardsList() {
   const allCardPool = [...state.allCards, ...state.privateCards];
   container.innerHTML = state.hiddenCards.map(id => {
     const card = allCardPool.find(c => c.id === id);
-    const label = card ? esc(card.label) : `（ID: ${id}）`;
+    const safeId = esc(id);
+    const label = card ? esc(card.label) : `（ID: ${safeId}）`;
     return `<div class="hidden-card-row">
       <span class="hidden-card-label">${label}</span>
-      <button class="btn-unhide-card" data-id="${id}" title="再表示"><i class="fa-solid fa-eye"></i> 再表示</button>
+      <button class="btn-unhide-card" data-id="${safeId}" title="再表示"><i class="fa-solid fa-eye"></i> 再表示</button>
     </div>`;
   }).join('');
   container.querySelectorAll('.btn-unhide-card').forEach(btn => {
@@ -2066,6 +2073,10 @@ function buildSection(cat, cards, options = {}) {
   const section = document.createElement('section');
   const gradient = getCategoryGradient(cat);
   const sectionId = cat.isPrivate ? `priv:${cat.docId}` : cat.id;
+  const safeSectionId = esc(sectionId || '');
+  const safeDocId = esc(cat.docId || '');
+  const categoryIconFallback = cat.isPrivate ? 'fa-solid fa-star' : 'fa-solid fa-folder';
+  const safeCategoryIcon = sanitizeIconIdentifier(cat.icon || categoryIconFallback, categoryIconFallback);
   const searchMode = options.searchMode === true;
   // 非表示カードをフィルタリング（個人設定）
   const visibleCards = cards.filter(c => !state.hiddenCards.includes(c.id));
@@ -2079,14 +2090,14 @@ function buildSection(cat, cards, options = {}) {
     section.className = 'external-tools' + (isCollapsed ? ' collapsed' : '');
     section.id = `section-${cat.id}`;
     const editBtns = state.isEditMode
-      ? `<button class="btn-edit-category" data-docid="${cat.docId || ''}" title="カテゴリ編集"><i class="fa-solid fa-pen"></i></button>`
+      ? `<button class="btn-edit-category" data-docid="${safeDocId}" title="カテゴリ編集"><i class="fa-solid fa-pen"></i></button>`
       : '';
     section.innerHTML = `
       <div class="category-header">
-        <div class="category-icon" style="background:${gradient}"><i class="${cat.icon}"></i></div>
+        <div class="category-icon" style="background:${gradient}"><i class="${esc(safeCategoryIcon)}"></i></div>
         <h2 class="category-title">${esc(cat.label)}</h2>
         ${editBtns}
-        <button class="btn-collapse-section${isCollapsed ? ' collapsed' : ''}" data-section-id="${sectionId}" title="${isCollapsed ? '展開' : '折り畳む'}">
+        <button class="btn-collapse-section${isCollapsed ? ' collapsed' : ''}" data-section-id="${safeSectionId}" title="${isCollapsed ? '展開' : '折り畳む'}">
           <i class="fa-solid fa-chevron-up"></i>
         </button>
       </div>
@@ -2128,11 +2139,11 @@ function buildSection(cat, cards, options = {}) {
     const privGradient = color ? color.gradient : CATEGORY_COLORS[0].gradient;
     section.innerHTML = `
       <div class="category-header">
-        <div class="category-icon" style="background:${privGradient}"><i class="${cat.icon || 'fa-solid fa-star'}"></i></div>
+        <div class="category-icon" style="background:${privGradient}"><i class="${esc(safeCategoryIcon)}"></i></div>
         <h2 class="category-title">${esc(cat.label)}<span class="private-badge"><i class="fa-solid fa-lock"></i></span></h2>
         <span class="category-count">${cards.length} 件</span>
-        <button class="btn-edit-category" data-docid="${cat.docId}" title="マイカテゴリを編集"><i class="fa-solid fa-pen"></i></button>
-        <button class="btn-collapse-section${isCollapsed ? ' collapsed' : ''}" data-section-id="${sectionId}" title="${isCollapsed ? '展開' : '折り畳む'}">
+        <button class="btn-edit-category" data-docid="${safeDocId}" title="マイカテゴリを編集"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn-collapse-section${isCollapsed ? ' collapsed' : ''}" data-section-id="${safeSectionId}" title="${isCollapsed ? '展開' : '折り畳む'}">
           <i class="fa-solid fa-chevron-up"></i>
         </button>
       </div>
@@ -2167,15 +2178,15 @@ function buildSection(cat, cards, options = {}) {
     section.className = 'category-section' + (isCollapsed ? ' collapsed' : '');
     section.id = `section-${cat.id}`;
     const editBtns = state.isEditMode
-      ? `<button class="btn-edit-category" data-docid="${cat.docId || ''}" title="カテゴリ編集"><i class="fa-solid fa-pen"></i></button>`
+      ? `<button class="btn-edit-category" data-docid="${safeDocId}" title="カテゴリ編集"><i class="fa-solid fa-pen"></i></button>`
       : '';
     section.innerHTML = `
       <div class="category-header">
-        <div class="category-icon" style="background:${gradient}"><i class="${cat.icon}"></i></div>
+        <div class="category-icon" style="background:${gradient}"><i class="${esc(safeCategoryIcon)}"></i></div>
         <h2 class="category-title">${esc(cat.label)}</h2>
         <span class="category-count">${cards.length} 件</span>
         ${editBtns}
-        <button class="btn-collapse-section${isCollapsed ? ' collapsed' : ''}" data-section-id="${sectionId}" title="${isCollapsed ? '展開' : '折り畳む'}">
+        <button class="btn-collapse-section${isCollapsed ? ' collapsed' : ''}" data-section-id="${safeSectionId}" title="${isCollapsed ? '展開' : '折り畳む'}">
           <i class="fa-solid fa-chevron-up"></i>
         </button>
       </div>
@@ -2268,7 +2279,7 @@ function buildLinkCard(card, isFav = false, gradient = '') {
   const favs = getFavorites();
   const isFavorited = favs.includes(card.id);
   const favoriteLabel = isFavorited ? 'お気に入り解除' : 'お気に入りに追加';
-  const starBtn = `<button class="btn-favorite${isFavorited ? ' active' : ''}" data-id="${card.id}" title="${favoriteLabel}" aria-label="${favoriteLabel}"><i class="fa-${isFavorited ? 'solid' : 'regular'} fa-star"></i></button>`;
+  const starBtn = `<button class="btn-favorite${isFavorited ? ' active' : ''}" data-id="${esc(card.id)}" title="${favoriteLabel}" aria-label="${favoriteLabel}"><i class="fa-${isFavorited ? 'solid' : 'regular'} fa-star"></i></button>`;
   const noUrlBadge = hasNoUrl
     ? `<span class="no-url-badge"><i class="fa-solid fa-triangle-exclamation"></i> URL未設定</span>`
     : '';
@@ -2563,10 +2574,14 @@ function openFavoriteLinkFromHome(cardId) {
     openWeatherPanel('solar');
     return;
   }
+  if (card.url === 'portal:trouble-report') {
+    void openTroubleReportWorkspace('new');
+    return;
+  }
 
   const href = `${card.url || ''}`.trim();
-  if (!href || href === '#') {
-    showToast('このリンクはURLが未設定です');
+  if (!isSafeWebUrl(href)) {
+    showToast(href ? '安全でないURLのため開けません。' : 'このリンクはURLが未設定です', 'warning');
     return;
   }
 
@@ -3067,8 +3082,14 @@ function switchWeatherTab(tab) {
   );
   const src = tab === 'radar' ? WINDY_URL : SOLAR_SRC;
   document.getElementById('wpanel-external').href = src;
-  document.getElementById('wpanel-content').innerHTML =
-    `<iframe src="${src}" class="wpanel-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" allowfullscreen></iframe>`;
+  const content = document.getElementById('wpanel-content');
+  const frame = document.createElement('iframe');
+  frame.src = src;
+  frame.className = 'wpanel-iframe';
+  frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
+  frame.setAttribute('allowfullscreen', '');
+  frame.title = tab === 'radar' ? '雨雲レーダー' : '太陽光発電状況';
+  content.replaceChildren(frame);
 }
 
 
@@ -3104,31 +3125,32 @@ async function fetchAndRenderWeather() {
   if (!currentEl) return;
 
   try {
-    const [curRes, frcRes] = await Promise.all([
-      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${WEATHER_LAT}&lon=${WEATHER_LON}&appid=${WEATHER_API_KEY}&units=metric&lang=ja`),
-      fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${WEATHER_LAT}&lon=${WEATHER_LON}&appid=${WEATHER_API_KEY}&units=metric&lang=ja&cnt=9`)
-    ]);
+    const weather = await fetchWeatherFromApi();
+    const cur = weather?.current;
+    const frc = weather?.forecast;
+    const tempValue = Number(cur?.temperature);
+    const feelsValue = Number(cur?.feelsLike);
+    const humidityValue = Number(cur?.humidity);
+    const windValue = Number(cur?.windSpeed);
+    if (![tempValue, feelsValue, humidityValue, windValue].every(Number.isFinite) || !Array.isArray(frc)) {
+      throw new Error('天気情報の形式が正しくありません。');
+    }
 
-    if (!curRes.ok || !frcRes.ok) throw new Error('API エラー');
-
-    const cur = await curRes.json();
-    const frc = await frcRes.json();
-
-    const temp = Math.round(cur.main.temp);
-    const feels = Math.round(cur.main.feels_like);
-    const humidity = cur.main.humidity;
-    const wind = (cur.wind.speed).toFixed(1);
-    const desc = cur.weather[0].description;
-    const iconCode = cur.weather[0].icon;
+    const temp = Math.round(tempValue);
+    const feels = Math.round(feelsValue);
+    const humidity = Math.max(0, Math.min(100, Math.round(humidityValue)));
+    const wind = Math.max(0, windValue).toFixed(1);
+    const desc = `${cur?.description || ''}`.slice(0, 80);
+    const iconCode = `${cur?.icon || ''}`;
     const emoji = OWM_ICON_MAP[iconCode] || '🌡';
-    const hi = calcHeatIndex(cur.main.temp, humidity);
+    const hi = calcHeatIndex(tempValue, humidity);
     const heat = getHeatLevel(hi);
 
     currentEl.innerHTML = `
       <div class="weather-main">
         <div class="weather-emoji">${emoji}</div>
         <div class="weather-temp">${temp}<span class="weather-unit">°C</span></div>
-        <div class="weather-desc">${desc}</div>
+        <div class="weather-desc">${esc(desc)}</div>
       </div>
       <div class="weather-details">
         <div class="weather-detail-item"><i class="fa-solid fa-droplet"></i> ${humidity}%</div>
@@ -3147,27 +3169,32 @@ async function fetchAndRenderWeather() {
 
     if (forecastEl) {
       forecastEl.innerHTML = '';
-      frc.list.slice(1, 9).forEach(item => {
-        const dt = new Date(item.dt * 1000);
+      frc.slice(0, 8).forEach(item => {
+        const dt = new Date(item?.at || '');
+        const itemTemp = Number(item?.temperature);
+        const itemHumidity = Number(item?.humidity);
+        if (Number.isNaN(dt.getTime()) || !Number.isFinite(itemTemp) || !Number.isFinite(itemHumidity)) return;
         const h = dt.getHours().toString().padStart(2, '0');
         const m = dt.getMonth() + 1;
         const d = dt.getDate();
-        const ico = OWM_ICON_MAP[item.weather[0].icon] || '🌡';
-        const t = Math.round(item.main.temp);
+        const ico = OWM_ICON_MAP[`${item?.icon || ''}`] || '🌡';
+        const t = Math.round(itemTemp);
+        const forecastHumidity = Math.max(0, Math.min(100, Math.round(itemHumidity)));
         const fItem = document.createElement('div');
         fItem.className = 'forecast-item';
         fItem.innerHTML = `
           <div class="forecast-time">${m}/${d} ${h}時</div>
           <div class="forecast-icon">${ico}</div>
           <div class="forecast-temp">${t}°</div>
-          <div class="forecast-hum"><i class="fa-solid fa-droplet" style="font-size:0.6rem"></i>${item.main.humidity}%</div>
+          <div class="forecast-hum"><i class="fa-solid fa-droplet" style="font-size:0.6rem"></i>${forecastHumidity}%</div>
         `;
         forecastEl.appendChild(fItem);
       });
     }
 
     if (updatedEl) {
-      const now = new Date();
+      const fetchedAt = new Date(weather?.updatedAt || Date.now());
+      const now = Number.isNaN(fetchedAt.getTime()) ? new Date() : fetchedAt;
       updatedEl.textContent = `${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')} 更新`;
     }
 
@@ -3502,65 +3529,8 @@ function updateClock() {
 
 // ========== PIN 送信処理 ==========
 async function handlePinSubmit() {
-  const now = Date.now();
-  if (now < state.lockoutUntil) {
-    document.getElementById('pin-error').textContent = `${Math.ceil((state.lockoutUntil - now) / 1000)}秒後に再試行してください`;
-    return;
-  }
-
-  const digits = [...document.querySelectorAll('.pin-digit')].map(el => el.value).join('');
-  if (digits.length !== 4) {
-    document.getElementById('pin-error').textContent = '4桁のPINを入力してください';
-    return;
-  }
-
-  const mode = document.getElementById('pin-modal').dataset.mode;
-
-  if (mode === 'setup') {
-    const confirm2 = [...document.querySelectorAll('.pin-digit-confirm')].map(el => el.value).join('');
-    if (digits !== confirm2) {
-      document.getElementById('pin-error').textContent = 'PINが一致しません';
-      document.querySelectorAll('.pin-digit-confirm').forEach(el => {
-        el.value = '';
-        el.classList.add('error');
-        setTimeout(() => el.classList.remove('error'), 500);
-      });
-      return;
-    }
-    await setPIN(digits);
-    closePinModal();
-    enterEditMode();
-  } else {
-    const btn = document.getElementById('pin-submit');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>';
-    try {
-      const ok = await verifyPIN(digits);
-      if (ok) {
-        state.failedAttempts = 0;
-        closePinModal();
-        enterEditMode();
-      } else {
-        state.failedAttempts++;
-        if (state.failedAttempts >= 3) {
-          state.lockoutUntil = Date.now() + 30000;
-          state.failedAttempts = 0;
-          document.getElementById('pin-error').textContent = '3回失敗。30秒後に再試行してください';
-        } else {
-          document.getElementById('pin-error').textContent = `PINが違います（残り${3 - state.failedAttempts}回）`;
-        }
-        document.querySelectorAll('.pin-digit').forEach(el => {
-          el.value = '';
-          el.classList.add('error');
-          setTimeout(() => el.classList.remove('error'), 500);
-        });
-        document.querySelector('.pin-digit').focus();
-      }
-    } finally {
-      btn.disabled = false;
-      btn.textContent = '認証';
-    }
-  }
+  document.getElementById('pin-error').textContent =
+    'PINによる管理者認証は廃止されました。登録済みの管理者Googleアカウントでログインしてください。';
 }
 
 
@@ -3611,6 +3581,15 @@ function closeSettingsPanel() {
 
 // ========== 初期化 ==========
 async function runInitialPortalBootstrap(storedUsername) {
+  void storedUsername;
+  localStorage.removeItem('portal-username');
+  const googleRestored = await restoreGoogleAuthSession();
+  if (!googleRestored) {
+    renderTodoSection();
+    if (!state.googleAuthUser) showUsernameModal(false);
+    return false;
+  }
+
   try {
     if (!isSupabaseSharedCoreEnabled()) {
       await migrateIfNeeded();
@@ -3624,23 +3603,7 @@ async function runInitialPortalBootstrap(storedUsername) {
   } catch (err) {
     console.error('Runtime data bootstrap error:', err);
   }
-
-  const googleRestored = await restoreGoogleAuthSession();
-  if (googleRestored) {
-    return;
-  }
-
-  if (!storedUsername) {
-    const hint = document.getElementById('area-personal-hint-floating');
-    if (hint) hint.hidden = false;
-    renderTodoSection();
-    showUsernameModal(false);
-    return;
-  }
-
-  localStorage.removeItem('portal-username');
-  renderTodoSection();
-  showUsernameModal(false);
+  return true;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -3666,10 +3629,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderFavorites();
 
   // お知らせリアクションを先行読み込み
-
-  // 天気は即時取得（30分ごと更新）
-  fetchAndRenderWeather();
-  setInterval(fetchAndRenderWeather, 30 * 60 * 1000);
 
   // ===== 天気パネル =====
   document.getElementById('wpanel-close').addEventListener('click', closeWeatherPanel);
@@ -3877,19 +3836,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // 管理者パネル
-  document.getElementById('btn-open-admin').addEventListener('click', () => {
+  document.getElementById('btn-open-admin').addEventListener('click', async () => {
     closeSettingsPanel();
-    openAdminModal();
+    if (!await openAdminModal()) return;
+    await loadUsersForAdmin();
+    renderAdminSuggBoxSection();
+    const mInput = document.getElementById('admin-mission-input');
+    if (mInput) mInput.value = state.missionText || '';
+    renderSupabaseAdminState();
   });
   document.getElementById('admin-cancel').addEventListener('click', closeAdminModal);
   document.getElementById('admin-close').addEventListener('click', closeAdminModal);
   document.getElementById('admin-auth-btn').addEventListener('click', async () => {
-    const pin   = document.getElementById('admin-pin-input').value;
     const errEl = document.getElementById('admin-auth-error');
-    errEl.hidden = true;
-    const ok = await verifyPIN(pin);
-    if (ok) {
-      state.isAdmin = true;
+    if (state.isAdmin) {
+      errEl.hidden = true;
       document.getElementById('admin-auth-area').hidden  = true;
       document.getElementById('admin-panel-area').hidden = false;
       loadUsersForAdmin();
@@ -3899,6 +3860,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (mInput) mInput.value = state.missionText || '';
       renderSupabaseAdminState();
     } else {
+      errEl.textContent = '管理者権限が必要です。';
       errEl.hidden = false;
     }
   });
@@ -3908,20 +3870,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 管理者PIN初回設定
   document.getElementById('admin-setup-btn').addEventListener('click', async () => {
-    const pin     = document.getElementById('admin-new-pin').value;
-    const confirm = document.getElementById('admin-new-pin-confirm').value;
     const errEl   = document.getElementById('admin-setup-error');
-    errEl.hidden  = true;
-    if (!/^\d{4,6}$/.test(pin))  { errEl.textContent = '4〜6桁の数字を入力してください'; errEl.hidden = false; return; }
-    if (pin !== confirm)          { errEl.textContent = 'PINが一致しません';               errEl.hidden = false; return; }
-    await setPIN(pin);
-    document.getElementById('admin-setup-area').hidden = true;
-    document.getElementById('admin-panel-area').hidden = false;
-    loadUsersForAdmin();
-    renderAdminSuggBoxSection();
-    const mInput = document.getElementById('admin-mission-input');
-    if (mInput) mInput.value = state.missionText || '';
-    renderSupabaseAdminState();
+    errEl.textContent = '管理者PINは廃止されました。管理者Googleアカウントを設定してください。';
+    errEl.hidden = false;
   });
   document.getElementById('admin-setup-cancel').addEventListener('click', closeAdminModal);
   // PIN設定
@@ -4036,7 +3987,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // 初回訪問時にニックネームモーダル
-  await runInitialPortalBootstrap(storedUsername);
+  const authenticated = await runInitialPortalBootstrap(storedUsername);
+  if (authenticated) {
+    await initOrder({});
+    fetchAndRenderWeather();
+    setInterval(fetchAndRenderWeather, 30 * 60 * 1000);
+  }
 
   // ===== TODO パネル =====
   document.getElementById('todo-toggle-btn').addEventListener('click', () => {
@@ -4124,7 +4080,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('email-generate').addEventListener('click', generateEmail);
   document.getElementById('btn-copy-output').addEventListener('click', copyEmailOutput);
   document.getElementById('btn-reset-output').addEventListener('click', resetEmailOutput);
-  document.getElementById('email-api-key-save').addEventListener('click', saveGeminiApiKey);
   // タブ
   // プロフィール
   document.getElementById('ep-save').addEventListener('click', saveUserEmailProfile);
@@ -4459,14 +4414,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('private-section-cancel').addEventListener('click', closePrivateSectionModal);
 
   document.getElementById('private-section-icon').addEventListener('input', e => {
-    const prev = document.getElementById('private-section-icon-preview');
-    if (prev) prev.innerHTML = `<i class="${e.target.value.trim()}"></i>`;
+    renderPrivateSectionIconPreview(e.target.value.trim());
   });
 
   document.getElementById('private-section-save').addEventListener('click', async () => {
     const label = document.getElementById('private-section-label').value.trim();
-    const icon = document.getElementById('private-section-icon').value.trim() || 'fa-solid fa-star';
+    const iconInput = document.getElementById('private-section-icon').value.trim();
+    const icon = sanitizeIconIdentifier(iconInput || 'fa-solid fa-star', '');
     if (!label) { document.getElementById('private-section-label').focus(); return; }
+    if (!icon || (icon.startsWith('svg:') && !SVG_ICONS[icon])) {
+      showToast('アイコン指定を確認してください。', 'warning');
+      document.getElementById('private-section-icon').focus();
+      return;
+    }
 
     const btn = document.getElementById('private-section-save');
     btn.disabled = true;

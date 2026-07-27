@@ -2,16 +2,16 @@
 
 ## プロジェクト概要
 - **名前**: 生産管理課 ポータル
-- **公開先**: GitHub Pages (`https://github.com/ni1214/portal.git` / branch: `master`)
+- **公開先**: Vercel（GitHub `https://github.com/ni1214/portal.git` / branch: `master` はソース管理のみ）
 - **バックエンド**: Supabase（runtime / 本番 primary） / Firebase は移行スクリプト専用
 - **スタック**: Vanilla JS (ES modules) + HTML + CSS — フレームワークなし
 - **主要ファイル**: `index.html` / `script.js` / `style.css`
 
 ## 開発方針（重要）
-- **基本方針**: GitHub Pages + Supabase Free の範囲内で実装する
-- バックエンド処理が必要になっても、まず「Supabase / フロントで代替できないか」を先に検討する
-- Vercel等に切り替えればより良い方法がある場合は「Vercelに切り替えれば〇〇もできます」と**条件付きで提案するだけ**にする
-- ユーザーはVercel等への移行を現時点では望んでいない
+- **基本方針**: Vercel + Supabase を本番構成とする
+- ブラウザへ置けないAPIキー・メール送信・認証済みAI処理は Vercel Functions に限定する
+- 静的ファイルは allowlist ビルドした `dist/` だけを公開し、SQL・運用文書・ツールを配信しない
+- Supabase Data API は Google セッションJWT + RLSを必須とし、publishable keyだけの匿名業務アクセスを許可しない
 
 ## Claude Code 役割の Codex 対応表
 > **目的**: Claude Code 側で使っている常設エージェント名を、Codex では `spawn_agent` / `explorer` / `worker` / `web` に読み替えて運用する。
@@ -171,21 +171,24 @@ export function xxxFunction() { ... }
 
 ## Git ワークフロー
 - 機能変更のたびに `git add` → `git commit` → `git push origin master`
-- コミット後 GitHub Pages に自動デプロイされる（数分で反映）
+- コミット後 Vercel のProductionへ自動デプロイする。GitHub Pagesは移行完了後に停止する
 - ユーザーに止められていない限り、**実装完了時は commit と push まで行う前提**で進める
 - 新規チャットでも同様に、変更を残す場合は `master` への push まで完了させる
 
 ## アーキテクチャ
 - 現在の runtime 本線は **Supabase**。以下の Firebase / Firestore 記述は、主に移行履歴・旧パス対応の参照メモとして残っている
 - `script.js` は `type="module"` — ESM import 構文必須
-- runtime は `modules/supabase.js` の REST helper を本線で使う。リアルタイム相当が必要な箇所は機能ごとに polling / 再取得で補う
+- runtime は `modules/supabase.js` の REST helper を本線で使い、`Authorization` には Google セッションの access token を送る。リアルタイム相当が必要な箇所は機能ごとに polling / 再取得で補う
+- Gemini / OpenWeather / 発注メールは同一オリジンの `/api/*` を経由し、秘密値をブラウザ・DBレスポンス・ログへ出さない
+- 管理権限は `user_accounts.is_admin` をサーバー側の正とし、ブラウザ状態・PIN・自己申告プロフィールを認可根拠にしない
 - **常時編集モード**: `isEditMode = true` 固定（PIN ゲートなし）
 
 ## ユーザー識別（Googleログイン + username互換）
 - 2026-06-22 以降の入口は **Supabase Auth の Google OAuth** を基本にする。
 - 既存データ互換のため、runtime の個人データキーは引き続き `state.currentUsername` / `user_accounts.username` を使う。
 - Google アカウント情報は `user_accounts.google_auth_id` / `google_email` / `google_name` / `google_avatar_url` に紐付ける。
-- 初回 Google ログイン時は、ポータル内表示名（`username`）を作成する。既存データを引き継ぐ場合は、これまでの `username` を入力して Google アカウントにリンクする。
+- 初回利用前に管理者が `username` / 会社 `google_email` / `access_department` を事前登録する。ブラウザからの自己登録は許可しない。
+- 初回 Google ログイン時は `claim_portal_account` が、JWTの会社メールと事前登録行が一致する場合だけ `google_auth_id` を原子的にリンクする。表示名の入力や既存名の自己申告を認可根拠にしない。
 - 旧 `localStorage('portal-username')` は自動ログインの正としない。Google セッションがない場合は復元せず、Googleログインへ誘導する。
 - `currentUsername` 変数で管理。`loadPersonalData(username)` で個人 Supabase データを読み込む。
 - 本番反映前に Supabase Dashboard の Google provider を有効化し、Google Cloud OAuth の Authorized JavaScript origins / redirect URI を設定すること。未設定のまま push するとログインできない。
@@ -232,7 +235,7 @@ export function xxxFunction() { ... }
 | `updatedBy` | string | 公開カードの最終更新者 |
 
 - 共有リンクは Google Drive 風のグリッド/リスト表示を持つ。サムネイル表示はユーザーごとに ON/OFF 保存する。
-- GitHub Pages 運用のため、外部ページのサムネイル自動スクレイピングは本線にしない。任意の `thumbnailUrl` とリンク種別アイコンで代替する。
+- Vercel運用でも外部ページのサムネイル自動スクレイピングは本線にしない。任意の `thumbnailUrl` とリンク種別アイコンで代替する。
 
 ### 共有リンク UI の再発防止（2026-07）
 - 共有リンクは検索を主操作にし、`すべて / お気に入り`、カテゴリ、グリッド/一覧を同じワークスペース内で切り替える。別画面や大きなモーダルへ分けない。
@@ -257,6 +260,12 @@ export function xxxFunction() { ... }
 | `orderedAt` | timestamp | 発注日時 |
 | `emailSent` | boolean | メール送信済みフラグ |
 | `emailSentAt` | timestamp\|null | メール送信日時 |
+| `emailSendStatus` | string | `'pending'` / `'sending'` / `'sent'` / `'failed'` |
+| `attemptId` | string\|null | サーバーが採番する送信試行ID |
+| `startedAt` | timestamp\|null | 送信処理を開始した日時 |
+| `emailResolution` | string\|null | 結果不明時の管理者確認結果（`'sent'` / `'not_sent'`） |
+| `emailResolutionBy` | string\|null | Gmail送信済みを確認して状態を確定した管理者 |
+| `emailResolvedAt` | timestamp\|null | 管理者が送信状態を確定した日時 |
 | `deletedAt` | timestamp\|null | 履歴を削除した日時（`null` なら表示対象） |
 | `deletedBy` | string\|null | 履歴を削除したユーザー名 |
 
@@ -312,6 +321,18 @@ export function xxxFunction() { ... }
 | `googleAvatarUrl` | string | Googleプロフィール画像URL |
 | `loginProvider` | string | `'google'` / 旧互換 `'nickname'` |
 | `lastGoogleLoginAt` | timestamp\|null | Googleログイン確認日時 |
+| `isAdmin` | boolean | サーバー管理の管理者権限。クライアントPINやプロフィール役割から昇格させない |
+| `isActive` | boolean | ポータル利用可否。無効なアカウントはRLS helperで会員として扱わない |
+
+### Vercel移行時のセキュリティ追加設計（2026-07-23）
+
+- `private.current_username()` / `private.is_admin()` を `auth.uid()` と `user_accounts` の対応だけから判定する。
+- 全業務テーブルでRLSを有効化し、`anon` のテーブル権限と不要な関数実行権限を剥奪する。
+- 個人テーブルは本人行のみ、共有テーブルは認証済み閲覧 + 必要な役割だけ更新、チャット・Drive・P2Pは当事者だけに限定する。
+- `portal_config` の `gemini_api_key` / `gas_order_url` / `pin_hash` はクライアントから取得しない。秘密値はVercel環境変数へ移行後にDB値を消去する。
+- AIと発注メールの乱用防止は、JWT検証に加えてDB側の原子的なrate limit / idempotency RPCで行う。
+- `orders` にメール送信試行状態・試行ID・開始時刻を追加し、同じ発注の二重送信を防止する。
+- GAS送信後に応答を確認できない発注は`sending`のまま自動再送を停止する。管理者がGmailの送信済みを発注IDで照合し、Vercel Functionが同じattemptのGAS状態を先に照合・確定してからDBを`sent`または`not_sent`へ更新した場合だけ次へ進める。ブラウザからDBだけを再送可能へ戻さない。
 
 ### トラブル報告フィールド（`trouble_reports/{reportId}`）
 | フィールド | 型 | 説明 |
@@ -366,8 +387,14 @@ export function xxxFunction() { ... }
 - **保持ポリシー（2026-03 追加）**: `users/{name}/attendance/` はフロント側で週1回クリーンアップし、180日より古い日付ドキュメントを自動削除する。
 
 ## セキュリティ
+- Vercel Functions はブラウザの Bearer Supabase JWT を `/auth/v1/user` で検証し、本人IDを確定してから処理する。
+- `consume_portal_rate_limit` / `claim_order_email_send` / `finish_order_email_send` / `authorize_order_email_resolution` / `resolve_order_email_send` は `service_role` 専用RPCとし、`anon` / `authenticated` からの直接実行を許可しない。検証済みの `user.id` / `user.email` を `p_user_id` / `p_user_email` として渡し、DB側でもAuth紐付け、会社メール、所有者・管理者・送信attemptを再検証する。発注メールの結果不明処理は、認可RPC → GASの同一attempt照合 → DB確定RPCの順に行う。
+- `SUPABASE_SERVICE_ROLE_KEY` は Vercel の Sensitive 環境変数だけに保存し、ブラウザコード、ログ、Git、`dist/` へ絶対に含めない。
+- APIのブラウザ送信元は本番の `SITE_ORIGIN` と、Preview時にVercelが設定する正規化済み `VERCEL_URL` の完全一致だけを許可する。リクエストの `Host` ヘッダーから許可originを組み立てない。
+- Vercel Functions は `/auth/v1/user` のトップレベル `email` を小文字化して検証し、厳密に `@framex.co.jp` の会社アカウントだけを許可する。Google OAuth の `hd` は入口のヒントであり、認可判定には使わない。
+- Vercel Functions は同じAuth応答の `app_metadata.provider` が厳密に `google` であることも検証し、`providers` 配列だけのフォールバックや会社ドメインのemail/passwordアカウント等をAPI認可へ流用させない。
 - runtime は Supabase。本番で Firebase セキュリティルールは使っていない。アクセス制御は Supabase 側の設定を前提に整理する
-- 管理者PIN: `portal/config.pinHash`（SHA-256ハッシュ）
+- 管理者認可は `user_accounts.is_admin` のみを正とする。旧管理者PINは認可に使用せず、Vercel移行時に保存列を削除する。
 - 招待コード機能は 2026-06-23 に廃止。入口制御は Supabase Auth の Googleログインに一本化する。
 - 個人PINロック: `users/{name}/data/lock_pin.hash`
 - ログイン前PIN確認: `users/{name}/data/lock_pin.enabled === true` かつ `hash` があるユーザーのみ、ユーザー名入力後にログイン前PINを要求する

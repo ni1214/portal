@@ -3,13 +3,12 @@ import { state, USER_ROLE_OPTIONS, USER_ROLE_LABELS } from './state.js';
 import { esc } from './utils.js';
 import { showToast } from './notify.js';
 import {
-  fetchPortalConfigFromSupabase,
-  savePortalConfigToSupabase,
   fetchUserProfileFromSupabase,
   saveUserProfileToSupabase,
   fetchEmailContactsFromSupabase,
   createEmailContactInSupabase,
 } from './supabase.js';
+import { requestAi } from './secure-api.js';
 
 let deps = {};
 export function initEmail(d) { deps = d; }
@@ -32,7 +31,6 @@ E-mail：{email}
 
 
 // ===== モジュール内状態 =====
-let geminiApiKey    = null;
 let emailModalLoaded = false;
 let userEmailProfile = buildNormalizedProfile();
 let emailContacts   = [];       // [{ id, companyName, personName }]
@@ -83,11 +81,6 @@ export async function loadUserEmailProfile(username = state.currentUsername) {
 
 // ===== 初期データ読み込み =====
 export async function loadEmailData() {
-  try {
-    const config = await fetchPortalConfigFromSupabase();
-    geminiApiKey = config.geminiApiKey || null;
-  } catch (_) {}
-
   if (state.currentUsername) {
     await loadEmailContacts();
     await loadUserEmailProfile(state.currentUsername);
@@ -128,7 +121,7 @@ function renderEmailReadiness() {
   if (!host) return;
 
   const profileReady = Boolean(userEmailProfile.realName && userEmailProfile.department);
-  const apiReady = Boolean(geminiApiKey);
+  const apiReady = Boolean(state.googleAuthSession?.access_token);
   const contactCount = Array.isArray(emailContacts) ? emailContacts.length : 0;
   const signatureReady = Boolean(userEmailProfile.signatureTemplate || DEFAULT_SIGNATURE_TEMPLATE);
   const readyCount = [profileReady, apiReady, signatureReady].filter(Boolean).length;
@@ -144,9 +137,9 @@ function renderEmailReadiness() {
       ready: profileReady,
     },
     {
-      icon: 'fa-solid fa-key',
-      label: 'Gemini',
-      value: apiReady ? '設定済み' : 'APIキー未設定',
+      icon: 'fa-solid fa-shield-halved',
+      label: 'AI',
+      value: apiReady ? 'サーバー接続済み' : 'Googleログインが必要',
       ready: apiReady,
     },
     {
@@ -213,8 +206,7 @@ export async function saveNewContact() {
 // ===== APIキーUI更新 =====
 function updateApiKeyUI() {
   const area = document.getElementById('email-api-key-area');
-  if (!area) return;
-  area.hidden = !!geminiApiKey;
+  if (area) area.hidden = true;
   renderEmailReadiness();
 }
 
@@ -265,9 +257,8 @@ export function selectTone(tone) {
 
 // ===== メール生成 =====
 export async function generateEmail() {
-  if (!geminiApiKey) {
-    document.getElementById('email-api-key-area').hidden = false;
-    document.getElementById('email-api-key-input').focus();
+  if (!state.googleAuthSession?.access_token) {
+    showToast('Googleログインが必要です。', 'warning');
     return;
   }
 
@@ -343,30 +334,14 @@ ${received}
   outputArea.hidden = true;
 
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiApiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: fullPrompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 1200 }
-        })
-      }
-    );
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error?.message || `HTTP ${res.status}`);
-    }
-    const data = await res.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '（生成結果が空でした）';
+    const text = await requestAi('email', fullPrompt);
     document.getElementById('email-output').textContent = text;
     outputArea.hidden = false;
     outputArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } catch (err) {
     document.getElementById('email-output').textContent = `エラー: ${err.message}`;
     outputArea.hidden = false;
-    console.error('Gemini APIエラー:', err);
+    console.error('メールAI生成エラー:', err);
   } finally {
     btn.disabled = false;
     btn.innerHTML = emailMode === 'reply'
@@ -390,18 +365,6 @@ export function copyEmailOutput() {
 export function resetEmailOutput() {
   document.getElementById('email-output-area').hidden = true;
   document.getElementById('email-output').textContent = '';
-}
-
-// ===== Gemini APIキー保存 =====
-export async function saveGeminiApiKey() {
-  const key = document.getElementById('email-api-key-input').value.trim();
-  if (!key) return;
-  try {
-    await savePortalConfigToSupabase({ geminiApiKey: key });
-    geminiApiKey = key;
-    document.getElementById('email-api-key-input').value = '';
-    updateApiKeyUI();
-  } catch (err) { console.error('APIキー保存エラー:', err); }
 }
 
 // ===== 署名補完 =====

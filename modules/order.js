@@ -1,13 +1,11 @@
 // ========== 鋼材発注 (order.js) ==========
 import {
-  db, doc, getDoc, setDoc, addDoc, getDocs, updateDoc, deleteDoc,
+  db, doc, addDoc, getDocs, updateDoc, deleteDoc,
   collection, query, where, orderBy,
   serverTimestamp
 } from './config.js';
 import {
   isSupabaseSharedCoreEnabled,
-  fetchPortalConfigFromSupabase,
-  savePortalConfigToSupabase,
   fetchOrderSuppliersFromSupabase,
   fetchOrderItemsFromSupabase,
   createOrderInSupabase,
@@ -20,12 +18,16 @@ import {
 } from './supabase.js';
 import { state } from './state.js';
 import { esc, normalizeProjectKey } from './utils.js';
+import { showToast } from './notify.js';
+import {
+  reconcileOrderEmailFromApi,
+  sendOrderEmailFromApi,
+} from './secure-api.js';
 
 // ===== 内部状態 =====
 let _suppliers = [];   // order_suppliers
 let _items = [];       // order_items
 let _historyOffset = 0; // 履歴期間オフセット（0=今期）
-let _gasUrl = '';
 let _orderType = 'factory';    // 工場在庫 / 現場名発注
 let _materialFilter = 'all';   // すべて / steel / stainless
 let _categoryFilter = 'all';   // カテゴリ絞り込み
@@ -92,33 +94,24 @@ function parseOrderLengths(raw = '') {
 async function loadMasters() {
   if (isSupabaseSharedCoreEnabled()) {
     try {
-      const [suppliers, items, config] = await Promise.all([
+      const [suppliers, items] = await Promise.all([
         fetchOrderSuppliersFromSupabase(),
         fetchOrderItemsFromSupabase(),
-        fetchPortalConfigFromSupabase().catch(err => {
-          console.error('order: portal_config Supabase読込失敗', err);
-          return {};
-        }),
       ]);
       _suppliers = suppliers;
       _items = items.map(normalizeSharedOrderItem);
-      _gasUrl = config.gasOrderUrl || '';
     } catch (err) {
       console.error('order: loadMasters (Supabase) error', err);
     }
     return;
   }
   try {
-    const [suppSnap, itemSnap, configSnap] = await Promise.all([
+    const [suppSnap, itemSnap] = await Promise.all([
       getDocs(query(collection(db, 'order_suppliers'), where('active', '==', true))),
       getDocs(query(collection(db, 'order_items'), orderBy('sortOrder'))),
-      getDoc(doc(db, 'portal', 'config'))
     ]);
     _suppliers = suppSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     _items = itemSnap.docs.map(d => normalizeSharedOrderItem({ id: d.id, ...d.data() }));
-    if (configSnap.exists()) {
-      _gasUrl = configSnap.data().gasOrderUrl || '';
-    }
   } catch (err) {
     console.error('order: loadMasters error', err);
   }
@@ -236,7 +229,10 @@ function buildHistoryOverview(activeOrders, deletedOrders) {
   const visibleCount = activeOrders.length;
   const deletedCount = deletedOrders.length;
   const totalQty = activeOrders.reduce((sum, order) => sum + getOrderItemStats(order).totalQty, 0);
-  const unsentCount = activeOrders.filter(order => !order.emailSent).length;
+  const reviewCount = activeOrders.filter(order => order.emailSendStatus === 'sending').length;
+  const unsentCount = activeOrders.filter(order => (
+    !order.emailSent && order.emailSendStatus !== 'sending'
+  )).length;
   return `
     <div class="ord-history-overview">
       <div class="ord-history-overview-card">
@@ -247,9 +243,9 @@ function buildHistoryOverview(activeOrders, deletedOrders) {
         <span>合計本数</span>
         <strong>${totalQty}本</strong>
       </div>
-      <div class="ord-history-overview-card${unsentCount ? ' ord-history-overview-card--warn' : ''}">
-        <span>未送信</span>
-        <strong>${unsentCount}件</strong>
+      <div class="ord-history-overview-card${unsentCount || reviewCount ? ' ord-history-overview-card--warn' : ''}">
+        <span>未送信 / 要確認</span>
+        <strong>${unsentCount} / ${reviewCount}件</strong>
       </div>
       <div class="ord-history-overview-card">
         <span>削除済み</span>
@@ -277,6 +273,42 @@ function buildStoredOrderData(data, { emailSent = false } = {}) {
   };
 }
 
+function getOrderEmailStatusMeta(order = {}) {
+  const status = order.emailSent ? 'sent' : (order.emailSendStatus || 'pending');
+  if (status === 'sent') {
+    return {
+      status,
+      label: '送信済み',
+      className: 'ord-email-badge--sent',
+      icon: 'fa-envelope-circle-check',
+    };
+  }
+  if (status === 'sending') {
+    return {
+      status,
+      label: '送信結果を確認中',
+      className: 'ord-email-badge--review',
+      icon: 'fa-shield-halved',
+    };
+  }
+  if (status === 'failed') {
+    return {
+      status,
+      label: order.emailResolution === 'not_sent'
+        ? '未送信を確認済み'
+        : '未送信（再送可）',
+      className: 'ord-email-badge--failed',
+      icon: 'fa-triangle-exclamation',
+    };
+  }
+  return {
+    status: 'pending',
+    label: '未送信',
+    className: 'ord-email-badge--unsent',
+    icon: 'fa-envelope',
+  };
+}
+
 function renderHistoryItem(order, { deleted = false } = {}) {
   const { label: typeLabel, className: typeCls } = getOrderTypeMeta(order);
   const itemsSummary = getOrderItemsSummary(order);
@@ -284,14 +316,26 @@ function renderHistoryItem(order, { deleted = false } = {}) {
   const projectKeyHtml = order.projectKey
     ? `<div class="ord-history-project"><span class="ord-history-project-label">物件No</span><span class="ord-project-key-chip">${esc(order.projectKey)}</span></div>`
     : '';
-  const emailBadge = order.emailSent
-    ? `<span class="ord-email-badge ord-email-badge--sent"><i class="fa-solid fa-envelope-circle-check"></i> 送信済み</span>`
-    : `<span class="ord-email-badge ord-email-badge--unsent"><i class="fa-solid fa-envelope"></i> 未送信</span>`;
+  const emailStatus = getOrderEmailStatusMeta(order);
+  const emailBadge = `<span class="ord-email-badge ${emailStatus.className}"><i class="fa-solid ${emailStatus.icon}"></i> ${esc(emailStatus.label)}</span>`;
   const deletedBadge = deleted
     ? '<span class="ord-history-deleted-badge"><i class="fa-solid fa-trash-can"></i> 削除済み</span>'
     : '';
   const deletedMeta = deleted
     ? `<div class="ord-history-deleted-note"><i class="fa-solid fa-rotate-left"></i> ${fmtDatetime(order.deletedAt)} に ${esc(order.deletedBy || '不明')} が削除</div>`
+    : '';
+  const retryButton = !deleted && ['pending', 'failed'].includes(emailStatus.status)
+    ? `<button class="ord-history-action-btn ord-history-email-retry-btn" data-id="${esc(order.id)}"><i class="fa-solid fa-paper-plane"></i> メールを送信</button>`
+    : '';
+  const resolutionButtons = !deleted && emailStatus.status === 'sending'
+    ? `
+      <div class="ord-email-review-actions">
+        <span><i class="fa-solid fa-shield-halved"></i> Gmailの送信済みを確認してから確定してください。</span>
+        ${state.isAdmin && order.attemptId ? `
+          <button class="ord-history-action-btn ord-email-resolve-btn" data-id="${esc(order.id)}" data-attempt-id="${esc(order.attemptId)}" data-resolution="sent"><i class="fa-solid fa-check"></i> 送信済みに確定</button>
+          <button class="ord-history-action-btn ord-email-resolve-btn" data-id="${esc(order.id)}" data-attempt-id="${esc(order.attemptId)}" data-resolution="not_sent"><i class="fa-solid fa-rotate"></i> 未送信として再送許可</button>`
+          : '<strong>管理者確認待ち</strong>'}
+      </div>`
     : '';
   const actionButtons = deleted
     ? `
@@ -299,7 +343,8 @@ function renderHistoryItem(order, { deleted = false } = {}) {
         <button class="ord-history-action-btn ord-history-restore-btn" data-id="${esc(order.id)}"><i class="fa-solid fa-rotate-left"></i> 元に戻す</button>`
     : `
         <button class="ord-history-action-btn ord-history-detail-btn" data-id="${esc(order.id)}"><i class="fa-solid fa-file-lines"></i> 詳細</button>
-        <button class="ord-history-action-btn ord-history-delete-btn" data-id="${esc(order.id)}"><i class="fa-solid fa-trash"></i> 削除</button>`;
+        <button class="ord-history-action-btn ord-history-delete-btn" data-id="${esc(order.id)}"><i class="fa-solid fa-trash"></i> 削除</button>
+        ${retryButton}`;
 
   return `
     <div class="ord-history-item${deleted ? ' ord-history-item--deleted' : ''}" data-id="${esc(order.id)}">
@@ -320,6 +365,7 @@ function renderHistoryItem(order, { deleted = false } = {}) {
       ${projectKeyHtml}
       ${order.note ? `<div class="ord-history-note">備考: ${esc(order.note)}</div>` : ''}
       ${deletedMeta}
+      ${resolutionButtons}
       <div class="ord-history-detail-btn-row">${actionButtons}</div>
     </div>`;
 }
@@ -386,47 +432,7 @@ ${noteText}
 E-mail：takabayashi@framex.co.jp
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
-  return { subject, body, toEmail: supplier.email || orderData.supplierEmail, replyTo: NOTIFY_EMAIL };
-}
-
-// ===== メール送信 =====
-const NOTIFY_EMAIL = 'takabayashi@framex.co.jp';
-
-async function sendOrderEmail(orderData) {
-  if (!_gasUrl) {
-    alert('GAS URLが設定されていません。管理者に設定を依頼してください。');
-    return false;
-  }
-
-  const { subject, body, toEmail, replyTo } = buildEmailContent(orderData);
-
-  try {
-    // 発注先へ送信（replyTo を設定することで返信先を担当者メールに）
-    await fetch(_gasUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: toEmail, subject, body, replyTo })
-    });
-
-    // 担当者（髙林）へも同内容を送信（誰が発注したかわかるよう控えとして）
-    await fetch(_gasUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        to: NOTIFY_EMAIL,
-        subject: `【控え】${subject}`,
-        body: `※ これは発注控えです。発注者：${orderData.orderedBy}\n\n${body}`
-      })
-    });
-
-    return true;
-  } catch (err) {
-    console.error('order: sendOrderEmail error', err);
-    alert('メール送信に失敗しました。\n' + err.message);
-    return false;
-  }
+  return { subject, body, toEmail: supplier.email || orderData.supplierEmail };
 }
 
 // ===== 印刷 =====
@@ -987,10 +993,14 @@ function buildOrderPreviewSummary(data) {
 }
 
 let _pendingOrderData = null;
+let _pendingOrderId = '';
+let _pendingOrderNeedsReview = false;
 async function openPreviewModal() {
   const data = collectOrderData();
   if (!data) return;
   _pendingOrderData = data;
+  _pendingOrderId = '';
+  _pendingOrderNeedsReview = false;
 
   const { subject, body, toEmail } = buildEmailContent({ ...data, orderedAt: data._localNow });
 
@@ -1009,39 +1019,55 @@ function closePreviewModal() {
 // プレビューから実際に送信
 async function submitFromPreview() {
   if (!_pendingOrderData) return;
+  if (_pendingOrderNeedsReview) {
+    await openOrderHistoryModal();
+    return;
+  }
   const data = _pendingOrderData;
   const nowLocal = data._localNow;
-  const localOrderData = { ...data, orderedAt: nowLocal };
   const btn = document.getElementById('ord-preview-send');
+  let needsStatusCheck = false;
 
   try {
     if (btn) { btn.disabled = true; btn.textContent = '送信中...'; }
-    const ok = await sendOrderEmail(localOrderData);
-    if (!ok) return;
-
-    if (isSupabaseSharedCoreEnabled()) {
-      await createOrderInSupabase({
-        ...buildStoredOrderData(data, { emailSent: true }),
-        orderedAt: nowLocal.toISOString(),
-        emailSentAt: nowLocal.toISOString(),
-      });
-    } else {
-      await addDoc(collection(db, 'orders'), buildStoredOrderData(data, { emailSent: true }));
+    if (!isSupabaseSharedCoreEnabled()) {
+      throw new Error('発注メールはVercel + Supabase環境でのみ送信できます。');
     }
+    if (!_pendingOrderId) {
+      _pendingOrderId = await createOrderInSupabase({
+        ...buildStoredOrderData(data, { emailSent: false }),
+        orderedAt: nowLocal.toISOString(),
+        emailSentAt: null,
+      });
+    }
+    const sendResult = await sendOrderEmailFromApi(_pendingOrderId);
 
     const usedIds = data.items.filter(it => it.itemId).map(it => it.itemId);
     if (usedIds.length) saveRecent(usedIds);
-    alert('メールを送信しました。');
+    alert(sendResult?.alreadySent ? 'この発注メールは送信済みです。' : 'メールを送信しました。');
     _pendingOrderData = null;
+    _pendingOrderId = '';
+    _pendingOrderNeedsReview = false;
     await openOrderHistoryModal();
   } catch (err) {
     console.error('order: submitFromPreview error', err);
-    _pendingOrderData = null;
-    alert('メール送信後の履歴保存に失敗しました。\n履歴に残っていない可能性があります。\n' + err.message);
+    needsStatusCheck = [
+      'email_delivery_unconfirmed',
+      'CLIENT_TIMEOUT',
+      'NETWORK_ERROR',
+    ].includes(err?.code);
+    if (needsStatusCheck) {
+      _pendingOrderNeedsReview = true;
+      alert(`送信結果を確認中です。\n二重送信を防ぐため自動再送は停止しています。新しい発注を作らず、管理者が発注履歴からGmailの送信済みを確認してください。\n${err.message}`);
+    } else {
+      alert(`メールを送信できませんでした。${_pendingOrderId ? '\n発注内容は未送信として履歴に保存されています。' : ''}\n${err.message}`);
+    }
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> この内容で送信';
+      btn.innerHTML = needsStatusCheck
+        ? '<i class="fa-solid fa-clock-rotate-left"></i> 発注履歴を確認'
+        : '<i class="fa-solid fa-paper-plane"></i> この内容で送信';
     }
   }
 }
@@ -1254,6 +1280,10 @@ function openOrderDetailModal(orderId) {
   const typeLabel = (!order.orderType || order.orderType === 'factory') ? '工場在庫' : (order.siteName || '現場名発注');
   const noteText = (order.note || '').trim() || '（なし）';
   const { itemCount, totalQty } = getOrderItemStats(order);
+  const emailStatus = getOrderEmailStatusMeta(order);
+  const resolutionInfo = order.emailResolvedAt
+    ? `<tr><th>状態確認</th><td>${fmtDatetime(order.emailResolvedAt)} / ${esc(order.emailResolutionBy || '管理者')}</td></tr>`
+    : '';
   const deletedInfo = isOrderDeleted(order)
     ? `<div class="ord-detail-deleted-banner"><i class="fa-solid fa-trash-can-arrow-up"></i> この履歴は削除済みです。${fmtDatetime(order.deletedAt)} に ${esc(order.deletedBy || '不明')} が削除しました。</div>`
     : '';
@@ -1272,7 +1302,7 @@ function openOrderDetailModal(orderId) {
         <div><span>発注先</span><strong>${esc(supplier.name || order.supplierName || '-')}</strong></div>
         <div><span>発注区分</span><strong>${esc(typeLabel)}</strong></div>
         <div><span>品目</span><strong>${itemCount}品目 / 合計${totalQty}本</strong></div>
-        <div><span>送信状態</span><strong>${order.emailSent ? '送信済み' : '未送信'}</strong></div>
+        <div><span>送信状態</span><strong>${esc(emailStatus.label)}</strong></div>
       </div>
       <table class="ord-detail-meta">
         <tr><th>発注日時</th><td>${dateStr}</td></tr>
@@ -1280,7 +1310,8 @@ function openOrderDetailModal(orderId) {
         <tr><th>発注者</th><td>${esc(order.orderedBy || '')}（日建フレメックス株式会社 生産管理課）</td></tr>
         <tr><th>発注区分</th><td>${typeLabel}</td></tr>
         ${order.projectKey ? `<tr><th>物件No</th><td><span class="ord-project-key-chip">${esc(order.projectKey)}</span></td></tr>` : ''}
-        <tr><th>メール送信</th><td>${order.emailSent ? `<span style="color:var(--accent-cyan)"><i class="fa-solid fa-envelope-circle-check"></i> 送信済み</span>` : `<span style="color:var(--accent-orange)"><i class="fa-solid fa-envelope"></i> 未送信（メール未送信）</span>`}</td></tr>
+        <tr><th>メール送信</th><td><span class="ord-email-badge ${emailStatus.className}"><i class="fa-solid ${emailStatus.icon}"></i> ${esc(emailStatus.label)}</span></td></tr>
+        ${resolutionInfo}
         ${isOrderDeleted(order) ? `<tr><th>削除状態</th><td>${fmtDatetime(order.deletedAt)} / ${esc(order.deletedBy || '不明')}</td></tr>` : ''}
       </table>
       <div class="ord-detail-section">【発注先】</div>
@@ -1367,15 +1398,81 @@ async function restoreOrderHistory(orderId) {
   }
 }
 
+async function retryOrderEmail(orderId) {
+  const order = findOrderById(orderId);
+  const emailStatus = getOrderEmailStatusMeta(order);
+  if (!order || !['pending', 'failed'].includes(emailStatus.status)) return;
+  if (!confirm(`「${order.supplierName || '発注先'}」への発注メールを送信しますか？\n\n発注ID: ${order.id}`)) return;
+
+  try {
+    const result = await sendOrderEmailFromApi(order.id);
+    alert(result?.alreadySent ? 'この発注メールは送信済みです。' : 'メールを送信しました。');
+  } catch (err) {
+    console.error('order: retryOrderEmail error', err);
+    if (['email_delivery_unconfirmed', 'CLIENT_TIMEOUT', 'NETWORK_ERROR'].includes(err?.code)) {
+      alert(`送信結果を確認中です。\n二重送信を防ぐため自動再送は停止しました。管理者がGmailの送信済みを確認してください。\n${err.message}`);
+    } else {
+      alert(`メールを送信できませんでした。\n${err.message}`);
+    }
+  } finally {
+    await renderHistory();
+  }
+}
+
+async function resolveOrderEmailState(orderId, attemptId, resolution) {
+  if (!state.isAdmin) return;
+  const order = findOrderById(orderId);
+  if (!order || order.emailSendStatus !== 'sending' || order.attemptId !== attemptId) {
+    alert('送信状態が更新されています。履歴を再読み込みします。');
+    await renderHistory();
+    return;
+  }
+
+  const sent = resolution === 'sent';
+  const message = sent
+    ? `Gmailの「送信済み」で発注ID「${order.id}」のメールが送信済みであることを確認しましたか？\n\n確認できた場合だけ「OK」を押してください。`
+    : `Gmailの「送信済み」に発注ID「${order.id}」のメールが存在しないことを確認しましたか？\n\n「OK」を押すと、この発注を再送できる状態へ戻します。`;
+  if (!confirm(message)) return;
+
+  try {
+    await reconcileOrderEmailFromApi(order.id, attemptId, resolution);
+    alert(sent
+      ? '送信済みとして確定しました。'
+      : '未送信として確定し、再送できる状態へ戻しました。');
+    if (_pendingOrderId === order.id) {
+      _pendingOrderNeedsReview = false;
+      if (sent) {
+        _pendingOrderData = null;
+        _pendingOrderId = '';
+      } else {
+        const previewButton = document.getElementById('ord-preview-send');
+        if (previewButton) {
+          previewButton.innerHTML = '<i class="fa-solid fa-paper-plane"></i> この内容で再送';
+        }
+      }
+    }
+  } catch (err) {
+    console.error('order: resolveOrderEmailState error', err);
+    alert(`送信状態を確定できませんでした。\n${err.message}`);
+  } finally {
+    await renderHistory();
+  }
+}
+
 // ===== 管理モーダル =====
 export async function openOrderAdminModal() {
+  if (!state.isAdmin) {
+    showToast('管理者権限が必要です。', 'error');
+    return false;
+  }
   const modal = document.getElementById('ord-admin-modal');
-  if (!modal) return;
+  if (!modal) return false;
   await loadMasters();
   resetSupplierForm();
   switchOrderAdminTab('items');
   document.getElementById('ord-modal')?.classList.add('visible');
   setOrderWorkspaceView('admin');
+  return true;
 }
 
 export function closeOrderAdminModal() {
@@ -1553,44 +1650,21 @@ function renderAdminSuppliers() {
     </div>`).join('');
 }
 
-// --- GAS設定 ---
+// --- メール送信設定（Vercelサーバー管理） ---
 function renderAdminGas() {
   const input = document.getElementById('ord-gas-url-input');
-  if (input) input.value = _gasUrl;
+  if (input) {
+    input.value = '';
+    input.disabled = true;
+  }
   renderGasStatus();
 }
 
 function renderGasStatus() {
   const status = document.getElementById('ord-gas-status');
   if (!status) return;
-  const configured = Boolean(_gasUrl);
-  status.className = `ord-gas-status ${configured ? 'ord-gas-status--ready' : 'ord-gas-status--missing'}`;
-  status.innerHTML = configured
-    ? '<i class="fa-solid fa-circle-check"></i><div><strong>メール送信設定済み</strong><span>プレビュー画面から発注メールを送信できます。</span></div>'
-    : '<i class="fa-solid fa-triangle-exclamation"></i><div><strong>メール送信は未設定</strong><span>GAS Webアプリ URLを保存するまで、発注メールは送信できません。</span></div>';
-}
-
-async function saveGasUrl() {
-  const input = document.getElementById('ord-gas-url-input');
-  if (!input) return;
-  const url = input.value.trim();
-  if (url && !/^https:\/\/script\.google\.com\/macros\/s\//.test(url)) {
-    alert('GAS Webアプリ URLを入力してください。URLは https://script.google.com/macros/s/... で始まる形式です。');
-    input.focus();
-    return;
-  }
-  try {
-    if (isSupabaseSharedCoreEnabled()) {
-      await savePortalConfigToSupabase({ gasOrderUrl: url });
-    } else {
-      await setDoc(doc(db, 'portal', 'config'), { gasOrderUrl: url }, { merge: true });
-    }
-    _gasUrl = url;
-    renderGasStatus();
-    alert('GAS URLを保存しました。');
-  } catch (err) {
-    alert('保存に失敗しました: ' + err.message);
-  }
+  status.className = 'ord-gas-status ord-gas-status--ready';
+  status.innerHTML = '<i class="fa-solid fa-shield-halved"></i><div><strong>Vercelサーバーで管理</strong><span>送信先と認証情報はブラウザへ公開されません。</span></div>';
 }
 
 // ===== イベントハンドラ登録 =====
@@ -1728,6 +1802,20 @@ function bindOrderEvents() {
 
   // 履歴詳細
   document.getElementById('ord-history-list')?.addEventListener('click', e => {
+    const resolveBtn = e.target.closest('.ord-email-resolve-btn');
+    if (resolveBtn) {
+      resolveOrderEmailState(
+        resolveBtn.dataset.id,
+        resolveBtn.dataset.attemptId,
+        resolveBtn.dataset.resolution,
+      );
+      return;
+    }
+    const retryBtn = e.target.closest('.ord-history-email-retry-btn');
+    if (retryBtn) {
+      retryOrderEmail(retryBtn.dataset.id);
+      return;
+    }
     const detailBtn = e.target.closest('.ord-history-detail-btn');
     if (detailBtn) {
       openOrderDetailModal(detailBtn.dataset.id);
@@ -1883,5 +1971,4 @@ function bindOrderEvents() {
   });
 
   // GAS URL保存
-  document.getElementById('ord-gas-save-btn')?.addEventListener('click', saveGasUrl);
 }

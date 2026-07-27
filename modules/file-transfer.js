@@ -1,7 +1,7 @@
 // ========== ファイル転送モジュール (P2P + Drive シェア) ==========
 
 import { state, RTC_CONFIG, FILE_CHUNK_SIZE } from './state.js';
-import { esc, getUserAvatarColor } from './utils.js';
+import { esc, getUserAvatarColor, isSafeWebUrl } from './utils.js';
 import { showToast, showConfirm } from './notify.js';
 import {
   fetchMyDriveLinkFromSupabase,
@@ -32,6 +32,21 @@ const FT_PANEL_MIN_WIDTH = 320;
 const FT_PANEL_MIN_HEIGHT = 360;
 const FT_PANEL_DEFAULT_WIDTH = 420;
 const FT_PANEL_DEFAULT_HEIGHT = 560;
+
+function getSafeDriveUrl(value) {
+  const url = `${value || ''}`.trim();
+  return isSafeWebUrl(url) ? url : '';
+}
+
+function openSafeDriveUrl(value) {
+  const url = getSafeDriveUrl(value);
+  if (!url) {
+    showToast('安全でないURLのため開けません。', 'error');
+    return false;
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
+  return true;
+}
 
 function isFtDesktopLayout() {
   return window.matchMedia('(min-width: 769px)').matches;
@@ -158,7 +173,7 @@ function updateInlineDriveShareState() {
   if (!btn) return;
   const inputUrl = document.getElementById('ft-my-link-input')?.value.trim();
   const url = inputUrl != null ? inputUrl : state._myDriveUrl;
-  const hasUrl = !!url && url.startsWith('http');
+  const hasUrl = !!getSafeDriveUrl(url);
   const hasUser = !!state._ftDriveSelectedUser;
   btn.disabled = !(hasUrl && hasUser);
   if (hasUrl && hasUser) {
@@ -618,14 +633,17 @@ export function stopFtListener() {
 export async function loadMyDriveUrl(username) {
   if (!username) return;
   try {
-    state._myDriveUrl = await fetchMyDriveLinkFromSupabase(username);
+    state._myDriveUrl = getSafeDriveUrl(await fetchMyDriveLinkFromSupabase(username));
   } catch (_) { state._myDriveUrl = ''; }
 }
 
 export async function saveMyDriveUrl(url) {
   if (!state.currentUsername) return;
-  state._myDriveUrl = url;
-  await saveMyDriveLinkInSupabase(state.currentUsername, url);
+  const normalized = `${url || ''}`.trim();
+  const safeUrl = normalized ? getSafeDriveUrl(normalized) : '';
+  if (normalized && !safeUrl) throw new Error('URLはhttp://またはhttps://で入力してください。');
+  state._myDriveUrl = safeUrl;
+  await saveMyDriveLinkInSupabase(state.currentUsername, safeUrl);
 }
 
 // --- Supabase polling ---
@@ -639,7 +657,7 @@ export function startDriveListeners(username) {
       const { incoming, outgoing } = await fetchDriveSharesFromSupabase(username);
       // 新規受信を検知して連絡先を自動保存
       incoming.forEach(s => {
-        if (!_driveKnownIncomingIds.has(s.id) && s.from && s.driveUrl && s.from !== username) {
+        if (!_driveKnownIncomingIds.has(s.id) && s.from && getSafeDriveUrl(s.driveUrl) && s.from !== username) {
           saveDriveContact(s.from, s.driveUrl);
         }
         _driveKnownIncomingIds.add(s.id);
@@ -672,10 +690,11 @@ export async function loadDriveContacts(username) {
 
 // --- Drive 連絡先 保存（追加・更新） ---
 export async function saveDriveContact(contactUsername, url) {
-  if (!state.currentUsername || !contactUsername || !url) return;
-  state._driveContacts[contactUsername] = { url, savedAt: Date.now() };
+  const safeUrl = getSafeDriveUrl(url);
+  if (!state.currentUsername || !contactUsername || !safeUrl) return;
+  state._driveContacts[contactUsername] = { url: safeUrl, savedAt: Date.now() };
   try {
-    await saveDriveContactInSupabase(state.currentUsername, contactUsername, url);
+    await saveDriveContactInSupabase(state.currentUsername, contactUsername, safeUrl);
   } catch (err) { console.error('Drive連絡先保存エラー:', err); }
 }
 
@@ -734,10 +753,11 @@ export function renderDrivePanel() {
     contactsEl.innerHTML = contacts.map(([name, info]) => {
       const color   = getUserAvatarColor(name);
       const initial = name.charAt(0).toUpperCase();
+      const safeUrl = getSafeDriveUrl(info.url);
       return `<div class="ft-contact-item">
-        <div class="ft-contact-avatar" style="background:${color}">${initial}</div>
+        <div class="ft-contact-avatar" style="background:${color}">${esc(initial)}</div>
         <div class="ft-contact-name" title="${esc(name)}">${esc(name)}</div>
-        <button class="btn-ft-contact-send" data-name="${esc(name)}" data-url="${esc(info.url)}" title="${esc(name)}のDriveフォルダを開く">
+        <button class="btn-ft-contact-send" data-name="${esc(name)}" data-url="${esc(safeUrl)}" title="${esc(name)}のDriveフォルダを開く"${safeUrl ? '' : ' disabled'}>
           <i class="fa-solid fa-folder-open"></i> 開く
         </button>
         <button class="btn-ft-contact-del" data-name="${esc(name)}" title="連絡先を削除">
@@ -746,7 +766,7 @@ export function renderDrivePanel() {
       </div>`;
     }).join('');
     contactsEl.querySelectorAll('.btn-ft-contact-send').forEach(btn => {
-      btn.addEventListener('click', () => window.open(btn.dataset.url, '_blank', 'noopener,noreferrer'));
+      btn.addEventListener('click', () => openSafeDriveUrl(btn.dataset.url));
     });
     contactsEl.querySelectorAll('.btn-ft-contact-del').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -764,6 +784,7 @@ export function renderDrivePanel() {
     const _tsDate = s.createdAt ? (s.createdAt.seconds ? new Date(s.createdAt.seconds * 1000) : new Date(s.createdAt)) : null;
     const ts  = _tsDate ? _tsDate.toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
     const msg = s.message ? `<div class="ft-drive-item-msg">${esc(s.message)}</div>` : '';
+    const safeUrl = getSafeDriveUrl(s.driveUrl);
     return `<div class="ft-drive-item">
       <div class="ft-drive-item-header">
         <i class="fa-brands fa-google-drive ft-drive-item-icon"></i>
@@ -774,7 +795,7 @@ export function renderDrivePanel() {
       </div>
       ${msg}
       <div class="ft-drive-item-actions">
-        <button class="btn-ft-drive-open" data-id="${s.id}" data-url="${esc(s.driveUrl)}" data-from="${esc(s.from)}">
+        <button class="btn-ft-drive-open" data-id="${esc(s.id)}" data-url="${esc(safeUrl)}" data-from="${esc(s.from)}"${safeUrl ? '' : ' disabled'}>
           <i class="fa-solid fa-folder-open"></i> フォルダを開く
         </button>
         <button class="btn-ft-drive-dismiss" data-id="${s.id}" title="消去">
@@ -793,11 +814,15 @@ export function renderDrivePanel() {
 
 // --- Driveを開く（既読にする） ---
 export async function openDriveShare(id, url) {
-  if (!url) return;
+  const safeUrl = getSafeDriveUrl(url);
+  if (!safeUrl) {
+    showToast('安全でないURLのため開けません。', 'error');
+    return;
+  }
   try {
     await updateDriveShareStatusInSupabase(id, 'viewed');
   } catch (_) {}
-  window.open(url, '_blank', 'noopener,noreferrer');
+  openSafeDriveUrl(safeUrl);
 }
 
 // --- 消去 ---
@@ -857,7 +882,7 @@ export async function confirmDriveSend() {
   const msg = document.getElementById('ft-drive-message').value.trim();
   if (!state._ftDriveSelectedUser) { showToast('送信先を選択してください', 'warning'); return; }
   const url = state._myDriveUrl;
-  if (!url) {
+  if (!getSafeDriveUrl(url)) {
     showToast('自分のDriveフォルダURLを設定してください。Drive共有タブの入力欄に貼り付けてください。', 'warning');
     closeDriveSendModal();
     return;
@@ -883,7 +908,7 @@ export async function confirmDriveSend() {
 export async function confirmInlineDriveShare() {
   const input = document.getElementById('ft-my-link-input');
   const url = input?.value.trim() || state._myDriveUrl;
-  if (!url || !url.startsWith('http')) {
+  if (!getSafeDriveUrl(url)) {
     showToast('自分の受け取りフォルダURLを登録してください。', 'warning');
     input?.focus();
     return;
@@ -932,7 +957,7 @@ export function initDriveLinkWidget() {
     clearTimeout(_saveTimer);
     const url = input.value.trim();
     if (url === state._myDriveUrl) return;
-    if (url && !url.startsWith('http')) {
+    if (url && !getSafeDriveUrl(url)) {
       input.style.borderColor = 'var(--accent-pink)';
       return;
     }
@@ -968,7 +993,7 @@ export function initDriveLinkWidget() {
   // 開くボタン
   if (openBtn) {
     openBtn.addEventListener('click', () => {
-      if (state._myDriveUrl) window.open(state._myDriveUrl, '_blank', 'noopener,noreferrer');
+      if (state._myDriveUrl) openSafeDriveUrl(state._myDriveUrl);
     });
   }
 }

@@ -13,3 +13,8 @@ supabase/generated-*.sql
 # Local build/test artifacts
 node_modules/
 test-results/
+dist/
+.vercel/
+.env
+.env.*
+!.env.example

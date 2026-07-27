@@ -1360,22 +1360,25 @@ async function exportSummaryCsv() {
 
 function buildSummaryPrintHtml(snapshot) {
   const printedAt = new Date().toLocaleString('ja-JP', { hour12: false });
-  const headCols = snapshot.users.map(u => `<th>${esc(u)}</th>`).join('');
+  const cellStyle = 'border:1px solid #555;padding:4px 6px;vertical-align:top';
+  const headerStyle = `${cellStyle};background:#f0f0f0`;
+  const numericStyle = `${cellStyle};text-align:right;white-space:nowrap`;
+  const headCols = snapshot.users.map(u => `<th style="${headerStyle}">${esc(u)}</th>`).join('');
   const bodyRows = snapshot.rows.map((row, idx) => {
     const userCols = snapshot.users.map(u => {
       const h = Number(row.userHours?.[u]) || 0;
-      return `<td class="num">${h > 0 ? esc(fmtHours(h)) : ''}</td>`;
+      return `<td style="${numericStyle}">${h > 0 ? esc(fmtHours(h)) : ''}</td>`;
     }).join('');
     return `<tr>
-      <td class="num">${idx + 1}</td>
-      <td>${esc(row.code || '-')}</td>
-      <td>${esc(row.name || '')}</td>
+      <td style="${numericStyle}">${idx + 1}</td>
+      <td style="${cellStyle}">${esc(row.code || '-')}</td>
+      <td style="${cellStyle}">${esc(row.name || '')}</td>
       ${userCols}
-      <td class="num strong">${esc(fmtHours(row.totalHours || 0))}</td>
+      <td style="${numericStyle};font-weight:700">${esc(fmtHours(row.totalHours || 0))}</td>
     </tr>`;
   }).join('');
   const footerCols = snapshot.users.map(u => (
-    `<th class="num">${esc(fmtHours(snapshot.userTotals[u] || 0))}</th>`
+    `<th style="${headerStyle};text-align:right;white-space:nowrap">${esc(fmtHours(snapshot.userTotals[u] || 0))}</th>`
   )).join('');
 
   return `<!doctype html>
@@ -1383,37 +1386,26 @@ function buildSummaryPrintHtml(snapshot) {
 <head>
   <meta charset="utf-8">
   <title>勤務内容集計表</title>
-  <style>
-    body { font-family: "Yu Gothic", "Meiryo", sans-serif; margin: 20px; color: #111; }
-    h1 { font-size: 20px; margin: 0 0 8px; }
-    .meta { font-size: 12px; margin-bottom: 10px; }
-    table { border-collapse: collapse; width: 100%; font-size: 12px; }
-    th, td { border: 1px solid #555; padding: 4px 6px; vertical-align: top; }
-    th { background: #f0f0f0; }
-    .num { text-align: right; white-space: nowrap; }
-    .strong { font-weight: 700; }
-    tfoot th { background: #e8e8e8; }
-  </style>
 </head>
-<body>
-  <h1>勤務内容集計表</h1>
-  <div class="meta">期間: ${esc(snapshot.periodLabel)} / 出力日時: ${esc(printedAt)}</div>
-  <table>
+<body style="font-family:'Yu Gothic','Meiryo',sans-serif;margin:20px;color:#111">
+  <h1 style="font-size:20px;margin:0 0 8px">勤務内容集計表</h1>
+  <div style="font-size:12px;margin-bottom:10px">期間: ${esc(snapshot.periodLabel)} / 出力日時: ${esc(printedAt)}</div>
+  <table style="border-collapse:collapse;width:100%;font-size:12px">
     <thead>
       <tr>
-        <th>No</th>
-        <th>現場コード</th>
-        <th>現場名</th>
+        <th style="${headerStyle}">No</th>
+        <th style="${headerStyle}">現場コード</th>
+        <th style="${headerStyle}">現場名</th>
         ${headCols}
-        <th>合計</th>
+        <th style="${headerStyle}">合計</th>
       </tr>
     </thead>
     <tbody>${bodyRows}</tbody>
     <tfoot>
       <tr>
-        <th colspan="3">合計</th>
+        <th colspan="3" style="${headerStyle};background:#e8e8e8">合計</th>
         ${footerCols}
-        <th class="num">${esc(fmtHours(snapshot.grandHours || 0))}</th>
+        <th style="${headerStyle};background:#e8e8e8;text-align:right;white-space:nowrap">${esc(fmtHours(snapshot.grandHours || 0))}</th>
       </tr>
     </tfoot>
   </table>
@@ -1428,14 +1420,18 @@ async function printSummaryTable() {
     return;
   }
 
-  const win = window.open('', '_blank', 'noopener,noreferrer,width=1280,height=900');
+  const win = window.open('', '_blank', 'width=1280,height=900');
   if (!win) {
     showToast('印刷ウィンドウを開けませんでした。ポップアップブロックを確認してください。', 'error');
     return;
   }
 
+  try {
+    win.opener = null;
+  } catch (_) {}
   win.document.open();
-  win.document.write(buildSummaryPrintHtml(snapshot));
+  const printHtml = buildSummaryPrintHtml(snapshot);
+  win.document.write(window.portalSecurity?.createPrintHtml(printHtml) || printHtml);
   win.document.close();
   win.focus();
   win.print();

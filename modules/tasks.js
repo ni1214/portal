@@ -11,7 +11,7 @@ import {
   createAssignedTaskInSupabase,
   updateAssignedTaskInSupabase,
   deleteAssignedTaskInSupabase,
-  updateCrossDeptRequestInSupabase,
+  syncRequestTaskLinkInSupabase,
   fetchTaskCommentsFromSupabase,
   addTaskCommentInSupabase,
   deleteTaskCommentInSupabase,
@@ -128,17 +128,7 @@ async function syncRequestLink(taskId, updates) {
   if (isSupabaseSharedCoreEnabled()) {
     const task = await getAssignedTaskFromSupabase(taskId);
     if (!task?.sourceRequestId) return task;
-    // Legacy timestamp sentinel をISO文字列に変換
-    const isoUpdates = Object.fromEntries(
-      Object.entries(updates).map(([k, v]) =>
-        [k, (v && typeof v === 'object' && '_methodName' in v) ? new Date().toISOString() : v]
-      )
-    );
-    await updateCrossDeptRequestInSupabase(task.sourceRequestId, {
-      ...isoUpdates,
-      updatedAt: new Date().toISOString(),
-      notifyCreator: true,
-    });
+    await syncRequestTaskLinkInSupabase(task.sourceRequestId, task.id, 'sync');
     return task;
   }
   const taskSnap = await getDoc(doc(db, 'assigned_tasks', taskId));
@@ -1375,7 +1365,6 @@ export async function deleteTask(taskId, confirmMsg) {
   try {
     let task;
     if (isSupabaseSharedCoreEnabled()) {
-      task = await getAssignedTaskFromSupabase(taskId);
       await deleteAssignedTaskInSupabase(taskId);
     } else {
       const taskSnap = await getDoc(doc(db, 'assigned_tasks', taskId));
@@ -1383,26 +1372,15 @@ export async function deleteTask(taskId, confirmMsg) {
       await deleteDoc(doc(db, 'assigned_tasks', taskId));
     }
     _removeTaskFromAllCaches(taskId);
-    if (task?.sourceRequestId) {
-      if (isSupabaseSharedCoreEnabled()) {
-        await updateCrossDeptRequestInSupabase(task.sourceRequestId, {
-          linkedTaskId: null,
-          linkedTaskStatus: task.status === 'done' ? 'done' : 'cancelled',
-          linkedTaskAssignedTo: task.assignedTo || null,
-          linkedTaskClosedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          notifyCreator: true,
-        });
-      } else {
-        await updateDoc(doc(db, 'cross_dept_requests', task.sourceRequestId), {
-          linkedTaskId: null,
-          linkedTaskStatus: task.status === 'done' ? 'done' : 'cancelled',
-          linkedTaskAssignedTo: task.assignedTo || null,
-          linkedTaskClosedAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          notifyCreator: true,
-        });
-      }
+    if (task?.sourceRequestId && !isSupabaseSharedCoreEnabled()) {
+      await updateDoc(doc(db, 'cross_dept_requests', task.sourceRequestId), {
+        linkedTaskId: null,
+        linkedTaskStatus: task.status === 'done' ? 'done' : 'cancelled',
+        linkedTaskAssignedTo: task.assignedTo || null,
+        linkedTaskClosedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        notifyCreator: true,
+      });
     }
   } catch (err) { console.error('タスク削除エラー:', err); }
 }

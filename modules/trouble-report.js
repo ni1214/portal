@@ -4,12 +4,12 @@ import {
   fetchAttendanceSitesFromSupabase,
   createAttendanceSiteInSupabase,
   updateAttendanceSiteInSupabase,
-  fetchPortalConfigFromSupabase,
   fetchTroubleReportsFromSupabase,
   createTroubleReportInSupabase,
   updateTroubleReportInSupabase,
 } from './supabase.js';
 import { showToast } from './notify.js';
+import { requestAi } from './secure-api.js';
 
 export let deps = {};
 
@@ -67,8 +67,6 @@ const TROUBLE_FIELD_LABELS = [
   '原因', '原因分析', '対処', '対応', '対処策', '是正', '再発防止', '防止策',
 ];
 
-let troubleGeminiLoaded = false;
-let troubleGeminiApiKey = '';
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -278,20 +276,6 @@ function buildHeuristicTroubleAnalysis(text = '') {
   };
 }
 
-async function loadTroubleGeminiApiKey() {
-  if (state.geminiApiKey) return state.geminiApiKey;
-  if (troubleGeminiLoaded) return troubleGeminiApiKey;
-  troubleGeminiLoaded = true;
-  try {
-    const config = await fetchPortalConfigFromSupabase();
-    troubleGeminiApiKey = config.geminiApiKey || '';
-    state.geminiApiKey = troubleGeminiApiKey;
-  } catch (err) {
-    console.error('Trouble Gemini API key load error:', err);
-  }
-  return troubleGeminiApiKey;
-}
-
 function parseJsonFromModel(text) {
   const cleaned = `${text || ''}`.replace(/```json|```/g, '').trim();
   const start = cleaned.indexOf('{');
@@ -319,8 +303,6 @@ function sanitizeTroubleAnalysis(raw = {}, sourceText = '') {
 }
 
 async function buildAiTroubleAnalysis(text) {
-  const key = await loadTroubleGeminiApiKey();
-  if (!key) return null;
   const sites = getActiveSites().slice(0, 200).map(site => ({
     code: site.code || '',
     name: site.name || '',
@@ -352,23 +334,8 @@ ${JSON.stringify(sites, null, 2)}
 - 文章は現場でそのまま読める短い日本語に整えてください。
 - 説明文やMarkdownは不要です。`;
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 1000 },
-      }),
-    }
-  );
-  if (!res.ok) {
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.error?.message || `AI解析に失敗しました。HTTP ${res.status}`);
-  }
-  const data = await res.json();
-  return sanitizeTroubleAnalysis(parseJsonFromModel(data.candidates?.[0]?.content?.parts?.[0]?.text || ''), text);
+  const result = await requestAi('trouble-report', prompt);
+  return sanitizeTroubleAnalysis(parseJsonFromModel(result), text);
 }
 
 function collectFormValues() {
@@ -641,7 +608,9 @@ function renderList() {
   if (!state.troubleReports.length) {
     return `${renderFilters()}<div class="trouble-empty"><i class="fa-regular fa-circle-check"></i><p>該当する報告はありません</p></div>`;
   }
-  const items = state.troubleReports.map(report => `
+  const items = state.troubleReports.map(report => {
+    const canUpdateStatus = state.isAdmin;
+    return `
     <article class="trouble-item" data-trouble-id="${esc(report.id)}">
       <div class="trouble-item-head">
         <div>
@@ -663,11 +632,14 @@ function renderList() {
       </div>
       <div class="trouble-item-actions">
         ${report.projectKey ? `<button type="button" class="btn-modal-secondary" data-trouble-project="${esc(report.projectKey)}">物件Noまとめ</button>` : ''}
-        <button type="button" class="btn-modal-secondary" data-trouble-status="reviewing">確認中</button>
-        <button type="button" class="btn-modal-primary" data-trouble-status="done">完了</button>
+        ${canUpdateStatus ? `
+          <button type="button" class="btn-modal-secondary" data-trouble-status="reviewing">確認中</button>
+          <button type="button" class="btn-modal-primary" data-trouble-status="done">完了</button>
+        ` : ''}
       </div>
     </article>
-  `).join('');
+  `;
+  }).join('');
   return `${renderFilters()}<div class="trouble-list">${items}</div>`;
 }
 
@@ -686,7 +658,7 @@ async function loadReports(force = false) {
   try {
     state.troubleReports = await fetchTroubleReportsFromSupabase({
       status: state.troubleReportStatusFilter,
-      title: state.troubleReportProjectFilter.trim(),
+      search: state.troubleReportProjectFilter.trim(),
     });
     state.troubleReportsLoaded = true;
   } catch (err) {
@@ -817,9 +789,14 @@ async function saveProjectSiteFromForm() {
 
 async function updateStatus(reportId, status) {
   if (!reportId || !status) return;
+  const target = state.troubleReports.find(report => report.id === reportId);
+  if (!state.isAdmin) {
+    showToast('この報告の対応状況を変更する権限がありません。', 'error');
+    return;
+  }
+  if (!target) return;
   try {
     await updateTroubleReportInSupabase(reportId, { status });
-    const target = state.troubleReports.find(report => report.id === reportId);
     if (target) target.status = status;
     showToast('対応状況を更新しました。', 'success');
     renderContent();

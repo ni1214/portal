@@ -14,32 +14,18 @@
   <link rel="manifest" href="site.webmanifest">
   <meta name="theme-color" content="#0f5f9f">
 
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
-
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- アイコンフォント（ビルド時に固定バージョンを同一originへ配置） -->
+  <link rel="stylesheet" href="./vendor/material-symbols-0.45.8/rounded.css">
+  <link rel="stylesheet" href="./vendor/fontawesome-6.7.2/css/all.min.css">
 
   <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css?v=20260723a">
 
-  <!-- テーマ・文字サイズをCSSロード直後に即時適用（フラッシュ防止） -->
-  <script>
-    (function() {
-      var t = localStorage.getItem('portal-theme')     || 'dark';
-      var f = localStorage.getItem('portal-font-size') || 'font-md';
-      document.documentElement.classList.add(f);
-      // body がまだない場合は html に仮適用し、body 生成後に移す
-      document.documentElement.setAttribute('data-theme', t);
-      document.addEventListener('DOMContentLoaded', function() {
-        document.body.setAttribute('data-theme', t);
-        document.documentElement.removeAttribute('data-theme');
-      });
-    })();
-  </script>
+  <!-- DOM生成をサニタイズする防御層。ほかのスクリプトより先に読み込む。 -->
+  <script src="./vendor/security-bootstrap.js"></script>
+
+  <!-- テーマ・文字サイズをCSSロード直後に即時適用（CSP対応の外部スクリプト） -->
+  <script src="./modules/theme-init.js"></script>
 </head>
 
 <body class="portal-ui-v2">
@@ -496,7 +482,7 @@
             <i class="material-symbols-rounded" aria-hidden="true">ios_share</i>
             サイトを共有
           </h3>
-          <p class="portal-share-desc">QRコードを読み取るか、URLをコピーしてください。</p>
+          <p class="portal-share-desc">現在の本番URLをコピーして共有してください。</p>
         </div>
         <button type="button" class="portal-share-close" id="portal-share-close" title="閉じる">
           <i class="material-symbols-rounded" aria-hidden="true">close</i>
@@ -504,14 +490,10 @@
       </div>
 
       <div class="portal-share-body">
-        <div class="portal-share-qr-card">
-          <img id="portal-share-qr-img" src="assets/portal-share-qr.png" width="320" height="320" alt="社内ポータルのQRコード">
-        </div>
-
         <div class="portal-share-link-card">
           <label class="portal-share-url-label" for="portal-share-url">共有URL</label>
           <div class="portal-share-url-row">
-            <input id="portal-share-url" class="portal-share-url" type="text" value="https://ni1214.github.io/portal/" readonly>
+            <input id="portal-share-url" class="portal-share-url" type="text" value="" readonly>
             <button type="button" class="portal-share-copy-btn" id="portal-share-copy-btn">
               <i class="material-symbols-rounded" aria-hidden="true">content_copy</i>
               コピー
@@ -972,7 +954,7 @@
           <i class="fa-brands fa-google" aria-hidden="true"></i>
           <span>Googleでログイン</span>
         </button>
-        <p class="auth-google-note">初回だけ、ログイン後にポータル内の表示名を設定します。</p>
+        <p class="auth-google-note">会社のGoogleアカウントでログインします。初回利用は管理者の事前登録が必要です。</p>
       </div>
       <div id="username-manual-area">
         <p class="auth-google-account" id="auth-google-account-text"></p>
@@ -982,7 +964,7 @@
         </div>
         <div class="username-warn-box">
           <i class="fa-solid fa-triangle-exclamation"></i>
-          <span>この名前はポータル内のIDです。既存データを引き継ぐ場合は、これまで使っていたユーザーネームを入力してください。</span>
+          <span>表示名は業務データと結び付いています。登録・変更が必要な場合は管理者へ依頼してください。</span>
         </div>
         <div class="username-error-box" id="username-error-box" hidden>
           <i class="fa-solid fa-circle-xmark"></i>
@@ -1231,7 +1213,7 @@
         <div class="guide-section">
           <h4 class="guide-section-title"><span class="guide-icon">🖱️</span> 基本操作</h4>
           <ul class="guide-list">
-            <li><strong>最初の利用時</strong>は <strong>Googleログイン → 表示名設定</strong> の順で進みます。既存データを引き継ぐ場合は、これまで使っていたユーザーネームを表示名として入力します。PINロック済みの名前は、ユーザー切り替え時にログイン前PINが必要です。</li>
+            <li><strong>最初の利用時</strong>は管理者に会社メールアドレスと表示名の登録を依頼し、その後<strong>会社のGoogleアカウント</strong>でログインします。</li>
             <li>サイドバーの<strong>共有リンク</strong>を開き、リンク名・説明・URLを検索すると目的のリンクだけに絞れます。</li>
             <li><strong>すべて／お気に入り</strong>を同じ画面で切り替え、カテゴリでも絞り込めます。</li>
             <li>リンクをクリック（スマホはタップ）すると、登録されたページが<strong>新しいタブ</strong>で開きます。</li>
@@ -1298,11 +1280,11 @@
         </div>
 
         <div class="guide-section">
-          <h4 class="guide-section-title"><span class="guide-icon">👤</span> ユーザーネーム設定</h4>
+          <h4 class="guide-section-title"><span class="guide-icon">👤</span> アカウントとプロフィール</h4>
           <ul class="guide-list">
-            <li>初回アクセス時にユーザーネーム設定ダイアログが表示されます。</li>
-            <li>ヘッダー右の<strong>「👤 名前」ボタン</strong>をクリックすると、プロフィール設定が開きます。所属部署・役割の設定や、そこからのユーザーネーム変更もできます。</li>
-            <li>同じユーザーネームを別のPCで入力すれば、セクション順序やマイカテゴリを引き継げます。</li>
+            <li>ログインは管理者が事前登録した会社メールアドレスとGoogleアカウントを照合します。</li>
+            <li>ヘッダー右の<strong>「👤 名前」ボタン</strong>からプロフィールを確認できます。表示名や利用権限の変更は管理者へ依頼してください。</li>
+            <li>別のPCでも同じGoogleアカウントでログインすれば、個人設定と業務データを引き継げます。</li>
             <li>プロフィールで<strong>所属部署と役割</strong>を入れると、ダッシュボード先頭のフォーカス表示が自分向けに切り替わります。</li>
           </ul>
         </div>
@@ -1620,7 +1602,7 @@
       <!-- ユーザー管理（認証後） -->
       <div id="admin-panel-area" hidden>
         <div class="admin-panel-header">
-          <span class="admin-panel-subtitle"><i class="material-symbols-rounded" aria-hidden="true">groups</i> ユーザー管理（PINリセット・削除）</span>
+          <span class="admin-panel-subtitle"><i class="material-symbols-rounded" aria-hidden="true">groups</i> ユーザー管理（PINリセット・利用停止）</span>
           <button class="btn-modal-secondary" id="admin-close">閉じる</button>
         </div>
         <div class="admin-user-list" id="admin-user-list">
@@ -1640,18 +1622,18 @@
         <!-- Supabase 接続設定 -->
         <div class="admin-section">
           <span class="admin-panel-subtitle"><i class="fa-solid fa-database"></i> Supabase 接続設定</span>
-          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">全データを Supabase で管理します。URL と APIキーを設定してください。</p>
+          <p class="modal-desc" style="margin:6px 0 10px;font-size:0.82rem;">全データを Supabase で管理します。接続先は安全のためデプロイ設定で固定されています。</p>
           <div class="form-group">
             <label class="form-label" for="admin-supabase-url">Supabase URL</label>
-            <input type="url" id="admin-supabase-url" class="form-input" placeholder="https://xxxxx.supabase.co" autocomplete="off">
+            <input type="url" id="admin-supabase-url" class="form-input" placeholder="https://xxxxx.supabase.co" autocomplete="off" disabled>
           </div>
           <div class="form-group">
             <label class="form-label" for="admin-supabase-key">Supabase APIキー（publishable 推奨）</label>
-            <textarea id="admin-supabase-key" class="form-input admin-supabase-key-input" rows="3" placeholder="sb_publishable_..." spellcheck="false"></textarea>
+            <textarea id="admin-supabase-key" class="form-input admin-supabase-key-input" rows="3" placeholder="sb_publishable_..." spellcheck="false" disabled></textarea>
           </div>
           <div class="admin-supabase-status-row">
             <span class="admin-invite-status" id="admin-supabase-status">Supabase 未設定</span>
-            <span class="admin-invite-hint" id="admin-supabase-hint">URL と APIキーを入力して保存してください。</span>
+            <span class="admin-invite-hint" id="admin-supabase-hint">接続先はデプロイ設定で固定されています。</span>
           </div>
           <div class="admin-invite-current-wrap">
             <span class="admin-invite-current-label">現在のキー表示</span>
@@ -1659,7 +1641,7 @@
           </div>
           <div class="admin-supabase-actions">
             <button class="btn-modal-secondary" id="admin-repair-categories-btn"><i class="fa-solid fa-wrench"></i> カテゴリ修復</button>
-            <button class="btn-modal-primary" id="admin-supabase-save-btn"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
+            <button class="btn-modal-primary" id="admin-supabase-save-btn" hidden disabled><i class="fa-solid fa-lock"></i> 固定済み</button>
           </div>
           <div class="security-error" id="admin-supabase-error" hidden></div>
         </div>
@@ -1794,18 +1776,6 @@
               </div>
             </div>
             <div class="email-output" id="email-output"></div>
-          </div>
-
-          <!-- APIキー設定（未設定時のみ表示） -->
-          <div class="email-api-key-area" id="email-api-key-area" hidden>
-            <div class="email-api-key-label">
-              <i class="fa-solid fa-key"></i> Gemini APIキーを設定してください
-              <span class="email-api-key-hint">（設定は全員に共有されます）</span>
-            </div>
-            <div class="email-api-key-row">
-              <input type="password" id="email-api-key-input" class="email-api-key-input" placeholder="AIzaSy..." autocomplete="off">
-              <button class="btn-save-apikey" id="email-api-key-save">設定する</button>
-            </div>
           </div>
 
         </div>
@@ -2668,12 +2638,7 @@
             </div>
             <div id="ord-admin-panel-gas" class="ord-admin-panel" role="tabpanel" hidden>
               <div class="ord-gas-status" id="ord-gas-status"></div>
-              <p class="ord-gas-desc">発注メールの送信先として使用するGAS Webアプリを設定します。通常の発注作業では変更しません。</p>
-              <div class="form-group">
-                <label class="form-label" for="ord-gas-url-input">GAS Webアプリ URL</label>
-                <input type="url" id="ord-gas-url-input" class="form-input" placeholder="https://script.google.com/macros/s/...">
-              </div>
-              <button type="button" class="btn-modal-primary" id="ord-gas-save-btn">設定を保存</button>
+              <p class="ord-gas-desc">発注メールはVercelサーバーから送信します。送信先と認証情報はブラウザへ表示されません。</p>
             </div>
           </div>
         </section>
@@ -2749,7 +2714,7 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="./vendor/xlsx.js"></script>
   <!-- Script (type="module") -->
   <script type="module" src="script.js?v=20260723a"></script>
 </body>

@@ -27935,6 +27935,56 @@ body.portal-ui-v2 #cal-modal.portal-workspace-mode.cal-workspace-mode.calendar-u
   }
 }
 
+/* ===== 鋼材発注: メール送信状態の手動確認 ===== */
+.ord-email-badge--review {
+  color: var(--accent-orange);
+  background: color-mix(in srgb, var(--accent-orange) 12%, transparent);
+}
+
+.ord-email-badge--failed {
+  color: var(--accent-red);
+  background: color-mix(in srgb, var(--accent-red) 11%, transparent);
+}
+
+.ord-email-review-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent-orange) 35%, var(--border-glass));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-orange) 8%, var(--bg-card));
+}
+
+.ord-email-review-actions > span {
+  flex: 1 1 260px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.ord-email-review-actions > strong {
+  color: var(--accent-orange);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 640px) {
+  .ord-email-review-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ord-email-review-actions > span {
+    flex-basis: auto;
+  }
+
+  .ord-email-review-actions .ord-history-action-btn {
+    width: 100%;
+  }
+}
+
 /* ===== portal workspace view ===== */
 body:has(#home-dashboard) .app-main.portal-workspace-active .home-content-grid,
 .app-main.portal-workspace-active .home-content-grid,

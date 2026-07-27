@@ -12,25 +12,12 @@ const DEFAULT_SUPABASE_KEY = 'sb_publishable_TuZiMD49GBC9NMSf-tyWYA_NKq8430v';
 const CATEGORY_SELECT = 'id,label,icon,color_index,order_index,is_external';
 const CARD_SELECT = 'id,label,icon,url,category_id,parent_id,order_index,category_order,is_external_tool,description,thumbnail_url,link_type,tags,last_opened_at,open_count,updated_by';
 
-function normalizeBackendMode(value) {
-  return BACKEND_SUPABASE;
-}
-
 function normalizeUrl(value) {
   return `${value || ''}`.trim().replace(/\/+$/, '');
 }
 
 function normalizeApiKey(value) {
   return `${value || ''}`.trim();
-}
-
-function resolveApiKey(config = {}) {
-  return normalizeApiKey(
-    config.supabasePublishableKey
-    || config.supabaseApiKey
-    || config.supabaseAnonKey
-    || ''
-  );
 }
 
 function maskApiKey(key) {
@@ -40,23 +27,18 @@ function maskApiKey(key) {
   return `${normalized.slice(0, 12)}...${normalized.slice(-6)}`;
 }
 
-function validateRuntimeConfig(mode, url, apiKey) {
-  if (mode !== BACKEND_SUPABASE) return;
-  if (!url) throw new Error('Supabase URL を入力してください。');
-  if (!/^https:\/\//i.test(url)) {
-    throw new Error('Supabase URL は https:// から始めてください。');
-  }
-  if (!apiKey) throw new Error('Supabase APIキーを入力してください。');
-}
-
 function getRestBaseUrl() {
   return `${state.supabaseUrl}/rest/v1`;
 }
 
 function getApiHeaders({ includeJson = false, prefer = '' } = {}) {
+  const accessToken = `${state.googleAuthSession?.access_token || ''}`.trim();
+  if (!accessToken) {
+    throw new Error('Googleログインが必要です。認証前のデータアクセスは許可されていません。');
+  }
   const headers = {
     apikey: state.supabaseApiKey,
-    Authorization: `Bearer ${state.supabaseApiKey}`,
+    Authorization: `Bearer ${accessToken}`,
     Accept: 'application/json',
   };
   if (includeJson) headers['Content-Type'] = 'application/json';
@@ -238,20 +220,17 @@ function mapCardUpdatePayload(data = {}) {
   return payload;
 }
 
-export function saveSupabaseConfigToStorage(url, apiKey, mode) {
+export function saveSupabaseConfigToStorage() {
+  // 認証済みJWTの送信先をブラウザ側の設定で変更できないよう、旧保存値は破棄する。
   try {
-    localStorage.setItem(SUPABASE_STORAGE_KEY, JSON.stringify({
-      url: normalizeUrl(url),
-      apiKey: normalizeApiKey(apiKey),
-      mode: normalizeBackendMode(mode),
-    }));
+    localStorage.removeItem(SUPABASE_STORAGE_KEY);
   } catch (_) {}
 }
 
-export function applySupabaseRuntimeConfig(config = {}) {
+export function applySupabaseRuntimeConfig() {
   state.dataBackendMode = BACKEND_SUPABASE; // モード選択廃止: 常にSupabase
-  state.supabaseUrl = normalizeUrl(config.supabaseUrl);
-  state.supabaseApiKey = resolveApiKey(config);
+  state.supabaseUrl = DEFAULT_SUPABASE_URL;
+  state.supabaseApiKey = DEFAULT_SUPABASE_KEY;
   state.supabaseConfigured = !!(state.supabaseUrl && state.supabaseApiKey);
   renderSupabaseAdminState();
   return {
@@ -279,6 +258,8 @@ export function renderSupabaseAdminState(message = '') {
 
   if (urlEl && urlEl.value !== state.supabaseUrl) urlEl.value = state.supabaseUrl;
   if (keyEl && keyEl.value !== state.supabaseApiKey) keyEl.value = state.supabaseApiKey;
+  if (urlEl) urlEl.disabled = true;
+  if (keyEl) keyEl.disabled = true;
 
   if (statusEl) {
     statusEl.textContent = state.supabaseConfigured ? 'Supabase 有効' : 'Supabase 未設定';
@@ -287,8 +268,8 @@ export function renderSupabaseAdminState(message = '') {
 
   if (hintEl) {
     hintEl.textContent = message || (state.supabaseConfigured
-      ? 'Supabase に接続済みです。全データが Supabase を使用します。'
-      : 'URL と APIキーを入力して保存してください。');
+      ? '接続先はデプロイ設定で固定されています。変更は管理者がコード更新として行います。'
+      : 'Supabase 接続設定を確認してください。');
   }
 
   if (previewEl) {
@@ -296,20 +277,8 @@ export function renderSupabaseAdminState(message = '') {
   }
 }
 
-export async function saveSupabaseRuntimeConfig({ url, apiKey }) {
-  const nextUrl = normalizeUrl(url);
-  const nextApiKey = normalizeApiKey(apiKey);
-
-  validateRuntimeConfig(BACKEND_SUPABASE, nextUrl, nextApiKey);
-
-  // localStorage に保存
-  saveSupabaseConfigToStorage(nextUrl, nextApiKey, BACKEND_SUPABASE);
-
-  return applySupabaseRuntimeConfig({
-    dataBackendMode: BACKEND_SUPABASE,
-    supabaseUrl: nextUrl,
-    supabasePublishableKey: nextApiKey,
-  });
+export async function saveSupabaseRuntimeConfig() {
+  throw new Error('Supabase 接続先はデプロイ設定で固定されています。');
 }
 
 export async function fetchSharedCategoriesFromSupabase() {
@@ -402,18 +371,10 @@ export async function deleteSharedCardInSupabase(id) {
 // ========== 個人データ（プライベートセクション・カード・TODO・設定）==========
 
 export function loadSupabaseConfigFromStorage() {
+  // 旧バージョンが残した任意接続先は使わない。JWTは固定したSupabase以外へ送信しない。
   try {
-    const raw = localStorage.getItem(SUPABASE_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return {
-        supabaseUrl: parsed.url || DEFAULT_SUPABASE_URL,
-        supabasePublishableKey: parsed.apiKey || DEFAULT_SUPABASE_KEY,
-        dataBackendMode: BACKEND_SUPABASE,
-      };
-    }
+    localStorage.removeItem(SUPABASE_STORAGE_KEY);
   } catch (_) {}
-  // localStorage 未設定でもデフォルト資格情報で Supabase を使う
   return {
     supabaseUrl: DEFAULT_SUPABASE_URL,
     supabasePublishableKey: DEFAULT_SUPABASE_KEY,
@@ -629,34 +590,28 @@ export async function deleteUserTodoInSupabase(id) {
 
 // ===== portal_config（管理設定） =====
 
-const PORTAL_CONFIG_SELECT = 'pin_hash,gemini_api_key,departments,suggestion_box_viewers,mission_text,gas_order_url,order_seed_version';
+const PORTAL_CONFIG_SELECT = 'departments,suggestion_box_viewers,mission_text,order_seed_version';
 
 export async function fetchPortalConfigFromSupabase() {
   const rows = await requestSupabase(
-    `portal_config?id=eq.1&select=${encodeURIComponent(PORTAL_CONFIG_SELECT)}`,
-    { diagKey: 'supabase.portal_config', diagLabel: 'Supabase 管理設定', diagScope: 'portal_config' }
+    `portal_client_config?select=${encodeURIComponent(PORTAL_CONFIG_SELECT)}&limit=1`,
+    { diagKey: 'supabase.portal_client_config', diagLabel: 'Supabase ポータル設定', diagScope: 'portal_client_config' }
   );
   if (!Array.isArray(rows) || !rows.length) return {};
   const r = rows[0];
   return {
-    pinHash: r.pin_hash || null,
-    geminiApiKey: r.gemini_api_key || '',
     departments: Array.isArray(r.departments) ? r.departments : [],
     suggestionBoxViewers: Array.isArray(r.suggestion_box_viewers) ? r.suggestion_box_viewers : [],
     missionText: r.mission_text || '',
-    gasOrderUrl: r.gas_order_url || '',
     orderSeedVersion: typeof r.order_seed_version === 'number' ? r.order_seed_version : 0,
   };
 }
 
 export async function savePortalConfigToSupabase(fields = {}) {
   const body = {};
-  if ('pinHash' in fields)              body.pin_hash = fields.pinHash || null;
-  if ('geminiApiKey' in fields)         body.gemini_api_key = fields.geminiApiKey || '';
   if ('departments' in fields)          body.departments = Array.isArray(fields.departments) ? fields.departments : [];
   if ('suggestionBoxViewers' in fields) body.suggestion_box_viewers = Array.isArray(fields.suggestionBoxViewers) ? fields.suggestionBoxViewers : [];
   if ('missionText' in fields)          body.mission_text = fields.missionText ?? '';
-  if ('gasOrderUrl' in fields)          body.gas_order_url = fields.gasOrderUrl || '';
   if ('orderSeedVersion' in fields)     body.order_seed_version = Number(fields.orderSeedVersion) || 0;
   if (Object.keys(body).length === 0) return;
   await requestSupabase('portal_config?id=eq.1', {
@@ -887,7 +842,7 @@ export async function deactivateOrderItemInSupabase(id) {
 
 // ---- orders ----
 
-const ORDER_SELECT = 'id,supplier_id,supplier_name,supplier_email,order_type,site_name,project_key,items,ordered_by,note,ordered_at,email_sent,email_sent_at,deleted_at,deleted_by,created_at,updated_at';
+const ORDER_SELECT = 'id,supplier_id,supplier_name,supplier_email,order_type,site_name,project_key,items,ordered_by,note,ordered_at,email_sent,email_sent_at,email_send_status,attempt_id,started_at,email_resolution,email_resolution_by,email_resolved_at,deleted_at,deleted_by,created_at,updated_at';
 
 function mapOrderRow(row = {}) {
   return {
@@ -904,6 +859,12 @@ function mapOrderRow(row = {}) {
     orderedAt:     isoToCompatTimestamp(row.ordered_at),
     emailSent:     !!row.email_sent,
     emailSentAt:   row.email_sent_at  ? isoToCompatTimestamp(row.email_sent_at) : null,
+    emailSendStatus: row.email_send_status || (row.email_sent ? 'sent' : 'pending'),
+    attemptId:      row.attempt_id || '',
+    emailStartedAt: row.started_at ? isoToCompatTimestamp(row.started_at) : null,
+    emailResolution: row.email_resolution || '',
+    emailResolutionBy: row.email_resolution_by || '',
+    emailResolvedAt: row.email_resolved_at ? isoToCompatTimestamp(row.email_resolved_at) : null,
     deletedAt:     row.deleted_at     ? isoToCompatTimestamp(row.deleted_at) : null,
     deletedBy:     row.deleted_by     || null,
     createdAt:     isoToCompatTimestamp(row.created_at),
@@ -950,8 +911,6 @@ export async function createOrderInSupabase(data) {
 
 export async function updateOrderInSupabase(id, data) {
   const payload = {};
-  if ('emailSent' in data)    payload.email_sent     = !!data.emailSent;
-  if ('emailSentAt' in data)  payload.email_sent_at  = data.emailSentAt || null;
   if ('deletedAt' in data)    payload.deleted_at     = data.deletedAt || null;
   if ('deletedBy' in data)    payload.deleted_by     = data.deletedBy || null;
   if ('note' in data)         payload.note           = data.note || '';
@@ -972,8 +931,8 @@ function toTimestamp(isoStr) {
   return { seconds: Math.floor(ms / 1000), nanoseconds: (ms % 1000) * 1e6, toDate: () => new Date(ms) };
 }
 
-async function callRpc(funcName, body = {}) {
-  return requestSupabase(`rpc/${funcName}`, { method: 'POST', body });
+async function callRpc(funcName, body = {}, options = {}) {
+  return requestSupabase(`rpc/${funcName}`, { ...options, method: 'POST', body });
 }
 
 // ==================== ユーザー認証 ====================
@@ -999,61 +958,33 @@ function mapUserAccountRow(row = {}) {
     googleAvatarUrl: row.google_avatar_url || '',
     loginProvider: row.login_provider || '',
     lastGoogleLoginAt: row.last_google_login_at || null,
+    isAdmin: row.is_admin === true,
+    isActive: row.is_active !== false,
   };
 }
 
-function mapGoogleAccountPayload(profile = {}) {
-  const payload = {};
-  if (profile.authId) payload.google_auth_id = profile.authId;
-  if (profile.email) payload.google_email = normalizeGoogleEmail(profile.email);
-  if ('name' in profile) payload.google_name = profile.name || '';
-  if ('avatarUrl' in profile) payload.google_avatar_url = profile.avatarUrl || '';
-  payload.login_provider = 'google';
-  payload.last_google_login_at = new Date().toISOString();
-  payload.last_login_at = new Date().toISOString();
-  return payload;
+function getSingleRpcRow(result) {
+  if (Array.isArray(result)) return result[0] || null;
+  return result && typeof result === 'object' ? result : null;
 }
 
-export async function fetchUserAccountByGoogleAuthId(authId) {
-  const normalized = `${authId || ''}`.trim();
-  if (!normalized) return null;
-  const rows = await requestSupabase(
-    `user_accounts?google_auth_id=eq.${encodeURIComponent(normalized)}&select=*&limit=1`
-  );
-  return Array.isArray(rows) && rows[0] ? mapUserAccountRow(rows[0]) : null;
-}
-
-export async function fetchUserAccountByGoogleEmail(email) {
-  const normalized = normalizeGoogleEmail(email);
-  if (!normalized) return null;
-  const rows = await requestSupabase(
-    `user_accounts?google_email=eq.${encodeURIComponent(normalized)}&select=*&limit=1`
-  );
-  return Array.isArray(rows) && rows[0] ? mapUserAccountRow(rows[0]) : null;
-}
-
-export async function linkGoogleAccountToUsername(username, profile = {}) {
-  const normalizedUsername = `${username || ''}`.trim();
-  if (!normalizedUsername) throw new Error('ユーザー名がありません。');
-  const payload = mapGoogleAccountPayload(profile);
-  await requestSupabase(`user_accounts?username=eq.${encodeURIComponent(normalizedUsername)}`, {
-    method: 'PATCH',
-    prefer: 'return=minimal',
-    body: payload,
+export async function claimPortalAccountInSupabase(profile = {}) {
+  const result = await callRpc('claim_portal_account', {
+    p_google_name: `${profile.name || ''}`.trim(),
+    p_google_avatar_url: `${profile.avatarUrl || ''}`.trim(),
   });
+  const row = getSingleRpcRow(result);
+  return row ? mapUserAccountRow(row) : null;
 }
 
 export async function registerUserLoginInSupabase(username, profile = null) {
-  const body = {
-    username,
-    last_login_at: new Date().toISOString(),
-  };
-  if (profile) Object.assign(body, mapGoogleAccountPayload(profile));
-  await requestSupabase('user_accounts', {
-    method: 'POST',
-    prefer: 'return=minimal,resolution=merge-duplicates',
-    body,
-  });
+  const normalizedUsername = `${username || ''}`.trim();
+  if (!normalizedUsername) throw new Error('ユーザー名がありません。');
+  const linked = await claimPortalAccountInSupabase(profile || state.googleAuthProfile || {});
+  if (!linked?.username || linked.username !== normalizedUsername) {
+    throw new Error('Googleアカウントとポータル利用者が一致しません。');
+  }
+  return linked;
 }
 
 export async function getUserLockPinFromSupabase(username) {
@@ -1073,63 +1004,34 @@ export async function saveLockPinToSupabase(username, { enabled, hash, autoLockM
   });
 }
 
+export async function resetUserLockPinAsAdminInSupabase(username) {
+  const result = await callRpc('admin_reset_lock_pin', {
+    p_username: `${username || ''}`.trim(),
+  });
+  if (result !== true) {
+    throw new Error('対象のPINをリセットできませんでした。');
+  }
+}
+
 export async function fetchAllUserAccountsFromSupabase() {
-  const rows = await requestSupabase('user_accounts?select=username,last_login_at,google_email,google_name,login_provider,last_google_login_at&order=username.asc');
+  const rows = await callRpc('list_portal_user_directory');
   if (!Array.isArray(rows)) return [];
   return rows.map(mapUserAccountRow);
 }
 
 export async function deleteUserFromSupabase(username) {
-  await requestSupabase(`user_accounts?username=eq.${encodeURIComponent(username)}`, {
-    method: 'DELETE',
-    prefer: 'return=minimal',
+  const result = await callRpc('deactivate_portal_account', {
+    p_username: `${username || ''}`.trim(),
   });
+  if (result !== true) {
+    throw new Error('対象の利用者を無効化できませんでした。');
+  }
 }
 
 export async function migrateUsernameInSupabase(oldName, newName) {
-  // 1. 新しいユーザーを作成（既存なら merge）
-  await requestSupabase('user_accounts', {
-    method: 'POST',
-    prefer: 'return=minimal,resolution=merge-duplicates',
-    body: { username: newName, last_login_at: new Date().toISOString() },
-  });
-  // 2. 旧ユーザーの各テーブルデータを新名にコピーしてから削除
-  const copyTables = [
-    'user_preferences', 'user_lock_pins', 'user_profiles', 'user_section_orders',
-    'private_sections', 'private_cards', 'user_todos', 'user_email_contacts',
-    'user_drive_links', 'user_drive_contacts', 'user_notice_reads', 'user_chat_reads',
-  ];
-  for (const tbl of copyTables) {
-    try {
-      const rows = await requestSupabase(`${tbl}?username=eq.${encodeURIComponent(oldName)}&select=*`);
-      if (!Array.isArray(rows) || rows.length === 0) continue;
-      const newRows = rows.map(r => ({ ...r, username: newName }));
-      await requestSupabase(tbl, { method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates', body: newRows });
-      await requestSupabase(`${tbl}?username=eq.${encodeURIComponent(oldName)}`, { method: 'DELETE', prefer: 'return=minimal' });
-    } catch (_) {}
-  }
-  // 3. assigned_tasks の参照を更新（PATCH は配列フィルタがないため行単位で）
-  try {
-    const tasks = await requestSupabase(
-      `assigned_tasks?or=(assigned_to.eq.${encodeURIComponent(oldName)},assigned_by.eq.${encodeURIComponent(oldName)})`
-    );
-    if (Array.isArray(tasks)) {
-      for (const t of tasks) {
-        const patch = {};
-        if (t.assigned_to === oldName) patch.assigned_to = newName;
-        if (t.assigned_by === oldName) patch.assigned_by = newName;
-        if (Object.keys(patch).length > 0) {
-          await requestSupabase(`assigned_tasks?id=eq.${encodeURIComponent(t.id)}`, {
-            method: 'PATCH', prefer: 'return=minimal', body: patch,
-          });
-        }
-      }
-    }
-  } catch (_) {}
-  // 4. 旧アカウント削除（cascade で関連データも削除）
-  await requestSupabase(`user_accounts?username=eq.${encodeURIComponent(oldName)}`, {
-    method: 'DELETE', prefer: 'return=minimal',
-  });
+  void oldName;
+  void newName;
+  throw new Error('表示名の変更はデータ移行を伴うため、管理者のサーバー操作が必要です。');
 }
 
 // ==================== お知らせ ====================
@@ -1184,7 +1086,6 @@ export async function updateNoticeInSupabase(id, data) {
   if ('targetScope' in data) payload.target_scope = data.targetScope || 'all';
   if ('targetDepartments' in data) payload.target_departments = Array.isArray(data.targetDepartments) ? data.targetDepartments : [];
   if ('requireAcknowledgement' in data) payload.require_acknowledgement = !!data.requireAcknowledgement;
-  if ('acknowledgedBy' in data) payload.acknowledged_by = Array.isArray(data.acknowledgedBy) ? data.acknowledgedBy : [];
   await requestSupabase(`notices?id=eq.${encodeURIComponent(id)}`, {
     method: 'PATCH', prefer: 'return=minimal', body: payload,
   });
@@ -1196,11 +1097,11 @@ export async function deleteNoticeInSupabase(id) {
   });
 }
 
-export async function acknowledgeNoticeInSupabase(noticeId, acknowledgedByArray) {
-  await requestSupabase(`notices?id=eq.${encodeURIComponent(noticeId)}`, {
-    method: 'PATCH', prefer: 'return=minimal',
-    body: { acknowledged_by: Array.isArray(acknowledgedByArray) ? acknowledgedByArray : [] },
-  });
+export async function acknowledgeNoticeInSupabase(noticeId) {
+  const result = await callRpc('acknowledge_notice', { p_notice_id: noticeId });
+  if (result !== true) {
+    throw new Error('お知らせの確認状態を更新できませんでした。');
+  }
 }
 
 export async function fetchReadNoticeIdsFromSupabase(username) {
@@ -1364,20 +1265,17 @@ export async function updateAssignedTaskInSupabase(id, data) {
   if ('acceptedAt' in data)    payload.accepted_at    = data.acceptedAt || null;
   if ('doneAt' in data)        payload.done_at        = data.doneAt || null;
   if ('sourceRequestId' in data)         payload.source_request_id          = data.sourceRequestId || null;
-  if ('linkedTaskStatus' in data)        payload.linked_task_status         = data.linkedTaskStatus || null;
-  if ('linkedTaskAssignedTo' in data)    payload.linked_task_assigned_to    = data.linkedTaskAssignedTo || null;
-  if ('linkedTaskLinkedBy' in data)      payload.linked_task_linked_by      = data.linkedTaskLinkedBy || null;
-  if ('linkedTaskLinkedAt' in data)      payload.linked_task_linked_at      = data.linkedTaskLinkedAt || null;
-  if ('linkedTaskClosedAt' in data)      payload.linked_task_closed_at      = data.linkedTaskClosedAt || null;
   await requestSupabase(`assigned_tasks?id=eq.${encodeURIComponent(id)}`, {
     method: 'PATCH', prefer: 'return=minimal', body: payload,
   });
 }
 
 export async function deleteAssignedTaskInSupabase(id) {
-  await requestSupabase(`assigned_tasks?id=eq.${encodeURIComponent(id)}`, {
-    method: 'DELETE', prefer: 'return=minimal',
+  const result = await callRpc('delete_request_task_entity', {
+    p_entity_type: 'task',
+    p_entity_id: `${id || ''}`.trim(),
   });
+  if (result !== true) throw new Error('タスクを削除できませんでした。');
 }
 
 export async function fetchTaskCommentsFromSupabase(taskId) {
@@ -1455,69 +1353,54 @@ export async function getChatRoomFromSupabase(roomId) {
   return mapChatRoomRow(rows[0]);
 }
 
-export async function upsertDmRoomInSupabase(roomId, data) {
-  await requestSupabase('chat_rooms', {
-    method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
-    body: {
-      id: roomId,
-      type: 'dm',
-      name: data.name || '',
-      members: Array.isArray(data.members) ? data.members : [],
-      created_by: data.createdBy || '',
-      last_message: data.lastMessage || '',
-      last_at: data.lastAt || null,
-      last_sender: data.lastSender || '',
-    },
+export async function ensureDmRoomInSupabase(roomId, otherUsername) {
+  const result = await callRpc('ensure_dm_room', {
+    p_room_id: `${roomId || ''}`.trim(),
+    p_other_username: `${otherUsername || ''}`.trim(),
   });
+  if (result !== true) return null;
+  return {
+    id: `${roomId || ''}`.trim(),
+    type: 'dm',
+    name: '',
+    members: [state.currentUsername, `${otherUsername || ''}`.trim()]
+      .filter(Boolean)
+      .sort(),
+    createdBy: state.currentUsername || '',
+    lastMessage: '',
+    lastAt: null,
+    lastSender: '',
+  };
 }
 
-export async function ensureDmMembersInSupabase(roomId, members) {
-  const room = await getChatRoomFromSupabase(roomId);
-  if (!room) return;
-  const current = room.members || [];
-  const missing = members.filter(m => !current.includes(m));
-  if (missing.length === 0) return;
-  const newMembers = [...new Set([...current, ...missing])];
-  await requestSupabase(`chat_rooms?id=eq.${encodeURIComponent(roomId)}`, {
-    method: 'PATCH', prefer: 'return=minimal', body: { members: newMembers },
+export async function createGroupRoomInSupabase(name, members) {
+  const id = createSupabaseClientId('room');
+  const result = await callRpc('create_group_room', {
+    p_room_id: id,
+    p_name: `${name || ''}`.trim(),
+    p_members: Array.isArray(members) ? members : [],
   });
+  if (result !== true) throw new Error('グループチャットを作成できませんでした。');
+  return {
+    id,
+    type: 'group',
+    name: `${name || ''}`.trim(),
+    members: [...new Set(
+      [...(Array.isArray(members) ? members : []), state.currentUsername]
+        .filter(Boolean),
+    )].sort(),
+    createdBy: state.currentUsername || '',
+    lastMessage: '',
+    lastAt: null,
+    lastSender: '',
+  };
 }
 
-export async function createGroupRoomInSupabase(data) {
-  const id = data.id || createSupabaseClientId('room');
-  await requestSupabase('chat_rooms', {
-    method: 'POST', prefer: 'return=minimal',
-    body: {
-      id,
-      type: 'group',
-      name: data.name || '',
-      members: Array.isArray(data.members) ? data.members : [],
-      created_by: data.createdBy || '',
-      last_message: '',
-      last_at: null,
-      last_sender: '',
-    },
+export async function leaveChatRoomInSupabase(roomId) {
+  const result = await callRpc('leave_chat_room', {
+    p_room_id: `${roomId || ''}`.trim(),
   });
-  return id;
-}
-
-export async function updateChatRoomLastInSupabase(roomId, data) {
-  const payload = {};
-  if ('lastMessage' in data) payload.last_message = data.lastMessage || '';
-  if ('lastAt' in data)      payload.last_at      = data.lastAt || null;
-  if ('lastSender' in data)  payload.last_sender  = data.lastSender || '';
-  if ('name' in data)        payload.name         = data.name || '';
-  if ('members' in data)     payload.members      = Array.isArray(data.members) ? data.members : [];
-  await requestSupabase(`chat_rooms?id=eq.${encodeURIComponent(roomId)}`, {
-    method: 'PATCH', prefer: 'return=minimal', body: payload,
-  });
-}
-
-export async function removeSelfFromDmRoomInSupabase(roomId, username, currentMembers) {
-  const newMembers = (currentMembers || []).filter(m => m !== username);
-  await requestSupabase(`chat_rooms?id=eq.${encodeURIComponent(roomId)}`, {
-    method: 'PATCH', prefer: 'return=minimal', body: { members: newMembers },
-  });
+  if (result !== true) throw new Error('チャットを一覧から削除できませんでした。');
 }
 
 export async function fetchChatMessagesFromSupabase(roomId, msgLimit = 200) {
@@ -1540,7 +1423,16 @@ export async function addChatMessageInSupabase(data) {
     method: 'POST', prefer: 'return=representation',
     body: { room_id: data.roomId, username: data.username || '', text: data.text || '' },
   });
-  if (Array.isArray(result) && result[0]) return result[0].id;
+  if (Array.isArray(result) && result[0]) {
+    const row = result[0];
+    return {
+      id: row.id,
+      roomId: row.room_id,
+      username: row.username || '',
+      text: row.text || '',
+      createdAt: toTimestamp(row.created_at),
+    };
+  }
   return null;
 }
 
@@ -1550,16 +1442,10 @@ export async function deleteChatMessageInSupabase(id) {
   });
 }
 
-export async function deleteOldestChatMessageInSupabase(roomId) {
-  // 最古のメッセージを1件取得して削除
-  const rows = await requestSupabase(
-    `chat_messages?room_id=eq.${encodeURIComponent(roomId)}&select=id&order=created_at.asc&limit=1`
-  );
-  if (Array.isArray(rows) && rows.length > 0) {
-    await requestSupabase(`chat_messages?id=eq.${encodeURIComponent(rows[0].id)}`, {
-      method: 'DELETE', prefer: 'return=minimal',
-    });
-  }
+export async function pruneOldestChatMessageInSupabase(roomId) {
+  return await callRpc('prune_oldest_chat_message', {
+    p_room_id: `${roomId || ''}`.trim(),
+  });
 }
 
 export async function fetchChatReadTimesFromSupabase(username) {
@@ -1582,11 +1468,12 @@ export async function markChatRoomReadInSupabase(username, roomKey) {
 // ==================== 勤怠 ====================
 
 function mapAttendanceRow(row = {}) {
+  const entryDate = row.entry_date || row.date || '';
   return {
-    id: `${row.username}_${row.entry_date}`,
+    id: `${row.username}_${entryDate}`,
     username: row.username || '',
-    date: row.entry_date || '',
-    dateStr: row.entry_date || '',
+    date: entryDate,
+    dateStr: entryDate,
     type: row.type || null,
     hayade: row.hayade || null,
     zangyo: row.zangyo || null,
@@ -1686,11 +1573,13 @@ export async function fetchMultipleMonthsAttendanceSummaryFromSupabase(yearMonth
   const yms = normalizeYearMonths(yearMonths);
   if (!yms.length) return [];
 
-  const encoded = encodeURIComponent(encodeInFilter(yms));
-  const rows = await requestSupabase(
-    `attendance_entries?year_month=in.${encoded}&order=entry_date.asc`,
-    { diagKey: 'attendance.summary', diagLabel: '勤怠集計', diagScope: yms.join(',') }
-  );
+  const rows = await callRpc('list_attendance_work_summary', {
+    p_year_months: yms,
+  }, {
+    diagKey: 'attendance.summary',
+    diagLabel: '勤怠集計',
+    diagScope: yms.join(','),
+  });
   return Array.isArray(rows) ? rows.map(mapAttendanceRow) : [];
 }
 
@@ -1771,30 +1660,22 @@ export async function fetchPublicAttendanceFromSupabase(yearMonth) {
 
 export async function writePublicAttendanceToSupabase(yearMonth, day, username, type) {
   if (!yearMonth || !day || !username || !type) return;
-  const days = { ...(await fetchPublicAttendanceFromSupabase(yearMonth)) };
-  const dayKey = `${day}`.padStart(2, '0');
-  const current = (days[dayKey] && typeof days[dayKey] === 'object') ? { ...days[dayKey] } : {};
-  current[username] = type;
-  days[dayKey] = current;
-  await requestSupabase('public_attendance_months', {
-    method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
-    body: { year_month: yearMonth, days },
+  const result = await callRpc('set_public_attendance', {
+    p_year_month: yearMonth,
+    p_day: `${day}`.padStart(2, '0'),
+    p_type: type,
   });
+  if (result !== true) throw new Error('共有勤怠を更新できませんでした。');
 }
 
 export async function removePublicAttendanceFromSupabase(yearMonth, day, username) {
   if (!yearMonth || !day || !username) return;
-  const days = { ...(await fetchPublicAttendanceFromSupabase(yearMonth)) };
-  const dayKey = `${day}`.padStart(2, '0');
-  const current = (days[dayKey] && typeof days[dayKey] === 'object') ? { ...days[dayKey] } : null;
-  if (!current || !current[username]) return;
-  delete current[username];
-  if (Object.keys(current).length === 0) delete days[dayKey];
-  else days[dayKey] = current;
-  await requestSupabase('public_attendance_months', {
-    method: 'POST', prefer: 'return=minimal,resolution=merge-duplicates',
-    body: { year_month: yearMonth, days },
+  const result = await callRpc('set_public_attendance', {
+    p_year_month: yearMonth,
+    p_day: `${day}`.padStart(2, '0'),
+    p_type: null,
   });
+  if (result !== true) throw new Error('共有勤怠を解除できませんでした。');
 }
 
 // ==================== 部門間依頼 ====================
@@ -1881,21 +1762,32 @@ export async function updateCrossDeptRequestInSupabase(id, data) {
   if ('statusUpdatedBy' in data)    payload.status_updated_by    = data.statusUpdatedBy || '';
   if ('archived' in data)           payload.archived             = !!data.archived;
   if ('notifyCreator' in data)      payload.notify_creator       = !!data.notifyCreator;
-  if ('linkedTaskId' in data)       payload.linked_task_id       = data.linkedTaskId || null;
-  if ('linkedTaskStatus' in data)   payload.linked_task_status   = data.linkedTaskStatus || null;
-  if ('linkedTaskAssignedTo' in data) payload.linked_task_assigned_to = data.linkedTaskAssignedTo || null;
-  if ('linkedTaskLinkedBy' in data) payload.linked_task_linked_by = data.linkedTaskLinkedBy || null;
-  if ('linkedTaskLinkedAt' in data) payload.linked_task_linked_at = data.linkedTaskLinkedAt || null;
-  if ('linkedTaskClosedAt' in data) payload.linked_task_closed_at = data.linkedTaskClosedAt || null;
   await requestSupabase(`cross_dept_requests?id=eq.${encodeURIComponent(id)}`, {
     method: 'PATCH', prefer: 'return=minimal', body: payload,
   });
 }
 
-export async function deleteCrossDeptRequestInSupabase(id) {
-  await requestSupabase(`cross_dept_requests?id=eq.${encodeURIComponent(id)}`, {
-    method: 'DELETE', prefer: 'return=minimal',
+export async function syncRequestTaskLinkInSupabase(requestId, taskId, action) {
+  const normalizedAction = `${action || ''}`.trim().toLowerCase();
+  if (!['link', 'sync', 'unlink'].includes(normalizedAction)) {
+    throw new Error('関連タスクの更新種別が不正です。');
+  }
+  const result = await callRpc('sync_request_task_link', {
+    p_request_id: `${requestId || ''}`.trim(),
+    p_task_id: `${taskId || ''}`.trim(),
+    p_action: normalizedAction,
   });
+  if (result !== true) {
+    throw new Error('部門間依頼とタスクの関連を更新できませんでした。');
+  }
+}
+
+export async function deleteCrossDeptRequestInSupabase(id) {
+  const result = await callRpc('delete_request_task_entity', {
+    p_entity_type: 'request',
+    p_entity_id: `${id || ''}`.trim(),
+  });
+  if (result !== true) throw new Error('部門間依頼を削除できませんでした。');
 }
 
 export async function fetchRequestCommentsFromSupabase(requestId) {
@@ -2035,18 +1927,17 @@ function mapTroubleReportPayload(data = {}) {
   };
 }
 
-export async function fetchTroubleReportsFromSupabase({ status = 'open', title = '', projectKey = '' } = {}) {
-  const filters = ['select=*'];
-  if (status === 'open') {
-    filters.push('status=in.(submitted,reviewing)');
-  } else if (status && status !== 'all') {
-    filters.push(`status=eq.${encodeURIComponent(status)}`);
-  }
-  if (title) filters.push(`or=(title.ilike.*${encodeURIComponent(title)}*,project_key.ilike.*${encodeURIComponent(title)}*)`);
-  if (projectKey) filters.push(`project_key=eq.${encodeURIComponent(projectKey)}`);
-  filters.push('order=created_at.desc');
-  filters.push('limit=200');
-  const rows = await requestSupabase(`trouble_reports?${filters.join('&')}`, {
+export async function fetchTroubleReportsFromSupabase({
+  status = 'open',
+  search = '',
+  title = '',
+  projectKey = '',
+} = {}) {
+  const rows = await callRpc('list_trouble_reports', {
+    p_status: `${status || 'open'}`.trim(),
+    p_search: `${search || title || ''}`.trim(),
+    p_project_key: `${projectKey || ''}`.trim(),
+  }, {
     diagKey: 'trouble.reports',
     diagLabel: 'トラブル報告',
     diagScope: status || 'all',

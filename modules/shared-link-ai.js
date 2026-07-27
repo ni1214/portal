@@ -1,12 +1,9 @@
 import { state } from './state.js';
 import { showToast } from './notify.js';
-import { fetchPortalConfigFromSupabase, isSupabaseSharedCoreEnabled } from './supabase.js';
-import { db, doc, getDoc } from './config.js';
 import { isSafeWebUrl, sanitizeIconIdentifier } from './utils.js';
+import { requestAi } from './secure-api.js';
 
 let deps = {};
-let geminiApiKey = '';
-let geminiLoaded = false;
 let isCreating = false;
 
 const KNOWN_LINKS = [
@@ -98,23 +95,6 @@ function buildHeuristicSuggestion(text) {
   return null;
 }
 
-async function loadGeminiApiKey() {
-  if (geminiLoaded) return geminiApiKey;
-  geminiLoaded = true;
-  try {
-    if (isSupabaseSharedCoreEnabled()) {
-      const config = await fetchPortalConfigFromSupabase();
-      geminiApiKey = config.geminiApiKey || '';
-    } else {
-      const snap = await getDoc(doc(db, 'portal', 'config'));
-      geminiApiKey = snap.data()?.geminiApiKey || '';
-    }
-  } catch (err) {
-    console.error('Gemini APIキーの読み込みに失敗しました:', err);
-  }
-  return geminiApiKey;
-}
-
 function parseJsonFromModel(text) {
   const cleaned = `${text || ''}`.replace(/```json|```/g, '').trim();
   const start = cleaned.indexOf('{');
@@ -124,9 +104,6 @@ function parseJsonFromModel(text) {
 }
 
 async function buildAiSuggestion(text) {
-  const key = await loadGeminiApiKey();
-  if (!key) return null;
-
   const categories = getPublicCategories().map(category => ({
     id: category.id,
     label: category.label,
@@ -152,24 +129,7 @@ ${JSON.stringify(categories, null, 2)}
 - URLが不明な場合は空文字ではなく、最も妥当な公式URLを推定してください。
 - 説明文やMarkdownは不要です。`;
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 500 },
-      }),
-    }
-  );
-
-  if (!res.ok) {
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.error?.message || `AI生成に失敗しました。HTTP ${res.status}`);
-  }
-  const data = await res.json();
-  return parseJsonFromModel(data.candidates?.[0]?.content?.parts?.[0]?.text || '');
+  return parseJsonFromModel(await requestAi('shared-link', prompt));
 }
 
 function sanitizeSuggestion(raw, sourceText) {
@@ -234,7 +194,7 @@ async function createSharedLinkFromAi() {
     const heuristic = buildHeuristicSuggestion(text);
     const rawSuggestion = heuristic || await buildAiSuggestion(text);
     if (!rawSuggestion) {
-      throw new Error('Gemini APIキーが未設定です。URLを含めるか、メール生成AI側でGemini APIキーを設定してください。');
+      throw new Error('リンク情報を推定できませんでした。URLを含めてもう一度お試しください。');
     }
 
     const suggestion = sanitizeSuggestion(rawSuggestion, text);

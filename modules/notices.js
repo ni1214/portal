@@ -127,7 +127,7 @@ function buildAcknowledgementHtml(notice) {
     ? '<span class="notice-ack-chip notice-ack-chip--done"><i class="fa-solid fa-circle-check"></i> 確認済み</span>'
     : '<span class="notice-ack-chip notice-ack-chip--pending"><i class="fa-solid fa-circle-exclamation"></i> 確認必須</span>';
   const actionButton = state.currentUsername && !acknowledged
-    ? `<button class="btn-notice-ack" data-notice-ack="${notice.id}"><i class="fa-solid fa-check"></i> 確認した</button>`
+    ? `<button class="btn-notice-ack" data-notice-ack="${esc(notice.id)}"><i class="fa-solid fa-check"></i> 確認した</button>`
     : '';
   const confirmedBy = acknowledgedUsers.length > 0
     ? `<div class="notice-ack-users">確認済み: ${acknowledgedUsers.map(username => esc(username)).join(' / ')}</div>`
@@ -353,7 +353,7 @@ export async function acknowledgeNotice(noticeId) {
 
   try {
     await Promise.all([
-      acknowledgeNoticeInSupabase(noticeId, notice.acknowledgedBy),
+      acknowledgeNoticeInSupabase(noticeId),
       markNoticesReadInSupabase(state.currentUsername, [noticeId]),
     ]);
   } catch (err) {
@@ -472,7 +472,7 @@ export function buildReactionBar(noticeId) {
     const count = users.length;
     const active = state.currentUsername && users.includes(state.currentUsername) ? ' active' : '';
     const countHtml = count > 0 ? `<span class="reaction-count">${count}</span>` : '';
-    return `<button class="reaction-btn${active}" data-notice-id="${noticeId}" data-emoji="${emoji}" title="${users.join(', ') || ''}">${emoji}${countHtml}</button>`;
+    return `<button class="reaction-btn${active}" data-notice-id="${esc(noticeId)}" data-emoji="${esc(emoji)}" title="${esc(users.join(', ') || '')}">${esc(emoji)}${countHtml}</button>`;
   }).join('');
   return `<div class="notice-reactions">${btns}</div>`;
 }
@@ -591,6 +591,7 @@ export function renderNotices(notices) {
   bindNoticeComposer(board);
 
   const list = board.querySelector('#notice-list');
+  if (!list) return;
   setupNoticeReactionLoader();
 
   if (!visibleNotices.length) {
@@ -608,7 +609,7 @@ export function renderNotices(notices) {
       ? `<span class="notice-new-badge">NEW</span>`
       : (isOwnNotice ? `<span class="notice-new-badge notice-new-badge--posted">投稿済み</span>` : '');
     const editBtns = state.isEditMode
-      ? `<button class="btn-notice-edit" data-id="${n.id}" aria-label="お知らせを編集"><i class="fa-solid fa-pen"></i></button>`
+      ? `<button class="btn-notice-edit" data-id="${esc(n.id)}" aria-label="お知らせを編集"><i class="fa-solid fa-pen"></i></button>`
       : '';
     const iconClass = n.priority === 'urgent' ? 'fa-triangle-exclamation' : 'fa-bullhorn';
     const iconMod = n.priority === 'urgent' ? 'urgent' : 'normal';
@@ -621,7 +622,7 @@ export function renderNotices(notices) {
         <div class="notice-item-header">
           ${newBadge}
           <span class="notice-badge ${n.priority === 'urgent' ? 'badge-urgent' : 'badge-normal'}">${badgeText}</span>
-          <span class="notice-date">${dateStr}</span>
+          <span class="notice-date">${esc(dateStr)}</span>
           ${editBtns}
         </div>
         <div class="notice-title">${esc(n.title || '')}</div>

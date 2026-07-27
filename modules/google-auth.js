@@ -1,23 +1,17 @@
 import { state } from './state.js';
 import {
-  fetchUserAccountByGoogleAuthId,
-  fetchUserAccountByGoogleEmail,
-  linkGoogleAccountToUsername,
+  claimPortalAccountInSupabase,
 } from './supabase.js';
 import { showToast } from './notify.js';
-
-const SUPABASE_JS_URLS = [
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',
-  'https://esm.sh/@supabase/supabase-js@2',
-];
+import { createClient } from '../vendor/supabase.js';
 
 let deps = {};
 let supabaseAuthClient = null;
 let authSubscription = null;
-let handlingUserId = '';
+const signedInUserTasks = new Map();
 
 function getRedirectTo() {
-  return window.location.origin + window.location.pathname;
+  return new URL('/', window.location.origin).toString();
 }
 
 function normalizeEmail(email) {
@@ -34,28 +28,11 @@ function deriveGoogleProfile(user = {}) {
   };
 }
 
-function buildUsernameSuggestion(profile = {}) {
-  const base = profile.name || profile.email?.split('@')[0] || '';
-  return `${base}`.trim().slice(0, 20);
-}
-
 async function getSupabaseAuthClient() {
   if (supabaseAuthClient) return supabaseAuthClient;
   if (!state.supabaseUrl || !state.supabaseApiKey) {
     throw new Error('Supabase 設定がありません。');
   }
-  let createClient = null;
-  let lastError = null;
-  for (const url of SUPABASE_JS_URLS) {
-    try {
-      ({ createClient } = await import(url));
-      break;
-    } catch (err) {
-      lastError = err;
-      console.warn('Supabase Auth client load failed:', url, err);
-    }
-  }
-  if (!createClient) throw lastError || new Error('Supabase Auth client を読み込めませんでした。');
   supabaseAuthClient = createClient(state.supabaseUrl, state.supabaseApiKey, {
     auth: {
       persistSession: true,
@@ -67,6 +44,46 @@ async function getSupabaseAuthClient() {
   return supabaseAuthClient;
 }
 
+function resetIdentityState() {
+  state.googleAuthSession = null;
+  state.googleAuthUser = null;
+  state.googleAuthProfile = null;
+  state.googleAuthLinkedUsername = '';
+  state.googleAuthLinkRequired = false;
+  state.isAccountActive = false;
+  state.isAdmin = false;
+  state.currentUsername = null;
+  localStorage.removeItem('portal-username');
+}
+
+function showUnlinkedAccountMessage(profile) {
+  deps.showUsernameModal?.(false);
+  const input = document.getElementById('username-input');
+  const submit = document.getElementById('username-submit');
+  const reclaim = document.getElementById('username-reclaim');
+  const desc = document.getElementById('username-modal-desc');
+  const errorBox = document.getElementById('username-error-box');
+  const errorText = document.getElementById('username-error-msg');
+  const skip = document.getElementById('username-skip');
+  if (input) {
+    input.value = '';
+    input.disabled = true;
+  }
+  if (submit) submit.hidden = true;
+  if (reclaim) reclaim.hidden = true;
+  if (desc) desc.textContent = 'このGoogleアカウントはポータル利用者に登録されていません。管理者へ登録を依頼してください。';
+  if (errorText) errorText.textContent = `${profile?.email || 'このアカウント'} は未登録です。`;
+  if (errorBox) errorBox.hidden = false;
+  if (skip) skip.textContent = 'ログアウト';
+}
+
+function restoreLinkedAccountUi() {
+  const input = document.getElementById('username-input');
+  const submit = document.getElementById('username-submit');
+  if (input) input.disabled = false;
+  if (submit) submit.hidden = false;
+}
+
 function setGoogleState(session = null) {
   const user = session?.user || null;
   state.googleAuthSession = session || null;
@@ -75,19 +92,10 @@ function setGoogleState(session = null) {
 }
 
 async function resolveLinkedAccount(profile) {
-  if (!profile?.authId && !profile?.email) return null;
-  const byAuthId = profile.authId
-    ? await fetchUserAccountByGoogleAuthId(profile.authId).catch(() => null)
-    : null;
-  if (byAuthId) return byAuthId;
-  const byEmail = profile.email
-    ? await fetchUserAccountByGoogleEmail(profile.email).catch(() => null)
-    : null;
-  if (byEmail?.username) {
-    await linkGoogleAccountToUsername(byEmail.username, profile);
-    return { ...byEmail, googleAuthId: profile.authId };
+  if (!profile?.authId || !profile?.email) {
+    throw new Error('Googleアカウントの識別情報を確認できません。');
   }
-  return null;
+  return await claimPortalAccountInSupabase(profile);
 }
 
 async function handleSignedInUser(user) {
@@ -95,8 +103,19 @@ async function handleSignedInUser(user) {
   state.googleAuthProfile = profile;
   const linked = await resolveLinkedAccount(profile);
   if (linked?.username) {
+    if (!linked.isActive) {
+      state.isAdmin = false;
+      state.isAccountActive = false;
+      showToast('このアカウントは無効です。管理者へお問い合わせください。', 'error');
+      await signOutGoogle({ reload: false });
+      deps.showUsernameModal?.(false);
+      return false;
+    }
+    restoreLinkedAccountUi();
     state.googleAuthLinkedUsername = linked.username;
     state.googleAuthLinkRequired = false;
+    state.isAccountActive = true;
+    state.isAdmin = linked.isAdmin === true;
     await deps.applyUsername?.(linked.username, { skipGoogleLink: true });
     deps.updateUsernameDisplay?.();
     return true;
@@ -104,10 +123,31 @@ async function handleSignedInUser(user) {
 
   state.googleAuthLinkedUsername = '';
   state.googleAuthLinkRequired = true;
-  deps.showUsernameModal?.(false);
-  const input = document.getElementById('username-input');
-  if (input && !input.value) input.value = buildUsernameSuggestion(profile);
+  state.isAccountActive = false;
+  state.isAdmin = false;
+  showUnlinkedAccountMessage(profile);
   return false;
+}
+
+function processSignedInUser(user) {
+  const userId = `${user?.id || ''}`.trim();
+  if (!userId) return Promise.resolve(false);
+  const currentTask = signedInUserTasks.get(userId);
+  if (currentTask) return currentTask;
+
+  let task;
+  task = Promise.resolve()
+    .then(() => handleSignedInUser(user))
+    .catch(err => {
+      console.error('Google account claim failed:', err);
+      showToast('Googleアカウント情報の確認に失敗しました。時間をおいて再度お試しください。', 'error');
+      return false;
+    })
+    .finally(() => {
+      if (signedInUserTasks.get(userId) === task) signedInUserTasks.delete(userId);
+    });
+  signedInUserTasks.set(userId, task);
+  return task;
 }
 
 export async function initGoogleAuth(d = {}) {
@@ -116,14 +156,15 @@ export async function initGoogleAuth(d = {}) {
   authSubscription?.unsubscribe?.();
   const { data } = client.auth.onAuthStateChange((event, session) => {
     setGoogleState(session);
-    if (event === 'INITIAL_SESSION') return;
-    const userId = session?.user?.id || '';
-    if (!userId || userId === handlingUserId) return;
-    handlingUserId = userId;
+    if (event === 'SIGNED_OUT') {
+      resetIdentityState();
+      deps.updateUsernameDisplay?.();
+      return;
+    }
+    if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return;
+    if (!session?.user?.id) return;
     setTimeout(() => {
-      void handleSignedInUser(session.user).finally(() => {
-        handlingUserId = '';
-      });
+      void processSignedInUser(session.user);
     }, 0);
   });
   authSubscription = data?.subscription || null;
@@ -138,8 +179,7 @@ export async function restoreGoogleAuthSession() {
     if (error) throw error;
     setGoogleState(data?.session || null);
     if (!data?.session?.user) return false;
-    await handleSignedInUser(data.session.user);
-    return true;
+    return await processSignedInUser(data.session.user);
   } catch (err) {
     console.error('Google login restore failed:', err);
     showToast('Googleログインの確認に失敗しました。', 'error');
@@ -158,6 +198,7 @@ export async function signInWithGoogle() {
       queryParams: {
         access_type: 'offline',
         prompt: 'select_account',
+        hd: 'framex.co.jp',
       },
     },
   });
@@ -174,13 +215,7 @@ export async function signOutGoogle({ reload = true } = {}) {
   } catch (err) {
     console.error('Google sign-out failed:', err);
   }
-  state.googleAuthSession = null;
-  state.googleAuthUser = null;
-  state.googleAuthProfile = null;
-  state.googleAuthLinkedUsername = '';
-  state.googleAuthLinkRequired = false;
-  state.currentUsername = null;
-  localStorage.removeItem('portal-username');
+  resetIdentityState();
   deps.updateUsernameDisplay?.();
   if (reload) window.location.reload();
 }

@@ -99,28 +99,26 @@ export function deleteField() {
 }
 
 // ========== 天気設定 ==========
-export const WEATHER_API_KEY = '4131c5bca956c19b2b60b014b4045c12';
 export const WEATHER_LAT = 36.3219;
 export const WEATHER_LON = 139.0033;
 
-// ========== アイコン: Google ファビコン API で公式ブランドアイコンを取得 ==========
-const _fav = d =>
-  `<img src="https://www.google.com/s2/favicons?domain=${d}&sz=128" loading="lazy" alt="${d}">`;
+// ========== アイコン: 同梱済みFont Awesomeのみで描画（外部favicon取得なし） ==========
+const _localIcon = iconClass => `<i class="${iconClass}" aria-hidden="true"></i>`;
 
 export const SVG_ICONS = {
-  'svg:notion':     _fav('notion.so'),
-  'svg:slack':      _fav('slack.com'),
-  'svg:gdrive':     _fav('drive.google.com'),
-  'svg:box':        _fav('box.com'),
-  'svg:teams':      _fav('teams.microsoft.com'),
-  'svg:onedrive':   _fav('onedrive.live.com'),
-  'svg:sharepoint': _fav('sharepoint.com'),
-  'svg:dropbox':    _fav('dropbox.com'),
-  'svg:gmail':      _fav('mail.google.com'),
-  'svg:zoom':       _fav('zoom.us'),
-  'svg:github':     _fav('github.com'),
-  'svg:kintone':    _fav('kintone.com'),
-  'svg:trello':     _fav('trello.com'),
+  'svg:notion':     _localIcon('fa-solid fa-note-sticky'),
+  'svg:slack':      _localIcon('fa-brands fa-slack'),
+  'svg:gdrive':     _localIcon('fa-brands fa-google-drive'),
+  'svg:box':        _localIcon('fa-solid fa-box'),
+  'svg:teams':      _localIcon('fa-brands fa-microsoft'),
+  'svg:onedrive':   _localIcon('fa-solid fa-cloud'),
+  'svg:sharepoint': _localIcon('fa-solid fa-share-nodes'),
+  'svg:dropbox':    _localIcon('fa-brands fa-dropbox'),
+  'svg:gmail':      _localIcon('fa-solid fa-envelope'),
+  'svg:zoom':       _localIcon('fa-solid fa-video'),
+  'svg:github':     _localIcon('fa-brands fa-github'),
+  'svg:kintone':    _localIcon('fa-solid fa-table-cells-large'),
+  'svg:trello':     _localIcon('fa-brands fa-trello'),
 };
 
 // ========== 外部ツール プリセットサービス ==========

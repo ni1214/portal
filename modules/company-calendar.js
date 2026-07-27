@@ -10,7 +10,6 @@ import {
 } from './supabase.js';
 import { db, doc, setDoc, updateDoc, getDoc, deleteField } from './config.js';
 import { esc } from './utils.js';
-import { verifyPIN } from './auth.js';
 import { showToast } from './notify.js';
 
 let deps = {};
@@ -344,6 +343,10 @@ export async function renderSharedCalendar() {
 export function openCompanyCalSettings() {
   const modal = document.getElementById('company-cal-settings-modal');
   if (!modal) return;
+  if (!state.isAdmin) {
+    showToast('会社カレンダーの設定には管理者権限が必要です。', 'error');
+    return;
+  }
 
   // 初期化
   _pendingHolidayStart = null;
@@ -352,18 +355,12 @@ export function openCompanyCalSettings() {
   const pinInput = document.getElementById('ccs-pin-input');
   const pinError = document.getElementById('ccs-pin-error');
 
-  // 既に管理者認証済みならそのまま本体を表示
-  if (state.isAdmin) {
-    if (pinGate) pinGate.hidden = true;
-    if (body) body.hidden = false;
-    _initFiscalYear();
-    _renderAnnualGrid();
-  } else {
-    if (pinGate) pinGate.hidden = false;
-    if (body) body.hidden = true;
-    if (pinInput) { pinInput.value = ''; setTimeout(() => pinInput.focus(), 100); }
-    if (pinError) pinError.hidden = true;
-  }
+  if (pinGate) pinGate.hidden = true;
+  if (body) body.hidden = false;
+  if (pinInput) pinInput.value = '';
+  if (pinError) pinError.hidden = true;
+  _initFiscalYear();
+  _renderAnnualGrid();
 
   modal.classList.add('visible');
 }
@@ -622,16 +619,8 @@ export function initCompanyCalSettingsForms() {
   const pinInput  = document.getElementById('ccs-pin-input');
   if (pinSubmit && pinInput) {
     const doAuth = async () => {
-      const pin = pinInput.value.trim();
-      if (!pin) return;
-      pinSubmit.disabled = true;
-      pinSubmit.textContent = '確認中…';
-      const ok = await verifyPIN(pin);
-      pinSubmit.disabled = false;
-      pinSubmit.textContent = '認証';
       const errEl = document.getElementById('ccs-pin-error');
-      if (ok) {
-        state.isAdmin = true;
+      if (state.isAdmin) {
         document.getElementById('ccs-pin-gate').hidden = true;
         const body = document.getElementById('ccs-body');
         body.hidden = false;
@@ -639,9 +628,8 @@ export function initCompanyCalSettingsForms() {
         _renderAnnualGrid();
         if (errEl) errEl.hidden = true;
       } else {
-        if (errEl) { errEl.hidden = false; errEl.textContent = 'PINが違います'; }
+        if (errEl) { errEl.hidden = false; errEl.textContent = '管理者権限が必要です'; }
         pinInput.value = '';
-        pinInput.focus();
       }
     };
     pinSubmit.addEventListener('click', doAuth);

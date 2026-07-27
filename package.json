@@ -1,0 +1,25 @@
+{
+  "name": "fremex-production-portal",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "build": "node tools/build-vercel.mjs",
+    "check": "node tools/build-vercel.mjs --check && node tools/verify-vercel-artifacts.mjs && node tools/verify-security.mjs && node tools/verify-migration.mjs && node tools/verify-api-security.mjs && node tools/verify-gas-order.mjs",
+    "verify:migration": "node tools/verify-migration.mjs"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "6.7.2",
+    "@supabase/supabase-js": "2.110.8",
+    "dompurify": "3.4.12",
+    "material-symbols": "0.45.8",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.4",
+    "esbuild": "0.28.1"
+  }
+}
