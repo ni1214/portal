@@ -611,12 +611,27 @@ if (migrationFiles.length !== 1) {
   );
 }
 
-const tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' })
-  .split(/\r?\n/)
-  .filter(Boolean);
-for (const pathname of tracked) {
-  if (/^\.env(?:\.|$)/.test(pathname) && pathname !== '.env.example') {
-    failures.push(`Tracked environment file: ${pathname}`);
+if (await exists('.git')) {
+  const tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' })
+    .split(/\r?\n/)
+    .filter(Boolean);
+  for (const pathname of tracked) {
+    if (/^\.env(?:\.|$)/.test(pathname) && pathname !== '.env.example') {
+      failures.push(`Tracked environment file: ${pathname}`);
+    }
+  }
+} else {
+  // Vercel source uploads intentionally omit .git. In that environment,
+  // prove that no real root-level environment file reached the build.
+  const uploadedRootEntries = await readdir(root, { withFileTypes: true });
+  for (const entry of uploadedRootEntries) {
+    if (
+      entry.isFile()
+      && /^\.env(?:\.|$)/.test(entry.name)
+      && entry.name !== '.env.example'
+    ) {
+      failures.push(`Uploaded environment file: ${entry.name}`);
+    }
   }
 }
 
