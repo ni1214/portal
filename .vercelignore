@@ -14,7 +14,6 @@ dist
 AGENTS.md
 CLAUDE.md
 HOME_SETUP.md
-gas-order-script.js
 
 .env
 .env.*
