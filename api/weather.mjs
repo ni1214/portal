@@ -17,7 +17,7 @@ export default async function handler(request, response) {
     assertNoRequestBody(request);
     const { user } = await authenticateSupabaseRequest(request);
     await consumePortalRateLimit(user.id, user.email, 'weather', {
-      limit: 120,
+      limit: 30,
       windowSeconds: 3600,
     });
     const weather = await fetchNormalizedWeather();

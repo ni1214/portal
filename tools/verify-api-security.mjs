@@ -7,7 +7,6 @@ Object.assign(process.env, {
   SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test',
   SUPABASE_SECRET_KEY: 'sb_secret_test',
   GEMINI_API_KEY: 'gemini-test-key',
-  OPENWEATHER_API_KEY: 'rotated-weather-test-key',
   GAS_ORDER_URL: 'https://script.google.com/macros/s/test/exec',
   GAS_ORDER_TOKEN: '0123456789abcdef0123456789abcdef',
   ORDER_COMPANY_NAME: 'Test Company',
@@ -27,7 +26,7 @@ const REGISTERED_EMAIL = 'portal.owner@gmail.com';
 const UNREGISTERED_EMAIL = 'another.portal.user@gmail.com';
 const RATE_LIMIT_RULES = new Map([
   ['ai:email', { limit: 20, windowSeconds: 3600 }],
-  ['weather', { limit: 120, windowSeconds: 3600 }],
+  ['weather', { limit: 30, windowSeconds: 3600 }],
   ['order-email', { limit: 20, windowSeconds: 3600 }],
   ['order-email-reconcile', { limit: 20, windowSeconds: 3600 }],
 ]);
@@ -203,24 +202,56 @@ globalThis.fetch = async (input, options = {}) => {
     assert.equal(options.headers['x-goog-api-key'], process.env.GEMINI_API_KEY);
     return Response.json({ candidates: [{ content: { parts: [{ text: 'generated' }] } }] });
   }
-  if (url.includes('/data/2.5/weather')) {
+  if (url.startsWith('https://api.open-meteo.com/v1/forecast')) {
     weatherProviderRequestCount += 1;
-    assert.match(url, /appid=rotated-weather-test-key/);
+    const providerUrl = new URL(url);
+    assert.equal(providerUrl.hostname, 'api.open-meteo.com');
+    assert.equal(providerUrl.pathname, '/v1/forecast');
+    assert.equal(providerUrl.searchParams.get('latitude'), '36.3219');
+    assert.equal(providerUrl.searchParams.get('longitude'), '139.0033');
+    assert.equal(providerUrl.searchParams.get('forecast_hours'), '25');
+    assert.equal(providerUrl.searchParams.get('temperature_unit'), 'celsius');
+    assert.equal(providerUrl.searchParams.get('wind_speed_unit'), 'ms');
+    assert.equal(providerUrl.searchParams.get('timeformat'), 'unixtime');
+    assert.equal(providerUrl.searchParams.get('timezone'), 'Asia/Tokyo');
+    assert.deepEqual(
+      providerUrl.searchParams.get('current')?.split(','),
+      [
+        'temperature_2m',
+        'apparent_temperature',
+        'relative_humidity_2m',
+        'wind_speed_10m',
+        'weather_code',
+        'is_day',
+      ],
+    );
+    assert.deepEqual(
+      providerUrl.searchParams.get('hourly')?.split(','),
+      ['temperature_2m', 'relative_humidity_2m', 'weather_code', 'is_day'],
+    );
+    assert.equal(providerUrl.searchParams.has('apikey'), false);
+    assert.equal(providerUrl.searchParams.has('appid'), false);
+    const times = Array.from(
+      { length: 25 },
+      (_, index) => 1_784_764_800 + index * 3_600,
+    );
     return Response.json({
-      name: 'Takasaki',
-      main: { temp: 30, feels_like: 32, humidity: 55 },
-      wind: { speed: 2.5 },
-      weather: [{ description: 'clear', icon: '01d' }],
-    });
-  }
-  if (url.includes('/data/2.5/forecast')) {
-    weatherProviderRequestCount += 1;
-    return Response.json({
-      list: Array.from({ length: 9 }, (_, index) => ({
-        dt: 1_784_764_800 + index * 10_800,
-        main: { temp: 29 + index, humidity: 50 },
-        weather: [{ description: 'clear', icon: '01d' }],
-      })),
+      current: {
+        time: times[0],
+        temperature_2m: 30,
+        apparent_temperature: 32,
+        relative_humidity_2m: 55,
+        wind_speed_10m: 2.5,
+        weather_code: 0,
+        is_day: 1,
+      },
+      hourly: {
+        time: times,
+        temperature_2m: times.map((_, index) => 29 + index),
+        relative_humidity_2m: times.map((_, index) => 50 + (index % 10)),
+        weather_code: times.map((_, index) => (index === 24 ? 95 : 2)),
+        is_day: times.map((_, index) => (index < 12 ? 1 : 0)),
+      },
     });
   }
   throw new Error(`Unexpected mocked request: ${url}`);
@@ -286,7 +317,32 @@ assert.equal(lastAuthBearerToken, createMockAuthToken());
 
 const weatherResult = await invoke(weather, createRequest('GET', undefined));
 assert.equal(weatherResult.status, 200);
+assert.equal(weatherProviderRequestCount, 1);
+assert.equal(weatherResult.payload.location, '高崎市');
+assert.deepEqual(weatherResult.payload.current, {
+  temperature: 30,
+  feelsLike: 32,
+  humidity: 55,
+  windSpeed: 2.5,
+  description: '晴れ',
+  icon: '01d',
+});
 assert.equal(weatherResult.payload.forecast.length, 8);
+assert.deepEqual(weatherResult.payload.forecast[0], {
+  at: new Date((1_784_764_800 + 3 * 3_600) * 1000).toISOString(),
+  temperature: 32,
+  humidity: 53,
+  description: '晴れ時々くもり',
+  icon: '03d',
+});
+assert.deepEqual(weatherResult.payload.forecast.at(-1), {
+  at: new Date((1_784_764_800 + 24 * 3_600) * 1000).toISOString(),
+  temperature: 53,
+  humidity: 54,
+  description: '雷雨',
+  icon: '11n',
+});
+assert.equal(Number.isNaN(Date.parse(weatherResult.payload.updatedAt)), false);
 
 const orderResult = await invoke(orderEmail, createRequest('POST', { orderId: 'order-123' }));
 assert.equal(orderResult.status, 200);
@@ -562,7 +618,7 @@ assert.equal(outsider.payload.error.code, 'operation_not_allowed');
 assert.equal(
   weatherProviderRequestCount,
   weatherRequestsBeforeUnregisteredMember,
-  'An unregistered Google account must be rejected before OpenWeather is called.',
+  'An unregistered Google account must be rejected before Open-Meteo is called.',
 );
 const outsiderMemberRpc = rpcRequests.findLast(
   request => request.url.includes('/consume_portal_rate_limit'),

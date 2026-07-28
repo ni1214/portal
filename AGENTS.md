@@ -2,7 +2,7 @@
 
 ## プロジェクト概要
 - **名前**: 生産管理課 ポータル
-- **公開先**: Vercel（本番予定origin: `https://fremex-production-portal-ni1214s-projects.vercel.app`。GitHub `https://github.com/ni1214/portal.git` / branch: `master` はソース管理のみ）
+- **公開先**: Vercel（本番origin: `https://fremex-production-portal.vercel.app`。GitHub `https://github.com/ni1214/portal.git` / branch: `master` はソース管理のみ）
 - **バックエンド**: Supabase（runtime / 本番 primary） / Firebase は移行スクリプト専用
 - **スタック**: Vanilla JS (ES modules) + HTML + CSS — フレームワークなし
 - **主要ファイル**: `index.html` / `script.js` / `style.css`
@@ -180,7 +180,7 @@ export function xxxFunction() { ... }
 - 現在の runtime 本線は **Supabase**。以下の Firebase / Firestore 記述は、主に移行履歴・旧パス対応の参照メモとして残っている
 - `script.js` は `type="module"` — ESM import 構文必須
 - runtime は `modules/supabase.js` の REST helper を本線で使い、`Authorization` には Google セッションの access token を送る。リアルタイム相当が必要な箇所は機能ごとに polling / 再取得で補う
-- Gemini / OpenWeather / 発注メールは同一オリジンの `/api/*` を経由し、秘密値をブラウザ・DBレスポンス・ログへ出さない
+- Gemini / Open-Meteo / 発注メールは同一オリジンの `/api/*` を経由する。Open-MeteoはAPIキー不要のForecast APIをサーバー側で呼び、Gemini・発注メールの秘密値はブラウザ・DBレスポンス・ログへ出さない
 - 管理権限は `user_accounts.is_admin` をサーバー側の正とし、ブラウザ状態・PIN・自己申告プロフィールを認可根拠にしない
 - **常時編集モード**: `isEditMode = true` 固定（PIN ゲートなし）
 

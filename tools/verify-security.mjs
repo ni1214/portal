@@ -189,6 +189,7 @@ const clientSource = (await Promise.all(clientFiles.map(pathname => readFile(pat
 
 forbidMatch(clientSource, /generativelanguage\.googleapis\.com/i, 'Gemini must not be called directly from browser code.');
 forbidMatch(clientSource, /api\.openweathermap\.org/i, 'OpenWeather must not be called directly from browser code.');
+forbidMatch(clientSource, /api\.open-meteo\.com/i, 'Open-Meteo must not be called directly from browser code.');
 forbidMatch(clientSource, /WEATHER_API_KEY\s*=/, 'A weather API key remains in browser code.');
 forbidMatch(clientSource, /Authorization\s*:\s*`Bearer\s+\$\{state\.supabaseApiKey\}`/, 'Supabase requests still authenticate as anon after login.');
 forbidMatch(clientSource, /https:\/\/(?:cdn\.jsdelivr\.net|esm\.sh)\/@supabase\/supabase-js/i, 'Supabase Auth still loads executable code from a runtime CDN.');
@@ -203,6 +204,7 @@ forbidMatch(
 
 const serverSource = (await Promise.all((await walk('server')).map(pathname => readFile(pathname, 'utf8')))).join('\n');
 const supabaseServer = await read('server/supabase.mjs');
+const weatherServer = await read('server/weather.mjs');
 requireMatch(serverSource, /SUPABASE_SECRET_KEY/, 'Server RPCs must use the server-only Supabase secret key.');
 forbidMatch(serverSource, /SUPABASE_SERVICE_ROLE_KEY/, 'Server code still uses the legacy Supabase service-role key.');
 requireMatch(serverSource, /apikey:\s*secretKey/, 'Server RPCs must send the Supabase secret key in the apikey header.');
@@ -215,6 +217,16 @@ requireMatch(serverSource, /callSupabaseServiceRpc/, 'Privileged Supabase RPC he
 forbidMatch(serverSource, /export\s+(?:async\s+)?function\s+callSupabaseRpc\b/, 'A public-JWT RPC helper remains available.');
 requireMatch(serverSource, /VERCEL_URL/, 'Preview origin must derive from Vercel system metadata.');
 forbidMatch(serverSource, /headers?(?:\?\.)?\[['"]host['"]\]|getRequestHeader\([^)]*['"]host['"]/, 'Request Host must not be trusted for origin validation.');
+requireMatch(
+  weatherServer,
+  /https:\/\/api\.open-meteo\.com\/v1\/forecast/,
+  'Weather must use the server-side Open-Meteo Forecast API.',
+);
+forbidMatch(
+  weatherServer,
+  /\b(?:OPENWEATHER_API_KEY|WEATHER_API_KEY|appid)\b/i,
+  'Weather server must not require or send a provider API key.',
+);
 forbidMatch(
   supabaseServer,
   /@framex\\\.co\\\.jp/i,

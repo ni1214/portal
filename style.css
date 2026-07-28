@@ -34829,3 +34829,20 @@ body.portal-ui-v2 #ord-modal.portal-workspace-mode.order-ui-v2 :is(
     grid-template-columns: minmax(0, 1fr);
   }
 }
+/* ===== Open-Meteo attribution ===== */
+.weather-data-source {
+  margin-top: var(--space-xs);
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  text-align: right;
+}
+
+.weather-data-source a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.weather-data-source a:hover {
+  color: var(--text-secondary);
+}
