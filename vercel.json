@@ -5,20 +5,16 @@
   "outputDirectory": "dist",
   "functions": {
     "api/ai.mjs": {
-      "maxDuration": 60,
-      "memory": 1024
+      "maxDuration": 60
     },
     "api/weather.mjs": {
-      "maxDuration": 45,
-      "memory": 1024
+      "maxDuration": 45
     },
     "api/order-email.mjs": {
-      "maxDuration": 60,
-      "memory": 1024
+      "maxDuration": 60
     },
     "api/order-email-reconcile.mjs": {
-      "maxDuration": 45,
-      "memory": 1024
+      "maxDuration": 45
     }
   },
   "headers": [
