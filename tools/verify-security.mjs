@@ -54,6 +54,14 @@ function normalizeSqlType(type) {
     .replace(/^pg_catalog\./, '');
 }
 
+function sliceNormalizedFunction(normalizedSql, functionName) {
+  const marker = `create or replace function ${functionName}`;
+  const start = normalizedSql.indexOf(marker);
+  if (start < 0) return '';
+  const next = normalizedSql.indexOf('create or replace function ', start + marker.length);
+  return normalizedSql.slice(start, next < 0 ? normalizedSql.length : next);
+}
+
 function parseFunctionParameterTypes(parameters) {
   if (!parameters.trim()) return [];
   return parameters.split(',').map(parameter => {
@@ -187,17 +195,78 @@ forbidMatch(clientSource, /https:\/\/(?:cdn\.jsdelivr\.net|esm\.sh)\/@supabase\/
 forbidMatch(clientSource, /https:\/\/cdn\.sheetjs\.com\/xlsx/i, 'XLSX still loads executable code from a runtime CDN.');
 forbidMatch(clientSource, /\b(?:gemini_api_key|gas_order_url)\b/i, 'A server-only configuration field remains in browser code.');
 forbidMatch(clientSource, /AIza[0-9A-Za-z_-]{20,}/, 'A Google API key-like value remains in browser code.');
-forbidMatch(clientSource, /SUPABASE_SERVICE_ROLE_KEY/i, 'The Supabase service-role key name leaked into browser code.');
+forbidMatch(
+  clientSource,
+  /SUPABASE_(?:SECRET|SERVICE_ROLE)_KEY/i,
+  'A server-only Supabase key name leaked into browser code.',
+);
 
 const serverSource = (await Promise.all((await walk('server')).map(pathname => readFile(pathname, 'utf8')))).join('\n');
-requireMatch(serverSource, /SUPABASE_SERVICE_ROLE_KEY/, 'Server RPCs must use the server-only Supabase service role.');
+const supabaseServer = await read('server/supabase.mjs');
+requireMatch(serverSource, /SUPABASE_SECRET_KEY/, 'Server RPCs must use the server-only Supabase secret key.');
+forbidMatch(serverSource, /SUPABASE_SERVICE_ROLE_KEY/, 'Server code still uses the legacy Supabase service-role key.');
+requireMatch(serverSource, /apikey:\s*secretKey/, 'Server RPCs must send the Supabase secret key in the apikey header.');
+forbidMatch(
+  serverSource,
+  /Authorization:\s*`Bearer\s+\$\{secretKey\}`/,
+  'Supabase secret keys must not be sent as bearer tokens.',
+);
 requireMatch(serverSource, /callSupabaseServiceRpc/, 'Privileged Supabase RPC helper is missing.');
 forbidMatch(serverSource, /export\s+(?:async\s+)?function\s+callSupabaseRpc\b/, 'A public-JWT RPC helper remains available.');
 requireMatch(serverSource, /VERCEL_URL/, 'Preview origin must derive from Vercel system metadata.');
 forbidMatch(serverSource, /headers?(?:\?\.)?\[['"]host['"]\]|getRequestHeader\([^)]*['"]host['"]/, 'Request Host must not be trusted for origin validation.');
-requireMatch(serverSource, /@framex\\\.co\\\.jp/, 'Server authentication must enforce the company email domain.');
-requireMatch(serverSource, /provider\s*!==\s*['"]google['"]/, 'Server authentication must strictly require app_metadata.provider=google.');
-forbidMatch(serverSource, /app_metadata\?\.providers|providers\.includes\(['"]google['"]\)/, 'Server authentication must not fall back to app_metadata.providers.');
+forbidMatch(
+  supabaseServer,
+  /@framex\\\.co\\\.jp/i,
+  'Server authentication must use the registered-account allowlist, not an email-domain regex.',
+);
+requireMatch(
+  supabaseServer,
+  /if\s*\(\s*!email\s*\|\|\s*!jwtEmail[\s\S]{0,180}?throw\s+invalidSessionError\(\)/,
+  'Server authentication must reject empty verified-user or JWT emails.',
+);
+requireMatch(supabaseServer, /provider\s*!==\s*['"]google['"]/, 'Server authentication must strictly require app_metadata.provider=google.');
+requireMatch(
+  supabaseServer,
+  /Array\.isArray\(jwtPayload\.amr\)[\s\S]{0,400}?method[\s\S]{0,160}?['"]oauth['"]/,
+  'Server authentication must require an OAuth AMR method.',
+);
+forbidMatch(supabaseServer, /app_metadata\?\.providers|providers\.includes\(['"]google['"]\)/, 'Server authentication must not fall back to app_metadata.providers.');
+
+const googleAuthClient = await read('modules/google-auth.js');
+forbidMatch(
+  googleAuthClient,
+  /\bhd\s*:/,
+  'Google OAuth must not use a hosted-domain hint as an authorization boundary.',
+);
+
+const apiSecurityFlows = [
+  ['api/ai.mjs', 'await generateAiText('],
+  ['api/weather.mjs', 'await fetchNormalizedWeather('],
+  ['api/order-email.mjs', 'await sendClaimedOrderEmail('],
+  ['api/order-email-reconcile.mjs', 'await reconcileClaimedOrderEmail('],
+];
+const actualApiFiles = (await walk('api'))
+  .filter(pathname => /\.mjs$/i.test(pathname))
+  .map(pathname => relative(root, pathname).replaceAll('\\', '/'));
+if (!sameSet(actualApiFiles, apiSecurityFlows.map(([pathname]) => pathname))) {
+  failures.push('Every Vercel API must declare an authentication/member-gate security flow.');
+}
+for (const [pathname, secretOperation] of apiSecurityFlows) {
+  const source = await read(pathname);
+  const authenticationIndex = source.indexOf('await authenticateSupabaseRequest(');
+  const memberGateIndex = source.indexOf('await consumePortalRateLimit(');
+  const secretOperationIndex = source.indexOf(secretOperation);
+  if (
+    authenticationIndex < 0
+    || memberGateIndex <= authenticationIndex
+    || secretOperationIndex <= memberGateIndex
+  ) {
+    failures.push(
+      `${pathname} must authenticate and pass the registered-member gate before secret processing.`,
+    );
+  }
+}
 
 const indexHtml = await read('index.html');
 forbidMatch(indexHtml, /https:\/\/(?:fonts\.googleapis\.com|fonts\.gstatic\.com|cdnjs\.cloudflare\.com)/i, 'Runtime font or icon CDN remains in index.html.');
@@ -416,6 +485,66 @@ if (migrationFiles.length !== 1) {
     normalizedMigration,
     /auth\.jwt\(\)\s*->\s*'amr'[\s\S]*->>\s*'method'[\s\S]*=\s*'oauth'/,
     'Supabase authorization must require an OAuth AMR method.',
+  );
+  forbidMatch(
+    normalizedMigration,
+    /@framex\\\.co\\\.jp/,
+    'Supabase authorization must use registered account identity, not a company-domain regex.',
+  );
+  const currentUsernameSource = sliceNormalizedFunction(
+    normalizedMigration,
+    'private.current_username',
+  );
+  requireMatch(
+    currentUsernameSource,
+    /account\.google_auth_id\s*=\s*\(select auth\.uid\(\)\)::text/,
+    'Browser authorization must match the registered account UID to auth.uid().',
+  );
+  requireMatch(
+    currentUsernameSource,
+    /account\.google_email[\s\S]{0,220}?=[\s\S]{0,220}?auth\.jwt\(\)\s*->>\s*'email'/,
+    'Browser authorization must match the registered account email to the JWT email.',
+  );
+  requireMatch(
+    currentUsernameSource,
+    /account\.is_active/,
+    'Browser authorization must require an active registered account.',
+  );
+
+  const usernameForUserIdSource = sliceNormalizedFunction(
+    normalizedMigration,
+    'private.username_for_user_id',
+  );
+  requireMatch(
+    usernameForUserIdSource,
+    /account\.google_auth_id\s*=\s*p_user_id::text/,
+    'Service RPC authorization must match the registered account UID.',
+  );
+  requireMatch(
+    usernameForUserIdSource,
+    /account\.google_email[\s\S]{0,220}?=[\s\S]{0,220}?p_user_email/,
+    'Service RPC authorization must match the registered account email.',
+  );
+  requireMatch(
+    usernameForUserIdSource,
+    /account\.is_active/,
+    'Service RPC authorization must require an active registered account.',
+  );
+  const rateLimitStart = normalizedMigration.indexOf(
+    'create or replace function public.consume_portal_rate_limit',
+  );
+  const rateLimitEnd = normalizedMigration.indexOf(
+    'create or replace function public.claim_order_email_send',
+  );
+  const rateLimitSource = (
+    rateLimitStart >= 0 && rateLimitEnd > rateLimitStart
+      ? normalizedMigration.slice(rateLimitStart, rateLimitEnd)
+      : ''
+  );
+  requireMatch(
+    rateLimitSource,
+    /'order-email-reconcile'/,
+    'The registered-member rate-limit RPC must support order-email-reconcile.',
   );
   forbidMatch(
     normalizedMigration,
@@ -640,7 +769,11 @@ if (await exists('dist')) {
     if (await exists(`dist/${forbidden}`)) failures.push(`Forbidden deployment artifact: dist/${forbidden}`);
   }
   const distSource = (await Promise.all((await walk('dist')).filter(pathname => /\.(?:js|html|css|json)$/i.test(pathname)).map(pathname => readFile(pathname, 'utf8')))).join('\n');
-  forbidMatch(distSource, /SUPABASE_SERVICE_ROLE_KEY/, 'The service-role key name leaked into dist.');
+  forbidMatch(
+    distSource,
+    /SUPABASE_(?:SECRET|SERVICE_ROLE)_KEY/,
+    'A server-only Supabase key name leaked into dist.',
+  );
 }
 
 if (failures.length) {

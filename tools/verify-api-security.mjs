@@ -5,7 +5,7 @@ Object.assign(process.env, {
   SITE_ORIGIN: 'https://portal.example.com',
   SUPABASE_URL: 'https://example.supabase.co',
   SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test',
-  SUPABASE_SERVICE_ROLE_KEY: 'service-role-test-key',
+  SUPABASE_SECRET_KEY: 'sb_secret_test',
   GEMINI_API_KEY: 'gemini-test-key',
   OPENWEATHER_API_KEY: 'rotated-weather-test-key',
   GAS_ORDER_URL: 'https://script.google.com/macros/s/test/exec',
@@ -23,7 +23,15 @@ delete process.env.VERCEL_ENV;
 delete process.env.VERCEL_URL;
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
-let authEmail = 'user@framex.co.jp';
+const REGISTERED_EMAIL = 'portal.owner@gmail.com';
+const UNREGISTERED_EMAIL = 'another.portal.user@gmail.com';
+const RATE_LIMIT_RULES = new Map([
+  ['ai:email', { limit: 20, windowSeconds: 3600 }],
+  ['weather', { limit: 120, windowSeconds: 3600 }],
+  ['order-email', { limit: 20, windowSeconds: 3600 }],
+  ['order-email-reconcile', { limit: 20, windowSeconds: 3600 }],
+]);
+let authEmail = REGISTERED_EMAIL;
 let authProvider = 'google';
 let authProviders = ['google'];
 let authJwtSubject = USER_ID;
@@ -38,6 +46,7 @@ let orderClaimMode = 'claimed';
 let orderAuthorizeMode = 'success';
 let orderResolveMode = 'success';
 let lastAuthBearerToken = '';
+let weatherProviderRequestCount = 0;
 const rpcRequests = [];
 
 function encodeJwtPart(value) {
@@ -57,6 +66,17 @@ function createMockAuthToken() {
   ].join('.');
 }
 
+function isRegisteredMemberPayload(payload) {
+  return payload.p_user_id === USER_ID && payload.p_user_email === REGISTERED_EMAIL;
+}
+
+function isExpectedResolutionPayload(payload) {
+  return isRegisteredMemberPayload(payload)
+    && payload.p_order_id === 'order-123'
+    && payload.p_attempt_id === 'attempt-1'
+    && ['sent', 'not_sent'].includes(payload.p_resolution);
+}
+
 globalThis.fetch = async (input, options = {}) => {
   const url = String(input);
   if (url.endsWith('/auth/v1/user')) {
@@ -71,12 +91,32 @@ globalThis.fetch = async (input, options = {}) => {
   }
 
   if (url.includes('/rest/v1/rpc/')) {
-    assert.equal(options.headers.apikey, process.env.SUPABASE_SERVICE_ROLE_KEY);
-    assert.equal(options.headers.Authorization, `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`);
+    assert.equal(options.headers.apikey, process.env.SUPABASE_SECRET_KEY);
+    assert.equal(
+      Object.keys(options.headers).some(name => name.toLowerCase() === 'authorization'),
+      false,
+    );
     const payload = JSON.parse(options.body);
     rpcRequests.push({ url, payload });
-    if (url.includes('/rpc/consume_portal_rate_limit')) return Response.json(rateLimitAllowed);
+    if (url.includes('/rpc/consume_portal_rate_limit')) {
+      if (!isRegisteredMemberPayload(payload)) {
+        return Response.json({ message: 'Active portal member was not found' }, { status: 403 });
+      }
+      const rule = RATE_LIMIT_RULES.get(payload.p_feature);
+      if (!rule) {
+        return Response.json({ message: 'Unsupported rate-limit feature' }, { status: 400 });
+      }
+      assert.equal(payload.p_limit, rule.limit);
+      assert.equal(payload.p_window_seconds, rule.windowSeconds);
+      return Response.json(rateLimitAllowed);
+    }
+    if (!isRegisteredMemberPayload(payload)) {
+      return Response.json({ message: 'Active portal member was not found' }, { status: 403 });
+    }
     if (url.includes('/rpc/claim_order_email_send')) {
+      if (payload.p_order_id !== 'order-123') {
+        return Response.json({ claimed: false, status: 'not_found' });
+      }
       if (orderClaimMode === 'sending') {
         return Response.json({ claimed: false, status: 'sending' });
       }
@@ -97,20 +137,26 @@ globalThis.fetch = async (input, options = {}) => {
         },
       });
     }
-    if (url.includes('/rpc/finish_order_email_send')) return Response.json(true);
+    if (url.includes('/rpc/finish_order_email_send')) {
+      return Response.json(
+        payload.p_order_id === 'order-123'
+        && payload.p_attempt_id === 'attempt-1'
+        && typeof payload.p_success === 'boolean',
+      );
+    }
     if (url.includes('/rpc/authorize_order_email_resolution')) {
       if (orderAuthorizeMode === 'denied') {
         return Response.json({ message: 'denied' }, { status: 403 });
       }
       if (orderAuthorizeMode === 'conflict') return Response.json(false);
-      return Response.json(true);
+      return Response.json(isExpectedResolutionPayload(payload));
     }
     if (url.includes('/rpc/resolve_order_email_send')) {
       if (orderResolveMode === 'denied') {
         return Response.json({ message: 'denied' }, { status: 403 });
       }
       if (orderResolveMode === 'conflict') return Response.json(false);
-      return Response.json(true);
+      return Response.json(isExpectedResolutionPayload(payload));
     }
   }
 
@@ -158,6 +204,7 @@ globalThis.fetch = async (input, options = {}) => {
     return Response.json({ candidates: [{ content: { parts: [{ text: 'generated' }] } }] });
   }
   if (url.includes('/data/2.5/weather')) {
+    weatherProviderRequestCount += 1;
     assert.match(url, /appid=rotated-weather-test-key/);
     return Response.json({
       name: 'Takasaki',
@@ -167,6 +214,7 @@ globalThis.fetch = async (input, options = {}) => {
     });
   }
   if (url.includes('/data/2.5/forecast')) {
+    weatherProviderRequestCount += 1;
     return Response.json({
       list: Array.from({ length: 9 }, (_, index) => ({
         dt: 1_784_764_800 + index * 10_800,
@@ -250,7 +298,7 @@ assert.ok(!gasRequest.url.includes(process.env.GAS_ORDER_TOKEN));
 
 for (const request of rpcRequests) {
   assert.equal(request.payload.p_user_id, USER_ID);
-  assert.equal(request.payload.p_user_email, 'user@framex.co.jp');
+  assert.equal(request.payload.p_user_email, REGISTERED_EMAIL);
 }
 assert.ok(rpcRequests.some(request => request.url.includes('/claim_order_email_send')));
 assert.ok(rpcRequests.some(request => request.url.includes('/finish_order_email_send')));
@@ -281,7 +329,7 @@ const resolutionRpc = rpcRequests.findLast(
 );
 assert.deepEqual(resolutionRpc.payload, {
   p_user_id: USER_ID,
-  p_user_email: 'user@framex.co.jp',
+  p_user_email: REGISTERED_EMAIL,
   p_order_id: 'order-123',
   p_attempt_id: 'attempt-1',
   p_resolution: 'not_sent',
@@ -409,12 +457,30 @@ const crossOrigin = await invoke(ai, createRequest(
 assert.equal(crossOrigin.status, 403);
 assert.equal(crossOrigin.payload.error.code, 'origin_not_allowed');
 
-authEmail = 'outsider@example.com';
+const weatherRequestsBeforeUnregisteredMember = weatherProviderRequestCount;
+authEmail = UNREGISTERED_EMAIL;
 authJwtEmail = authEmail;
 const outsider = await invoke(weather, createRequest('GET', undefined));
 assert.equal(outsider.status, 403);
-assert.equal(outsider.payload.error.code, 'account_not_allowed');
-authEmail = 'user@framex.co.jp';
+assert.equal(outsider.payload.error.code, 'operation_not_allowed');
+assert.equal(
+  weatherProviderRequestCount,
+  weatherRequestsBeforeUnregisteredMember,
+  'An unregistered Google account must be rejected before OpenWeather is called.',
+);
+const outsiderMemberRpc = rpcRequests.findLast(
+  request => request.url.includes('/consume_portal_rate_limit'),
+);
+assert.equal(outsiderMemberRpc.payload.p_user_email, UNREGISTERED_EMAIL);
+authEmail = REGISTERED_EMAIL;
+authJwtEmail = authEmail;
+
+authEmail = '';
+authJwtEmail = '';
+const missingEmail = await invoke(weather, createRequest('GET', undefined));
+assert.equal(missingEmail.status, 401);
+assert.equal(missingEmail.payload.error.code, 'invalid_session');
+authEmail = REGISTERED_EMAIL;
 authJwtEmail = authEmail;
 
 authProvider = 'github';
@@ -430,12 +496,12 @@ const providerListOnly = await invoke(weather, createRequest('GET', undefined));
 assert.equal(providerListOnly.status, 403);
 assert.equal(providerListOnly.payload.error.code, 'google_account_required');
 
-authProvider = 'email';
-authProviders = ['email', 'google'];
+authProvider = 'google';
+authProviders = ['google'];
 authAmr = ['password'];
-const passwordProvider = await invoke(weather, createRequest('GET', undefined));
-assert.equal(passwordProvider.status, 403);
-assert.equal(passwordProvider.payload.error.code, 'google_account_required');
+const passwordAmr = await invoke(weather, createRequest('GET', undefined));
+assert.equal(passwordAmr.status, 403);
+assert.equal(passwordAmr.payload.error.code, 'google_account_required');
 authProvider = 'google';
 authProviders = ['google'];
 authAmr = ['oauth'];
@@ -446,7 +512,7 @@ assert.equal(subjectMismatch.status, 401);
 assert.equal(subjectMismatch.payload.error.code, 'invalid_session');
 authJwtSubject = USER_ID;
 
-authJwtEmail = 'another-user@framex.co.jp';
+authJwtEmail = 'different.jwt.user@gmail.com';
 const emailMismatch = await invoke(weather, createRequest('GET', undefined));
 assert.equal(emailMismatch.status, 401);
 assert.equal(emailMismatch.payload.error.code, 'invalid_session');
@@ -516,4 +582,4 @@ for (const [pathname, functionConfig] of Object.entries(vercelConfig.functions))
   );
 }
 
-console.log('API authentication, origin, service-role, rate-limit, and secret-boundary checks passed.');
+console.log('API authentication, origin, secret-key, rate-limit, and secret-boundary checks passed.');

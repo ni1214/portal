@@ -188,8 +188,10 @@ export function xxxFunction() { ... }
 - 2026-06-22 以降の入口は **Supabase Auth の Google OAuth** を基本にする。
 - 既存データ互換のため、runtime の個人データキーは引き続き `state.currentUsername` / `user_accounts.username` を使う。
 - Google アカウント情報は `user_accounts.google_auth_id` / `google_email` / `google_name` / `google_avatar_url` に紐付ける。
-- 初回利用前に管理者が `username` / 会社 `google_email` / `access_department` を事前登録する。ブラウザからの自己登録は許可しない。
-- 初回 Google ログイン時は `claim_portal_account` が、JWTの会社メールと事前登録行が一致する場合だけ `google_auth_id` を原子的にリンクする。表示名の入力や既存名の自己申告を認可根拠にしない。
+- 初回利用前に管理者が `username` / 許可する `google_email` / `access_department` を事前登録する。ブラウザからの自己登録は許可しない。
+- 個人利用では個人Googleアカウントも事前登録できるが、`gmail.com` などのドメイン全体は許可しない。`user_accounts.google_email` の小文字完全一致を唯一のメール許可リストとする。
+- 初回 Google ログイン時は `claim_portal_account` が、JWTのメールと事前登録行が一致する場合だけ `google_auth_id` を原子的にリンクする。表示名の入力や既存名の自己申告を認可根拠にしない。
+- 個人利用中のSupabase AuthはGoogle providerだけを有効にし、既存の許可ユーザーがリンク済みなら新規ユーザー登録を無効化する。メールprovider、匿名ログイン、手動identity linkingは無効を維持する。
 - 旧 `localStorage('portal-username')` は自動ログインの正としない。Google セッションがない場合は復元せず、Googleログインへ誘導する。
 - `currentUsername` 変数で管理。`loadPersonalData(username)` で個人 Supabase データを読み込む。
 - 本番反映前に Supabase Dashboard の Google provider を有効化し、Google Cloud OAuth の Authorized JavaScript origins / redirect URI を設定すること。未設定のまま push するとログインできない。
@@ -329,6 +331,7 @@ export function xxxFunction() { ... }
 
 - `private.current_username()` / `private.is_admin()` を `auth.uid()` と `user_accounts` の対応だけから判定する。
 - 全業務テーブルでRLSを有効化し、`anon` のテーブル権限と不要な関数実行権限を剥奪する。
+- 公開スキーマに残る39テーブルをすべて `ENABLE RLS + FORCE RLS` の管理対象にする。未使用の旧図面レイアウト試作テーブル `fittings` / `floors` / `sites` / `workers` はデータを消さず、別途レビューされるまでブラウザ権限を全剥奪して `service_role` 専用にする。
 - 個人テーブルは本人行のみ、共有テーブルは認証済み閲覧 + 必要な役割だけ更新、チャット・Drive・P2Pは当事者だけに限定する。
 - `portal_config` の `gemini_api_key` / `gas_order_url` / `pin_hash` はクライアントから取得しない。秘密値はVercel環境変数へ移行後にDB値を消去する。
 - AIと発注メールの乱用防止は、JWT検証に加えてDB側の原子的なrate limit / idempotency RPCで行う。
@@ -389,11 +392,12 @@ export function xxxFunction() { ... }
 
 ## セキュリティ
 - Vercel Functions はブラウザの Bearer Supabase JWT を `/auth/v1/user` で検証し、本人IDを確定してから処理する。
-- `consume_portal_rate_limit` / `claim_order_email_send` / `finish_order_email_send` / `authorize_order_email_resolution` / `resolve_order_email_send` は `service_role` 専用RPCとし、`anon` / `authenticated` からの直接実行を許可しない。検証済みの `user.id` / `user.email` を `p_user_id` / `p_user_email` として渡し、DB側でもAuth紐付け、会社メール、所有者・管理者・送信attemptを再検証する。発注メールの結果不明処理は、認可RPC → GASの同一attempt照合 → DB確定RPCの順に行う。
-- `SUPABASE_SERVICE_ROLE_KEY` は Vercel の Sensitive 環境変数だけに保存し、ブラウザコード、ログ、Git、`dist/` へ絶対に含めない。
+- `consume_portal_rate_limit` / `claim_order_email_send` / `finish_order_email_send` / `authorize_order_email_resolution` / `resolve_order_email_send` は `service_role` 専用RPCとし、`anon` / `authenticated` からの直接実行を許可しない。検証済みの `user.id` / `user.email` を `p_user_id` / `p_user_email` として渡し、DB側でもAuth紐付け、登録メール完全一致、所有者・管理者・送信attemptを再検証する。発注メールの結果不明処理は、認可RPC → GASの同一attempt照合 → DB確定RPCの順に行う。
+- `consume_portal_rate_limit` の許可機能には発注送信 `order-email` と結果照合 `order-email-reconcile` を別枠で明示し、未登録の機能名を受け入れない。
+- `SUPABASE_SECRET_KEY` は `sb_secret_...` の新Secret keyだけを使い、Vercel の Sensitive 環境変数だけに保存する。`Authorization: Bearer` には入れず `apikey` ヘッダーだけで管理RPCを呼び、ブラウザコード、ログ、Git、`dist/`、Codexメモへ絶対に含めない。
 - APIのブラウザ送信元は本番の `SITE_ORIGIN` と、Preview時にVercelが設定する正規化済み `VERCEL_URL` の完全一致だけを許可する。リクエストの `Host` ヘッダーから許可originを組み立てない。
-- Vercel Functions は `/auth/v1/user` のトップレベル `email` を小文字化して検証し、厳密に `@framex.co.jp` の会社アカウントだけを許可する。Google OAuth の `hd` は入口のヒントであり、認可判定には使わない。
-- Vercel Functions は同じAuth応答の `app_metadata.provider` が厳密に `google` であることも検証し、`providers` 配列だけのフォールバックや会社ドメインのemail/passwordアカウント等をAPI認可へ流用させない。
+- Vercel Functions は `/auth/v1/user` のトップレベル `email` を小文字化し、空でないことを検証する。メールドメインでは許可せず、全APIが `user_accounts` の `google_auth_id` / `google_email` / `is_active` 完全一致を確認するサーバーRPCを秘密処理より先に通す。
+- Vercel Functions は同じAuth応答の `app_metadata.provider` が厳密に `google` で、JWTの `amr.method` が `oauth` であることも検証する。`providers` 配列だけのフォールバック、email/password、未登録の別GoogleアカウントをAPI認可へ流用させない。
 - runtime は Supabase。本番で Firebase セキュリティルールは使っていない。アクセス制御は Supabase 側の設定を前提に整理する
 - 管理者認可は `user_accounts.is_admin` のみを正とする。旧管理者PINは認可に使用せず、Vercel移行時に保存列を削除する。
 - 招待コード機能は 2026-06-23 に廃止。入口制御は Supabase Auth の Googleログインに一本化する。
@@ -576,7 +580,7 @@ export function xxxFunction() { ... }
 - ヘルプガイド (`#guide-modal` in `index.html`) は大きな機能追加時に更新すること
 - 返答は**日本語**で行うこと
 - 「記録して」と言われた場合は **AGENTS.md** に記載する（MEMORY.md はローカル専用のため Git 経由で別 PC に引き継がれない）
-- 実機テスト用のPINなど**秘密値そのものは AGENTS.md に書かない**。必要な場合はローカル専用の `C:\Users\frx\.codex\memory.md` を参照し、ここには「ローカル専用メモを使う」という運用ルールだけ残す
+- 実機テスト用のPINなど**秘密値そのものは AGENTS.md やCodexメモに書かない**。本番秘密値はVercelのSensitive環境変数、外部サービス側のSecret管理、または利用時だけの一時入力で扱う
 
 ## 2026-03-18 Supabase runtime config（shared core）
 
@@ -669,8 +673,8 @@ export function xxxFunction() { ... }
 ### 移行当時の方針
 - Firestore の read 最適化を続けるより、段階的に `Supabase` へ移行する方針で進める
 - 以後の Supabase 操作は Codex 側で SQL editor / テーブル作成まで担当する前提でステップを切る
-- ただし `project URL / anon key / service role key / project ref` などの秘密値は repo に書かない
-- 秘密値はローカル専用の `C:\Users\frx\.codex\memory.md` に保存する
+- 当時は `project URL / anon key / service role key / project ref` を一括してローカル管理していたが、この運用は廃止した。現在は公開設定と秘密値を分離し、新しい `sb_secret_...` などの秘密値はVercelのSensitive環境変数へ直接保存する
+- 秘密値をrepo、通常ファイル、Codexメモへ保存しない
 - まずは `DB 置換` を優先し、移行当時は `ニックネームログイン + 招待コード + ログイン前 PIN` の UX を維持していた。現在の入口は Googleログイン。
 
 ### 参照先
@@ -711,7 +715,7 @@ export function xxxFunction() { ... }
   - `private_cards`
   - `user_todos`
   - `user_email_contacts`
-- 秘密値は repo に書かず、`C:\Users\frx\.codex\memory.md` にのみ保存する
+- この時点のローカルメモ運用は廃止済み。現在は秘密値をrepoやCodexメモへ書かず、VercelのSensitive環境変数へ直接保存する
 - `supabase db query --linked` は一時 login role 初期化で不安定になることがある
 - 以後の remote SQL 実行は、基本的に `tools/invoke-supabase-sql.ps1` + Management API を優先する
 - `tools/invoke-supabase-sql.ps1` は UTF-8 body 送信済み。日本語を含む SQL でも remote 実行できる

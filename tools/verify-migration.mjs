@@ -47,7 +47,12 @@ const MANAGED_TABLES = [
   'user_profiles',
   'user_section_orders',
   'user_todos',
+  'fittings',
+  'floors',
+  'sites',
+  'workers',
 ];
+const LOCKED_LEGACY_TABLES = ['fittings', 'floors', 'sites', 'workers'];
 const IDS = {
   alice: '11111111-1111-4111-8111-111111111111',
   bob: '22222222-2222-4222-8222-222222222222',
@@ -109,6 +114,10 @@ async function main() {
           '{}'
         )::jsonb
       $$;
+      create table public.fittings (id uuid primary key);
+      create table public.floors (id uuid primary key);
+      create table public.sites (id uuid primary key);
+      create table public.workers (id uuid primary key);
     `);
 
     const baseFiles = (await readdir(SUPABASE_DIR))
@@ -182,6 +191,35 @@ async function main() {
     assert.deepEqual(rls.rows[0], {
       total: MANAGED_TABLES.length,
       hardened: MANAGED_TABLES.length,
+    });
+
+    const lockedLegacyAcl = await db.query(
+      `select
+        count(*) filter (
+          where has_table_privilege('anon', relation.oid, 'SELECT')
+             or has_table_privilege('anon', relation.oid, 'INSERT')
+             or has_table_privilege('anon', relation.oid, 'UPDATE')
+             or has_table_privilege('anon', relation.oid, 'DELETE')
+             or has_table_privilege('authenticated', relation.oid, 'SELECT')
+             or has_table_privilege('authenticated', relation.oid, 'INSERT')
+             or has_table_privilege('authenticated', relation.oid, 'UPDATE')
+             or has_table_privilege('authenticated', relation.oid, 'DELETE')
+        )::int as browser_accessible,
+        count(*) filter (
+          where has_table_privilege('service_role', relation.oid, 'SELECT')
+            and has_table_privilege('service_role', relation.oid, 'INSERT')
+            and has_table_privilege('service_role', relation.oid, 'UPDATE')
+            and has_table_privilege('service_role', relation.oid, 'DELETE')
+        )::int as service_accessible
+      from pg_class as relation
+      join pg_namespace as namespace on namespace.oid = relation.relnamespace
+      where namespace.nspname = 'public'
+        and relation.relname = any($1::text[])`,
+      [LOCKED_LEGACY_TABLES],
+    );
+    assert.deepEqual(lockedLegacyAcl.rows[0], {
+      browser_accessible: 0,
+      service_accessible: LOCKED_LEGACY_TABLES.length,
     });
 
     const acl = await db.query(`
@@ -316,7 +354,7 @@ async function main() {
         ($1, 'alice@framex.co.jp', '{"provider":"google","providers":["google"]}'),
         ($2, 'bob@framex.co.jp', '{"provider":"google","providers":["google"]}'),
         ($3, 'carol@framex.co.jp', '{"provider":"google","providers":["google"]}'),
-        ($4, 'dave@framex.co.jp', '{"provider":"google","providers":["google"]}')`,
+        ($4, 'dave.portal.test@gmail.com', '{"provider":"google","providers":["google"]}')`,
       [IDS.alice, IDS.bob, IDS.carol, IDS.dave],
     );
     await db.query(
@@ -338,6 +376,16 @@ async function main() {
         ('Bob', $2, 'bob@framex.co.jp', true, false, '工場'),
         ('Carol', null, 'carol@framex.co.jp', true, true, '営業')`,
       [IDS.alice, IDS.bob],
+    );
+    await expectDbError(
+      () => db.exec(`
+        insert into public.user_accounts (
+          username, google_email, is_active
+        )
+        values ('Duplicate Alice', 'ALICE@FRAMEX.CO.JP', true)
+      `),
+      /duplicate key|unique/i,
+      'case-insensitive registered Google email uniqueness',
     );
     await db.exec(`
       insert into public.public_categories (id, label)
@@ -371,11 +419,49 @@ async function main() {
     );
     assert.equal(providerListOnlyRead.rows[0].count, 0);
 
+    await db.exec('reset role');
+    await db.exec(`
+      update auth.identities
+      set provider = 'github'
+      where user_id = '${IDS.alice}'
+    `);
+    await setSession(IDS.alice, 'alice@framex.co.jp');
+    const nonGoogleIdentityRead = await db.query(
+      'select count(*)::int as count from public.public_categories',
+    );
+    assert.equal(nonGoogleIdentityRead.rows[0].count, 0);
+    await db.exec('reset role');
+    await db.exec(`
+      update auth.identities
+      set provider = 'google'
+      where user_id = '${IDS.alice}'
+    `);
+
     await setSession(IDS.alice, 'alice@framex.co.jp');
     const oauthRead = await db.query(
       'select count(*)::int as count from public.public_categories',
     );
     assert.equal(oauthRead.rows[0].count, 1);
+
+    // A valid Google JWT cannot take over an allowlisted row belonging to a
+    // different Supabase user id, even when its email claim is copied.
+    await db.exec('reset role');
+    await db.exec(`
+      update auth.users
+      set email = 'alice@framex.co.jp'
+      where id = '${IDS.dave}'
+    `);
+    await setSession(IDS.dave, 'alice@framex.co.jp');
+    const differentUidRead = await db.query(
+      'select count(*)::int as count from public.public_categories',
+    );
+    assert.equal(differentUidRead.rows[0].count, 0);
+    await db.exec('reset role');
+    await db.exec(`
+      update auth.users
+      set email = 'dave.portal.test@gmail.com'
+      where id = '${IDS.dave}'
+    `);
 
     await setSession(IDS.carol, 'carol@framex.co.jp');
     const claim = await db.query(
@@ -391,17 +477,21 @@ async function main() {
     assert.equal(claim.rows[0].is_active, true);
     assert.equal(claim.rows[0].is_admin, true);
 
-    await setSession(IDS.dave, 'dave@framex.co.jp');
+    await setSession(IDS.dave, 'dave.portal.test@gmail.com');
     const unprovisionedClaim = await db.query(
       `select * from public.claim_portal_account('Dave', '')`,
     );
     assert.equal(unprovisionedClaim.rows.length, 0);
+    const unprovisionedGmailRead = await db.query(
+      'select count(*)::int as count from public.public_categories',
+    );
+    assert.equal(unprovisionedGmailRead.rows[0].count, 0);
     await expectDbError(
       () => db.exec(`
         insert into public.user_accounts (
           username, google_auth_id, google_email
         )
-        values ('Dave', '${IDS.dave}', 'dave@framex.co.jp')
+        values ('Dave', '${IDS.dave}', 'dave.portal.test@gmail.com')
       `),
       /permission denied/i,
       'unprovisioned self-registration',
@@ -967,6 +1057,13 @@ async function main() {
       set started_at = timezone('utc', now()) - interval '1 day'
       where id = 'order-1'
     `);
+    const reconciliationRateLimit = await db.query(
+      `select public.consume_portal_rate_limit(
+        $1, $2, 'order-email-reconcile', 20, 3600
+      ) as allowed`,
+      [IDS.alice, 'alice@framex.co.jp'],
+    );
+    assert.equal(reconciliationRateLimit.rows[0].allowed, true);
     const staleOrderClaim = await db.query(
       `select public.claim_order_email_send($1, $2, $3) as result`,
       [IDS.alice, 'alice@framex.co.jp', 'order-1'],
@@ -1167,14 +1264,27 @@ async function main() {
     ]);
 
     await setServiceRole();
-    await db.query(
+    await db.exec(
       `insert into public.user_accounts (
         username, google_auth_id, google_email,
         is_active, is_admin, access_department
       )
-      values ('Dave', $1, 'dave@framex.co.jp', true, false, '設計')`,
-      [IDS.dave],
+      values (
+        'Dave', null, 'dave.portal.test@gmail.com',
+        true, false, '設計'
+      )`,
     );
+    await setSession(IDS.dave, 'dave.portal.test@gmail.com');
+    const registeredGmailClaim = await db.query(
+      `select * from public.claim_portal_account('Dave Gmail', '')`,
+    );
+    assert.equal(registeredGmailClaim.rows.length, 1);
+    assert.equal(registeredGmailClaim.rows[0].username, 'Dave');
+    assert.equal(registeredGmailClaim.rows[0].google_auth_id, IDS.dave);
+    const registeredGmailRead = await db.query(
+      'select count(*)::int as count from public.public_categories',
+    );
+    assert.equal(registeredGmailRead.rows[0].count, 1);
     await setSession(IDS.alice, 'alice@framex.co.jp');
     await expectDbError(
       () => db.query(
@@ -1235,11 +1345,15 @@ async function main() {
       `select public.deactivate_portal_account('Dave') as ok`,
     );
     assert.equal(deactivated.rows[0].ok, true);
-    await setSession(IDS.dave, 'dave@framex.co.jp');
+    await setSession(IDS.dave, 'dave.portal.test@gmail.com');
     const inactiveClaim = await db.query(
       `select * from public.claim_portal_account('Dave', '')`,
     );
     assert.equal(inactiveClaim.rows.length, 0);
+    const inactiveGmailRead = await db.query(
+      'select count(*)::int as count from public.public_categories',
+    );
+    assert.equal(inactiveGmailRead.rows[0].count, 0);
 
     console.log(
       `Migration security verification passed (${MANAGED_TABLES.length} forced-RLS tables).`,

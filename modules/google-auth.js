@@ -198,7 +198,6 @@ export async function signInWithGoogle() {
       queryParams: {
         access_type: 'offline',
         prompt: 'select_account',
-        hd: 'framex.co.jp',
       },
     },
   });

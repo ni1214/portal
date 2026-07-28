@@ -27,13 +27,16 @@ function getSupabaseConfig() {
   };
 }
 
-function getSupabaseServiceConfig() {
+function getSupabaseSecretConfig() {
   const config = getSupabaseConfig();
-  const serviceRoleKey = requiredEnv('SUPABASE_SERVICE_ROLE_KEY');
-  if (serviceRoleKey === config.publishableKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY must not be the publishable key.');
+  const secretKey = requiredEnv('SUPABASE_SECRET_KEY');
+  if (!secretKey.startsWith('sb_secret_')) {
+    throw new Error('SUPABASE_SECRET_KEY must be a Supabase secret key (sb_secret_...).');
   }
-  return { ...config, serviceRoleKey };
+  if (secretKey === config.publishableKey) {
+    throw new Error('SUPABASE_SECRET_KEY must not be the publishable key.');
+  }
+  return { ...config, secretKey };
 }
 
 function extractBearerToken(request) {
@@ -138,11 +141,8 @@ export async function authenticateSupabaseRequest(request) {
   const jwtEmail = typeof jwtPayload.email === 'string'
     ? jwtPayload.email.trim().toLowerCase()
     : '';
-  if (jwtSubject !== user.id || jwtEmail !== email) {
+  if (!email || !jwtEmail || jwtSubject !== user.id || jwtEmail !== email) {
     throw invalidSessionError();
-  }
-  if (!/^[^@\s]+@framex\.co\.jp$/.test(email)) {
-    throw new HttpError(403, 'account_not_allowed', 'この会社アカウントではポータルを利用できません。');
   }
   const provider = typeof user.app_metadata?.provider === 'string'
     ? user.app_metadata.provider.trim().toLowerCase()
@@ -155,7 +155,7 @@ export async function authenticateSupabaseRequest(request) {
       && `${entry.method || ''}`.trim().toLowerCase() === 'oauth'
     ));
   if (provider !== 'google' || !hasOauthAmr) {
-    throw new HttpError(403, 'google_account_required', 'Google会社アカウントでログインしてください。');
+    throw new HttpError(403, 'google_account_required', 'Googleアカウントでログインしてください。');
   }
   return { user: { id: user.id, email } };
 }
@@ -164,12 +164,11 @@ export async function callSupabaseServiceRpc(name, params, { timeoutMs = DEFAULT
   if (!SERVICE_RPC_NAMES.has(name)) {
     throw new Error('Invalid RPC name.');
   }
-  const { baseUrl, serviceRoleKey } = getSupabaseServiceConfig();
+  const { baseUrl, secretKey } = getSupabaseSecretConfig();
   const response = await fetchWithTimeout(`${baseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
+      apikey: secretKey,
       Accept: 'application/json',
       'Content-Type': 'application/json',
     },

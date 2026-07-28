@@ -145,7 +145,7 @@ const forbiddenPublicContent = [
   },
   {
     label: 'server-only environment variable',
-    pattern: /\b(?:SUPABASE_SERVICE_ROLE_KEY|GEMINI_API_KEY|OPENWEATHER_API_KEY|GAS_ORDER_TOKEN)\b/,
+    pattern: /\b(?:SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|GEMINI_API_KEY|OPENWEATHER_API_KEY|GAS_ORDER_TOKEN)\b/,
   },
   {
     label: 'Google Apps Script deployment endpoint',

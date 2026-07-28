@@ -72,6 +72,10 @@ create index if not exists idx_user_accounts_active_directory
   on public.user_accounts(username)
   where is_active;
 
+create unique index if not exists idx_user_accounts_google_email_unique
+  on public.user_accounts(lower(google_email))
+  where nullif(btrim(google_email), '') is not null;
+
 -- Administrator membership must be reviewed and provisioned explicitly.
 -- A legacy feature-level viewer list is not an authorization source.
 
@@ -85,7 +89,7 @@ alter table public.portal_config
 -- A linked Google identity is not enough: the current session itself must be
 -- an OAuth session. This prevents a password/OTP session added to the same
 -- Supabase user from inheriting Portal access.
-create or replace function private.is_google_company_jwt()
+create or replace function private.is_google_oauth_jwt()
 returns boolean
 language sql
 stable
@@ -93,8 +97,8 @@ set search_path = ''
 as $$
   select
     (select auth.uid()) is not null
-    and lower(coalesce((select auth.jwt() ->> 'email'), ''))
-      ~ '^[^@[:space:]]+@framex\.co\.jp$'
+    and nullif(btrim(coalesce((select auth.jwt() ->> 'email'), '')), '')
+      is not null
     and lower(coalesce(
       (select auth.jwt() -> 'app_metadata' ->> 'provider'),
       ''
@@ -117,13 +121,27 @@ set search_path = ''
 as $$
   select account.username
   from public.user_accounts as account
-  where (select private.is_google_company_jwt())
+  where (select private.is_google_oauth_jwt())
     and account.google_auth_id = (select auth.uid())::text
-    and lower(account.google_email) = lower(
-      coalesce((select auth.jwt() ->> 'email'), '')
+    and lower(btrim(account.google_email)) = lower(
+      btrim(coalesce((select auth.jwt() ->> 'email'), ''))
     )
-    and lower(account.google_email) ~ '^[^@[:space:]]+@framex\.co\.jp$'
+    and nullif(btrim(account.google_email), '') is not null
     and account.is_active
+    and exists (
+      select 1
+      from auth.users as auth_user
+      where auth_user.id = (select auth.uid())
+        and lower(btrim(coalesce(auth_user.email, ''))) = lower(
+          btrim(coalesce((select auth.jwt() ->> 'email'), ''))
+        )
+        and exists (
+          select 1
+          from auth.identities as identity
+          where identity.user_id = auth_user.id
+            and lower(identity.provider) = 'google'
+        )
+    )
   limit 1
 $$;
 
@@ -137,13 +155,27 @@ as $$
   select coalesce((
     select account.is_admin
     from public.user_accounts as account
-    where (select private.is_google_company_jwt())
+    where (select private.is_google_oauth_jwt())
       and account.google_auth_id = (select auth.uid())::text
-      and lower(account.google_email) = lower(
-        coalesce((select auth.jwt() ->> 'email'), '')
+      and lower(btrim(account.google_email)) = lower(
+        btrim(coalesce((select auth.jwt() ->> 'email'), ''))
       )
-      and lower(account.google_email) ~ '^[^@[:space:]]+@framex\.co\.jp$'
+      and nullif(btrim(account.google_email), '') is not null
       and account.is_active
+      and exists (
+        select 1
+        from auth.users as auth_user
+        where auth_user.id = (select auth.uid())
+          and lower(btrim(coalesce(auth_user.email, ''))) = lower(
+            btrim(coalesce((select auth.jwt() ->> 'email'), ''))
+          )
+          and exists (
+            select 1
+            from auth.identities as identity
+            where identity.user_id = auth_user.id
+              and lower(identity.provider) = 'google'
+          )
+      )
     limit 1
   ), false)
 $$;
@@ -174,17 +206,18 @@ set search_path = ''
 as $$
   select account.username
   from public.user_accounts as account
-  where account.google_auth_id = p_user_id::text
-    and lower(account.google_email) = lower(btrim(coalesce(p_user_email, '')))
-    and lower(account.google_email) ~ '^[^@[:space:]]+@framex\.co\.jp$'
-    and lower(btrim(coalesce(p_user_email, '')))
-      ~ '^[^@[:space:]]+@framex\.co\.jp$'
+  where p_user_id is not null
+    and account.google_auth_id = p_user_id::text
+    and lower(btrim(account.google_email))
+      = lower(btrim(coalesce(p_user_email, '')))
+    and nullif(btrim(account.google_email), '') is not null
+    and nullif(btrim(coalesce(p_user_email, '')), '') is not null
     and account.is_active
     and exists (
       select 1
       from auth.users as auth_user
       where auth_user.id = p_user_id
-        and lower(coalesce(auth_user.email, ''))
+        and lower(btrim(coalesce(auth_user.email, '')))
           = lower(btrim(coalesce(p_user_email, '')))
         and exists (
           select 1
@@ -209,17 +242,18 @@ as $$
   select coalesce((
     select account.is_admin
     from public.user_accounts as account
-    where account.google_auth_id = p_user_id::text
-      and lower(account.google_email) = lower(btrim(coalesce(p_user_email, '')))
-      and lower(account.google_email) ~ '^[^@[:space:]]+@framex\.co\.jp$'
-      and lower(btrim(coalesce(p_user_email, '')))
-        ~ '^[^@[:space:]]+@framex\.co\.jp$'
+    where p_user_id is not null
+      and account.google_auth_id = p_user_id::text
+      and lower(btrim(account.google_email))
+        = lower(btrim(coalesce(p_user_email, '')))
+      and nullif(btrim(account.google_email), '') is not null
+      and nullif(btrim(coalesce(p_user_email, '')), '') is not null
       and account.is_active
       and exists (
         select 1
         from auth.users as auth_user
         where auth_user.id = p_user_id
-          and lower(coalesce(auth_user.email, ''))
+          and lower(btrim(coalesce(auth_user.email, '')))
             = lower(btrim(coalesce(p_user_email, '')))
           and exists (
             select 1
@@ -324,7 +358,7 @@ set search_path = ''
 as $$
 declare
   v_uid text := (select auth.uid())::text;
-  v_email text := lower(coalesce((select auth.jwt() ->> 'email'), ''));
+  v_email text := lower(btrim(coalesce((select auth.jwt() ->> 'email'), '')));
   v_username text := (select private.current_username());
   v_role text := coalesce(
     nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role',
@@ -339,8 +373,8 @@ begin
     raise exception 'Authentication is required' using errcode = '42501';
   end if;
 
-  if not (select private.is_google_company_jwt()) then
-    raise exception 'A Google OAuth company session is required'
+  if not (select private.is_google_oauth_jwt()) then
+    raise exception 'A Google OAuth session is required'
       using errcode = '42501';
   end if;
 
@@ -371,7 +405,6 @@ begin
     if old.google_auth_id is not null
        or new.google_auth_id <> v_uid
        or v_email = ''
-       or v_email !~ '^[^@[:space:]]+@framex\.co\.jp$'
        or lower(coalesce(new.google_email, '')) <> v_email
        or lower(coalesce(old.google_email, '')) <> v_email then
       raise exception 'Google account link is not permitted' using errcode = '42501';
@@ -379,8 +412,8 @@ begin
   end if;
 
   if new.google_auth_id <> v_uid
-     or lower(coalesce(new.google_email, '')) <> v_email
-     or v_email !~ '^[^@[:space:]]+@framex\.co\.jp$' then
+     or v_email = ''
+     or lower(coalesce(new.google_email, '')) <> v_email then
     raise exception 'Account identity does not match the authenticated user'
       using errcode = '42501';
   end if;
@@ -899,7 +932,7 @@ as $$
 declare
   v_username text := (select private.current_username());
   v_department text := (select private.current_department());
-  v_email text := lower(coalesce((select auth.jwt() ->> 'email'), ''));
+  v_email text := lower(btrim(coalesce((select auth.jwt() ->> 'email'), '')));
   v_role text := coalesce(
     nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role',
     ''
@@ -1001,7 +1034,7 @@ as $$
     and (select private.current_username()) is not null
     and account.is_active
     and account.google_auth_id is not null
-    and lower(account.google_email) ~ '^[^@[:space:]]+@framex\.co\.jp$'
+    and nullif(btrim(account.google_email), '') is not null
   order by account.username
 $$;
 
@@ -1027,13 +1060,13 @@ set search_path = ''
 as $$
 declare
   v_uid text := (select auth.uid())::text;
-  v_email text := lower(coalesce((select auth.jwt() ->> 'email'), ''));
+  v_email text := lower(btrim(coalesce((select auth.jwt() ->> 'email'), '')));
   v_matches integer;
   v_name text := left(btrim(coalesce(p_google_name, '')), 200);
   v_avatar text := btrim(coalesce(p_google_avatar_url, ''));
 begin
-  if not (select private.is_google_company_jwt()) then
-    raise exception 'A Google OAuth company session is required'
+  if not (select private.is_google_oauth_jwt()) then
+    raise exception 'A Google OAuth session is required'
       using errcode = '42501';
   end if;
 
@@ -1051,7 +1084,7 @@ begin
     return;
   end if;
   if v_matches <> 1 then
-    raise exception 'The company email is mapped to multiple Portal accounts'
+    raise exception 'The registered Google account is mapped to multiple Portal accounts'
       using errcode = '23505';
   end if;
 
@@ -1770,7 +1803,7 @@ begin
   if v_feature in ('ai:email', 'ai:shared-link', 'ai:trouble-report') then
     v_effective_limit := least(greatest(coalesce(p_limit, 20), 1), 20);
     v_effective_window := 3600;
-  elsif v_feature = 'order-email' then
+  elsif v_feature in ('order-email', 'order-email-reconcile') then
     v_effective_limit := least(greatest(coalesce(p_limit, 20), 1), 20);
     v_effective_window := 3600;
   elsif v_feature = 'weather' then
@@ -2195,7 +2228,7 @@ begin
     where account.username = v_other
       and account.is_active
       and account.google_auth_id is not null
-      and lower(account.google_email) ~ '^[^@[:space:]]+@framex\.co\.jp$'
+      and nullif(btrim(account.google_email), '') is not null
   ) then
     raise exception 'The selected Portal member is not active' using errcode = '22023';
   end if;
@@ -2278,7 +2311,7 @@ begin
       where account.username = member
         and account.is_active
         and account.google_auth_id is not null
-        and lower(account.google_email) ~ '^[^@[:space:]]+@framex\.co\.jp$'
+        and nullif(btrim(account.google_email), '') is not null
     )
   ) then
     raise exception 'The group contains an inactive Portal member'
@@ -2620,6 +2653,56 @@ begin
 end;
 $$;
 
+-- These four tables belong to an abandoned drawing-layout prototype and are
+-- not used by the Portal runtime. Keep their existing data for recovery, but
+-- expose no browser access until a separately reviewed feature adopts them.
+-- The conditional form also keeps this migration valid on projects where the
+-- prototype tables were never created.
+do $$
+declare
+  table_name text;
+  policy_row record;
+  locked_legacy_tables constant text[] := array[
+    'fittings', 'floors', 'sites', 'workers'
+  ];
+begin
+  for policy_row in
+    select schemaname, tablename, policyname
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = any(locked_legacy_tables)
+  loop
+    execute format(
+      'drop policy %I on %I.%I',
+      policy_row.policyname,
+      policy_row.schemaname,
+      policy_row.tablename
+    );
+  end loop;
+
+  foreach table_name in array locked_legacy_tables loop
+    if to_regclass(format('public.%I', table_name)) is not null then
+      execute format(
+        'alter table public.%I enable row level security',
+        table_name
+      );
+      execute format(
+        'alter table public.%I force row level security',
+        table_name
+      );
+      execute format(
+        'revoke all privileges on table public.%I from public, anon, authenticated',
+        table_name
+      );
+      execute format(
+        'grant all privileges on table public.%I to service_role',
+        table_name
+      );
+    end if;
+  end loop;
+end;
+$$;
+
 -- Singleton configuration: direct access is admin-only.
 create policy portal_config_admin_select
 on public.portal_config for select to authenticated
@@ -2631,7 +2714,7 @@ using ((select private.is_admin()))
 with check ((select private.is_admin()) and id = 1);
 
 -- Accounts must be provisioned ahead of time. Browser access may only link an
--- already-active row whose stored corporate email matches the live JWT.
+-- already-active row whose registered Google email matches the live JWT.
 create policy user_accounts_self_or_admin_select
 on public.user_accounts for select to authenticated
 using (
@@ -2649,8 +2732,10 @@ with check (
   (select private.is_admin())
   or (
     google_auth_id = (select auth.uid())::text
-    and lower(google_email) = lower(coalesce((select auth.jwt() ->> 'email'), ''))
-    and lower(google_email) ~ '^[^@[:space:]]+@framex\.co\.jp$'
+    and lower(btrim(google_email)) = lower(
+      btrim(coalesce((select auth.jwt() ->> 'email'), ''))
+    )
+    and nullif(btrim(google_email), '') is not null
     and is_active
   )
 );
@@ -3165,7 +3250,7 @@ grant usage on schema private to authenticated, service_role;
 revoke all privileges on table private.portal_rate_limits from public, anon, authenticated;
 grant all privileges on table private.portal_rate_limits to service_role;
 
-revoke all on function private.is_google_company_jwt() from public, anon, authenticated;
+revoke all on function private.is_google_oauth_jwt() from public, anon, authenticated;
 revoke all on function private.current_username() from public, anon, authenticated;
 revoke all on function private.is_admin() from public, anon, authenticated;
 revoke all on function private.current_department() from public, anon, authenticated;

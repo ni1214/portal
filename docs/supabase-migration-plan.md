@@ -17,8 +17,8 @@
 
 ## 前提
 - 以後の Supabase 操作は Codex 側で進める前提でステップを組む
-- ただし、`project URL / anon key / service role key / dashboard でしか分からない値` は repo に保存しない
-- 秘密値はローカル専用の `C:\Users\frx\.codex\memory.md` へ記録する
+- ただし、`server secret key（現在は sb_secret_...）/ dashboard でしか分からない秘密値` は repo に保存しない
+- 秘密値はCodexメモや通常ファイルへ保存せず、VercelのSensitive環境変数へ直接登録する
 - 移行当時は Firebase をいきなり止めず、`画面単位` で Supabase に切り替える方針だった
 
 ## 移行当時の Firestore 依存範囲
@@ -139,7 +139,7 @@
 
 やること:
 1. Supabase プロジェクトを 1 つ作成
-2. `project URL / anon key / service role key / project ref` をローカル専用メモへ保存
+2. `project URL / publishable key / project ref` は公開設定として管理し、server secret key（現在は `sb_secret_...`）はVercelのSensitive環境変数へ直接登録
 3. repo には `example` だけ置き、実値は置かない
 4. `public schema` を使う方針で始める
 
