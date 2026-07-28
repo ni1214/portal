@@ -306,6 +306,12 @@ requireMatch(
   'Ambiguous order email states must be reconciled through a Vercel Function.',
 );
 const orderServer = await read('server/order-email.mjs');
+const orderEmailApi = await read('api/order-email.mjs');
+requireMatch(
+  orderEmailApi,
+  /await consumePortalRateLimit\([\s\S]{0,500}?readOrderEmailConfiguration\(\)[\s\S]{0,300}?await sendClaimedOrderEmail\([^)]*emailConfig/,
+  'Order email configuration must be validated after the member gate and before claiming an order.',
+);
 requireMatch(
   orderServer,
   /callSupabaseServiceRpc\(\s*['"]authorize_order_email_resolution['"][\s\S]{0,1200}?await reconcileGasOrderState\([\s\S]{0,1200}?callSupabaseServiceRpc\(\s*['"]resolve_order_email_send['"]/,

@@ -10,6 +10,7 @@ import {
 } from '../server/http.mjs';
 import {
   assertOrderEmailDeliveryAllowed,
+  readOrderEmailConfiguration,
   sendClaimedOrderEmail,
 } from '../server/order-email.mjs';
 import { authenticateSupabaseRequest, consumePortalRateLimit } from '../server/supabase.mjs';
@@ -33,7 +34,8 @@ export default async function handler(request, response) {
       limit: 20,
       windowSeconds: 3600,
     });
-    const result = await sendClaimedOrderEmail(user, orderId);
+    const emailConfig = readOrderEmailConfiguration();
+    const result = await sendClaimedOrderEmail(user, orderId, emailConfig);
     sendJson(response, 200, { ok: true, ...result });
   });
 }

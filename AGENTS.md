@@ -2,7 +2,7 @@
 
 ## プロジェクト概要
 - **名前**: 生産管理課 ポータル
-- **公開先**: Vercel（GitHub `https://github.com/ni1214/portal.git` / branch: `master` はソース管理のみ）
+- **公開先**: Vercel（本番予定origin: `https://fremex-production-portal-ni1214s-projects.vercel.app`。GitHub `https://github.com/ni1214/portal.git` / branch: `master` はソース管理のみ）
 - **バックエンド**: Supabase（runtime / 本番 primary） / Firebase は移行スクリプト専用
 - **スタック**: Vanilla JS (ES modules) + HTML + CSS — フレームワークなし
 - **主要ファイル**: `index.html` / `script.js` / `style.css`
@@ -394,6 +394,7 @@ export function xxxFunction() { ... }
 - Vercel Functions はブラウザの Bearer Supabase JWT を `/auth/v1/user` で検証し、本人IDを確定してから処理する。
 - `consume_portal_rate_limit` / `claim_order_email_send` / `finish_order_email_send` / `authorize_order_email_resolution` / `resolve_order_email_send` は `service_role` 専用RPCとし、`anon` / `authenticated` からの直接実行を許可しない。検証済みの `user.id` / `user.email` を `p_user_id` / `p_user_email` として渡し、DB側でもAuth紐付け、登録メール完全一致、所有者・管理者・送信attemptを再検証する。発注メールの結果不明処理は、認可RPC → GASの同一attempt照合 → DB確定RPCの順に行う。
 - `consume_portal_rate_limit` の許可機能には発注送信 `order-email` と結果照合 `order-email-reconcile` を別枠で明示し、未登録の機能名を受け入れない。
+- 発注メールは認証と会員rate limitの後、DBの送信claimを取得する前にGAS URL・トークン・送信者設定を検証する。設定不足を「GASへ送信したが結果不明」と扱って `sending` に固定しない。
 - `SUPABASE_SECRET_KEY` は `sb_secret_...` の新Secret keyだけを使い、Vercel の Sensitive 環境変数だけに保存する。`Authorization: Bearer` には入れず `apikey` ヘッダーだけで管理RPCを呼び、ブラウザコード、ログ、Git、`dist/`、Codexメモへ絶対に含めない。
 - APIのブラウザ送信元は本番の `SITE_ORIGIN` と、Preview時にVercelが設定する正規化済み `VERCEL_URL` の完全一致だけを許可する。リクエストの `Host` ヘッダーから許可originを組み立てない。
 - Vercel Functions は `/auth/v1/user` のトップレベル `email` を小文字化し、空でないことを検証する。メールドメインでは許可せず、全APIが `user_accounts` の `google_auth_id` / `google_email` / `is_active` 完全一致を確認するサーバーRPCを秘密処理より先に通す。

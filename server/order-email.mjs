@@ -44,6 +44,58 @@ function readEmail(value, label) {
   return email;
 }
 
+function orderEmailConfigurationError() {
+  return new HttpError(
+    500,
+    'server_misconfigured',
+    'メール送信設定を確認できませんでした。',
+  );
+}
+
+function readOrderEmailEnv(name) {
+  try {
+    return requiredEnv(name);
+  } catch {
+    throw orderEmailConfigurationError();
+  }
+}
+
+export function readOrderEmailConfiguration() {
+  const gasToken = readOrderEmailEnv('GAS_ORDER_TOKEN');
+  const companyName = cleanSingleLine(readOrderEmailEnv('ORDER_COMPANY_NAME'), 200);
+  const departmentName = cleanSingleLine(readOrderEmailEnv('ORDER_DEPARTMENT_NAME'), 200);
+  const contactName = cleanSingleLine(readOrderEmailEnv('ORDER_CONTACT_NAME'), 100);
+  const replyTo = cleanSingleLine(readOrderEmailEnv('ORDER_REPLY_TO'), 254);
+
+  let gasUrl;
+  try {
+    gasUrl = parseHttpsUrl(readOrderEmailEnv('GAS_ORDER_URL'), 'GAS_ORDER_URL');
+  } catch {
+    throw orderEmailConfigurationError();
+  }
+
+  if (
+    gasToken.length < 32
+    || !companyName
+    || !departmentName
+    || !contactName
+    || !/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(replyTo)
+    || gasUrl.hostname !== 'script.google.com'
+    || !gasUrl.pathname.startsWith('/macros/s/')
+  ) {
+    throw orderEmailConfigurationError();
+  }
+
+  return Object.freeze({
+    gasUrl: gasUrl.href,
+    gasToken,
+    companyName,
+    departmentName,
+    contactName,
+    replyTo,
+  });
+}
+
 function normalizeItems(value) {
   if (!Array.isArray(value) || value.length < 1 || value.length > MAX_ITEMS) {
     throw new HttpError(422, 'invalid_order_items', '発注明細を確認できませんでした。');
@@ -101,15 +153,13 @@ function normalizeClaimedOrder(value) {
   };
 }
 
-function composeOrderEmail(order) {
-  const companyName = cleanSingleLine(requiredEnv('ORDER_COMPANY_NAME'), 200);
-  const departmentName = cleanSingleLine(requiredEnv('ORDER_DEPARTMENT_NAME'), 200);
-  const contactName = cleanSingleLine(requiredEnv('ORDER_CONTACT_NAME'), 100);
-  const replyTo = readEmail(requiredEnv('ORDER_REPLY_TO'), '返信先メールアドレス');
-  if (!companyName || !departmentName || !contactName) {
-    throw new HttpError(500, 'server_misconfigured', 'メール送信設定を確認できませんでした。');
-  }
-
+function composeOrderEmail(order, emailConfig) {
+  const {
+    companyName,
+    departmentName,
+    contactName,
+    replyTo,
+  } = emailConfig;
   const typeLabel = order.orderType === 'site' ? '現場名発注' : '工場在庫';
   const projectSuffix = order.projectKey ? ` / ${order.projectKey}` : '';
   const subject = `【鋼材発注・${typeLabel}】${order.orderedAt.split(' ')[0]}${projectSuffix} - ${companyName} ${departmentName} [${order.id}]`
@@ -130,20 +180,8 @@ function composeOrderEmail(order) {
   return { to: order.supplierEmail, subject, body, replyTo };
 }
 
-function getGasUrl() {
-  const url = parseHttpsUrl(requiredEnv('GAS_ORDER_URL'), 'GAS_ORDER_URL');
-  if (url.hostname !== 'script.google.com' || !url.pathname.startsWith('/macros/s/')) {
-    throw new HttpError(500, 'server_misconfigured', 'メール送信先の設定を確認できませんでした。');
-  }
-  return url;
-}
-
-async function requestGas(payload) {
-  const token = requiredEnv('GAS_ORDER_TOKEN');
-  if (token.length < 32) {
-    throw new HttpError(500, 'server_misconfigured', 'メール送信設定を確認できませんでした。');
-  }
-  const gasUrl = getGasUrl();
+async function requestGas(payload, emailConfig) {
+  const { gasToken, gasUrl } = emailConfig;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), GAS_TIMEOUT_MS);
   try {
@@ -154,7 +192,7 @@ async function requestGas(payload) {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ token, ...payload }),
+      body: JSON.stringify({ token: gasToken, ...payload }),
       signal: controller.signal,
     });
     if (!response.ok) {
@@ -182,9 +220,9 @@ async function requestGas(payload) {
   }
 }
 
-async function postToGas(payload) {
+async function postToGas(payload, emailConfig) {
   try {
-    const result = await requestGas(payload);
+    const result = await requestGas(payload, emailConfig);
     if (
       result?.success === true
       && (result.status === 'sent' || result.status === 'already_sent')
@@ -212,7 +250,12 @@ async function postToGas(payload) {
   }
 }
 
-async function reconcileGasOrderState(orderId, attemptId, resolution) {
+async function reconcileGasOrderState(
+  orderId,
+  attemptId,
+  resolution,
+  emailConfig,
+) {
   let result;
   try {
     result = await requestGas({
@@ -220,7 +263,7 @@ async function reconcileGasOrderState(orderId, attemptId, resolution) {
       orderId,
       attemptId,
       resolution,
-    });
+    }, emailConfig);
   } catch (error) {
     if (error instanceof HttpError) throw error;
     throw new HttpError(
@@ -261,8 +304,9 @@ async function finishClaim(user, orderId, attemptId, success) {
   }
 }
 
-export async function sendClaimedOrderEmail(user, orderId) {
+export async function sendClaimedOrderEmail(user, orderId, configuredEmail = null) {
   assertOrderEmailDeliveryAllowed();
+  const emailConfig = configuredEmail || readOrderEmailConfiguration();
   const claim = await callSupabaseServiceRpc('claim_order_email_send', {
     p_user_id: user.id,
     p_user_email: user.email,
@@ -293,8 +337,8 @@ export async function sendClaimedOrderEmail(user, orderId) {
     if (!order.id || order.id !== orderId) {
       throw new HttpError(502, 'invalid_order_claim', '発注内容を確認できませんでした。');
     }
-    const message = composeOrderEmail(order);
-    await postToGas({ orderId, attemptId, ...message });
+    const message = composeOrderEmail(order, emailConfig);
+    await postToGas({ orderId, attemptId, ...message }, emailConfig);
   } catch (error) {
     if (error?.code !== 'email_delivery_unconfirmed') {
       try {
@@ -343,7 +387,8 @@ export async function reconcileClaimedOrderEmail(
     );
   }
 
-  await reconcileGasOrderState(orderId, attemptId, resolution);
+  const emailConfig = readOrderEmailConfiguration();
+  await reconcileGasOrderState(orderId, attemptId, resolution, emailConfig);
 
   const result = await callSupabaseServiceRpc('resolve_order_email_send', {
     p_user_id: user.id,

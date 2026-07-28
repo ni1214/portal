@@ -406,6 +406,44 @@ assert.equal(databaseConflict.payload.error.code, 'email_reconciliation_conflict
 assert.equal(gasRequestCount, gasCountBeforeDatabaseConflict + 1);
 orderResolveMode = 'success';
 
+const authorizationCountBeforeMissingReconcileConfig = rpcRequests.filter(
+  request => request.url.includes('/authorize_order_email_resolution'),
+).length;
+const resolutionCountBeforeMissingReconcileConfig = rpcRequests.filter(
+  request => request.url.includes('/resolve_order_email_send'),
+).length;
+const gasCountBeforeMissingReconcileConfig = gasRequestCount;
+const validGasUrl = process.env.GAS_ORDER_URL;
+delete process.env.GAS_ORDER_URL;
+const missingReconcileConfig = await invoke(reconcileOrderEmail, createRequest(
+  'POST',
+  {
+    orderId: 'order-123',
+    attemptId: 'attempt-1',
+    resolution: 'sent',
+  },
+));
+process.env.GAS_ORDER_URL = validGasUrl;
+assert.equal(missingReconcileConfig.status, 500);
+assert.equal(missingReconcileConfig.payload.error.code, 'server_misconfigured');
+assert.equal(
+  rpcRequests.filter(
+    request => request.url.includes('/authorize_order_email_resolution'),
+  ).length,
+  authorizationCountBeforeMissingReconcileConfig + 1,
+  'Order reconciliation must retain its administrator authorization gate.',
+);
+assert.equal(
+  rpcRequests.filter(request => request.url.includes('/resolve_order_email_send')).length,
+  resolutionCountBeforeMissingReconcileConfig,
+  'Missing provider configuration must not finalize a reconciliation.',
+);
+assert.equal(
+  gasRequestCount,
+  gasCountBeforeMissingReconcileConfig,
+  'Missing provider configuration must stop before GAS reconciliation.',
+);
+
 const finishCountAfterSuccess = rpcRequests.filter(
   request => request.url.includes('/finish_order_email_send'),
 ).length;
@@ -431,22 +469,80 @@ assert.equal(sendingOrder.status, 409);
 assert.equal(sendingOrder.payload.error.code, 'email_delivery_unconfirmed');
 orderClaimMode = 'claimed';
 
+const rateLimitCountBeforeMissingConfig = rpcRequests.filter(
+  request => request.url.includes('/consume_portal_rate_limit'),
+).length;
+const claimCountBeforeMissingConfig = rpcRequests.filter(
+  request => request.url.includes('/claim_order_email_send'),
+).length;
+const finishCountBeforeMissingConfig = rpcRequests.filter(
+  request => request.url.includes('/finish_order_email_send'),
+).length;
+const gasCountBeforeMissingConfig = gasRequestCount;
+const validCompanyName = process.env.ORDER_COMPANY_NAME;
+delete process.env.ORDER_COMPANY_NAME;
+const missingOrderConfiguration = await invoke(orderEmail, createRequest(
+  'POST',
+  { orderId: 'order-123' },
+));
+process.env.ORDER_COMPANY_NAME = validCompanyName;
+assert.equal(missingOrderConfiguration.status, 500);
+assert.equal(missingOrderConfiguration.payload.error.code, 'server_misconfigured');
+assert.equal(
+  missingOrderConfiguration.payload.error.message,
+  'メール送信設定を確認できませんでした。',
+);
+assert.equal(
+  rpcRequests.filter(request => request.url.includes('/consume_portal_rate_limit')).length,
+  rateLimitCountBeforeMissingConfig + 1,
+  'Configuration must be checked only after the registered-member rate limit.',
+);
+assert.equal(
+  rpcRequests.filter(request => request.url.includes('/claim_order_email_send')).length,
+  claimCountBeforeMissingConfig,
+  'Missing configuration must stop before claiming the order.',
+);
+assert.equal(
+  rpcRequests.filter(request => request.url.includes('/finish_order_email_send')).length,
+  finishCountBeforeMissingConfig,
+  'Missing configuration must not finalize an unclaimed order.',
+);
+assert.equal(
+  gasRequestCount,
+  gasCountBeforeMissingConfig,
+  'Missing configuration must stop before GAS is requested.',
+);
+
 const validGasToken = process.env.GAS_ORDER_TOKEN;
 process.env.GAS_ORDER_TOKEN = 'too-short';
+const claimCountBeforeRejected = rpcRequests.filter(
+  request => request.url.includes('/claim_order_email_send'),
+).length;
 const finishCountBeforeRejected = rpcRequests.filter(
   request => request.url.includes('/finish_order_email_send'),
 ).length;
+const gasCountBeforeRejected = gasRequestCount;
 const rejectedBeforeDispatch = await invoke(orderEmail, createRequest(
   'POST',
   { orderId: 'order-123' },
 ));
 assert.equal(rejectedBeforeDispatch.status, 500);
 assert.equal(rejectedBeforeDispatch.payload.error.code, 'server_misconfigured');
-const finishCallsAfterRejected = rpcRequests.filter(
-  request => request.url.includes('/finish_order_email_send'),
+assert.equal(
+  rpcRequests.filter(request => request.url.includes('/claim_order_email_send')).length,
+  claimCountBeforeRejected,
+  'Invalid configuration must stop before claiming the order.',
 );
-assert.equal(finishCallsAfterRejected.length, finishCountBeforeRejected + 1);
-assert.equal(finishCallsAfterRejected.at(-1).payload.p_success, false);
+assert.equal(
+  rpcRequests.filter(request => request.url.includes('/finish_order_email_send')).length,
+  finishCountBeforeRejected,
+  'Invalid configuration must not finalize an unclaimed order.',
+);
+assert.equal(
+  gasRequestCount,
+  gasCountBeforeRejected,
+  'Invalid configuration must stop before GAS is requested.',
+);
 process.env.GAS_ORDER_TOKEN = validGasToken;
 
 const crossOrigin = await invoke(ai, createRequest(

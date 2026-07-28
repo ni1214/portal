@@ -16,17 +16,16 @@
 ## 安全な実施順
 
 1. 本番Supabaseをバックアップする。
-2. `supabase/migrations/20260723000000_harden_portal_rls.sql` を本番へ適用する。
-3. 管理者を含む利用者を `user_accounts` へ事前登録し、許可するGoogleメール、部署、`is_active`、`is_admin` を確認する。個人利用でもドメイン全体は許可せず、メール完全一致の行だけを許可する。
-4. Supabase AuthでGoogle providerだけを有効にし、リンク済み利用者を確認してから新規ユーザー登録、メールprovider、匿名ログイン、手動identity linkingを無効化する。Site URL / Redirect URLsへVercel本番URLを設定する。Google Cloud側は、Authorized JavaScript originsへ本番originを、Authorized redirect URIへSupabaseが表示する `https://<project-ref>.supabase.co/auth/v1/callback` を設定する。
-5. GAS最新版をデプロイし、`PORTAL_ORDER_TOKEN` をVercelの `GAS_ORDER_TOKEN` と同じ新規値にする。
-6. Vercel HobbyチームにPortalプロジェクトを作成し、GitHubの `master` をProductionへ接続する。
-7. `.env.example` に列挙した値をVercel Productionへ設定する。`SUPABASE_SECRET_KEY` には新しい `sb_secret_...` を使い、秘密値はSensitiveとして登録する。
-8. Productionをデプロイし、下記の受入確認をすべて完了する。
-9. 合格後にGitHub Pagesを停止する。必要ならリポジトリをPrivateへ変更する。
-10. Vercel Functionsが新しいSecret keyだけで動作することを確認してから、Supabaseの旧`service_role` keyを無効化する。
-11. ローテーション完了を確認してからGitHubのSecret Scanning警告を解決済みにする。
-12. `portal_config` などに残る旧APIキー、GAS URL、旧管理者PIN値を削除する。
+2. 管理者候補を含む利用者について、現行 `user_accounts` の許可GoogleメールとAuth UIDが完全一致していることを確認する。個人利用でもドメイン全体は許可しない。
+3. Supabase AuthでGoogle providerだけを有効にし、リンク済み利用者を確認してから新規ユーザー登録、メールprovider、匿名ログイン、手動identity linkingを無効化する。Redirect URLsへVercel本番origin `https://fremex-production-portal-ni1214s-projects.vercel.app/` を追加する。Google Cloud側はAuthorized JavaScript originsへ同じoriginを、Authorized redirect URIへSupabaseが表示する `https://<project-ref>.supabase.co/auth/v1/callback` を設定する。
+4. Vercel HobbyのPortalプロジェクトへ `.env.example` のProduction値を設定する。`SITE_ORIGIN` は `https://fremex-production-portal-ni1214s-projects.vercel.app` の完全一致、`SUPABASE_SECRET_KEY` は新しい `sb_secret_...` とし、秘密値はSensitiveで登録する。
+5. GAS最新版を新規デプロイし、`PORTAL_ORDER_TOKEN` をVercelの `GAS_ORDER_TOKEN` と同じ新規値にする。Gemini・OpenWeather・GASの旧値を再利用しない。
+6. `supabase/migrations/20260723000000_harden_portal_rls.sql` を本番へ適用し、直後にリンク済み1アカウントの `is_active` / `is_admin` / `access_department` を管理経路で確認する。
+7. `master`をProductionへデプロイし、SupabaseのSite URLをVercel本番originへ切り替えて、下記の受入確認をすべて完了する。
+8. 合格後にGitHub Pagesを停止し、GitHub Pages・localhost・127.0.0.1など不要になったSupabase Redirect URLsを削除する。必要ならリポジトリをPrivateへ変更する。
+9. Vercel Functionsが新しいSecret keyだけで動作することを確認してから、Supabaseの旧`service_role` keyを無効化する。
+10. ローテーション完了を確認してからGitHubのSecret Scanning警告を解決済みにする。
+11. マイグレーションで `portal_config` から旧APIキー、GAS URL、旧管理者PIN列が消えていることを再確認する。
 
 ## 本番受入確認
 
