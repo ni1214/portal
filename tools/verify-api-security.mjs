@@ -16,6 +16,12 @@ Object.assign(process.env, {
   ORDER_REPLY_TO: 'orders@framex.co.jp',
 });
 
+// Vercel executes this verifier inside a Preview build where these variables
+// are already set. Start normal-path tests from a deterministic environment;
+// Preview-specific behavior is enabled explicitly later in this file.
+delete process.env.VERCEL_ENV;
+delete process.env.VERCEL_URL;
+
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 let authEmail = 'user@framex.co.jp';
 let authProvider = 'google';
