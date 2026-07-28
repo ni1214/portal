@@ -23,4 +23,4 @@ alter table public.user_preferences
 
 create index if not exists idx_public_cards_link_type on public.public_cards(link_type);
 create index if not exists idx_public_cards_last_opened_at on public.public_cards(last_opened_at desc);
-create index if not exists idx_private_cards_link_type on public.private_cards(link_type);
+create index if not exists idx_private_cards_link_type on public.private_cards(link_type);;

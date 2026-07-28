@@ -76,6 +76,77 @@ create unique index if not exists idx_user_accounts_google_email_unique
   on public.user_accounts(lower(google_email))
   where nullif(btrim(google_email), '') is not null;
 
+-- Keep the single existing, fully linked Google account usable as the initial
+-- administrator. This must run before the account-security trigger is created.
+-- Fail the whole migration instead of leaving production with no active
+-- administrator when the live identity state is unexpected.
+do $bootstrap$
+declare
+  v_username text;
+  v_department text;
+  v_updated integer;
+  v_account_count integer;
+begin
+  select count(*)
+  into v_account_count
+  from public.user_accounts;
+
+  -- A schema-only rebuild has no identity to bootstrap yet. Existing
+  -- environments must still fail closed when their identity state is invalid.
+  if v_account_count = 0 then
+    return;
+  end if;
+
+  begin
+    select
+      account.username,
+      coalesce(
+        nullif(btrim(account.access_department), ''),
+        (
+          select max(nullif(btrim(profile.department), ''))
+          from public.user_profiles profile
+          where profile.username = account.username
+        )
+      )
+    into strict v_username, v_department
+    from public.user_accounts account
+    join auth.users auth_user
+      on auth_user.id::text = account.google_auth_id
+     and lower(btrim(coalesce(auth_user.email, ''))) =
+       lower(btrim(account.google_email))
+    where nullif(btrim(account.google_email), '') is not null
+      and exists (
+        select 1
+        from auth.identities identity
+        where identity.user_id = auth_user.id
+          and lower(identity.provider) = 'google'
+      )
+    for update of account;
+  exception
+    when no_data_found then
+      raise exception 'Expected exactly one linked Google Portal account; found none';
+    when too_many_rows then
+      raise exception 'Expected exactly one linked Google Portal account; found multiple';
+  end;
+
+  if v_department is null then
+    raise exception 'Linked Google Portal account has no access department';
+  end if;
+
+  update public.user_accounts
+  set
+    is_active = true,
+    is_admin = true,
+    access_department = v_department
+  where username = v_username;
+
+  get diagnostics v_updated = row_count;
+  if v_updated <> 1 then
+    raise exception 'Admin bootstrap updated % rows, expected 1', v_updated;
+  end if;
+end
+$bootstrap$;
+
 -- Administrator membership must be reviewed and provisioned explicitly.
 -- A legacy feature-level viewer list is not an authorization source.
 

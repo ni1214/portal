@@ -54,6 +54,7 @@ const MANAGED_TABLES = [
 ];
 const LOCKED_LEGACY_TABLES = ['fittings', 'floors', 'sites', 'workers'];
 const IDS = {
+  bootstrap: '55555555-5555-4555-8555-555555555555',
   alice: '11111111-1111-4111-8111-111111111111',
   bob: '22222222-2222-4222-8222-222222222222',
   carol: '33333333-3333-4333-8333-333333333333',
@@ -77,68 +78,116 @@ async function expectDbError(action, pattern, label) {
   assert.match(`${error.message || error}`, pattern, label);
 }
 
-async function main() {
-  const db = new PGlite();
+async function prepareBaseSchema(db) {
   await db.waitReady;
+  await db.exec(`
+    create role anon nologin;
+    create role authenticated nologin;
+    create role service_role nologin bypassrls;
+    create schema auth;
+    create table auth.users (
+      id uuid primary key,
+      email text,
+      raw_app_meta_data jsonb
+    );
+    create table auth.identities (
+      id text primary key,
+      user_id uuid not null,
+      provider text not null
+    );
+    create or replace function auth.uid()
+    returns uuid
+    language sql
+    stable
+    as $$
+      select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+    $$;
+    create or replace function auth.jwt()
+    returns jsonb
+    language sql
+    stable
+    as $$
+      select coalesce(
+        nullif(current_setting('request.jwt.claims', true), ''),
+        '{}'
+      )::jsonb
+    $$;
+    create table public.fittings (id uuid primary key);
+    create table public.floors (id uuid primary key);
+    create table public.sites (id uuid primary key);
+    create table public.workers (id uuid primary key);
+  `);
+
+  const baseFiles = (await readdir(SUPABASE_DIR))
+    .filter(name => /^\d+.*\.sql$/.test(name))
+    .sort();
+  for (const name of baseFiles) {
+    const sql = stripUnsupportedLocalExtension(
+      await readFile(path.join(SUPABASE_DIR, name), 'utf8'),
+    );
+    await db.exec(sql);
+  }
+  await db.exec(
+    await readFile(
+      path.join(
+        SUPABASE_DIR,
+        'migrations',
+        '20260623040342_add_shared_link_drive_metadata.sql',
+      ),
+      'utf8',
+    ),
+  );
+}
+
+async function verifyEmptyDatabaseMigration() {
+  const db = new PGlite();
+  try {
+    await prepareBaseSchema(db);
+    await db.exec(await readFile(HARDENING_MIGRATION, 'utf8'));
+    const accounts = await db.query(
+      'select count(*)::int as count from public.user_accounts',
+    );
+    assert.equal(accounts.rows[0].count, 0);
+  } finally {
+    await db.close();
+  }
+}
+
+async function main() {
+  await verifyEmptyDatabaseMigration();
+  const db = new PGlite();
 
   try {
-    await db.exec(`
-      create role anon nologin;
-      create role authenticated nologin;
-      create role service_role nologin bypassrls;
-      create schema auth;
-      create table auth.users (
-        id uuid primary key,
-        email text,
-        raw_app_meta_data jsonb
-      );
-      create table auth.identities (
-        id text primary key,
-        user_id uuid not null,
-        provider text not null
-      );
-      create or replace function auth.uid()
-      returns uuid
-      language sql
-      stable
-      as $$
-        select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
-      $$;
-      create or replace function auth.jwt()
-      returns jsonb
-      language sql
-      stable
-      as $$
-        select coalesce(
-          nullif(current_setting('request.jwt.claims', true), ''),
-          '{}'
-        )::jsonb
-      $$;
-      create table public.fittings (id uuid primary key);
-      create table public.floors (id uuid primary key);
-      create table public.sites (id uuid primary key);
-      create table public.workers (id uuid primary key);
-    `);
-
-    const baseFiles = (await readdir(SUPABASE_DIR))
-      .filter(name => /^\d+.*\.sql$/.test(name))
-      .sort();
-    for (const name of baseFiles) {
-      const sql = stripUnsupportedLocalExtension(
-        await readFile(path.join(SUPABASE_DIR, name), 'utf8'),
-      );
-      await db.exec(sql);
-    }
-    await db.exec(
-      await readFile(
-        path.join(
-          SUPABASE_DIR,
-          'migrations',
-          '20260623040342_add_shared_link_drive_metadata.sql',
-        ),
-        'utf8',
-      ),
+    await prepareBaseSchema(db);
+    await db.query(
+      `insert into auth.users (id, email, raw_app_meta_data)
+      values (
+        $1,
+        'bootstrap.admin@framex.co.jp',
+        '{"provider":"google","providers":["google"]}'
+      )`,
+      [IDS.bootstrap],
     );
+    await db.query(
+      `insert into auth.identities (id, user_id, provider)
+      values ('bootstrap-google', $1, 'google')`,
+      [IDS.bootstrap],
+    );
+    await db.query(
+      `insert into public.user_accounts (
+        username, google_auth_id, google_email
+      )
+      values (
+        'Bootstrap Admin',
+        $1::text,
+        'bootstrap.admin@framex.co.jp'
+      )`,
+      [IDS.bootstrap],
+    );
+    await db.exec(`
+      insert into public.user_profiles (username, department)
+      values ('Bootstrap Admin', '管理')
+    `);
     await db.exec(await readFile(HARDENING_MIGRATION, 'utf8'));
 
     const setSession = async (
@@ -175,6 +224,27 @@ async function main() {
       );
       await db.exec('set role service_role');
     };
+
+    const bootstrapAdmin = await db.query(`
+      select is_active, is_admin, access_department
+      from public.user_accounts
+      where username = 'Bootstrap Admin'
+    `);
+    assert.deepEqual(bootstrapAdmin.rows[0], {
+      is_active: true,
+      is_admin: true,
+      access_department: '管理',
+    });
+    await db.exec(`
+      delete from public.user_accounts
+      where username = 'Bootstrap Admin';
+
+      delete from auth.identities
+      where user_id = '${IDS.bootstrap}';
+
+      delete from auth.users
+      where id = '${IDS.bootstrap}';
+    `);
 
     const rls = await db.query(
       `select
