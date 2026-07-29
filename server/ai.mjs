@@ -75,6 +75,19 @@ export async function generateAiText(feature, prompt) {
   });
 
   if (!response.ok) {
+    let upstreamStatus = '';
+    try {
+      const errorPayload = await response.clone().json();
+      upstreamStatus = typeof errorPayload?.error?.status === 'string'
+        ? errorPayload.error.status
+        : '';
+    } catch {
+      // Keep diagnostics metadata-only; never log upstream bodies or prompts.
+    }
+    console.warn('Gemini request rejected', {
+      httpStatus: response.status,
+      upstreamStatus,
+    });
     if (response.status === 429) {
       throw new HttpError(503, 'ai_busy', 'AIが混み合っています。少し待ってから再度お試しください。');
     }
