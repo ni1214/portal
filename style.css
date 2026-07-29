@@ -34521,7 +34521,8 @@ body.portal-ui-v2 #ord-modal.portal-workspace-mode.order-ui-v2 :is(
 }
 
 .env-refresh-btn,
-.env-external-link {
+.env-external-link,
+.env-frame-reload {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -34546,13 +34547,19 @@ body.portal-ui-v2 #ord-modal.portal-workspace-mode.order-ui-v2 :is(
   cursor: pointer;
 }
 
-.env-external-link {
+.env-external-link,
+.env-frame-reload {
   flex-shrink: 0;
   padding: 0 12px;
 }
 
+.env-frame-reload {
+  cursor: pointer;
+}
+
 .env-refresh-btn:hover,
-.env-external-link:hover {
+.env-external-link:hover,
+.env-frame-reload:hover {
   border-color: var(--accent-blue);
   background: rgba(var(--accent-blue-rgb-legacy), 0.08);
   color: var(--accent-blue);
@@ -34591,6 +34598,13 @@ body.portal-ui-v2 #ord-modal.portal-workspace-mode.order-ui-v2 :is(
 .env-monitor-heading {
   align-items: flex-start;
   margin-bottom: 16px;
+}
+
+.env-monitor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .env-section-kicker {
@@ -34967,8 +34981,14 @@ body.portal-ui-v2 #ord-modal.portal-workspace-mode.order-ui-v2 :is(
   }
 
   .env-refresh-btn,
-  .env-external-link {
+  .env-external-link,
+  .env-frame-reload {
     align-self: flex-start;
+  }
+
+  .env-monitor-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
   .env-radar-frame-wrap {

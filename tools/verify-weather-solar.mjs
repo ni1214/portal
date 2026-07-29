@@ -31,6 +31,12 @@ assert.doesNotMatch(html, /id="weather-widget"|id="weather-panel"|id="wpanel-/);
 assert.match(script, /initWeatherSolar\(\{\s*fetchWeatherFromApi\s*\}\)/);
 assert.match(script, /elementId:\s*['"]env-workspace['"]/);
 assert.match(script, /sourceButtonId:\s*['"]env-sidebar-btn['"]/);
+assert.match(script, /afterOpenAction:\s*openWeatherSolarView/);
+assert.doesNotMatch(script, /openAction:\s*openWeatherSolarView/);
+assert.match(
+  script,
+  /const workspaceOpened = openWorkspaceView\([\s\S]*?const afterOpened = await afterOpenAction\?\.\(\)/,
+);
 assert.match(script, /getElementById\(['"]env-sidebar-btn['"]\)\.addEventListener/);
 assert.doesNotMatch(
   script,
@@ -43,6 +49,9 @@ assert.match(moduleSource, /id="env-sun"/);
 assert.match(moduleSource, /id="env-heat"/);
 assert.match(moduleSource, /id="env-solar-frame"/);
 assert.match(moduleSource, /id="env-radar-frame"/);
+assert.match(moduleSource, /id="env-solar-reload"/);
+assert.match(moduleSource, /id="env-radar-reload"/);
+assert.match(moduleSource, /function reloadFrame\(frameId,\s*url\)/);
 assert.match(moduleSource, /日の出・日没/);
 assert.match(moduleSource, /暑さ指数（WBGT）/);
 assert.match(moduleSource, /https:\/\/mierukaweb\.energymntr\.com\/48429893PZ/);
@@ -51,6 +60,7 @@ assert.match(
   moduleSource,
   /sandbox="allow-scripts allow-same-origin allow-forms allow-popups"/,
 );
+assert.equal((moduleSource.match(/loading="eager"/g) || []).length, 2);
 assert.doesNotMatch(moduleSource, /allow-top-navigation|allow-top-navigation-by-user-activation/);
 
 assert.equal(getWbgtLevel(20.9).key, 'safe');

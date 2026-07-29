@@ -214,7 +214,7 @@ import {
   initWeatherSolar,
   openWeatherSolarView,
   closeWeatherSolarView,
-} from './modules/weather-solar.js?v=20260729a';
+} from './modules/weather-solar.js?v=20260729b';
 
 import {
   isSupabaseSharedCoreEnabled,
@@ -433,7 +433,7 @@ async function openCalendarWorkspaceView() {
 function openWeatherSolarWorkspace() {
   return openPortalWorkspace({
     elementId: 'env-workspace',
-    openAction: openWeatherSolarView,
+    afterOpenAction: openWeatherSolarView,
     closeAction: closeWeatherSolarView,
     hideOnClose: true,
     closeOnBackdrop: false,
@@ -457,6 +457,7 @@ function returnToHomeWorkspace() {
 async function openPortalWorkspace({
   elementId,
   openAction,
+  afterOpenAction,
   closeAction,
   closeSelector,
   extraClass = '',
@@ -474,7 +475,7 @@ async function openPortalWorkspace({
   closeActiveWorkspaceView();
   const opened = await openAction?.();
   if (opened === false) return false;
-  return openWorkspaceView({
+  const workspaceOpened = openWorkspaceView({
     elementId,
     closeAction,
     closeSelector,
@@ -487,6 +488,13 @@ async function openPortalWorkspace({
     icon,
     sourceButtonId,
   });
+  if (!workspaceOpened) return false;
+  const afterOpened = await afterOpenAction?.();
+  if (afterOpened === false) {
+    closeActiveWorkspaceView();
+    return false;
+  }
+  return true;
 }
 
 function openTaskWorkspace() {

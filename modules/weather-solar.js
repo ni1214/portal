@@ -93,16 +93,22 @@ function ensureWorkspace() {
           <p class="env-section-kicker">発電状況</p>
           <h2 id="env-solar-heading">八幡工場 太陽光発電モニター</h2>
         </div>
-        <a class="env-external-link" href="${SOLAR_MONITOR_URL}" target="_blank" rel="noopener noreferrer">
-          <span>別タブで開く</span>
-          <i class="material-symbols-rounded" aria-hidden="true">open_in_new</i>
-        </a>
+        <div class="env-monitor-actions">
+          <button class="env-frame-reload" id="env-solar-reload" type="button">
+            <i class="material-symbols-rounded" aria-hidden="true">refresh</i>
+            <span>再読み込み</span>
+          </button>
+          <a class="env-external-link" href="${SOLAR_MONITOR_URL}" target="_blank" rel="noopener noreferrer">
+            <span>別タブで開く</span>
+            <i class="material-symbols-rounded" aria-hidden="true">open_in_new</i>
+          </a>
+        </div>
       </div>
       <div class="env-frame-wrap env-solar-frame-wrap">
         <iframe
           id="env-solar-frame"
           title="日建フレメックス八幡工場 太陽光発電状況"
-          loading="lazy"
+          loading="eager"
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
           referrerpolicy="strict-origin-when-cross-origin"
           allowfullscreen
@@ -117,16 +123,22 @@ function ensureWorkspace() {
           <p class="env-section-kicker">降雨確認</p>
           <h2 id="env-radar-heading">高崎市周辺の雨雲レーダー</h2>
         </div>
-        <a class="env-external-link" href="${RAIN_RADAR_URL}" target="_blank" rel="noopener noreferrer">
-          <span>別タブで開く</span>
-          <i class="material-symbols-rounded" aria-hidden="true">open_in_new</i>
-        </a>
+        <div class="env-monitor-actions">
+          <button class="env-frame-reload" id="env-radar-reload" type="button">
+            <i class="material-symbols-rounded" aria-hidden="true">refresh</i>
+            <span>再読み込み</span>
+          </button>
+          <a class="env-external-link" href="${RAIN_RADAR_URL}" target="_blank" rel="noopener noreferrer">
+            <span>別タブで開く</span>
+            <i class="material-symbols-rounded" aria-hidden="true">open_in_new</i>
+          </a>
+        </div>
       </div>
       <div class="env-frame-wrap env-radar-frame-wrap">
         <iframe
           id="env-radar-frame"
           title="高崎市周辺の雨雲レーダー"
-          loading="lazy"
+          loading="eager"
           sandbox="allow-scripts allow-same-origin allow-popups"
           referrerpolicy="strict-origin-when-cross-origin"
           allowfullscreen
@@ -140,7 +152,22 @@ function ensureWorkspace() {
   document.getElementById('env-refresh')?.addEventListener('click', () => {
     void refreshWeatherSolar({ force: true });
   });
+  document.getElementById('env-solar-reload')?.addEventListener('click', () => {
+    reloadFrame('env-solar-frame', SOLAR_MONITOR_URL);
+  });
+  document.getElementById('env-radar-reload')?.addEventListener('click', () => {
+    reloadFrame('env-radar-frame', RAIN_RADAR_URL);
+  });
   return workspace;
+}
+
+function reloadFrame(frameId, url) {
+  const frame = document.getElementById(frameId);
+  if (!frame) return;
+  frame.removeAttribute('src');
+  window.requestAnimationFrame(() => {
+    frame.setAttribute('src', url);
+  });
 }
 
 function activateFrames() {
