@@ -2,8 +2,19 @@ import { optionalEnv } from './env.mjs';
 import { HttpError } from './http.mjs';
 
 const WEATHER_TIMEOUT_MS = 10_000;
+const WBGT_TIMEOUT_MS = 5_000;
+const WBGT_CACHE_MS = 10 * 60 * 1000;
 const OPEN_METEO_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
+const WBGT_DATA_BASE_URL = 'https://www.wbgt.env.go.jp/est15WG/dl';
+const WBGT_SOURCE_URL = 'https://www.wbgt.env.go.jp/wbgt_data.php?region=01';
+const WBGT_STATION_ID = '42251';
+const WBGT_STATION_NAME = '前橋';
 const FORECAST_SAMPLE_INDEXES = Object.freeze([3, 6, 9, 12, 15, 18, 21, 24]);
+let wbgtCache = {
+  key: '',
+  expiresAt: 0,
+  value: null,
+};
 const WMO_WEATHER = Object.freeze({
   0: { description: '晴れ', icon: '01' },
   1: { description: '晴れ', icon: '02' },
@@ -86,6 +97,23 @@ function readHourlySeries(hourly, name) {
   return values;
 }
 
+function readDailyValue(daily, name, label) {
+  const values = daily?.[name];
+  if (!Array.isArray(values) || values.length === 0) {
+    throw new HttpError(502, 'invalid_weather_response', `天気情報の${label}を確認できませんでした。`);
+  }
+  return values[0];
+}
+
+function normalizeToday(daily) {
+  return {
+    sunrise: unixSecondsToIso(readDailyValue(daily, 'sunrise', '日の出'), '日の出'),
+    sunset: unixSecondsToIso(readDailyValue(daily, 'sunset', '日没'), '日没'),
+    daylightSeconds: finiteNumber(readDailyValue(daily, 'daylight_duration', '昼の長さ'), '昼の長さ'),
+    uvIndexMax: finiteNumber(readDailyValue(daily, 'uv_index_max', '紫外線指数'), '紫外線指数'),
+  };
+}
+
 function normalizeForecast(hourly) {
   const times = readHourlySeries(hourly, 'time');
   const temperatures = readHourlySeries(hourly, 'temperature_2m');
@@ -103,6 +131,100 @@ function normalizeForecast(hourly) {
       icon: boundedText(details.icon, 8),
     };
   });
+}
+
+function getTokyoDateParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const read = type => Number(parts.find(part => part.type === type)?.value);
+  return {
+    year: read('year'),
+    month: read('month'),
+    day: read('day'),
+  };
+}
+
+function toObservationIso(year, month, day, timeText) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(`${timeText || ''}`.trim());
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isInteger(hour) || hour < 0 || hour > 24 || minute < 0 || minute > 59) return null;
+  const observedAt = new Date(Date.UTC(year, month - 1, day, hour - 9, minute));
+  return Number.isNaN(observedAt.getTime()) ? null : observedAt.toISOString();
+}
+
+function unavailableWbgt() {
+  return {
+    station: WBGT_STATION_NAME,
+    current: null,
+    todayMax: null,
+    observedAt: null,
+    source: '環境省 熱中症予防情報サイト',
+    sourceUrl: WBGT_SOURCE_URL,
+  };
+}
+
+async function fetchLatestWbgt(now = new Date()) {
+  const { year, month, day } = getTokyoDateParts(now);
+  const monthKey = `${year}${String(month).padStart(2, '0')}`;
+  const cacheKey = `${monthKey}-${day}`;
+  if (wbgtCache.key === cacheKey && wbgtCache.expiresAt > Date.now() && wbgtCache.value) {
+    return wbgtCache.value;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), WBGT_TIMEOUT_MS);
+  let value = unavailableWbgt();
+  try {
+    const response = await fetch(
+      `${WBGT_DATA_BASE_URL}/wbgt_${WBGT_STATION_ID}_${monthKey}.csv`,
+      {
+        method: 'GET',
+        headers: { Accept: 'text/csv' },
+        signal: controller.signal,
+      },
+    );
+    if (!response.ok) return value;
+    const csv = await response.text();
+    const expectedDate = `${year}/${month}/${day}`;
+    const observations = csv
+      .split(/\r?\n/)
+      .map(line => line.split(','))
+      .filter(columns => (
+        columns[0] === expectedDate
+        && `${columns[2] ?? ''}`.trim() !== ''
+        && Number.isFinite(Number(columns[2]))
+      ))
+      .map(columns => ({
+        value: Number(columns[2]),
+        observedAt: toObservationIso(year, month, day, columns[1]),
+      }))
+      .filter(observation => observation.observedAt);
+    if (observations.length > 0) {
+      const latest = observations.at(-1);
+      value = {
+        ...unavailableWbgt(),
+        current: latest.value,
+        todayMax: Math.max(...observations.map(observation => observation.value)),
+        observedAt: latest.observedAt,
+      };
+    }
+  } catch {
+    // WBGT is supplemental. Keep the weather response available when the official feed is unavailable.
+  } finally {
+    clearTimeout(timeout);
+    wbgtCache = {
+      key: cacheKey,
+      expiresAt: Date.now() + (value.current == null ? 2 * 60 * 1000 : WBGT_CACHE_MS),
+      value,
+    };
+  }
+  return value;
 }
 
 async function fetchWeatherJson(url) {
@@ -154,15 +276,25 @@ export async function fetchNormalizedWeather() {
       'weather_code',
       'is_day',
     ].join(','),
+    daily: [
+      'sunrise',
+      'sunset',
+      'daylight_duration',
+      'uv_index_max',
+    ].join(','),
     forecast_hours: '25',
+    forecast_days: '1',
     temperature_unit: 'celsius',
     wind_speed_unit: 'ms',
     timeformat: 'unixtime',
     timezone: 'Asia/Tokyo',
   }).toString();
 
-  const weather = await fetchWeatherJson(forecastUrl);
-  if (!weather?.current || !weather?.hourly) {
+  const [weather, heatStress] = await Promise.all([
+    fetchWeatherJson(forecastUrl),
+    fetchLatestWbgt(),
+  ]);
+  if (!weather?.current || !weather?.hourly || !weather?.daily) {
     throw new HttpError(502, 'invalid_weather_response', '天気予報の応答を確認できませんでした。');
   }
   const currentDetails = weatherDetails(weather.current.weather_code, weather.current.is_day);
@@ -178,6 +310,8 @@ export async function fetchNormalizedWeather() {
       icon: boundedText(currentDetails.icon, 8),
     },
     forecast: normalizeForecast(weather.hourly),
+    today: normalizeToday(weather.daily),
+    heatStress,
     updatedAt: new Date().toISOString(),
   };
 }

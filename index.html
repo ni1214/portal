@@ -113,6 +113,11 @@
             <span class="app-sidebar-label">カレンダー・勤怠</span>
           </button>
 
+          <button class="app-sidebar-item" id="env-sidebar-btn" data-home-target="weather-solar" title="天気・太陽光発電">
+            <span class="app-sidebar-icon"><i class="material-symbols-rounded">solar_power</i></span>
+            <span class="app-sidebar-label">天気・太陽光</span>
+          </button>
+
           <button class="app-sidebar-item" id="btn-task" data-home-target="task" title="タスク管理">
             <span class="app-sidebar-icon">
               <i class="material-symbols-rounded">checklist</i>
@@ -240,51 +245,6 @@
 
           <!-- お知らせボード -->
           <section id="notice-board" class="notice-board"></section>
-
-          <!-- 天気ウィジェット（通常は非表示、太陽光カードで展開） -->
-          <section id="weather-widget" class="weather-widget" hidden>
-        <div class="weather-section-header">
-          <div class="weather-title-area">
-            <i class="fa-solid fa-cloud-sun weather-section-icon"></i>
-            <span class="weather-section-title">高崎市の天気</span>
-          </div>
-          <span id="weather-updated" class="weather-updated"></span>
-        </div>
-        <div class="weather-body">
-          <div id="weather-current" class="weather-current">
-            <div class="weather-loading"><i class="fa-solid fa-spinner fa-spin"></i> 天気情報を取得中...</div>
-          </div>
-          <div id="weather-forecast" class="forecast-scroll"></div>
-        </div>
-        <div class="weather-data-source">
-          天気データ:
-          <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
-          （表示用に加工）
-          /
-          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>
-        </div>
-
-        <!-- 展開パネル（雨雲レーダー / 太陽光発電 タブ） -->
-        <div id="weather-panel" class="weather-panel" hidden>
-          <div class="wpanel-tabs">
-            <button class="wpanel-tab" id="tab-radar" data-tab="radar">
-              <i class="fa-solid fa-map"></i> 雨雲レーダー
-            </button>
-            <button class="wpanel-tab" id="tab-solar" data-tab="solar">
-              <i class="fa-solid fa-solar-panel"></i> 太陽光発電
-            </button>
-            <a id="wpanel-external" href="#" target="_blank" rel="noopener" class="wpanel-external">
-              <i class="fa-solid fa-arrow-up-right-from-square"></i> 別タブで開く
-            </a>
-            <button id="wpanel-close" class="wpanel-close" title="閉じる">
-              <i class="material-symbols-rounded" aria-hidden="true">close</i>
-            </button>
-          </div>
-          <div id="wpanel-content" class="wpanel-content">
-            <!-- iframe は JS が挿入 -->
-          </div>
-        </div>
-      </section>
 
           <!-- 公開セクション（JS が動的挿入） -->
 
@@ -1322,12 +1282,12 @@
         </div>
 
         <div class="guide-section">
-          <h4 class="guide-section-title"><span class="guide-icon">☀️</span> 天気・太陽光発電パネル</h4>
+          <h4 class="guide-section-title"><span class="guide-icon">☀️</span> 天気・太陽光</h4>
           <ul class="guide-list">
-            <li>外部ツールの<strong>「太陽光発電」アイコン</strong>をクリックするとパネルが展開されます。</li>
-            <li><strong>現在の気温・湿度・風速・体感温度</strong>と24時間予報が表示されます。</li>
-            <li><strong>熱中症危険度バナー</strong>で作業前の安全確認ができます（危険・厳重警戒時は点滅）。</li>
-            <li>タブで<strong>「雨雲レーダー」</strong>と<strong>「太陽光発電モニタリング」</strong>を切り替えられます。</li>
+            <li>サイドバーの<strong>「天気・太陽光」</strong>から、今日の天気と発電状況を開けます。</li>
+            <li><strong>気温・湿度・風速・体感温度、日の出・日没</strong>と24時間予報を確認できます。</li>
+            <li><strong>環境省の暑さ指数（WBGT）</strong>を使って、作業前の熱中症リスクを確認できます。</li>
+            <li><strong>太陽光発電モニターと雨雲レーダー</strong>を同じ画面で確認できます。</li>
           </ul>
         </div>
 
@@ -1414,6 +1374,10 @@
         <button class="more-drawer-item" data-target="btn-calendar">
           <i class="fa-regular fa-calendar"></i>
           <span>カレンダー</span>
+        </button>
+        <button class="more-drawer-item" data-target="env-sidebar-btn">
+          <i class="material-symbols-rounded" aria-hidden="true">solar_power</i>
+          <span>天気・太陽光</span>
         </button>
         <button class="more-drawer-item" data-target="btn-favorites-only">
           <i class="fa-regular fa-star"></i>
@@ -2723,7 +2687,7 @@
 
   <script src="./vendor/xlsx.js"></script>
   <!-- Script (type="module") -->
-  <script type="module" src="script.js?v=20260723a"></script>
+  <script type="module" src="script.js?v=20260729a"></script>
 </body>
 
 </html>

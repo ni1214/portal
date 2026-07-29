@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "node tools/build-vercel.mjs",
-    "check": "node tools/build-vercel.mjs --check && node tools/verify-vercel-artifacts.mjs && node tools/verify-security.mjs && node tools/verify-migration.mjs && node tools/verify-api-security.mjs && node tools/verify-gas-order.mjs",
+    "check": "node tools/build-vercel.mjs --check && node tools/verify-vercel-artifacts.mjs && node tools/verify-security.mjs && node tools/verify-migration.mjs && node tools/verify-api-security.mjs && node tools/verify-weather-solar.mjs && node tools/verify-gas-order.mjs",
     "verify:migration": "node tools/verify-migration.mjs"
   },
   "dependencies": {

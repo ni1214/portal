@@ -6,7 +6,6 @@ import {
   db, doc, documentId, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc,
   collection, query, where, orderBy, limit, writeBatch, serverTimestamp, onSnapshot,
   arrayUnion, arrayRemove,
-  WEATHER_LAT, WEATHER_LON,
   SVG_ICONS, PRESET_SERVICES, CATEGORY_COLORS, ICON_PICKER_LIST,
   DEFAULT_CATEGORIES, INITIAL_CARDS
 } from './modules/config.js';
@@ -161,7 +160,7 @@ import {
   isWorkspaceViewOpen,
   resetWorkspaceNavigationState,
   setWorkspaceNavigationState,
-} from './modules/workspace-view.js?v=20260723a';
+} from './modules/workspace-view.js?v=20260729a';
 
 import {
   initOrder,
@@ -211,6 +210,11 @@ import {
   closeTroubleReportModal,
 } from './modules/trouble-report.js';
 import { fetchWeatherFromApi } from './modules/secure-api.js';
+import {
+  initWeatherSolar,
+  openWeatherSolarView,
+  closeWeatherSolarView,
+} from './modules/weather-solar.js?v=20260729a';
 
 import {
   isSupabaseSharedCoreEnabled,
@@ -423,6 +427,21 @@ async function openCalendarWorkspaceView() {
     subtitle: '今日の勤怠と現場工数を記録し、必要な勤務内容を確認します。',
     icon: 'calendar_month',
     sourceButtonId: 'btn-calendar',
+  });
+}
+
+function openWeatherSolarWorkspace() {
+  return openPortalWorkspace({
+    elementId: 'env-workspace',
+    openAction: openWeatherSolarView,
+    closeAction: closeWeatherSolarView,
+    hideOnClose: true,
+    closeOnBackdrop: false,
+    route: 'weather-solar',
+    title: '天気・太陽光',
+    subtitle: '今日の天気、安全情報、発電状況と雨雲をまとめて確認します。',
+    icon: 'solar_power',
+    sourceButtonId: 'env-sidebar-btn',
   });
 }
 
@@ -645,19 +664,6 @@ function openTroubleReportWorkspace(initialTab = 'new') {
   });
 }
 
-function focusWeatherWidget() {
-  const widget = document.getElementById('weather-widget');
-  if (!widget) return;
-
-  if (widget.hidden) {
-    widget.hidden = false;
-  }
-
-  const headerOffset = window.innerWidth <= 768 ? 76 : 92;
-  const targetTop = Math.max(0, window.scrollY + widget.getBoundingClientRect().top - headerOffset);
-  window.scrollTo({ top: targetTop, behavior: 'smooth' });
-}
-
 function bindProfileQuickActions() {
   const renameBtn = document.getElementById('ep-edit-username');
   if (!renameBtn) return;
@@ -702,7 +708,7 @@ function configureSidebarNavigation() {
     { label: '', ids: ['sidebar-home-btn'] },
     {
       label: '今日の業務',
-      ids: ['btn-task', 'btn-calendar', 'btn-reqboard', 'btn-notice-bell'],
+      ids: ['btn-task', 'btn-calendar', 'env-sidebar-btn', 'btn-reqboard', 'btn-notice-bell'],
     },
     {
       label: '共有・連絡',
@@ -902,7 +908,6 @@ Object.assign(sharedSpaceDeps, {
     ],
   }),
   focusNoticeBoard: focusNoticeBoardFromDashboard,
-  focusWeatherWidget,
   openCalendarModal: async () => {
     if (await openCalendarWorkspaceView()) {
       await onCalendarModalOpen();
@@ -2571,7 +2576,7 @@ function openFavoriteLinkFromHome(cardId) {
   }
 
   if (card.url === 'solar:open') {
-    openWeatherPanel('solar');
+    void openWeatherSolarWorkspace();
     return;
   }
   if (card.url === 'portal:trouble-report') {
@@ -3051,160 +3056,6 @@ function closeServicePicker() {
 }
 
 
-// ========== 天気パネル ==========
-const WINDY_URL = `https://embed.windy.com/embed2.html?lat=${WEATHER_LAT}&lon=${WEATHER_LON}&detailLat=${WEATHER_LAT}&detailLon=${WEATHER_LON}&zoom=9&level=surface&overlay=rain&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1`;
-const SOLAR_SRC = 'https://mierukaweb.energymntr.com/48429893PZ';
-
-function openWeatherPanel(tab) {
-  const widget = document.getElementById('weather-widget');
-  const panel  = document.getElementById('weather-panel');
-  if (!widget || !panel) return;
-  widget.removeAttribute('hidden');
-  panel.removeAttribute('hidden');
-  switchWeatherTab(tab);
-  const current = document.getElementById('weather-current');
-  if (current && !current.innerHTML.trim()) fetchAndRenderWeather();
-  setTimeout(() => widget.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
-}
-
-function closeWeatherPanel() {
-  const panel   = document.getElementById('weather-panel');
-  const content = document.getElementById('wpanel-content');
-  const widget  = document.getElementById('weather-widget');
-  if (panel)   panel.setAttribute('hidden', '');
-  if (content) content.innerHTML = '';
-  if (widget)  widget.setAttribute('hidden', '');
-}
-
-function switchWeatherTab(tab) {
-  document.querySelectorAll('.wpanel-tab').forEach(b =>
-    b.classList.toggle('active', b.dataset.tab === tab)
-  );
-  const src = tab === 'radar' ? WINDY_URL : SOLAR_SRC;
-  document.getElementById('wpanel-external').href = src;
-  const content = document.getElementById('wpanel-content');
-  const frame = document.createElement('iframe');
-  frame.src = src;
-  frame.className = 'wpanel-iframe';
-  frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
-  frame.setAttribute('allowfullscreen', '');
-  frame.title = tab === 'radar' ? '雨雲レーダー' : '太陽光発電状況';
-  content.replaceChildren(frame);
-}
-
-
-// ========== 天気 ==========
-function calcHeatIndex(tempC, humidity) {
-  if (tempC < 27) return tempC;
-  const T = tempC, RH = humidity;
-  return -8.78469475556 + 1.61139411*T + 2.33854883889*RH
-    - 0.14611605*T*RH - 0.012308094*T*T - 0.0164248277778*RH*RH
-    + 0.002211732*T*T*RH + 0.00072546*T*RH*RH - 0.000003582*T*T*RH*RH;
-}
-
-function getHeatLevel(hi) {
-  if (hi >= 40) return { level: 'danger',    label: '危険',    icon: '🔴', color: '#c0392b', glow: 'rgba(255,94,160,0.55)', textColor: '#fff' };
-  if (hi >= 35) return { level: 'warning',   label: '厳重警戒', icon: '🟠', color: '#d35400', glow: 'rgba(255,140,66,0.55)', textColor: '#fff' };
-  if (hi >= 31) return { level: 'caution',   label: '警戒',    icon: '🟡', color: '#d4ac00', glow: 'rgba(230,200,0,0.4)',  textColor: '#1a1a00' };
-  if (hi >= 28) return { level: 'attention', label: '注意',    icon: '🟢', color: '#00a888', glow: 'rgba(0,212,170,0.4)',  textColor: '#fff' };
-  return { level: 'safe', label: 'ほぼ安全', icon: '✅', color: 'rgba(255,255,255,0.12)', glow: 'transparent', textColor: 'var(--text-secondary)' };
-}
-
-const OWM_ICON_MAP = {
-  '01d':'☀️','01n':'🌙','02d':'🌤','02n':'🌤',
-  '03d':'☁️','03n':'☁️','04d':'☁️','04n':'☁️',
-  '09d':'🌧','09n':'🌧','10d':'🌦','10n':'🌦',
-  '11d':'⛈','11n':'⛈','13d':'❄️','13n':'❄️',
-  '50d':'🌫','50n':'🌫'
-};
-
-async function fetchAndRenderWeather() {
-  const currentEl = document.getElementById('weather-current');
-  const forecastEl = document.getElementById('weather-forecast');
-  const updatedEl = document.getElementById('weather-updated');
-  if (!currentEl) return;
-
-  try {
-    const weather = await fetchWeatherFromApi();
-    const cur = weather?.current;
-    const frc = weather?.forecast;
-    const tempValue = Number(cur?.temperature);
-    const feelsValue = Number(cur?.feelsLike);
-    const humidityValue = Number(cur?.humidity);
-    const windValue = Number(cur?.windSpeed);
-    if (![tempValue, feelsValue, humidityValue, windValue].every(Number.isFinite) || !Array.isArray(frc)) {
-      throw new Error('天気情報の形式が正しくありません。');
-    }
-
-    const temp = Math.round(tempValue);
-    const feels = Math.round(feelsValue);
-    const humidity = Math.max(0, Math.min(100, Math.round(humidityValue)));
-    const wind = Math.max(0, windValue).toFixed(1);
-    const desc = `${cur?.description || ''}`.slice(0, 80);
-    const iconCode = `${cur?.icon || ''}`;
-    const emoji = OWM_ICON_MAP[iconCode] || '🌡';
-    const hi = calcHeatIndex(tempValue, humidity);
-    const heat = getHeatLevel(hi);
-
-    currentEl.innerHTML = `
-      <div class="weather-main">
-        <div class="weather-emoji">${emoji}</div>
-        <div class="weather-temp">${temp}<span class="weather-unit">°C</span></div>
-        <div class="weather-desc">${esc(desc)}</div>
-      </div>
-      <div class="weather-details">
-        <div class="weather-detail-item"><i class="fa-solid fa-droplet"></i> ${humidity}%</div>
-        <div class="weather-detail-item"><i class="fa-solid fa-wind"></i> ${wind}m/s</div>
-        <div class="weather-detail-item"><i class="fa-solid fa-temperature-half"></i> 体感 ${feels}°C</div>
-      </div>
-      <div class="heat-badge level-${heat.level}"
-           style="background:${heat.color};color:${heat.textColor};--heat-glow:${heat.glow}">
-        <span class="heat-badge-icon">${heat.icon}</span>
-        <div class="heat-badge-body">
-          <span class="heat-badge-title">熱中症危険度</span>
-          <span class="heat-badge-level">${heat.label}</span>
-        </div>
-      </div>
-    `;
-
-    if (forecastEl) {
-      forecastEl.innerHTML = '';
-      frc.slice(0, 8).forEach(item => {
-        const dt = new Date(item?.at || '');
-        const itemTemp = Number(item?.temperature);
-        const itemHumidity = Number(item?.humidity);
-        if (Number.isNaN(dt.getTime()) || !Number.isFinite(itemTemp) || !Number.isFinite(itemHumidity)) return;
-        const h = dt.getHours().toString().padStart(2, '0');
-        const m = dt.getMonth() + 1;
-        const d = dt.getDate();
-        const ico = OWM_ICON_MAP[`${item?.icon || ''}`] || '🌡';
-        const t = Math.round(itemTemp);
-        const forecastHumidity = Math.max(0, Math.min(100, Math.round(itemHumidity)));
-        const fItem = document.createElement('div');
-        fItem.className = 'forecast-item';
-        fItem.innerHTML = `
-          <div class="forecast-time">${m}/${d} ${h}時</div>
-          <div class="forecast-icon">${ico}</div>
-          <div class="forecast-temp">${t}°</div>
-          <div class="forecast-hum"><i class="fa-solid fa-droplet" style="font-size:0.6rem"></i>${forecastHumidity}%</div>
-        `;
-        forecastEl.appendChild(fItem);
-      });
-    }
-
-    if (updatedEl) {
-      const fetchedAt = new Date(weather?.updatedAt || Date.now());
-      const now = Number.isNaN(fetchedAt.getTime()) ? new Date() : fetchedAt;
-      updatedEl.textContent = `${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')} 更新`;
-    }
-
-  } catch (err) {
-    console.error('天気取得エラー:', err);
-    currentEl.innerHTML = '<div class="weather-error"><i class="fa-solid fa-circle-exclamation"></i> 天気情報を取得できませんでした</div>';
-  }
-}
-
-
 // ========== コンテキストメニュー ==========
 let activeContextMenu = null;
 
@@ -3620,6 +3471,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 常に編集モード
   document.body.classList.add('edit-mode');
   configureSidebarNavigation();
+  initWeatherSolar({ fetchWeatherFromApi });
 
   // 公開リンクは必要な時だけ読み込む。共有ホームは軽い状態で先に描画する。
   state.allCards = [];
@@ -3630,17 +3482,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // お知らせリアクションを先行読み込み
 
-  // ===== 天気パネル =====
-  document.getElementById('wpanel-close').addEventListener('click', closeWeatherPanel);
-  document.getElementById('tab-radar').addEventListener('click', () => switchWeatherTab('radar'));
-  document.getElementById('tab-solar').addEventListener('click', () => switchWeatherTab('solar'));
-
   // ===== 太陽光発電カード =====
   document.addEventListener('click', e => {
     const card = e.target.closest('[data-solar-open]');
     if (card) {
       e.preventDefault();
-      openWeatherPanel('solar');
+      void openWeatherSolarWorkspace();
     }
   });
 
@@ -3990,8 +3837,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const authenticated = await runInitialPortalBootstrap(storedUsername);
   if (authenticated) {
     await initOrder({});
-    fetchAndRenderWeather();
-    setInterval(fetchAndRenderWeather, 30 * 60 * 1000);
   }
 
   // ===== TODO パネル =====
@@ -4255,6 +4100,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ===== カレンダー =====
+  document.getElementById('env-sidebar-btn').addEventListener('click', () => {
+    void openWeatherSolarWorkspace();
+  });
   document.getElementById('btn-calendar').addEventListener('click', async () => {
     if (!state.currentUsername) {
       promptUsernameFor('カレンダー・勤怠');

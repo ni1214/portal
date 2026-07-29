@@ -22,6 +22,7 @@ const BOTTOM_NAV_BY_SOURCE = {
   'chat-fab': 'bnav-more',
   'ft-fab': 'bnav-more',
   'btn-calendar': 'bnav-more',
+  'env-sidebar-btn': 'bnav-more',
   'btn-reqboard': 'bnav-request',
   'btn-trouble-report': 'bnav-more',
   'btn-order-launch': 'bnav-more',

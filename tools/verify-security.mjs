@@ -222,6 +222,11 @@ requireMatch(
   /https:\/\/api\.open-meteo\.com\/v1\/forecast/,
   'Weather must use the server-side Open-Meteo Forecast API.',
 );
+requireMatch(
+  weatherServer,
+  /https:\/\/www\.wbgt\.env\.go\.jp\/est15WG\/dl/,
+  'Heat stress must use the official Ministry of the Environment WBGT feed.',
+);
 forbidMatch(
   weatherServer,
   /\b(?:OPENWEATHER_API_KEY|WEATHER_API_KEY|appid)\b/i,

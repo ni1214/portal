@@ -46,6 +46,7 @@ let orderAuthorizeMode = 'success';
 let orderResolveMode = 'success';
 let lastAuthBearerToken = '';
 let weatherProviderRequestCount = 0;
+let wbgtProviderRequestCount = 0;
 const rpcRequests = [];
 
 function encodeJwtPart(value) {
@@ -210,6 +211,7 @@ globalThis.fetch = async (input, options = {}) => {
     assert.equal(providerUrl.searchParams.get('latitude'), '36.3219');
     assert.equal(providerUrl.searchParams.get('longitude'), '139.0033');
     assert.equal(providerUrl.searchParams.get('forecast_hours'), '25');
+    assert.equal(providerUrl.searchParams.get('forecast_days'), '1');
     assert.equal(providerUrl.searchParams.get('temperature_unit'), 'celsius');
     assert.equal(providerUrl.searchParams.get('wind_speed_unit'), 'ms');
     assert.equal(providerUrl.searchParams.get('timeformat'), 'unixtime');
@@ -228,6 +230,10 @@ globalThis.fetch = async (input, options = {}) => {
     assert.deepEqual(
       providerUrl.searchParams.get('hourly')?.split(','),
       ['temperature_2m', 'relative_humidity_2m', 'weather_code', 'is_day'],
+    );
+    assert.deepEqual(
+      providerUrl.searchParams.get('daily')?.split(','),
+      ['sunrise', 'sunset', 'daylight_duration', 'uv_index_max'],
     );
     assert.equal(providerUrl.searchParams.has('apikey'), false);
     assert.equal(providerUrl.searchParams.has('appid'), false);
@@ -252,7 +258,32 @@ globalThis.fetch = async (input, options = {}) => {
         weather_code: times.map((_, index) => (index === 24 ? 95 : 2)),
         is_day: times.map((_, index) => (index < 12 ? 1 : 0)),
       },
+      daily: {
+        sunrise: [1_784_784_600],
+        sunset: [1_784_833_800],
+        daylight_duration: [49_200],
+        uv_index_max: [8.4],
+      },
     });
+  }
+  if (url.startsWith('https://www.wbgt.env.go.jp/est15WG/dl/')) {
+    wbgtProviderRequestCount += 1;
+    const providerUrl = new URL(url);
+    assert.equal(providerUrl.hostname, 'www.wbgt.env.go.jp');
+    assert.match(providerUrl.pathname, /^\/est15WG\/dl\/wbgt_42251_\d{6}\.csv$/);
+    assert.equal(options.headers.Accept, 'text/csv');
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Tokyo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date());
+    const readPart = type => Number(parts.find(part => part.type === type)?.value);
+    const today = `${readPart('year')}/${readPart('month')}/${readPart('day')}`;
+    return new Response(
+      `Date,Time,42251\n${today},8:00,25.2\n${today},9:00,26.7\n${today},24:00,\n`,
+      { headers: { 'content-type': 'text/csv' } },
+    );
   }
   throw new Error(`Unexpected mocked request: ${url}`);
 };
@@ -318,6 +349,7 @@ assert.equal(lastAuthBearerToken, createMockAuthToken());
 const weatherResult = await invoke(weather, createRequest('GET', undefined));
 assert.equal(weatherResult.status, 200);
 assert.equal(weatherProviderRequestCount, 1);
+assert.equal(wbgtProviderRequestCount, 1);
 assert.equal(weatherResult.payload.location, '高崎市');
 assert.deepEqual(weatherResult.payload.current, {
   temperature: 30,
@@ -342,6 +374,20 @@ assert.deepEqual(weatherResult.payload.forecast.at(-1), {
   description: '雷雨',
   icon: '11n',
 });
+assert.deepEqual(weatherResult.payload.today, {
+  sunrise: new Date(1_784_784_600 * 1000).toISOString(),
+  sunset: new Date(1_784_833_800 * 1000).toISOString(),
+  daylightSeconds: 49_200,
+  uvIndexMax: 8.4,
+});
+assert.equal(weatherResult.payload.heatStress.station, '前橋');
+assert.equal(weatherResult.payload.heatStress.current, 26.7);
+assert.equal(weatherResult.payload.heatStress.todayMax, 26.7);
+assert.equal(
+  Number.isNaN(Date.parse(weatherResult.payload.heatStress.observedAt)),
+  false,
+);
+assert.match(weatherResult.payload.heatStress.sourceUrl, /^https:\/\/www\.wbgt\.env\.go\.jp\//);
 assert.equal(Number.isNaN(Date.parse(weatherResult.payload.updatedAt)), false);
 
 const orderResult = await invoke(orderEmail, createRequest('POST', { orderId: 'order-123' }));
