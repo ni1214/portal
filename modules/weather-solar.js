@@ -3,9 +3,23 @@ import { WEATHER_LAT, WEATHER_LON } from './config.js';
 import { esc } from './utils.js';
 
 const SOLAR_MONITOR_URL = 'https://mierukaweb.energymntr.com/48429893PZ';
-const RAIN_RADAR_URL = `https://embed.windy.com/embed2.html?lat=${WEATHER_LAT}&lon=${WEATHER_LON}&detailLat=${WEATHER_LAT}&detailLon=${WEATHER_LON}&zoom=9&level=surface&overlay=rain&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1`;
+const RAIN_RADAR_URL = `https://embed.windy.com/embed2.html?lat=${WEATHER_LAT}&lon=${WEATHER_LON}&detailLat=${WEATHER_LAT}&detailLon=${WEATHER_LON}&zoom=9&level=surface&overlay=radar&product=radar&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1`;
 const WEATHER_CACHE_MS = 5 * 60 * 1000;
 const WEATHER_REFRESH_MS = 10 * 60 * 1000;
+const EMBEDDED_FRAMES = Object.freeze([
+  Object.freeze({
+    wrapperId: 'env-solar-frame-wrap',
+    frameId: 'env-solar-frame',
+    title: '日建フレメックス八幡工場 太陽光発電状況',
+    sandbox: 'allow-scripts allow-same-origin allow-forms allow-popups',
+  }),
+  Object.freeze({
+    wrapperId: 'env-radar-frame-wrap',
+    frameId: 'env-radar-frame',
+    title: '高崎市周辺の雨雲レーダー',
+    sandbox: 'allow-scripts allow-same-origin allow-popups',
+  }),
+]);
 
 const WEATHER_ICONS = Object.freeze({
   '01d': '☀️',
@@ -39,9 +53,30 @@ export function initWeatherSolar(d = {}) {
   ensureWorkspace();
 }
 
+function mountEmbeddedFrames(workspace) {
+  EMBEDDED_FRAMES.forEach(config => {
+    const wrapper = workspace.querySelector(`#${config.wrapperId}`);
+    if (!wrapper || wrapper.querySelector(`#${config.frameId}`)) return;
+
+    // iframe is intentionally created through the DOM API. The portal's
+    // Trusted Types sanitizer removes iframe markup from every HTML string.
+    const frame = document.createElement('iframe');
+    frame.id = config.frameId;
+    frame.title = config.title;
+    frame.setAttribute('loading', 'eager');
+    frame.setAttribute('sandbox', config.sandbox);
+    frame.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+    frame.setAttribute('allowfullscreen', '');
+    wrapper.appendChild(frame);
+  });
+}
+
 function ensureWorkspace() {
   let workspace = document.getElementById('env-workspace');
-  if (workspace) return workspace;
+  if (workspace) {
+    mountEmbeddedFrames(workspace);
+    return workspace;
+  }
 
   workspace = document.createElement('section');
   workspace.id = 'env-workspace';
@@ -104,16 +139,7 @@ function ensureWorkspace() {
           </a>
         </div>
       </div>
-      <div class="env-frame-wrap env-solar-frame-wrap">
-        <iframe
-          id="env-solar-frame"
-          title="日建フレメックス八幡工場 太陽光発電状況"
-          loading="eager"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-          referrerpolicy="strict-origin-when-cross-origin"
-          allowfullscreen
-        ></iframe>
-      </div>
+      <div class="env-frame-wrap env-solar-frame-wrap" id="env-solar-frame-wrap"></div>
       <p class="env-frame-note">発電モニターが表示されない場合は「別タブで開く」を使用してください。</p>
     </section>
 
@@ -134,20 +160,12 @@ function ensureWorkspace() {
           </a>
         </div>
       </div>
-      <div class="env-frame-wrap env-radar-frame-wrap">
-        <iframe
-          id="env-radar-frame"
-          title="高崎市周辺の雨雲レーダー"
-          loading="eager"
-          sandbox="allow-scripts allow-same-origin allow-popups"
-          referrerpolicy="strict-origin-when-cross-origin"
-          allowfullscreen
-        ></iframe>
-      </div>
+      <div class="env-frame-wrap env-radar-frame-wrap" id="env-radar-frame-wrap"></div>
       <p class="env-frame-note">雨雲レーダー提供: Windy.com</p>
     </section>
   `;
   document.body.appendChild(workspace);
+  mountEmbeddedFrames(workspace);
 
   document.getElementById('env-refresh')?.addEventListener('click', () => {
     void refreshWeatherSolar({ force: true });

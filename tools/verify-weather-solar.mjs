@@ -14,6 +14,7 @@ const [
   style,
   weatherServer,
   vercelConfigSource,
+  securityBootstrap,
 ] = await Promise.all([
   read('index.html'),
   read('script.js'),
@@ -22,6 +23,7 @@ const [
   read('style.css'),
   read('server/weather.mjs'),
   read('vercel.json'),
+  read('security-bootstrap.js'),
 ]);
 
 assert.match(html, /id="env-sidebar-btn"[\s\S]*?天気・太陽光/);
@@ -47,8 +49,10 @@ assert.match(workspaceSource, /['"]env-sidebar-btn['"]:\s*['"]bnav-more['"]/);
 assert.match(moduleSource, /id="env-current"/);
 assert.match(moduleSource, /id="env-sun"/);
 assert.match(moduleSource, /id="env-heat"/);
-assert.match(moduleSource, /id="env-solar-frame"/);
-assert.match(moduleSource, /id="env-radar-frame"/);
+assert.match(moduleSource, /frameId:\s*['"]env-solar-frame['"]/);
+assert.match(moduleSource, /frameId:\s*['"]env-radar-frame['"]/);
+assert.match(moduleSource, /id="env-solar-frame-wrap"/);
+assert.match(moduleSource, /id="env-radar-frame-wrap"/);
 assert.match(moduleSource, /id="env-solar-reload"/);
 assert.match(moduleSource, /id="env-radar-reload"/);
 assert.match(moduleSource, /function reloadFrame\(frameId,\s*url\)/);
@@ -56,12 +60,17 @@ assert.match(moduleSource, /日の出・日没/);
 assert.match(moduleSource, /暑さ指数（WBGT）/);
 assert.match(moduleSource, /https:\/\/mierukaweb\.energymntr\.com\/48429893PZ/);
 assert.match(moduleSource, /https:\/\/embed\.windy\.com\/embed2\.html/);
+assert.match(moduleSource, /overlay=radar&product=radar/);
 assert.match(
   moduleSource,
-  /sandbox="allow-scripts allow-same-origin allow-forms allow-popups"/,
+  /sandbox:\s*['"]allow-scripts allow-same-origin allow-forms allow-popups['"]/,
 );
-assert.equal((moduleSource.match(/loading="eager"/g) || []).length, 2);
+assert.match(moduleSource, /document\.createElement\(['"]iframe['"]\)/);
+assert.match(moduleSource, /mountEmbeddedFrames\(workspace\)/);
+assert.match(moduleSource, /setAttribute\(['"]loading['"],\s*['"]eager['"]\)/);
+assert.doesNotMatch(moduleSource, /<iframe(?:\s|>)/i);
 assert.doesNotMatch(moduleSource, /allow-top-navigation|allow-top-navigation-by-user-activation/);
+assert.match(securityBootstrap, /FORBID_TAGS:\s*\[[^\]]*['"]iframe['"]/);
 
 assert.equal(getWbgtLevel(20.9).key, 'safe');
 assert.equal(getWbgtLevel(21).key, 'attention');

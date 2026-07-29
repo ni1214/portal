@@ -214,7 +214,7 @@ import {
   initWeatherSolar,
   openWeatherSolarView,
   closeWeatherSolarView,
-} from './modules/weather-solar.js?v=20260729b';
+} from './modules/weather-solar.js?v=20260729c';
 
 import {
   isSupabaseSharedCoreEnabled,
