@@ -1111,20 +1111,50 @@
   </div>
 
   <!-- ==================== お知らせ編集モーダル ==================== -->
-  <div class="modal-overlay" id="notice-modal">
-    <div class="modal-glass">
-      <h3 class="modal-title" id="notice-modal-title">お知らせを追加</h3>
+  <div class="modal-overlay notice-editor-modal" id="notice-modal" role="dialog" aria-modal="true" aria-labelledby="notice-modal-title" aria-describedby="notice-modal-desc" aria-hidden="true" inert hidden>
+    <div class="modal-glass notice-editor-dialog">
+      <header class="notice-editor-header">
+        <div>
+          <h3 class="modal-title" id="notice-modal-title">新しいお知らせ</h3>
+          <p class="notice-editor-description" id="notice-modal-desc">全社へ伝える内容を、短く分かりやすく入力してください。</p>
+        </div>
+        <button type="button" class="notice-editor-close" id="notice-editor-close" aria-label="閉じる">
+          <i class="material-symbols-rounded" aria-hidden="true">close</i>
+        </button>
+      </header>
 
       <div class="form-group">
-        <label class="form-label">優先度</label>
-        <select id="notice-priority" class="form-input">
-          <option value="normal">通常</option>
-          <option value="urgent">重要</option>
-        </select>
+        <label class="form-label" for="notice-title">タイトル</label>
+        <input type="text" id="notice-title" class="form-input" placeholder="例: 明日の工場予定を変更します" maxlength="80" autocomplete="off">
       </div>
 
       <div class="form-group">
-        <label class="form-label">配信先</label>
+        <label class="form-label" for="notice-body">本文 <span>省略可</span></label>
+        <textarea id="notice-body" class="form-input" rows="5" placeholder="日時・対象・対応してほしいことを入力してください"></textarea>
+      </div>
+
+      <div class="notice-editor-options">
+        <div class="form-group">
+          <label class="form-label" for="notice-priority">重要度</label>
+          <select id="notice-priority" class="form-input">
+            <option value="normal">通常</option>
+            <option value="urgent">重要</option>
+          </select>
+        </div>
+
+        <div class="form-group notice-editor-ack-option">
+          <label class="notice-ack-setting" for="notice-require-ack">
+            <input type="checkbox" id="notice-require-ack">
+            <span>
+              <strong>確認を必須にする</strong>
+              <small>確認者の履歴を残します</small>
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group" hidden>
+        <label class="form-label" for="notice-target-scope">配信先</label>
         <select id="notice-target-scope" class="form-input">
           <option value="all">全体に配信</option>
           <option value="departments">部署を選んで配信</option>
@@ -1136,25 +1166,7 @@
         <div class="notice-target-hint" id="notice-target-hint">全体に表示されます。</div>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">タイトル</label>
-        <input type="text" id="notice-title" class="form-input" placeholder="例: 明日は工場予定変更">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">本文（省略可）</label>
-        <textarea id="notice-body" class="form-input" rows="3" placeholder="詳細メッセージ..."></textarea>
-      </div>
-
-      <div class="form-group">
-        <label class="notice-ack-setting" for="notice-require-ack">
-          <input type="checkbox" id="notice-require-ack">
-          <span>確認必須にする</span>
-        </label>
-        <div class="notice-target-hint">オンにすると、対象ユーザーが「確認した」を押した履歴を残せます。</div>
-      </div>
-
-      <div class="modal-actions">
+      <div class="modal-actions notice-editor-actions">
         <button class="btn-modal-secondary" id="notice-cancel">キャンセル</button>
         <button class="btn-modal-danger" id="notice-delete" style="display:none">
           <i class="fa-solid fa-trash"></i> 削除

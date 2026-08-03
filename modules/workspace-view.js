@@ -278,7 +278,7 @@ document.addEventListener('keydown', event => {
   }
   const activeSubview = activeWorkspaceElement.querySelector('[data-workspace-subview]:not([hidden])');
   const subviewBack = activeSubview?.querySelector('[data-workspace-back]');
-  if (subviewBack) {
+  if (subviewBack?.getClientRects().length) {
     event.preventDefault();
     event.stopImmediatePropagation();
     subviewBack.click();

@@ -19,6 +19,23 @@ import {
 // Cross-module function references
 export const deps = {};
 
+const NOTICE_FILTERS = [
+  { id: 'action', label: '要対応' },
+  { id: 'unread', label: '未読' },
+  { id: 'urgent', label: '重要' },
+  { id: 'all', label: 'すべて' },
+  { id: 'mine', label: '自分の投稿' },
+];
+
+let noticeCenterReturnParent = null;
+let noticeWorkspaceFilter = '';
+let noticeWorkspaceQuery = '';
+let noticeSearchComposing = false;
+let selectedNoticeId = '';
+let noticeDetailOpen = false;
+let noticeModalReturnFocus = null;
+const noticeReadRequests = new Set();
+
 function normalizeTargetDepartments(departments) {
   if (!Array.isArray(departments)) return [];
   return [...new Set(
@@ -33,14 +50,25 @@ function getNoticeTargetScope(notice) {
   return notice?.targetScope === 'departments' && targetDepartments.length > 0 ? 'departments' : 'all';
 }
 
+// 現行RLSはログイン済み利用者へ全件を返すため、部署指定は表示上の対象情報としてのみ扱う。
 function isNoticeVisibleForCurrentUser(notice) {
   return !!notice;
+}
+
+function getNoticeTimestamp(notice) {
+  const raw = notice?.createdAt;
+  if (!raw) return 0;
+  if (typeof raw.toMillis === 'function') return raw.toMillis();
+  if (typeof raw.toDate === 'function') return raw.toDate().getTime();
+  if (Number.isFinite(raw.seconds)) return raw.seconds * 1000;
+  const parsed = new Date(raw).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function getVisibleNoticesFromList(notices = state.allNotices) {
   return (Array.isArray(notices) ? notices : [])
     .filter(isNoticeVisibleForCurrentUser)
-    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    .sort((a, b) => getNoticeTimestamp(b) - getNoticeTimestamp(a));
 }
 
 function normalizeAcknowledgedUsers(users) {
@@ -60,49 +88,83 @@ function isNoticeCreatedByCurrentUser(notice) {
   return !!state.currentUsername && !!notice?.createdBy && notice.createdBy === state.currentUsername;
 }
 
+function canManageNotice(notice) {
+  return !!notice && (state.isAdmin === true || isNoticeCreatedByCurrentUser(notice));
+}
+
 function isNoticeAcknowledgedByCurrentUser(notice) {
   if (!state.currentUsername || !noticeRequiresAcknowledgement(notice)) return false;
   return normalizeAcknowledgedUsers(notice.acknowledgedBy).includes(state.currentUsername);
 }
 
-function getPendingAcknowledgementNotices(notices = state.visibleNotices) {
-  if (!state.currentUsername) return [];
-  return (Array.isArray(notices) ? notices : []).filter(notice =>
-    !isNoticeCreatedByCurrentUser(notice) && noticeRequiresAcknowledgement(notice) && !isNoticeAcknowledgedByCurrentUser(notice)
-  );
+function isNoticeUnread(notice) {
+  return !!state.currentUsername
+    && !isNoticeCreatedByCurrentUser(notice)
+    && !isNoticeAcknowledgedByCurrentUser(notice)
+    && !state.readNoticeIds.has(notice.id);
+}
+
+function isNoticePendingAcknowledgement(notice) {
+  return !!state.currentUsername
+    && !isNoticeCreatedByCurrentUser(notice)
+    && noticeRequiresAcknowledgement(notice)
+    && !isNoticeAcknowledgedByCurrentUser(notice);
+}
+
+function isNoticeActionable(notice) {
+  return isNoticePendingAcknowledgement(notice) || isNoticeUnread(notice);
 }
 
 function getVisibleUnreadCount() {
-  return (state.visibleNotices || []).filter(n => !isNoticeCreatedByCurrentUser(n) && !state.readNoticeIds.has(n.id)).length;
-}
-
-function formatNoticeDate(notice) {
-  const raw = notice?.createdAt;
-  const date = raw
-    ? (raw.toDate ? raw.toDate() : new Date((raw.seconds || 0) * 1000))
-    : null;
-  if (!date || Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' });
-}
-
-function getVisibleUnreadNoticeCount() {
-  return (state.visibleNotices || []).filter(notice =>
-    !isNoticeCreatedByCurrentUser(notice) && !state.readNoticeIds.has(notice.id) && !noticeRequiresAcknowledgement(notice)
-  ).length;
+  if (!state.currentUsername) return 0;
+  return (state.visibleNotices || []).filter(isNoticeUnread).length;
 }
 
 function getVisibleNoticeActionCount() {
-  return getPendingAcknowledgementNotices().length + getVisibleUnreadNoticeCount();
+  return (state.visibleNotices || []).filter(isNoticeActionable).length;
+}
+
+function toNoticeDate(notice) {
+  const timestamp = getNoticeTimestamp(notice);
+  return timestamp > 0 ? new Date(timestamp) : null;
+}
+
+function formatNoticeDate(notice, detailed = false) {
+  const date = toNoticeDate(notice);
+  if (!date || Number.isNaN(date.getTime())) return '日時不明';
+  const now = new Date();
+  const sameYear = date.getFullYear() === now.getFullYear();
+  return date.toLocaleString('ja-JP', detailed
+    ? {
+        year: 'numeric', month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      }
+    : {
+        ...(sameYear ? {} : { year: 'numeric' }),
+        month: 'numeric', day: 'numeric',
+      });
+}
+
+function getAudienceLabel(notice) {
+  if (getNoticeTargetScope(notice) === 'all') return '全社';
+  const departments = normalizeTargetDepartments(notice.targetDepartments);
+  if (departments.length <= 2) return departments.join('・');
+  return `${departments[0]} ほか${departments.length - 1}部署`;
 }
 
 function buildAudienceBadgeHtml(notice) {
-  const targetScope = getNoticeTargetScope(notice);
-  if (targetScope === 'all') {
-    return '<span class="notice-target-chip notice-target-chip--all">全体</span>';
+  if (getNoticeTargetScope(notice) === 'all') {
+    return '<span class="notice-target-chip notice-target-chip--all">全社</span>';
   }
   return normalizeTargetDepartments(notice.targetDepartments).map(department => `
     <span class="notice-target-chip notice-target-chip--dept">${esc(department)}</span>
   `).join('');
+}
+
+function getNoticeExcerpt(notice) {
+  const source = `${notice?.body || ''}`.replace(/\s+/g, ' ').trim();
+  if (!source) return '本文はありません。';
+  return source.length > 92 ? `${source.slice(0, 92)}…` : source;
 }
 
 function buildAcknowledgementHtml(notice) {
@@ -113,153 +175,51 @@ function buildAcknowledgementHtml(notice) {
       ? `<div class="notice-ack-users">確認済み: ${acknowledgedUsers.map(username => esc(username)).join(' / ')}</div>`
       : '<div class="notice-ack-users">まだ確認者はいません</div>';
     return `
-      <div class="notice-ack-row">
+      <div class="notice-ack-row notice-detail-confirmation">
         <div class="notice-ack-head">
-          <span class="notice-ack-chip notice-ack-chip--done"><i class="fa-solid fa-circle-check"></i> 投稿済み</span>
+          <span class="notice-ack-chip notice-ack-chip--done"><i class="fa-solid fa-circle-check"></i> 確認状況</span>
           <span class="notice-ack-count">${acknowledgedUsers.length}名確認</span>
         </div>
         ${confirmedBy}
       </div>
     `;
   }
-  const acknowledged = isNoticeAcknowledgedByCurrentUser(notice);
-  const statusChip = acknowledged
-    ? '<span class="notice-ack-chip notice-ack-chip--done"><i class="fa-solid fa-circle-check"></i> 確認済み</span>'
-    : '<span class="notice-ack-chip notice-ack-chip--pending"><i class="fa-solid fa-circle-exclamation"></i> 確認必須</span>';
-  const actionButton = state.currentUsername && !acknowledged
-    ? `<button class="btn-notice-ack" data-notice-ack="${esc(notice.id)}"><i class="fa-solid fa-check"></i> 確認した</button>`
+
+  const adminSummary = state.isAdmin
+    ? `<div class="notice-ack-users">全体の確認状況: ${acknowledgedUsers.length > 0
+      ? acknowledgedUsers.map(username => esc(username)).join(' / ')
+      : 'まだ確認者はいません'}</div>`
     : '';
-  const confirmedBy = acknowledgedUsers.length > 0
-    ? `<div class="notice-ack-users">確認済み: ${acknowledgedUsers.map(username => esc(username)).join(' / ')}</div>`
-    : '<div class="notice-ack-users">まだ確認者はいません</div>';
+
+  const acknowledged = isNoticeAcknowledgedByCurrentUser(notice);
+  if (acknowledged) {
+    return `
+      <div class="notice-ack-row notice-detail-confirmation notice-detail-confirmation--done">
+        <div class="notice-ack-head">
+          <span class="notice-ack-chip notice-ack-chip--done"><i class="fa-solid fa-circle-check"></i> 確認済み</span>
+        </div>
+        <div class="notice-ack-users">このお知らせは確認済みです。</div>
+        ${adminSummary}
+      </div>
+    `;
+  }
 
   return `
-    <div class="notice-ack-row">
+    <div class="notice-ack-row notice-detail-confirmation notice-detail-confirmation--pending">
       <div class="notice-ack-head">
-        ${statusChip}
-        <span class="notice-ack-count">${acknowledgedUsers.length}名確認</span>
-        ${actionButton}
+        <div>
+          <span class="notice-ack-chip notice-ack-chip--pending"><i class="fa-solid fa-circle-exclamation"></i> 確認が必要</span>
+          <p class="notice-ack-prompt">内容を確認したら、確認ボタンを押してください。</p>
+        </div>
+        ${state.currentUsername ? `
+          <button class="btn-notice-ack" type="button" data-notice-ack="${esc(notice.id)}">
+            <i class="fa-solid fa-check"></i> 確認しました
+          </button>
+        ` : ''}
       </div>
-      ${confirmedBy}
+      ${adminSummary}
     </div>
   `;
-}
-
-function buildNoticeComposerHtml() {
-  if (!state.isEditMode) return '';
-  return `
-    <form class="notice-composer" id="notice-composer">
-      <div class="notice-composer-head">
-        <div>
-          <div class="notice-composer-kicker">Post</div>
-          <h3 class="notice-composer-title">全社員へ周知する</h3>
-        </div>
-        <span class="notice-composer-scope"><i class="fa-solid fa-building"></i> 全社員</span>
-      </div>
-      <input type="text" id="notice-quick-title" class="notice-composer-input" placeholder="件名: 社内行事・予定変更・共有事項" maxlength="80" autocomplete="off">
-      <textarea id="notice-quick-body" class="notice-composer-textarea" rows="3" placeholder="本文: 日時、対象、対応してほしいことを短く入力"></textarea>
-      <div class="notice-composer-actions">
-        <select id="notice-quick-priority" class="notice-composer-select" aria-label="お知らせ種別">
-          <option value="normal">通常</option>
-          <option value="urgent">重要</option>
-        </select>
-        <label class="notice-composer-check" for="notice-quick-ack">
-          <input type="checkbox" id="notice-quick-ack">
-          <span>確認必須</span>
-        </label>
-        <button type="submit" class="notice-composer-submit" id="notice-quick-submit">
-          <i class="fa-solid fa-paper-plane"></i> 投稿
-        </button>
-      </div>
-    </form>
-  `;
-}
-
-function buildNoticeEmptyHtml() {
-  return `
-    <div class="notice-empty-state">
-      <i class="fa-solid fa-bullhorn"></i>
-      <strong>まだお知らせはありません</strong>
-      <span>社内行事や全社員への共有事項を投稿できます。</span>
-    </div>
-  `;
-}
-
-function bindNoticeComposer(board) {
-  const form = board.querySelector('#notice-composer');
-  if (!form) return;
-  form.addEventListener('submit', async event => {
-    event.preventDefault();
-    const titleEl = board.querySelector('#notice-quick-title');
-    const bodyEl = board.querySelector('#notice-quick-body');
-    const priorityEl = board.querySelector('#notice-quick-priority');
-    const ackEl = board.querySelector('#notice-quick-ack');
-    const submitBtn = board.querySelector('#notice-quick-submit');
-    const title = titleEl?.value.trim() || '';
-    const body = bodyEl?.value.trim() || '';
-    if (!title) {
-      titleEl?.focus();
-      return;
-    }
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span class="spinner"></span>';
-    try {
-      state.editingNoticeId = null;
-      await saveNotice({
-        title,
-        body,
-        priority: priorityEl?.value || 'normal',
-        requireAcknowledgement: !!ackEl?.checked,
-        targetScope: 'all',
-        targetDepartments: [],
-        createdBy: state.currentUsername || '',
-      });
-      if (titleEl) titleEl.value = '';
-      if (bodyEl) bodyEl.value = '';
-      if (priorityEl) priorityEl.value = 'normal';
-      if (ackEl) ackEl.checked = false;
-      showToast('全社員向けのお知らせを投稿しました。', 'success');
-    } catch (err) {
-      console.error('お知らせ投稿エラー:', err);
-      showToast('お知らせを投稿できませんでした。時間をおいて再度お試しください。', 'error');
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 投稿';
-    }
-  });
-}
-
-let noticeCenterReturnParent = null;
-
-function ensureNoticeCenterModal() {
-  let modal = document.getElementById('notice-center-modal');
-  if (modal) return modal;
-
-  modal = document.createElement('div');
-  modal.id = 'notice-center-modal';
-  modal.className = 'notice-center-modal';
-  modal.innerHTML = `
-    <div class="notice-center-backdrop" data-notice-center-close></div>
-    <section class="notice-center-panel" role="dialog" aria-modal="true" aria-labelledby="notice-center-title">
-      <div class="notice-center-header">
-        <div>
-          <p class="notice-center-kicker">Notice</p>
-          <h2 id="notice-center-title">お知らせセンター</h2>
-        </div>
-        <button type="button" class="notice-center-close" data-notice-center-close aria-label="閉じる">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-      <div class="notice-center-body" id="notice-center-body"></div>
-    </section>
-  `;
-  modal.addEventListener('click', event => {
-    if (event.target.closest('[data-notice-center-close]')) {
-      closeNoticeCenter();
-    }
-  });
-  document.body.appendChild(modal);
-  return modal;
 }
 
 function renderNoticeTargetDepartments(selectedDepartments = []) {
@@ -267,9 +227,10 @@ function renderNoticeTargetDepartments(selectedDepartments = []) {
   if (!container) return;
 
   const selected = new Set(normalizeTargetDepartments(selectedDepartments));
-  const departments = Array.isArray(state.currentDepartments) && state.currentDepartments.length > 0
+  const currentDepartments = Array.isArray(state.currentDepartments) && state.currentDepartments.length > 0
     ? state.currentDepartments
     : state.DEFAULT_DEPARTMENTS;
+  const departments = [...new Set([...currentDepartments, ...selected])];
 
   container.innerHTML = departments.map((department, index) => `
     <label class="notice-target-option" for="notice-target-dept-${index}">
@@ -291,6 +252,18 @@ function getSelectedTargetDepartments() {
     .filter(Boolean);
 }
 
+export function getNoticeTargetFormValues() {
+  const requestedScope = document.getElementById('notice-target-scope')?.value || 'all';
+  const targetDepartments = getSelectedTargetDepartments();
+  const targetScope = requestedScope === 'departments' && targetDepartments.length > 0
+    ? 'departments'
+    : 'all';
+  return {
+    targetScope,
+    targetDepartments: targetScope === 'departments' ? targetDepartments : [],
+  };
+}
+
 export function handleNoticeTargetScopeChange() {
   const scope = document.getElementById('notice-target-scope')?.value || 'all';
   const picker = document.getElementById('notice-target-picker');
@@ -298,9 +271,380 @@ export function handleNoticeTargetScopeChange() {
   if (picker) picker.hidden = scope !== 'departments';
   if (hint) {
     hint.textContent = scope === 'departments'
-      ? '選んだ部署のユーザーにだけ表示されます。'
-      : '全体に表示されます。';
+      ? '配信対象として記録されている部署です。'
+      : '全社向けのお知らせとして配信します。';
   }
+}
+
+function getNoticeFilterCounts(notices) {
+  return {
+    action: notices.filter(isNoticeActionable).length,
+    unread: notices.filter(isNoticeUnread).length,
+    urgent: notices.filter(notice => notice.priority === 'urgent').length,
+    all: notices.length,
+    mine: notices.filter(isNoticeCreatedByCurrentUser).length,
+  };
+}
+
+function ensureNoticeWorkspaceFilter(notices) {
+  if (NOTICE_FILTERS.some(filter => filter.id === noticeWorkspaceFilter)) return;
+  if (!notices.length) return;
+  noticeWorkspaceFilter = notices.some(isNoticeActionable) ? 'action' : 'all';
+}
+
+function matchesNoticeFilter(notice) {
+  switch (noticeWorkspaceFilter) {
+    case 'action': return isNoticeActionable(notice);
+    case 'unread': return isNoticeUnread(notice);
+    case 'urgent': return notice.priority === 'urgent';
+    case 'mine': return isNoticeCreatedByCurrentUser(notice);
+    default: return true;
+  }
+}
+
+function getNoticeActionRank(notice) {
+  if (isNoticePendingAcknowledgement(notice)) return 0;
+  if (isNoticeUnread(notice) && notice.priority === 'urgent') return 1;
+  if (isNoticeUnread(notice)) return 2;
+  if (notice.priority === 'urgent') return 3;
+  return 4;
+}
+
+function getFilteredNotices(notices) {
+  const query = noticeWorkspaceQuery.trim().toLocaleLowerCase('ja-JP');
+  return notices
+    .filter(matchesNoticeFilter)
+    .filter(notice => {
+      if (!query) return true;
+      const haystack = [
+        notice.title,
+        notice.body,
+        notice.createdBy,
+        getAudienceLabel(notice),
+        ...normalizeTargetDepartments(notice.targetDepartments),
+      ].join(' ').toLocaleLowerCase('ja-JP');
+      return haystack.includes(query);
+    })
+    .sort((a, b) => {
+      const rankDiff = getNoticeActionRank(a) - getNoticeActionRank(b);
+      return rankDiff || getNoticeTimestamp(b) - getNoticeTimestamp(a);
+    });
+}
+
+function getTotalReactionCount(noticeId) {
+  return Object.values(state.noticeReactions[noticeId] || {})
+    .reduce((sum, users) => sum + (Array.isArray(users) ? users.length : 0), 0);
+}
+
+function buildNoticeFilterBar(counts) {
+  return NOTICE_FILTERS.map(filter => {
+    const active = filter.id === noticeWorkspaceFilter;
+    return `
+      <button
+        type="button"
+        class="notice-filter-button${active ? ' active' : ''}"
+        data-notice-filter="${filter.id}"
+        aria-pressed="${active ? 'true' : 'false'}"
+      >
+        <span>${filter.label}</span>
+        <span class="notice-filter-count">${counts[filter.id] || 0}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+function buildNoticeInboxItem(notice) {
+  const unread = isNoticeUnread(notice);
+  const pending = isNoticePendingAcknowledgement(notice);
+  const urgent = notice.priority === 'urgent';
+  const selected = noticeDetailOpen && notice.id === selectedNoticeId;
+  const reactionCount = getTotalReactionCount(notice.id);
+  const stateLabel = pending
+    ? '<span class="notice-list-state notice-list-state--pending"><i class="material-symbols-rounded" aria-hidden="true">task_alt</i>確認が必要</span>'
+    : urgent
+      ? '<span class="notice-list-state notice-list-state--urgent"><i class="material-symbols-rounded" aria-hidden="true">priority_high</i>重要</span>'
+      : '';
+
+  return `
+    <button
+      type="button"
+      class="notice-inbox-item${unread ? ' is-unread' : ''}${urgent ? ' is-urgent' : ''}${selected ? ' is-selected' : ''}"
+      data-notice-select="${esc(notice.id)}"
+      aria-current="${selected ? 'true' : 'false'}"
+    >
+      <span class="notice-inbox-leading" aria-hidden="true">
+        ${unread ? '<span class="notice-unread-dot"></span>' : '<span class="notice-read-dot"></span>'}
+      </span>
+      <span class="notice-inbox-content">
+        <span class="notice-inbox-topline">
+          <span class="notice-inbox-title">${esc(notice.title || '無題のお知らせ')}</span>
+          <time class="notice-inbox-date">${esc(formatNoticeDate(notice))}</time>
+        </span>
+        <span class="notice-inbox-excerpt">${esc(getNoticeExcerpt(notice))}</span>
+        <span class="notice-inbox-meta">
+          ${stateLabel}
+          <span><i class="material-symbols-rounded" aria-hidden="true">groups</i>${esc(getAudienceLabel(notice))}</span>
+          ${notice.createdBy ? `<span><i class="material-symbols-rounded" aria-hidden="true">person</i>${esc(notice.createdBy)}</span>` : ''}
+          ${reactionCount > 0 ? `<span><i class="material-symbols-rounded" aria-hidden="true">mood</i>${reactionCount}</span>` : ''}
+        </span>
+      </span>
+      <i class="material-symbols-rounded notice-inbox-arrow" aria-hidden="true">chevron_right</i>
+    </button>
+  `;
+}
+
+function buildNoticeListEmptyHtml() {
+  const hasQuery = !!noticeWorkspaceQuery.trim();
+  const filterLabel = NOTICE_FILTERS.find(filter => filter.id === noticeWorkspaceFilter)?.label || 'お知らせ';
+  const title = hasQuery
+    ? '一致するお知らせはありません'
+    : noticeWorkspaceFilter === 'action'
+      ? '対応が必要なお知らせはありません'
+      : `${filterLabel}のお知らせはありません`;
+  const copy = hasQuery
+    ? '検索語を短くするか、別の絞り込みを選んでください。'
+    : noticeWorkspaceFilter === 'action'
+      ? '必要な確認はすべて完了しています。'
+      : '別の絞り込みを選ぶと、お知らせを確認できます。';
+  return `
+    <div class="notice-list-empty">
+      <i class="material-symbols-rounded" aria-hidden="true">${noticeWorkspaceFilter === 'action' ? 'done_all' : 'inbox'}</i>
+      <strong>${title}</strong>
+      <span>${copy}</span>
+    </div>
+  `;
+}
+
+function buildNoticeDetailHtml(notice) {
+  if (!notice) {
+    return `
+      <div class="notice-detail-empty">
+        <span class="notice-detail-empty-icon"><i class="material-symbols-rounded" aria-hidden="true">campaign</i></span>
+        <strong>お知らせを選択してください</strong>
+        <span>左の一覧から選ぶと、内容と必要な操作をここで確認できます。</span>
+      </div>
+    `;
+  }
+
+  const unread = isNoticeUnread(notice);
+  const pending = isNoticePendingAcknowledgement(notice);
+  const urgent = notice.priority === 'urgent';
+  const statusLabel = pending
+    ? '<span class="notice-detail-status notice-detail-status--pending"><i class="material-symbols-rounded" aria-hidden="true">task_alt</i>確認が必要</span>'
+    : unread
+      ? '<span class="notice-detail-status notice-detail-status--unread"><i class="material-symbols-rounded" aria-hidden="true">mark_email_unread</i>未読</span>'
+      : '<span class="notice-detail-status"><i class="material-symbols-rounded" aria-hidden="true">done</i>確認済み</span>';
+
+  return `
+    <div class="notice-detail-document">
+      <button type="button" class="notice-detail-back" data-notice-back data-workspace-back>
+        <i class="material-symbols-rounded" aria-hidden="true">arrow_back</i>
+        一覧へ戻る
+      </button>
+
+      <header class="notice-detail-header">
+        <div class="notice-detail-statuses">
+          ${statusLabel}
+          ${urgent ? '<span class="notice-detail-status notice-detail-status--urgent"><i class="material-symbols-rounded" aria-hidden="true">priority_high</i>重要</span>' : ''}
+        </div>
+        ${canManageNotice(notice) ? `
+          <button type="button" class="notice-detail-edit" data-notice-edit="${esc(notice.id)}">
+            <i class="material-symbols-rounded" aria-hidden="true">edit</i>
+            編集
+          </button>
+        ` : ''}
+      </header>
+
+      <h2 class="notice-detail-title">${esc(notice.title || '無題のお知らせ')}</h2>
+      <div class="notice-detail-meta">
+        <span><i class="material-symbols-rounded" aria-hidden="true">schedule</i>${esc(formatNoticeDate(notice, true))}</span>
+        ${notice.createdBy ? `<span><i class="material-symbols-rounded" aria-hidden="true">person</i>${esc(notice.createdBy)}</span>` : ''}
+      </div>
+      <div class="notice-detail-targets" aria-label="配信対象">${buildAudienceBadgeHtml(notice)}</div>
+
+      <div class="notice-detail-body${notice.body ? '' : ' is-empty'}">
+        ${notice.body ? esc(notice.body) : '本文はありません。'}
+      </div>
+
+      ${buildAcknowledgementHtml(notice)}
+
+      <section class="notice-detail-reactions" aria-label="リアクション">
+        <div class="notice-detail-section-title">リアクション</div>
+        ${buildReactionBar(notice.id)}
+      </section>
+    </div>
+  `;
+}
+
+function focusNoticeListItem(noticeId) {
+  const board = document.getElementById('notice-board');
+  const target = [...(board?.querySelectorAll('[data-notice-select]') || [])]
+    .find(element => element.dataset.noticeSelect === noticeId);
+  if (!target) return false;
+  target.focus({ preventScroll: true });
+  return true;
+}
+
+function focusNoticeReaction(noticeId, emoji) {
+  const board = document.getElementById('notice-board');
+  const target = [...(board?.querySelectorAll('.reaction-btn') || [])]
+    .find(element => element.dataset.noticeId === noticeId && element.dataset.emoji === emoji);
+  target?.focus({ preventScroll: true });
+}
+
+async function persistNoticeRead(noticeId) {
+  if (!state.currentUsername || !noticeId || noticeReadRequests.has(noticeId)) return;
+  noticeReadRequests.add(noticeId);
+  try {
+    await markNoticesReadInSupabase(state.currentUsername, [noticeId]);
+  } catch (err) {
+    state.readNoticeIds.delete(noticeId);
+    updateNoticeBadge();
+    renderNotices(state.visibleNotices);
+    deps.renderTodayDashboard?.();
+    deps.renderSharedHome?.();
+    console.error('お知らせ既読保存エラー:', err);
+    showToast('既読状態を保存できませんでした。', 'error');
+  } finally {
+    noticeReadRequests.delete(noticeId);
+  }
+}
+
+function selectNotice(noticeId) {
+  const notice = (state.visibleNotices || []).find(item => item.id === noticeId);
+  if (!notice) return;
+  selectedNoticeId = noticeId;
+  noticeDetailOpen = true;
+  const shouldMarkRead = isNoticeUnread(notice);
+  if (shouldMarkRead) state.readNoticeIds.add(noticeId);
+  updateNoticeBadge();
+  renderNotices(state.visibleNotices);
+  deps.renderTodayDashboard?.();
+  deps.renderSharedHome?.();
+  if (shouldMarkRead) void persistNoticeRead(noticeId);
+
+  window.requestAnimationFrame(() => {
+    if (window.matchMedia('(max-width: 760px)').matches) {
+      document.querySelector('#notice-detail .notice-detail-back')?.focus({ preventScroll: true });
+    } else if (!focusNoticeListItem(noticeId)) {
+      document.getElementById('notice-detail')?.focus({ preventScroll: true });
+    }
+  });
+}
+
+function bindNoticeWorkspace(board) {
+  const searchInput = board.querySelector('#notice-workspace-search');
+  const commitSearch = (value, caret) => {
+    noticeWorkspaceQuery = value;
+    noticeDetailOpen = false;
+    selectedNoticeId = '';
+    renderNotices(state.visibleNotices);
+    window.requestAnimationFrame(() => {
+      const nextInput = document.getElementById('notice-workspace-search');
+      nextInput?.focus({ preventScroll: true });
+      nextInput?.setSelectionRange(caret, caret);
+    });
+  };
+  searchInput?.addEventListener('compositionstart', () => {
+    noticeSearchComposing = true;
+  });
+  searchInput?.addEventListener('compositionend', event => {
+    noticeSearchComposing = false;
+    const value = event.currentTarget.value;
+    const caret = event.currentTarget.selectionStart ?? value.length;
+    noticeWorkspaceQuery = value;
+    window.setTimeout(() => {
+      if (document.getElementById('notice-workspace-search') === searchInput) {
+        commitSearch(value, caret);
+      }
+    }, 0);
+  });
+  searchInput?.addEventListener('input', event => {
+    noticeWorkspaceQuery = event.target.value;
+    if (event.isComposing || noticeSearchComposing) return;
+    const caret = event.target.selectionStart ?? noticeWorkspaceQuery.length;
+    commitSearch(noticeWorkspaceQuery, caret);
+  });
+
+  board.querySelector('[data-notice-search-clear]')?.addEventListener('click', () => {
+    noticeWorkspaceQuery = '';
+    noticeDetailOpen = false;
+    selectedNoticeId = '';
+    renderNotices(state.visibleNotices);
+    document.getElementById('notice-workspace-search')?.focus({ preventScroll: true });
+  });
+
+  board.querySelectorAll('[data-notice-filter]').forEach(button => {
+    button.addEventListener('click', () => {
+      noticeWorkspaceFilter = button.dataset.noticeFilter || 'all';
+      noticeDetailOpen = false;
+      selectedNoticeId = '';
+      renderNotices(state.visibleNotices);
+      document.querySelector(`[data-notice-filter="${noticeWorkspaceFilter}"]`)?.focus({ preventScroll: true });
+    });
+  });
+
+  board.querySelector('[data-notice-create]')?.addEventListener('click', () => openNoticeModal(null));
+  board.querySelector('[data-notice-mark-all]')?.addEventListener('click', async event => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      await markAllNoticesRead();
+    } catch (err) {
+      console.error('お知らせ一括既読エラー:', err);
+      showToast('既読状態を保存できませんでした。', 'error');
+      button.disabled = false;
+    }
+  });
+
+  board.querySelectorAll('[data-notice-select]').forEach(button => {
+    button.addEventListener('click', () => selectNotice(button.dataset.noticeSelect));
+  });
+
+  board.querySelector('[data-notice-back]')?.addEventListener('click', () => {
+    const previousNoticeId = selectedNoticeId;
+    noticeDetailOpen = false;
+    selectedNoticeId = '';
+    renderNotices(state.visibleNotices);
+    window.requestAnimationFrame(() => {
+      if (!focusNoticeListItem(previousNoticeId)) {
+        board.querySelector('[data-notice-select]')?.focus({ preventScroll: true });
+      }
+    });
+  });
+
+  board.querySelector('[data-notice-edit]')?.addEventListener('click', event => {
+    const notice = (state.allNotices || []).find(item => item.id === event.currentTarget.dataset.noticeEdit);
+    if (notice) openNoticeModal(notice);
+  });
+
+  board.querySelector('[data-notice-ack]')?.addEventListener('click', async event => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    await acknowledgeNotice(button.dataset.noticeAck);
+    window.requestAnimationFrame(() => document.getElementById('notice-detail')?.focus({ preventScroll: true }));
+  });
+
+  board.querySelectorAll('.reaction-btn').forEach(button => {
+    button.addEventListener('click', async () => {
+      if (!state.currentUsername) {
+        showToast('リアクションするにはログインが必要です。', 'warning');
+        return;
+      }
+      const { noticeId, emoji } = button.dataset;
+      if (!noticeId || !emoji) return;
+      button.disabled = true;
+      try {
+        await ensureNoticeReactionsLoaded();
+        await toggleReaction(noticeId, emoji);
+      } catch (err) {
+        console.error('リアクション保存エラー:', err);
+        showToast('リアクションを保存できませんでした。', 'error');
+      } finally {
+        window.requestAnimationFrame(() => focusNoticeReaction(noticeId, emoji));
+      }
+    });
+  });
 }
 
 export function refreshNoticeVisibility() {
@@ -314,7 +658,12 @@ export function refreshNoticeVisibility() {
 
 // ========== お知らせ未読管理 ==========
 export async function loadReadNotices(username) {
-  if (!username) { state.readNoticeIds = new Set(); updateNoticeBadge(); return; }
+  if (!username) {
+    state.readNoticeIds = new Set();
+    updateNoticeBadge();
+    renderNotices(state.visibleNotices);
+    return;
+  }
   try {
     state.readNoticeIds = await fetchReadNoticeIdsFromSupabase(username);
     updateNoticeBadge();
@@ -328,10 +677,10 @@ export async function loadReadNotices(username) {
 
 export async function markAllNoticesRead() {
   if (!state.currentUsername || !state.visibleNotices.length) return;
-  const unreadIds = state.visibleNotices.filter(n => !state.readNoticeIds.has(n.id)).map(n => n.id);
+  const unreadIds = state.visibleNotices.filter(isNoticeUnread).map(notice => notice.id);
   if (!unreadIds.length) return;
   await markNoticesReadInSupabase(state.currentUsername, unreadIds);
-  state.visibleNotices.forEach(n => state.readNoticeIds.add(n.id));
+  unreadIds.forEach(id => state.readNoticeIds.add(id));
   updateNoticeBadge();
   renderNotices(state.visibleNotices);
   deps.renderTodayDashboard?.();
@@ -344,6 +693,7 @@ export async function acknowledgeNotice(noticeId) {
   if (!notice || !noticeRequiresAcknowledgement(notice) || isNoticeAcknowledgedByCurrentUser(notice)) return;
 
   const previousAcknowledgedBy = normalizeAcknowledgedUsers(notice.acknowledgedBy);
+  const wasRead = state.readNoticeIds.has(noticeId);
   notice.acknowledgedBy = [...previousAcknowledgedBy, state.currentUsername];
   state.readNoticeIds.add(noticeId);
   updateNoticeBadge();
@@ -352,25 +702,30 @@ export async function acknowledgeNotice(noticeId) {
   deps.renderSharedHome?.();
 
   try {
-    await Promise.all([
-      acknowledgeNoticeInSupabase(noticeId),
-      markNoticesReadInSupabase(state.currentUsername, [noticeId]),
-    ]);
+    await acknowledgeNoticeInSupabase(noticeId);
   } catch (err) {
     notice.acknowledgedBy = previousAcknowledgedBy;
-    state.readNoticeIds.delete(noticeId);
+    if (!wasRead) state.readNoticeIds.delete(noticeId);
     updateNoticeBadge();
     renderNotices(state.visibleNotices);
     deps.renderTodayDashboard?.();
     deps.renderSharedHome?.();
     console.error('お知らせ確認の保存に失敗しました:', err);
     showToast('確認の保存に失敗しました。時間をおいてもう一度お試しください。', 'error');
+    return;
   }
+
+  try {
+    await markNoticesReadInSupabase(state.currentUsername, [noticeId]);
+  } catch (err) {
+    console.warn('お知らせ確認後の既読履歴保存に失敗しました:', err);
+  }
+  showToast('確認済みにしました。', 'success');
 }
 
 export function updateNoticeBadge() {
   const badge = document.getElementById('notice-unread-badge');
-  const bell  = document.getElementById('btn-notice-bell');
+  const bell = document.getElementById('btn-notice-bell');
   if (!badge || !bell) return;
   const actionCount = getVisibleNoticeActionCount();
   if (actionCount > 0) {
@@ -385,14 +740,12 @@ export function updateNoticeBadge() {
   deps.updateSummaryCards?.();
 }
 
+// 自動一括既読は行わない。既読化は通知を選ぶか「すべて既読」の明示操作だけで行う。
 export function setupNoticeObserver() {
-  if (state._noticeObserver) { state._noticeObserver.disconnect(); state._noticeObserver = null; }
-  const board = document.getElementById('notice-board');
-  if (!board || !state.currentUsername || !(state.visibleNotices || []).length) return;
-  state._noticeObserver = new IntersectionObserver(entries => {
-    if (entries[0].isIntersecting) markAllNoticesRead();
-  }, { threshold: 0.3 });
-  state._noticeObserver.observe(board);
+  if (state._noticeObserver) {
+    state._noticeObserver.disconnect();
+    state._noticeObserver = null;
+  }
 }
 
 function stopNoticeReactionObserver() {
@@ -417,7 +770,7 @@ export function setupNoticeReactionLoader() {
   state._noticeReactionObserver = new IntersectionObserver(entries => {
     if (!entries[0]?.isIntersecting) return;
     stopNoticeReactionObserver();
-    ensureNoticeReactionsLoaded();
+    void ensureNoticeReactionsLoaded();
   }, {
     threshold: 0.1,
     rootMargin: '240px 0px',
@@ -445,13 +798,10 @@ export async function toggleReaction(noticeId, emoji) {
   if (!state.currentUsername) return;
   const current = (state.noticeReactions[noticeId] || {})[emoji] || [];
   const alreadyReacted = current.includes(state.currentUsername);
-  // 楽観的UI更新
   if (!state.noticeReactions[noticeId]) state.noticeReactions[noticeId] = {};
-  if (alreadyReacted) {
-    state.noticeReactions[noticeId][emoji] = current.filter(u => u !== state.currentUsername);
-  } else {
-    state.noticeReactions[noticeId][emoji] = [...current, state.currentUsername];
-  }
+  state.noticeReactions[noticeId][emoji] = alreadyReacted
+    ? current.filter(username => username !== state.currentUsername)
+    : [...current, state.currentUsername];
   renderNotices(state.visibleNotices);
   try {
     if (alreadyReacted) {
@@ -462,27 +812,41 @@ export async function toggleReaction(noticeId, emoji) {
   } catch (err) {
     console.error('リアクション更新エラー:', err);
     await loadAllNoticeReactions();
+    throw err;
   }
 }
 
 export function buildReactionBar(noticeId) {
   const reactions = state.noticeReactions[noticeId] || {};
-  const btns = REACTION_EMOJIS.map(emoji => {
+  const buttons = REACTION_EMOJIS.map(emoji => {
     const users = reactions[emoji] || [];
     const count = users.length;
-    const active = state.currentUsername && users.includes(state.currentUsername) ? ' active' : '';
-    const countHtml = count > 0 ? `<span class="reaction-count">${count}</span>` : '';
-    return `<button class="reaction-btn${active}" data-notice-id="${esc(noticeId)}" data-emoji="${esc(emoji)}" title="${esc(users.join(', ') || '')}">${esc(emoji)}${countHtml}</button>`;
+    const active = !!state.currentUsername && users.includes(state.currentUsername);
+    const title = users.length > 0 ? users.join(', ') : `${emoji}でリアクション`;
+    return `
+      <button
+        type="button"
+        class="reaction-btn${active ? ' active' : ''}"
+        data-notice-id="${esc(noticeId)}"
+        data-emoji="${esc(emoji)}"
+        title="${esc(title)}"
+        aria-pressed="${active ? 'true' : 'false'}"
+      >
+        <span aria-hidden="true">${esc(emoji)}</span>
+        ${count > 0 ? `<span class="reaction-count">${count}</span>` : ''}
+      </button>
+    `;
   }).join('');
-  return `<div class="notice-reactions">${btns}</div>`;
+  return `<div class="notice-reactions">${buttons}</div>`;
 }
 
 // ========== CRUD ==========
 export async function subscribeNotices() {
-  // Runtime: realtime なし、一回読み込み
   try {
-    const notices = await fetchNoticesFromSupabase();
-    state.allNotices = notices;
+    state.allNotices = await fetchNoticesFromSupabase();
+    if (!NOTICE_FILTERS.some(filter => filter.id === noticeWorkspaceFilter)) {
+      noticeWorkspaceFilter = state.allNotices.some(isNoticeActionable) ? 'action' : 'all';
+    }
     refreshNoticeVisibility();
   } catch (err) {
     console.error('Supabase お知らせ読み込みエラー:', err);
@@ -510,21 +874,25 @@ export async function saveNotice(data) {
 
   if (state.editingNoticeId) {
     await updateNoticeInSupabase(state.editingNoticeId, normalizedData);
-    const idx = (state.allNotices || []).findIndex(notice => notice.id === state.editingNoticeId);
-    if (idx >= 0) {
-      state.allNotices[idx] = { ...state.allNotices[idx], ...normalizedData };
-    }
+    const index = (state.allNotices || []).findIndex(notice => notice.id === state.editingNoticeId);
+    if (index >= 0) state.allNotices[index] = { ...state.allNotices[index], ...normalizedData };
+    selectedNoticeId = state.editingNoticeId;
+    noticeDetailOpen = true;
+    noticeWorkspaceFilter = isNoticeCreatedByCurrentUser(state.allNotices[index]) ? 'mine' : 'all';
   } else {
     const newId = await createNoticeInSupabase(normalizedData);
     state.allNotices = [
       { id: newId, ...normalizedData, createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 } },
       ...(state.allNotices || []),
     ];
+    selectedNoticeId = newId;
+    noticeDetailOpen = true;
+    noticeWorkspaceFilter = 'mine';
   }
+  noticeWorkspaceQuery = '';
 
   refreshNoticeVisibility();
 }
-
 
 export async function addNotice(data) {
   const normalizedData = {
@@ -542,7 +910,11 @@ export async function addNotice(data) {
 
 export async function deleteNotice(id) {
   await deleteNoticeInSupabase(id);
-  state.allNotices = (state.allNotices || []).filter(n => n.id !== id);
+  state.allNotices = (state.allNotices || []).filter(notice => notice.id !== id);
+  if (selectedNoticeId === id) {
+    selectedNoticeId = '';
+    noticeDetailOpen = false;
+  }
   refreshNoticeVisibility();
 }
 
@@ -550,141 +922,124 @@ export async function deleteNotice(id) {
 export function renderNotices(notices) {
   const board = document.getElementById('notice-board');
   if (!board) return;
+  if (noticeSearchComposing && document.activeElement?.id === 'notice-workspace-search') return;
 
   const visibleNotices = getVisibleNoticesFromList(Array.isArray(notices) ? notices : state.allNotices);
   state.visibleNotices = visibleNotices;
+  ensureNoticeWorkspaceFilter(visibleNotices);
 
-  if (!visibleNotices.length && !state.isEditMode) {
-    board.innerHTML = '';
-    return;
+  const filterCounts = getNoticeFilterCounts(visibleNotices);
+  const filteredNotices = getFilteredNotices(visibleNotices);
+  const selectedVisibleNotice = visibleNotices.find(notice => notice.id === selectedNoticeId) || null;
+  if (selectedNoticeId && !selectedVisibleNotice) {
+    selectedNoticeId = '';
+    noticeDetailOpen = false;
   }
-
+  const selectedNotice = noticeDetailOpen ? selectedVisibleNotice : null;
   const unreadCount = getVisibleUnreadCount();
-  const unreadNoticeCount = getVisibleUnreadNoticeCount();
-  const pendingAckCount = getPendingAcknowledgementNotices(visibleNotices).length;
-  const readAllBtn = (state.currentUsername && unreadCount > 0)
-    ? `<button class="btn-read-all" id="btn-read-all"><i class="fa-solid fa-check-double"></i> すべて既読</button>`
-    : '';
+  const resultCountLabel = `${filteredNotices.length}件${noticeWorkspaceQuery ? 'の検索結果' : ''}`;
 
+  board.classList.add('notice-ui-v2');
   board.innerHTML = `
-    <div class="notice-board-header">
-      <div class="notice-board-title-block">
-        <span class="notice-board-icon"><i class="fa-solid fa-bullhorn"></i></span>
-        <div>
-          <h2 class="notice-board-title">全社員へ共有</h2>
-          <p class="notice-board-copy">社内行事・予定変更・全員に周知したいことを共有します。</p>
-        </div>
+    <div class="notice-workspace-toolbar">
+      <div class="notice-workspace-search">
+        <i class="material-symbols-rounded" aria-hidden="true">search</i>
+        <input
+          type="search"
+          id="notice-workspace-search"
+          aria-label="お知らせを検索"
+          value="${esc(noticeWorkspaceQuery)}"
+          placeholder="件名・本文・投稿者を検索"
+          autocomplete="off"
+        >
+        ${noticeWorkspaceQuery ? `
+          <button type="button" data-notice-search-clear aria-label="検索をクリア">
+            <i class="material-symbols-rounded" aria-hidden="true">close</i>
+          </button>
+        ` : ''}
       </div>
-      <div class="notice-board-actions">
-        ${pendingAckCount > 0 ? `<span class="notice-unread-label notice-unread-label--ack">${pendingAckCount}件 確認待ち</span>` : ''}
-        ${unreadNoticeCount > 0 ? `<span class="notice-unread-label">${unreadNoticeCount}件 未読</span>` : ''}
-        ${readAllBtn}
+      <div class="notice-workspace-actions">
+        ${state.currentUsername && unreadCount > 0 ? `
+          <button type="button" class="notice-secondary-action" data-notice-mark-all aria-label="すべて既読にする">
+            <i class="material-symbols-rounded" aria-hidden="true">done_all</i>
+            <span>すべて既読</span>
+          </button>
+        ` : ''}
+        ${state.isEditMode ? `
+          <button type="button" class="notice-primary-action" data-notice-create>
+            <i class="material-symbols-rounded" aria-hidden="true">add</i>
+            <span>新しいお知らせ</span>
+          </button>
+        ` : ''}
       </div>
     </div>
-    ${buildNoticeComposerHtml()}
-    <div class="notice-list" id="notice-list"></div>
+
+    <nav class="notice-filter-bar" aria-label="お知らせの絞り込み">
+      ${buildNoticeFilterBar(filterCounts)}
+    </nav>
+
+    <div class="notice-workspace-layout${noticeDetailOpen ? ' show-detail' : ''}">
+      <section class="notice-inbox-pane" aria-labelledby="notice-inbox-heading">
+        <div class="notice-inbox-heading-row">
+          <div>
+            <h2 id="notice-inbox-heading">${esc(NOTICE_FILTERS.find(filter => filter.id === noticeWorkspaceFilter)?.label || 'お知らせ')}</h2>
+            <p>${resultCountLabel}</p>
+          </div>
+          ${filterCounts.action > 0 ? `<span class="notice-action-summary">要対応 ${filterCounts.action}件</span>` : ''}
+        </div>
+        <div class="notice-inbox-list" id="notice-inbox-list">
+          ${filteredNotices.length > 0
+            ? filteredNotices.map(buildNoticeInboxItem).join('')
+            : buildNoticeListEmptyHtml()}
+        </div>
+      </section>
+
+      <article
+        class="notice-detail-pane"
+        id="notice-detail"
+        tabindex="-1"
+        ${noticeDetailOpen ? 'data-workspace-subview' : ''}
+        aria-label="お知らせの詳細"
+      >
+        ${buildNoticeDetailHtml(selectedNotice)}
+      </article>
+    </div>
   `;
 
-  if (state.currentUsername && unreadCount > 0) {
-    board.querySelector('#btn-read-all')?.addEventListener('click', markAllNoticesRead);
-  }
-  bindNoticeComposer(board);
-
-  const list = board.querySelector('#notice-list');
-  if (!list) return;
+  bindNoticeWorkspace(board);
   setupNoticeReactionLoader();
+}
 
-  if (!visibleNotices.length) {
-    list.innerHTML = buildNoticeEmptyHtml();
-    return;
-  }
+function ensureNoticeCenterModal() {
+  let modal = document.getElementById('notice-center-modal');
+  if (modal) return modal;
 
-  visibleNotices.forEach(n => {
-    const isOwnNotice = isNoticeCreatedByCurrentUser(n);
-    const isUnread = state.currentUsername && !isOwnNotice && !state.readNoticeIds.has(n.id);
-    const item = document.createElement('div');
-    item.className = `notice-item${n.priority === 'urgent' ? ' urgent' : ''}${isUnread ? ' notice-unread' : ''}`;
-    const dateStr = formatNoticeDate(n);
-    const newBadge = isUnread
-      ? `<span class="notice-new-badge">NEW</span>`
-      : (isOwnNotice ? `<span class="notice-new-badge notice-new-badge--posted">投稿済み</span>` : '');
-    const editBtns = state.isEditMode
-      ? `<button class="btn-notice-edit" data-id="${esc(n.id)}" aria-label="お知らせを編集"><i class="fa-solid fa-pen"></i></button>`
-      : '';
-    const iconClass = n.priority === 'urgent' ? 'fa-triangle-exclamation' : 'fa-bullhorn';
-    const iconMod = n.priority === 'urgent' ? 'urgent' : 'normal';
-    const badgeText = n.priority === 'urgent' ? '重要' : '周知';
-    item.innerHTML = `
-      <div class="notice-card-icon notice-card-icon--${iconMod}">
-        <i class="fa-solid ${iconClass}"></i>
-      </div>
-      <div class="notice-card-body">
-        <div class="notice-item-header">
-          ${newBadge}
-          <span class="notice-badge ${n.priority === 'urgent' ? 'badge-urgent' : 'badge-normal'}">${badgeText}</span>
-          <span class="notice-date">${esc(dateStr)}</span>
-          ${editBtns}
-        </div>
-        <div class="notice-title">${esc(n.title || '')}</div>
-        ${n.body ? `<div class="notice-body">${esc(n.body)}</div>` : ''}
-        <div class="notice-targets"><span class="notice-target-chip notice-target-chip--all">全社員</span></div>
-        ${buildAcknowledgementHtml(n)}
-        ${buildReactionBar(n.id)}
-      </div>
-    `;
-    if (state.isEditMode) {
-      item.querySelector('.btn-notice-edit')?.addEventListener('click', () => openNoticeModal(n));
-    }
-    list.appendChild(item);
+  modal = document.createElement('div');
+  modal.id = 'notice-center-modal';
+  modal.className = 'notice-center-modal notice-ui-v2';
+  modal.innerHTML = `
+    <div class="notice-center-backdrop" data-notice-center-close></div>
+    <section class="notice-center-panel" role="dialog" aria-modal="true" aria-label="お知らせ">
+      <button type="button" class="notice-center-close" data-notice-center-close aria-label="閉じる">
+        <i class="material-symbols-rounded" aria-hidden="true">close</i>
+      </button>
+      <div class="notice-center-body" id="notice-center-body"></div>
+    </section>
+  `;
+  modal.addEventListener('click', event => {
+    if (event.target.closest('[data-notice-center-close]')) closeNoticeCenter();
   });
-
-  list.addEventListener('click', async e => {
-    const ackBtn = e.target.closest('[data-notice-ack]');
-    if (ackBtn) {
-      const id = ackBtn.dataset.noticeAck;
-      ackBtn.disabled = true;
-      try {
-        await acknowledgeNotice(id);
-      } catch (err) {
-        console.error('お知らせ確認エラー:', err);
-        showToast('確認状態を保存できませんでした。', 'error');
-        ackBtn.disabled = false;
-      }
-      return;
-    }
-
-    const btn = e.target.closest('.reaction-btn');
-    if (!btn || btn.disabled) return;
-    if (!state.currentUsername) {
-      showToast('リアクションするにはユーザーネームを設定してください。', 'warning');
-      return;
-    }
-    const { noticeId, emoji } = btn.dataset;
-    if (!noticeId || !emoji) return;
-
-    btn.disabled = true;
-    const bar = btn.closest('.notice-reactions');
-    bar?.classList.add('loading');
-    try {
-      await ensureNoticeReactionsLoaded();
-      await toggleReaction(noticeId, emoji);
-    } catch (err) {
-      console.error('リアクション保存エラー:', err);
-      showToast('リアクションを保存できませんでした。', 'error');
-    } finally {
-      bar?.classList.remove('loading');
-      btn.disabled = false;
-    }
-  });
+  document.body.appendChild(modal);
+  return modal;
 }
 
 export function openNoticeCenter() {
   const board = document.getElementById('notice-board');
-  if (!board) return;
+  if (!board) return false;
 
   const modal = ensureNoticeCenterModal();
   const body = modal.querySelector('#notice-center-body');
-  if (!body) return;
+  if (!body) return false;
 
   if (!noticeCenterReturnParent && board.parentElement !== body) {
     noticeCenterReturnParent = board.parentElement;
@@ -694,9 +1049,9 @@ export function openNoticeCenter() {
   refreshNoticeVisibility();
   modal.classList.add('visible');
   document.body.classList.add('notice-center-open');
-  window.setTimeout(() => {
-    board.querySelector('#notice-quick-title')?.focus();
-  }, 80);
+  void ensureNoticeReactionsLoaded();
+  window.setTimeout(() => board.querySelector('#notice-workspace-search')?.focus({ preventScroll: true }), 80);
+  return true;
 }
 
 export function closeNoticeCenter() {
@@ -709,11 +1064,58 @@ export function closeNoticeCenter() {
   document.body.classList.remove('notice-center-open');
 }
 
+function getNoticeModalFocusable(modal) {
+  return [...modal.querySelectorAll(
+    'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )].filter(element => !element.closest('[hidden], [inert]') && element.getClientRects().length > 0);
+}
+
+function ensureNoticeModalAccessibility(modal) {
+  if (!modal || modal.dataset.noticeA11yBound === '1') return;
+  modal.dataset.noticeA11yBound = '1';
+  modal.addEventListener('click', event => {
+    if (event.target === modal) closeNoticeModal();
+  });
+  modal.addEventListener('keydown', event => {
+    if (!modal.classList.contains('visible')) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeNoticeModal();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = getNoticeModalFocusable(modal);
+    if (!focusable.length) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+}
+
 export function openNoticeModal(notice) {
+  if (notice && !canManageNotice(notice)) {
+    showToast('このお知らせを編集できるのは投稿者または管理者です。', 'warning');
+    return false;
+  }
+
+  const modal = document.getElementById('notice-modal');
+  if (!modal) return false;
+  ensureNoticeModalAccessibility(modal);
+  noticeModalReturnFocus = document.activeElement;
   state.editingNoticeId = notice ? notice.id : null;
-  const targetDepartments = [];
-  const targetScope = 'all';
-  document.getElementById('notice-modal-title').textContent = notice ? 'お知らせを編集' : 'お知らせを追加';
+  const targetDepartments = normalizeTargetDepartments(notice?.targetDepartments);
+  const targetScope = getNoticeTargetScope(notice);
+  document.getElementById('notice-modal-title').textContent = notice ? 'お知らせを編集' : '新しいお知らせ';
   document.getElementById('notice-priority').value = notice?.priority || 'normal';
   document.getElementById('notice-require-ack').checked = !!notice?.requireAcknowledgement;
   document.getElementById('notice-target-scope').value = targetScope;
@@ -723,11 +1125,28 @@ export function openNoticeModal(notice) {
   document.getElementById('notice-title').value = notice?.title || '';
   document.getElementById('notice-body').value = notice?.body || '';
   document.getElementById('notice-delete').style.display = notice ? 'inline-flex' : 'none';
-  document.getElementById('notice-modal').classList.add('visible');
-  setTimeout(() => document.getElementById('notice-title').focus(), 100);
+  modal.removeAttribute('hidden');
+  modal.removeAttribute('inert');
+  modal.setAttribute('aria-hidden', 'false');
+  modal.classList.add('visible');
+  window.setTimeout(() => document.getElementById('notice-title')?.focus(), 100);
+  return true;
 }
 
 export function closeNoticeModal() {
-  document.getElementById('notice-modal').classList.remove('visible');
+  const modal = document.getElementById('notice-modal');
+  if (!modal) return;
+  modal.classList.remove('visible');
+  modal.setAttribute('aria-hidden', 'true');
+  modal.setAttribute('inert', '');
+  modal.setAttribute('hidden', '');
   state.editingNoticeId = null;
+  const returnTarget = noticeModalReturnFocus;
+  noticeModalReturnFocus = null;
+  window.setTimeout(() => {
+    const focusTarget = returnTarget?.isConnected
+      ? returnTarget
+      : document.querySelector('#notice-detail, #notice-workspace-search, .portal-workspace-home-btn');
+    focusTarget?.focus({ preventScroll: true });
+  }, 0);
 }

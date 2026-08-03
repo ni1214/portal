@@ -79,7 +79,8 @@ import {
   deps as noticeDeps,
   loadReadNotices, markAllNoticesRead, updateNoticeBadge, setupNoticeObserver,
   subscribeNotices, saveNotice as moduleSaveNotice, addNotice as moduleAddNotice, deleteNotice as moduleDeleteNotice,
-  renderNotices, openNoticeModal, closeNoticeModal, openNoticeCenter, closeNoticeCenter, refreshNoticeVisibility, handleNoticeTargetScopeChange
+  renderNotices, openNoticeModal, closeNoticeModal, openNoticeCenter, closeNoticeCenter, refreshNoticeVisibility,
+  handleNoticeTargetScopeChange, getNoticeTargetFormValues
 } from './modules/notices.js';
 
 import {
@@ -4670,6 +4671,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ===== お知らせモーダル =====
   document.getElementById('notice-cancel').addEventListener('click', closeNoticeModal);
+  document.getElementById('notice-editor-close').addEventListener('click', closeNoticeModal);
   document.getElementById('notice-target-scope').addEventListener('change', handleNoticeTargetScopeChange);
 
   document.getElementById('notice-save').addEventListener('click', async () => {
@@ -4677,8 +4679,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const body  = document.getElementById('notice-body').value.trim();
     const priority = document.getElementById('notice-priority').value;
     const requireAcknowledgement = document.getElementById('notice-require-ack').checked;
-    const targetScope = 'all';
-    const targetDepartments = [];
+    const { targetScope, targetDepartments } = getNoticeTargetFormValues();
     if (!title) { document.getElementById('notice-title').focus(); return; }
 
     const btn = document.getElementById('notice-save');
