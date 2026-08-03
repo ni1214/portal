@@ -247,8 +247,35 @@ document.addEventListener('keydown', event => {
   if (event.key !== 'Escape') return;
   if (!activeWorkspaceElement) return;
   if (!isWorkspaceViewOpen(activeWorkspaceElement)) return;
-  const sharedLinksSearch = event.target?.closest?.('#shared-links-search');
-  if (sharedLinksSearch?.value) return;
+  const secondaryModalOpen = Array.from(document.querySelectorAll('.modal-overlay.visible'))
+    .some(modal => modal !== activeWorkspaceElement && !activeWorkspaceElement.contains(modal));
+  if (secondaryModalOpen) return;
+  if (activeWorkspaceElement.id === 'shared-links-modal') {
+    const openSharedLinksMenu = activeWorkspaceElement.querySelector(
+      '#shared-links-actions-menu[open], .shared-links-display-menu[open], .shared-link-card-menu[open]'
+    );
+    if (openSharedLinksMenu) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      openSharedLinksMenu.open = false;
+      return;
+    }
+    const sharedLinksSearch = activeWorkspaceElement.querySelector('#shared-links-search');
+    if (sharedLinksSearch?.value) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      sharedLinksSearch.value = '';
+      sharedLinksSearch.dispatchEvent(new Event('input', { bubbles: true }));
+      sharedLinksSearch.focus({ preventScroll: true });
+      return;
+    }
+    if (activeWorkspaceElement.classList.contains('shared-links-manage-mode')) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      activeWorkspaceElement.querySelector('#shared-links-manage-toggle')?.click();
+      return;
+    }
+  }
   const activeSubview = activeWorkspaceElement.querySelector('[data-workspace-subview]:not([hidden])');
   const subviewBack = activeSubview?.querySelector('[data-workspace-back]');
   if (subviewBack) {
@@ -257,9 +284,6 @@ document.addEventListener('keydown', event => {
     subviewBack.click();
     return;
   }
-  const secondaryModalOpen = Array.from(document.querySelectorAll('.modal-overlay.visible'))
-    .some(modal => modal !== activeWorkspaceElement && !activeWorkspaceElement.contains(modal));
-  if (secondaryModalOpen) return;
   event.preventDefault();
   event.stopImmediatePropagation();
   closeWorkspaceView(activeWorkspaceElement);

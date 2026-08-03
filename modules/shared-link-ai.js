@@ -4,7 +4,7 @@ import { isSafeWebUrl, sanitizeIconIdentifier } from './utils.js';
 import { requestAi } from './secure-api.js';
 
 let deps = {};
-let isCreating = false;
+let assistRequestSequence = 0;
 
 const KNOWN_LINKS = [
   { keys: ['chatgpt', 'chat gpt', 'チャットgpt', 'チャットジーピーティー', 'openai'], label: 'ChatGPT', url: 'https://chatgpt.com/', icon: 'fa-solid fa-link' },
@@ -32,6 +32,12 @@ export function initSharedLinkAi(d = {}) {
   bindSharedLinkAiEvents();
 }
 
+export function resetSharedLinkAiAssist() {
+  assistRequestSequence += 1;
+  setBusy(false);
+  setAiStatus();
+}
+
 function normalizeText(value) {
   return `${value || ''}`.normalize('NFKC').toLowerCase().trim();
 }
@@ -44,6 +50,8 @@ function getPublicCategories() {
 
 function getDefaultCategoryId() {
   const categories = getPublicCategories();
+  const selectedCategory = document.getElementById('shared-links-edit-category-select')?.value || '';
+  if (categories.some(category => category.id === selectedCategory)) return selectedCategory;
   return categories.find(category => category.id === 'external')?.id || categories[0]?.id || 'external';
 }
 
@@ -77,6 +85,7 @@ function buildHeuristicSuggestion(text) {
       url: known.url,
       category: getDefaultCategoryId(),
       icon: known.icon || 'fa-solid fa-link',
+      description: '',
       reason: 'known',
     };
   }
@@ -88,6 +97,7 @@ function buildHeuristicSuggestion(text) {
       url,
       category: getDefaultCategoryId(),
       icon: 'fa-solid fa-link',
+      description: '',
       reason: 'url',
     };
   }
@@ -121,7 +131,8 @@ ${JSON.stringify(categories, null, 2)}
   "label": "表示名。短く自然な名前",
   "url": "公式URL。https:// で始める",
   "category": "利用可能カテゴリのid。迷ったら external",
-  "icon": "Font Awesome class。迷ったら fa-solid fa-link"
+  "icon": "Font Awesome class。迷ったら fa-solid fa-link",
+  "description": "用途が分かる短い日本語。20文字程度"
 }
 
 条件:
@@ -140,12 +151,13 @@ function sanitizeSuggestion(raw, sourceText) {
   const label = `${raw?.label || fallback?.label || guessLabelFromUrl(normalizedUrl)}`.trim().slice(0, 48);
   const category = categoryIds.has(raw?.category) ? raw.category : (fallback?.category || getDefaultCategoryId());
   const icon = sanitizeIconIdentifier(raw?.icon || fallback?.icon || 'fa-solid fa-link', 'fa-solid fa-link');
+  const description = `${raw?.description || fallback?.description || ''}`.trim().slice(0, 80);
 
   if (!label || !isSafeWebUrl(normalizedUrl)) {
     throw new Error('リンク名またはURLを推定できませんでした。例: 「ChatGPTのリンクを作成して」');
   }
 
-  return { label, url: normalizedUrl, category, icon };
+  return { label, url: normalizedUrl, category, icon, description };
 }
 
 function findExistingCard(suggestion) {
@@ -165,27 +177,65 @@ function setAiStatus(message = '', type = '') {
 }
 
 function setBusy(isBusy) {
-  isCreating = isBusy;
   const button = document.getElementById('shared-link-ai-button');
   const input = document.getElementById('shared-link-ai-input');
   if (button) {
     button.disabled = isBusy;
     button.innerHTML = isBusy
-      ? '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i><span>作成中</span>'
-      : '<i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><span>AIで追加</span>';
+      ? '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i><span>確認中</span>'
+      : '<i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><span>候補を入力</span>';
   }
   if (input) input.disabled = isBusy;
 }
 
-async function createSharedLinkFromAi() {
-  if (isCreating) return;
+function fillSharedLinkForm(suggestion) {
+  const labelInput = document.getElementById('edit-label');
+  const urlInput = document.getElementById('edit-url');
+  const categorySelect = document.getElementById('shared-links-edit-category-select');
+  const iconInput = document.getElementById('edit-icon');
+  const descriptionInput = document.getElementById('edit-description');
+
+  if (labelInput) labelInput.value = suggestion.label;
+  if (urlInput) {
+    urlInput.value = suggestion.url;
+    urlInput.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  if (
+    categorySelect
+    && !categorySelect.disabled
+    && [...categorySelect.options].some(option => option.value === suggestion.category)
+  ) {
+    categorySelect.value = suggestion.category;
+    categorySelect.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  if (iconInput) {
+    iconInput.value = suggestion.icon;
+    iconInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  if (descriptionInput && suggestion.description && !descriptionInput.value.trim()) {
+    descriptionInput.value = suggestion.description;
+  }
+}
+
+async function assistSharedLinkForm() {
   const input = document.getElementById('shared-link-ai-input');
   const text = input?.value.trim() || '';
   if (!text) {
     input?.focus();
-    setAiStatus('追加したいリンクを入力してください。', 'warning');
+    setAiStatus('入力を手伝ってほしいサービス名やURLを入力してください。', 'warning');
     return;
   }
+
+  const requestId = ++assistRequestSequence;
+  const cardModal = document.getElementById('card-modal');
+  const editSession = cardModal?.dataset.editSession || '';
+  const isCurrentRequest = () =>
+    requestId === assistRequestSequence
+    && Boolean(editSession)
+    && cardModal?.dataset.editSession === editSession
+    && cardModal.classList.contains('visible')
+    && !state.editingDocId
+    && !state.editingIsPrivate;
 
   setBusy(true);
   setAiStatus('リンク情報を推定しています...', '');
@@ -193,6 +243,7 @@ async function createSharedLinkFromAi() {
     await deps.ensureSharedCardsLoaded?.();
     const heuristic = buildHeuristicSuggestion(text);
     const rawSuggestion = heuristic || await buildAiSuggestion(text);
+    if (!isCurrentRequest()) return;
     if (!rawSuggestion) {
       throw new Error('リンク情報を推定できませんでした。URLを含めてもう一度お試しください。');
     }
@@ -200,33 +251,22 @@ async function createSharedLinkFromAi() {
     const suggestion = sanitizeSuggestion(rawSuggestion, text);
     const existing = findExistingCard(suggestion);
     if (existing) {
-      state.sharedLinksCategory = existing.category || 'all';
-      state.sharedLinksQuery = existing.label || suggestion.label;
-      deps.renderSharedLinksBrowser?.();
       setAiStatus(`既に「${existing.label}」が登録されています。`, 'warning');
       showToast('同じリンクが既に登録されています。', 'warning');
       return;
     }
 
-    await deps.addCard?.({
-      label: suggestion.label,
-      icon: suggestion.icon,
-      url: suggestion.url,
-      category: suggestion.category,
-    });
-
-    state.sharedLinksCategory = suggestion.category || 'all';
-    state.sharedLinksQuery = suggestion.label;
-    deps.renderSharedLinksBrowser?.();
+    fillSharedLinkForm(suggestion);
     if (input) input.value = '';
-    setAiStatus(`「${suggestion.label}」を追加しました。`, 'success');
-    showToast(`共有リンクに「${suggestion.label}」を追加しました。`, 'success');
+    setAiStatus('候補を入力しました。内容を確認して「保存」を押してください。', 'success');
+    showToast('リンク情報の候補を入力しました。', 'success');
   } catch (err) {
-    console.error('共有リンクAI作成エラー:', err);
-    setAiStatus(err?.message || 'AIリンク作成に失敗しました。', 'error');
-    showToast(err?.message || 'AIリンク作成に失敗しました。', 'error');
+    if (!isCurrentRequest()) return;
+    console.error('共有リンクAI入力補助エラー:', err);
+    setAiStatus(err?.message || 'リンク情報を入力できませんでした。', 'error');
+    showToast(err?.message || 'リンク情報を入力できませんでした。', 'error');
   } finally {
-    setBusy(false);
+    if (requestId === assistRequestSequence) setBusy(false);
   }
 }
 
@@ -236,7 +276,7 @@ function bindSharedLinkAiEvents() {
   if (button && !button.dataset.bound) {
     button.dataset.bound = '1';
     button.addEventListener('click', () => {
-      void createSharedLinkFromAi();
+      void assistSharedLinkForm();
     });
   }
   if (input && !input.dataset.bound) {
@@ -244,7 +284,7 @@ function bindSharedLinkAiEvents() {
     input.addEventListener('keydown', event => {
       if (event.key === 'Enter') {
         event.preventDefault();
-        void createSharedLinkFromAi();
+        void assistSharedLinkForm();
       }
     });
   }
